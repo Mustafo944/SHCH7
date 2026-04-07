@@ -324,8 +324,7 @@ export async function confirmReport(reportId: string, dispatcherName: string): P
 
 export async function confirmReportEntry(
   reportId: string,
-  entryIndex: number,
-  dispatcherName: string
+  entryIndex: number
 ): Promise<WorkReport | null> {
   const { data: current } = await supabase
     .from('work_reports')
@@ -343,7 +342,7 @@ export async function confirmReportEntry(
     entry.haftalikJadval || entry.yillikJadval || entry.yangiIshlar || entry.kmoBartaraf || entry.majburiyOzgarish;
 
   if (hasMeaning) {
-    entries[entryIndex] = { ...entry, adImzosi: `✅ Tasdiqlandi: ${dispatcherName}` };
+    entries[entryIndex] = { ...entry, adImzosi: `✅ Tasdiqlandi: Aloqa dispetcheri` };
   }
 
   const { data, error } = await supabase

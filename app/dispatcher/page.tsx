@@ -289,7 +289,7 @@ export default function DispatcherPage() {
   async function handleConfirmEntry(reportId: string, entryIndex: number) {
     if (!session) return
     try {
-      await confirmReportEntry(reportId, entryIndex, session.fullName)
+      await confirmReportEntry(reportId, entryIndex)
       refreshData()
     } catch (err: unknown) {
       setFormMsg({
