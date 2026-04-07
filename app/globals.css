@@ -8,6 +8,8 @@
   padding: 0;
 }
 
+
+
 :root {
   --bg: #f4f6fb;
   --card: #ffffff;
@@ -58,6 +60,7 @@ body {
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -178,7 +181,10 @@ a:focus:not(:focus-visible) {
 
 /* Mobil optimizatsiya — teginish maqsad kattaligi */
 @media (max-width: 640px) {
-  button, a, [role="button"] {
+
+  button,
+  a,
+  [role="button"] {
     min-height: 44px;
     min-width: 44px;
   }

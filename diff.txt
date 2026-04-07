@@ -1,0 +1,134 @@
+﻿diff --git a/app/dispatcher/page.tsx b/app/dispatcher/page.tsx
+index 79b7b40..84014c8 100644
+--- a/app/dispatcher/page.tsx
++++ b/app/dispatcher/page.tsx
+@@ -1248,7 +1248,7 @@ function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry }: {
+   onConfirmEntry: (reportId: string, idx: number) => void
+ }) {
+   const [selStation, setSelStation] = useState<string | null>(null)
+-  const [selYear, setSelYear] = useState(new Date().getFullYear().toString())
++  const [selYear, setSelYear] = useState('2026')
+   const [selMonth, setSelMonth] = useState<number | null>(null)
+ 
+   const archiveReports = selStation && selMonth !== null
+@@ -1274,7 +1274,7 @@ function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry }: {
+             <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+               <h2 className="text-2xl font-black text-white">{stations.find((s: any) => s.id === selStation)?.name} Arxiv</h2>
+               <div className="mt-6 flex flex-wrap gap-2">
+-                {[selYear, Number(selYear) - 1].map(y => (
++                {Array.from({ length: Math.max(3, new Date().getFullYear() - 2026 + 3) }, (_, i) => 2026 + i).map(y => (
+                   <button key={y} onClick={() => setSelYear(y.toString())} className={`rounded-xl px-6 py-2 text-xs font-black ${selYear === y.toString() ? 'bg-white text-slate-900' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>{y} yil</button>
+                 ))}
+               </div>
+diff --git a/app/globals.css b/app/globals.css
+index c130c97..44c78b5 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -8,6 +8,11 @@
+   padding: 0;
+ }
+ 
++textarea {
++  -webkit-spell-check: none;
++  spell-check: none;
++}
++
+ :root {
+   --bg: #f4f6fb;
+   --card: #ffffff;
+@@ -58,6 +63,7 @@ body {
+     opacity: 0;
+     transform: translateY(8px);
+   }
++
+   to {
+     opacity: 1;
+     transform: translateY(0);
+@@ -178,7 +184,10 @@ a:focus:not(:focus-visible) {
+ 
+ /* Mobil optimizatsiya тАФ teginish maqsad kattaligi */
+ @media (max-width: 640px) {
+-  button, a, [role="button"] {
++
++  button,
++  a,
++  [role="button"] {
+     min-height: 44px;
+     min-width: 44px;
+   }
+diff --git a/components/JournalView.tsx b/components/JournalView.tsx
+index 4b0ed48..701e2d6 100644
+--- a/components/JournalView.tsx
++++ b/components/JournalView.tsx
+@@ -652,8 +652,8 @@ export function DU46JournalView({
+                       {/* Ishchi vaqti тАФ eng tepada */}
+                       <input value={e.soatMinut1 || ''} onChange={ev => update(i, 'soatMinut1', ev.target.value)} readOnly={!isWorker || !!e.yuborildi || !!e.kamchilikBBTasdiqladi}
+                         className={`w-full rounded px-1.5 py-2 text-center text-[11px] font-bold outline-none ${e.kamchilikBajarildi
+-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+-                            : 'bg-transparent focus:bg-[#0b1728]'
++                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
++                          : 'bg-transparent focus:bg-[#0b1728]'
+                           }`} />
+                     </div>
+ 
+@@ -683,6 +683,8 @@ export function DU46JournalView({
+                       <textarea value={e.kamchilik || ''} onChange={ev => update(i, 'kamchilik', ev.target.value)}
+                         readOnly={!isWorker || !!e.yuborildi || !!e.kamchilikBBTasdiqladi}
+                         rows={3}
++                        spellCheck={false}
++                        lang="uz"
+                         className="w-full resize-y rounded bg-transparent px-2 py-1 text-[11px] outline-none focus:bg-[#0b1728]"
+                       />
+                     </div>
+@@ -741,8 +743,8 @@ export function DU46JournalView({
+                       {/* Ishchi vaqti тАФ eng tepada */}
+                       <input value={e.soatMinut4 as string || ''} onChange={ev => update(i, 'soatMinut4', ev.target.value)} readOnly={!isWorker || !!e.yuborildi || !!e.bartarafBBTasdiqladi}
+                         className={`w-full rounded px-1.5 py-2 text-center text-[11px] font-bold outline-none ${e.bartarafBajarildi
+-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+-                            : 'bg-transparent focus:bg-[#0b1728]'
++                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
++                          : 'bg-transparent focus:bg-[#0b1728]'
+                           }`} />
+                     </div>
+ 
+@@ -772,6 +774,8 @@ export function DU46JournalView({
+                       <textarea value={e.bartarafInfo || ''} onChange={ev => update(i, 'bartarafInfo', ev.target.value)}
+                         readOnly={!isWorker || !!e.yuborildi || !!e.bartarafBBTasdiqladi || !e.kamchilikBBTasdiqladi}
+                         rows={3}
++                        spellCheck={false}
++                        lang="uz"
+                         className={`w-full resize-y rounded px-2 py-1 text-[11px] outline-none ${!e.kamchilikBBTasdiqladi && !e.bartarafInfo ? 'bg-slate-800/30 text-slate-600 cursor-not-allowed' : 'bg-transparent focus:bg-[#0b1728]'}`}
+                         placeholder={!e.kamchilikBBTasdiqladi ? '3-ustun tasdiqlanishi kerak...' : ''}
+                       />
+@@ -985,7 +989,7 @@ export function SHU2JournalView({
+   const onYuborishClick = () => {
+     // Faqat matnli qatorlarni olamiz
+     const validEntries = entries.filter(e => e.sana?.trim() || e.yozuv?.trim())
+-    
++
+     // Agar birorta ham yozuv bo'lmasa, yuborishga hojat yo'q
+     if (validEntries.length === 0) return
+ 
+@@ -1136,6 +1140,8 @@ export function SHU2JournalView({
+                     <td className="border-r border-white/10 p-0.5">
+                       <textarea value={e.yozuv} onChange={ev => update(i, 'yozuv', ev.target.value)}
+                         readOnly={!isWorker || isLocked}
++                        spellCheck={false}
++                        lang="uz"
+                         className={`min-h-[60px] w-full resize-none rounded bg-transparent px-3 py-2 text-[12px] outline-none focus:bg-[#0b1728] ${isLocked ? 'opacity-60' : ''}`} />
+                     </td>
+                     <td className="p-1">
+@@ -1215,11 +1221,11 @@ export function SHU2JournalView({
+             <h3 className="text-xl font-black text-white text-center mb-4">Qayta yuborish</h3>
+             <p className="text-sm text-white/50 text-center mb-8">Bu jurnal ma&apos;lumotlari oldin yuborilgan. Yana qayta yuborilsinmi?</p>
+             <div className="flex gap-4">
+-              <button 
++              <button
+                 onClick={handleYuborish}
+                 className="flex-1 rounded-xl bg-cyan-500 py-3 font-bold text-slate-900 shadow-xl shadow-cyan-500/20 hover:scale-105 transition"
+               >Ha, yuborilsin</button>
+-              <button 
++              <button
+                 onClick={() => setShowConfirmModal(false)}
+                 className="flex-1 rounded-xl bg-white/5 py-3 font-bold text-white hover:bg-white/10 transition"
+               >Bekor qilish</button>

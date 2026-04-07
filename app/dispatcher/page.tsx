@@ -1248,7 +1248,7 @@ function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry }: {
   onConfirmEntry: (reportId: string, idx: number) => void
 }) {
   const [selStation, setSelStation] = useState<string | null>(null)
-  const [selYear, setSelYear] = useState(new Date().getFullYear().toString())
+  const [selYear, setSelYear] = useState('2026')
   const [selMonth, setSelMonth] = useState<number | null>(null)
 
   const archiveReports = selStation && selMonth !== null
@@ -1274,7 +1274,7 @@ function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry }: {
             <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
               <h2 className="text-2xl font-black text-white">{stations.find((s: any) => s.id === selStation)?.name} Arxiv</h2>
               <div className="mt-6 flex flex-wrap gap-2">
-                {[selYear, Number(selYear) - 1].map(y => (
+                {Array.from({ length: Math.max(3, new Date().getFullYear() - 2026 + 3) }, (_, i) => 2026 + i).map(y => (
                   <button key={y} onClick={() => setSelYear(y.toString())} className={`rounded-xl px-6 py-2 text-xs font-black ${selYear === y.toString() ? 'bg-white text-slate-900' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>{y} yil</button>
                 ))}
               </div>
