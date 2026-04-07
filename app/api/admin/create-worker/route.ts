@@ -65,6 +65,23 @@ export async function POST(req: Request) {
 
     const email = `${body.login}@shch-buxoro.local`
 
+    // ─── Avval tekshirish: email allaqachon bormi? ─────────────────
+    const { data: existingUsers } = await supabaseAdmin
+      .from('users')
+      .select('id, login')
+      .eq('login', body.login)
+
+    if (existingUsers && existingUsers.length > 0) {
+      // Eski foydalanuvchini o'chirish (Auth + Database)
+      for (const existing of existingUsers) {
+        // Auth dan o'chirish
+        await supabaseAdmin.auth.admin.deleteUser(existing.id)
+        // Database dan o'chirish (agar qolib ketgan bo'lsa)
+        await supabaseAdmin.from('users').delete().eq('id', existing.id)
+      }
+    }
+
+    // ─── Yangi foydalanuvchi yaratish ─────────────────────────────
     const { data: authData, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
         email,
