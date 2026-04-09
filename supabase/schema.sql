@@ -4,17 +4,18 @@ create table if not exists users (
   login text unique not null,
   password text not null,
   full_name text not null,
-  role text not null check (role in ('dispatcher', 'worker')),
+  role text not null check (role in ('dispatcher', 'worker', 'bekat_boshlighi')),
   position text not null default 'katta_elektromexanik',
-  station_id text,
+  station_ids text[] default '{}',
   phone text,
   created_at timestamptz default now()
 );
 
--- Dispatcher seed (bir marta)
-insert into users (id, login, password, full_name, role, station_id, phone)
-values ('dispatcher_1', 'dispetcher', 'admin123', 'Aloqa dispetcher', 'dispatcher', null, '+998901234567')
-on conflict (id) do nothing;
+-- Dispatcher seed: Birinchi marta ishga tushirganda Supabase Dashboard orqali yarating
+-- yoki quyidagi SQL ni ishlating (parolni o'zingiz belgilang):
+-- INSERT INTO auth.users (email, encrypted_password, email_confirmed_at, role)
+-- VALUES ('dispetcher@shch-buxoro.local', crypt('SIZNING_PAROLINGIZ', gen_salt('bf')), now(), 'authenticated');
+-- Keyin users jadvaliga profil qo'shing.
 
 -- Oylik hisobotlar
 create table if not exists work_reports (

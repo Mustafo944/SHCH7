@@ -57,25 +57,39 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0b1728] p-4 font-sans text-white">
-      <div className="relative w-full max-w-md overflow-hidden rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl sm:p-12">
-        <div className="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-cyan-500/20 blur-3xl"></div>
-        <div className="absolute -bottom-24 -right-24 h-48 w-48 rounded-full bg-blue-600/20 blur-3xl"></div>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-sky-50 p-4">
+      {/* Animated background elements */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-blue-200/30 blur-3xl animate-pulse" />
+        <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-sky-200/30 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-200/20 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
 
-        <div className="relative z-10">
-          <div className="mb-10 text-center">
-            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center">
-              <img src="/uty-logo.png" alt="UTY" className="h-24 w-24 object-contain filter drop-shadow-[0_0_16px_rgba(34,211,238,0.4)]" />
+      {/* Login card */}
+      <div className="relative z-10 w-full max-w-md animate-fade-up">
+        <div className="rounded-3xl border border-white/60 bg-white/80 p-8 shadow-xl backdrop-blur-xl sm:p-10">
+          {/* Logo and title */}
+          <div className="mb-8 text-center sm:mb-10">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center sm:h-24 sm:w-24">
+              <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
             </div>
-            <h1 className="text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">SHCH BUXORO</h1>
-            <p className="mt-2 text-sm font-medium tracking-widest text-cyan-300/80">SMART CONTROL</p>
+            <h1 className="text-2xl font-bold uppercase tracking-tight text-slate-900 sm:text-3xl">
+              SHCH BUXORO
+            </h1>
+            <p className="mt-2 text-xs font-semibold tracking-widest text-blue-600 uppercase">
+              SMART CONTROL TIZIMI
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Login form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Login input */}
             <div className="space-y-2">
-              <label className="ml-1 text-xs font-bold uppercase tracking-wider text-white/50">Login</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-white/40 transition-colors group-focus-within:text-cyan-400">
+              <label className="block text-sm font-medium text-slate-700">
+                Login
+              </label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                   <User className="h-5 w-5" />
                 </div>
                 <input
@@ -83,59 +97,71 @@ export default function LoginPage() {
                   required
                   value={login}
                   onChange={(e) => setLogin(e.target.value)}
-                  className="block w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-12 pr-4 text-white placeholder-white/20 transition-all focus:border-cyan-500/50 focus:bg-white/10 focus:outline-none focus:ring-4 focus:ring-cyan-500/10"
+                  className="block w-full rounded-xl border border-slate-300 bg-white py-3.5 pl-12 pr-4 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   placeholder="Loginni kiriting"
                 />
               </div>
             </div>
 
+            {/* Password input */}
             <div className="space-y-2">
-              <label className="ml-1 text-xs font-bold uppercase tracking-wider text-white/50">Parol</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-white/40 transition-colors group-focus-within:text-cyan-400">
+              <label className="block text-sm font-medium text-slate-700">
+                Parol
+              </label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                   <Lock className="h-5 w-5" />
                 </div>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-12 pr-12 text-white placeholder-white/20 transition-all focus:border-cyan-500/50 focus:bg-white/10 focus:outline-none focus:ring-4 focus:ring-cyan-500/10"
-                    placeholder="Parolni kiriting"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-white/40 hover:text-white transition"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="block w-full rounded-xl border border-slate-300 bg-white py-3.5 pl-12 pr-12 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  placeholder="Parolni kiriting"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 transition-colors hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
             </div>
 
+            {/* Error message */}
             {error && (
-              <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-center text-sm font-bold text-red-400">
+              <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-600 animate-fade-up">
+                <svg className="h-5 w-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
                 {error}
               </div>
             )}
 
+            {/* Submit button */}
             <button
               type="submit"
               disabled={loading}
-              className="relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 py-4 font-black uppercase tracking-widest text-white shadow-xl shadow-cyan-500/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+              className="relative flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-3.5 text-sm font-semibold uppercase tracking-wide text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-700 hover:to-sky-600 hover:shadow-xl hover:shadow-blue-500/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <div className="flex items-center justify-center gap-2">
-                {loading ? (
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-                ) : (
-                  "Kirish"
-                )}
-              </div>
+              {loading ? (
+                <>
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                  <span>Kirilmoqda...</span>
+                </>
+              ) : (
+                'Kirish'
+              )}
             </button>
           </form>
         </div>
+
+        {/* Footer text */}
+        <p className="mt-6 text-center text-xs text-slate-500">
+          © 2026 SHCH Buxoro. Barcha huquqlar himoyalangan.
+        </p>
       </div>
     </div>
   )

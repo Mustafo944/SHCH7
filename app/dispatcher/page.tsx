@@ -23,9 +23,10 @@ import {
   getGlobalGraphics,
   uploadGlobalGraphicFile,
   deleteGlobalGraphicFile,
+  getAllJournals,
   signOut
 } from '@/lib/supabase-db'
-import type { User, WorkReport, PremiyaReport, StationSchema, JournalType, ReportEntry } from '@/types'
+import type { User, WorkReport, PremiyaReport, StationSchema, JournalType, ReportEntry, StationJournal, DU46Entry, SHU2Entry } from '@/types'
 import { MONTHS } from '@/lib/constants'
 import { JournalSelectModal, DU46JournalView, SHU2JournalView } from '@/components/JournalView'
 import {
@@ -69,6 +70,7 @@ export default function DispatcherPage() {
   const [allReports, setAllReports] = useState<WorkReport[]>([])
   const [allPremiyaReports, setAllPremiyaReports] = useState<PremiyaReport[]>([])
   const [globalGraphics, setGlobalGraphics] = useState<StationSchema[]>([])
+  const [allJournals, setAllJournals] = useState<StationJournal[]>([])
 
   const [loading, setLoading] = useState(true)
   const [selectedStation, setSelectedStation] = useState<string | null>(null)
@@ -120,16 +122,24 @@ export default function DispatcherPage() {
     } catch (e) { console.error('Error fetching graphics', e) }
   }, [])
 
+  const loadJournals = useCallback(async () => {
+    try {
+      const j = await getAllJournals()
+      setAllJournals(j)
+    } catch (e) { console.error('Error fetching journals', e) }
+  }, [])
+
   const refreshData = useCallback(async () => {
     setLoading(true)
     await Promise.all([
       loadWorkers(),
       loadWorkReports(),
       loadPremiyaReports(),
-      loadGraphics()
+      loadGraphics(),
+      loadJournals()
     ])
     setLoading(false)
-  }, [loadWorkers, loadWorkReports, loadPremiyaReports, loadGraphics])
+  }, [loadWorkers, loadWorkReports, loadPremiyaReports, loadGraphics, loadJournals])
 
   useEffect(() => {
     async function init() {
@@ -166,8 +176,7 @@ export default function DispatcherPage() {
       .channel('dispatcher_journals')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals' }, () => {
         console.log('🚀 Realtime: Jurnal yangilandi!')
-        // Dispatchers don't actively rely on journaling on this level apart from possible side-effects. 
-        // Component child instances refresh themselves, so no global refresh needed.
+        loadJournals()
       })
       .subscribe()
 
@@ -176,7 +185,7 @@ export default function DispatcherPage() {
       supabase.removeChannel(premiyaReportsChannel)
       supabase.removeChannel(journalsChannel)
     }
-  }, [loadWorkReports, loadPremiyaReports])
+  }, [loadWorkReports, loadPremiyaReports, loadJournals])
 
   // Calculated pending counts
   const pendingCounts = useMemo(() => {
@@ -202,10 +211,47 @@ export default function DispatcherPage() {
     return counts
   }, [allPremiyaReports])
 
+  // Jurnal pending hisobi: yuborilgan lekin qabul qilinmagan qatorlar (DU-46 va SHU-2 alohida)
+  const du46PendingCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    allJournals.filter(j => j.journalType === 'du46').forEach(j => {
+      const entries = j.entries as DU46Entry[]
+      const pendingCount = entries.filter(e => e.yuborildi && !e.dispetcherQabulQildi).length
+      if (pendingCount > 0) {
+        counts[j.stationId] = (counts[j.stationId] || 0) + pendingCount
+      }
+    })
+    return counts
+  }, [allJournals])
+
+  const shu2PendingCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    allJournals.filter(j => j.journalType === 'shu2').forEach(j => {
+      const entries = j.entries as SHU2Entry[]
+      const pendingCount = entries.filter(e => e.yuborildi && !e.dispetcherQabulQildi).length
+      if (pendingCount > 0) {
+        counts[j.stationId] = (counts[j.stationId] || 0) + pendingCount
+      }
+    })
+    return counts
+  }, [allJournals])
+
+  const journalPendingCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    Object.keys(du46PendingCounts).forEach(sid => {
+      counts[sid] = (counts[sid] || 0) + (du46PendingCounts[sid] || 0)
+    })
+    Object.keys(shu2PendingCounts).forEach(sid => {
+      counts[sid] = (counts[sid] || 0) + (shu2PendingCounts[sid] || 0)
+    })
+    return counts
+  }, [du46PendingCounts, shu2PendingCounts])
+
   const totalPending = useMemo(() => {
     return Object.values(pendingCounts).reduce((a, b) => a + b, 0) +
-      Object.values(premiyaPendingCounts).reduce((a, b) => a + b, 0)
-  }, [pendingCounts, premiyaPendingCounts])
+      Object.values(premiyaPendingCounts).reduce((a, b) => a + b, 0) +
+      Object.values(journalPendingCounts).reduce((a, b) => a + b, 0)
+  }, [pendingCounts, premiyaPendingCounts, journalPendingCounts])
 
   async function handleAddWorker(e: React.FormEvent) {
     e.preventDefault()
@@ -290,12 +336,16 @@ export default function DispatcherPage() {
     if (!session) return
     try {
       await confirmReportEntry(reportId, entryIndex)
+      setFormMsg({ type: 'ok', text: '✅ Tasdiqlandi!' })
+      setTimeout(() => setFormMsg(null), 2000)
       refreshData()
     } catch (err: unknown) {
+      console.error('❌ Tasdiqlash xatosi:', err)
       setFormMsg({
         type: 'err',
         text: err instanceof Error ? err.message : "Xatolik yuz berdi"
       })
+      setTimeout(() => setFormMsg(null), 3000)
     }
   }
 
@@ -313,45 +363,44 @@ export default function DispatcherPage() {
   }
 
   if (!session) return (
-    <div className="flex min-h-screen items-center justify-center bg-[#06111f]">
-      <div className="h-12 w-12 animate-spin rounded-full border-4 border-cyan-500/20 border-t-cyan-500" />
+    <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-sky-500" />
     </div>
   )
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#06111f] text-white selection:bg-cyan-500/30">
-      {/* Premium Background */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.15),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(37,99,235,0.12),_transparent_40%),linear-gradient(135deg,_#06111f_0%,_#08172a_45%,_#020817_100%)]" />
-      <div className="absolute -left-32 top-0 h-[600px] w-[600px] rounded-full bg-cyan-400/5 blur-[120px]" />
-      <div className="absolute -right-32 bottom-0 h-[600px] w-[600px] rounded-full bg-blue-600/5 blur-[120px]" />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-sky-50 text-slate-900 selection:bg-sky-500/10">
+      {/* Subtle Decorative Elements */}
+      <div className="absolute -left-32 top-0 h-[600px] w-[600px] rounded-full bg-sky-200/15 blur-[120px]" />
+      <div className="absolute -right-32 bottom-0 h-[600px] w-[600px] rounded-full bg-blue-200/15 blur-[120px]" />
+      <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-100/10 blur-[100px]" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
-        {/* Header */}
-        <header className="sticky top-0 z-50 border-b border-white/10 bg-[#06111f]/60 backdrop-blur-2xl print:hidden">
+        {/* Header - Glass Card Effect */}
+        <header className="sticky top-0 z-50 border-b border-white/20 bg-white/70 backdrop-blur-xl print:hidden">
           <div className="mx-auto flex max-w-[1600px] items-center justify-between px-4 py-4 sm:px-8">
             <div className="flex items-center gap-4">
-              <div className="relative group">
-                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 opacity-25 blur transition group-hover:opacity-50"></div>
-                <div className="relative flex h-14 w-14 items-center justify-center">
-                  <img src="/uty-logo.png" alt="UTY" className="h-14 w-14 object-contain filter drop-shadow-[0_0_10px_rgba(34,211,238,0.4)]" />
+              <div className="relative">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/80 p-2 shadow-sm ring-1 ring-slate-200/60">
+                  <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
                 </div>
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-xl font-black uppercase tracking-tighter text-white">SMART SHCH</h1>
+                <h1 className="text-xl font-black uppercase tracking-tighter bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">SMART SHCH</h1>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="hidden items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 sm:flex">
-                <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]"></div>
-                <span className="text-sm font-medium text-white/70">Aloqa dispetcheri</span>
+              <div className="hidden items-center gap-3 rounded-2xl border border-white/40 bg-white/50 backdrop-blur-sm px-4 py-2 sm:flex shadow-sm">
+                <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]"></div>
+                <span className="text-sm font-medium text-slate-600">Aloqa dispetcheri</span>
               </div>
 
               <button
                 onClick={async () => { await signOut(); router.push('/') }}
-                className="group flex h-12 w-12 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/5 transition-all hover:bg-red-500/20 active:scale-95"
+                className="group flex h-12 w-12 items-center justify-center rounded-2xl border border-red-100/60 bg-red-50/50 backdrop-blur-sm transition-all duration-200 hover:bg-red-100 hover:shadow-md active:scale-95"
               >
-                <LogOut className="h-5 w-5 text-red-400 transition-transform group-hover:translate-x-0.5" />
+                <LogOut className="h-5 w-5 text-red-500 transition-transform group-hover:translate-x-0.5" />
               </button>
             </div>
           </div>
@@ -359,7 +408,7 @@ export default function DispatcherPage() {
 
         <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 sm:p-8">
           {/* Dashboard Stats */}
-          <div className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-4 animate-fade-up">
             <StatCard icon={<MapPin className="text-cyan-400" />} label="Bekatlar" value={stations.length} />
             <StatCard
               icon={<Users className="text-blue-400" />}
@@ -373,8 +422,8 @@ export default function DispatcherPage() {
           </div>
 
           {/* Navigation Tabs */}
-          <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex gap-1 rounded-[20px] bg-white/5 p-1.5 backdrop-blur-md border border-white/5">
+          <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between animate-fade-up">
+            <div className="flex gap-1 rounded-full bg-white/60 backdrop-blur-sm p-1.5 shadow-sm border border-white/40">
               <TabButton active={tab === 'bekatlar'} onClick={() => setTab('bekatlar')} label="Bekatlar" icon={<MapPin size={18} />} />
               <TabButton active={tab === 'arxiv'} onClick={() => setTab('arxiv')} label="Arxiv" icon={<FileText size={18} />} />
               <TabButton active={tab === 'grafiklar'} onClick={() => setTab('grafiklar')} label="Grafiklar" icon={<Download size={18} />} />
@@ -382,7 +431,7 @@ export default function DispatcherPage() {
 
             <button
               onClick={() => setShowAddWorker(!showAddWorker)}
-              className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-4 font-bold shadow-lg shadow-cyan-500/20 transition hover:scale-[1.02] active:scale-95"
+              className="btn-gradient flex items-center justify-center gap-2 rounded-full px-6 py-4 font-bold text-white shadow-lg shadow-sky-500/20 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl active:scale-95"
             >
               <Plus size={20} />
               <span>Xodim qo'shish</span>
@@ -390,7 +439,7 @@ export default function DispatcherPage() {
           </div>
 
           {showAddWorker && (
-            <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="mb-10 animate-scale-in">
               <WorkerForm
                 onSubmit={handleAddWorker}
                 onCancel={() => { setShowAddWorker(false); setEditingWorkerId(null); setForm({ fullName: '', login: '', password: '', phone: '', role: 'worker', stationIds: [] }) }}
@@ -406,12 +455,12 @@ export default function DispatcherPage() {
           {/* Tab Content */}
           <div className="min-h-[400px]">
             {tab === 'bekatlar' && (
-              <div className="grid gap-8 lg:grid-cols-[300px_1fr]">
+              <div className="grid gap-8 lg:grid-cols-[300px_1fr] animate-fade-up">
                 {/* Station Selection Sidebar */}
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-white/30">Bekatni tanlang</h3>
-                    <button onClick={() => setShowMobileStations(!showMobileStations)} className="lg:hidden text-cyan-400">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Bekatni tanlang</h3>
+                    <button onClick={() => setShowMobileStations(!showMobileStations)} className="lg:hidden text-sky-600">
                       <Menu size={20} />
                     </button>
                   </div>
@@ -434,17 +483,17 @@ export default function DispatcherPage() {
                         <button
                           key={st.id}
                           onClick={() => { setSelectedStation(st.id); setSelectedReportType(null); setShowMobileStations(false) }}
-                          className={`relative flex w-full items-center justify-between rounded-2xl border p-4 text-left transition-all ${isSelected
-                            ? 'border-cyan-500/50 bg-cyan-500/10 text-white'
-                            : 'border-white/5 bg-white/5 text-white/40 hover:border-white/10 hover:text-white/70'
+                          className={`relative flex w-full items-center justify-between rounded-2xl border p-4 text-left transition-all duration-200 ${isSelected
+                            ? 'border-sky-400/50 bg-white shadow-lg shadow-sky-500/10 text-slate-900 ring-1 ring-sky-400/20'
+                            : 'border-white/40 bg-white/60 backdrop-blur-sm text-slate-400 hover:border-slate-200 hover:bg-white hover:text-slate-600 hover:shadow-sm'
                             }`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className={`h-2 w-2 shrink-0 rounded-full ${isSelected ? 'bg-cyan-400' : 'bg-white/20'}`} />
+                            <div className={`h-2 w-2 shrink-0 rounded-full transition-all ${isSelected ? 'bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.4)]' : 'bg-slate-200'}`} />
                             <span className="font-bold">{st.name}</span>
                           </div>
                           {count > 0 && (
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-red-500 text-[10px] font-black">{count}</span>
+                            <span className="badge-danger flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[10px] font-black">{count}</span>
                           )}
                         </button>
                       )
@@ -455,19 +504,19 @@ export default function DispatcherPage() {
                 {/* Report Content */}
                 <div className="min-w-0 flex-1">
                   {!selectedStation ? (
-                    <div className="flex h-full flex-col items-center justify-center rounded-[32px] border border-white/5 bg-white/5 p-12 text-center backdrop-blur-sm">
-                      <div className="mb-6 rounded-full bg-white/5 p-8">
-                        <MapPin size={48} className="text-white/20" />
+                    <div className="premium-card flex h-full flex-col items-center justify-center p-12 text-center">
+                      <div className="mb-6 rounded-full bg-gradient-to-br from-slate-100 to-slate-50 p-8 text-slate-300 shadow-inner">
+                        <MapPin size={48} />
                       </div>
-                      <h2 className="text-2xl font-black text-white/80">Bekat tanlanmagan</h2>
-                      <p className="mt-2 max-w-sm text-white/40">Ish jarayonini nazorat qilish uchun ro'yxatdan bekatni tanlang.</p>
+                      <h2 className="text-2xl font-black text-slate-900">Bekat tanlanmagan</h2>
+                      <p className="mt-2 max-w-sm text-slate-500">Ish jarayonini nazorat qilish uchun ro'yxatdan bekatni tanlang.</p>
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-[32px] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+                      <div className="premium-card flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-6">
                         <div>
-                          <h2 className="text-2xl font-black text-white">{stations.find(s => s.id === selectedStation)?.name}</h2>
-                          <div className="mt-1 flex items-center gap-2 text-xs font-bold text-cyan-400/60">
+                          <h2 className="text-2xl font-black text-slate-900">{stations.find(s => s.id === selectedStation)?.name}</h2>
+                          <div className="mt-1 flex items-center gap-2 text-xs font-bold text-sky-600/70">
                             <Users size={12} />
                             <span>{workers.filter(w => w.stationIds.includes(selectedStation)).length} ta xodim biriktirilgan</span>
                           </div>
@@ -495,6 +544,8 @@ export default function DispatcherPage() {
                           <JournalSelectModal
                             onSelect={(type) => setActiveJournalType(type)}
                             onClose={() => setSelectedReportType(null)}
+                            du46Count={du46PendingCounts[selectedStation || ''] || 0}
+                            shu2Count={shu2PendingCounts[selectedStation || ''] || 0}
                           />
                         )}
                         {selectedReportType === 'jurnallar' && activeJournalType === 'du46' && (
@@ -537,6 +588,7 @@ export default function DispatcherPage() {
                               desc="DU-46 va ShU-2 jurnallarini ko'rish va tahrirlash."
                               icon={<BookOpen size={32} />}
                               onClick={() => setSelectedReportType('jurnallar')}
+                              count={(du46PendingCounts[selectedStation || ''] || 0) + (shu2PendingCounts[selectedStation || ''] || 0)}
                               color="emerald"
                             />
                             <BigActionCard
@@ -559,6 +611,7 @@ export default function DispatcherPage() {
               <ArchiveView
                 stations={stations}
                 allReports={allReports}
+                allJournals={allJournals}
                 onConfirm={handleConfirmReport}
                 onConfirmEntry={handleConfirmEntry}
               />
@@ -623,13 +676,13 @@ export default function DispatcherPage() {
 
       {/* O'chirish tasdiqlash modali */}
       {deleteConfirmId && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-[#06111f] p-8 shadow-2xl">
-            <h3 className="text-lg font-black text-white">Ishchini o'chirish</h3>
-            <p className="mt-2 text-sm text-white/40">Haqiqatdan ham ishchini o'chirishni xohlaysizmi? Bu amalni qaytarib bo'lmaydi.</p>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
+          <div className="premium-card w-full max-w-md p-8 animate-scale-in">
+            <h3 className="text-lg font-black text-slate-900">Ishchini o'chirish</h3>
+            <p className="mt-2 text-sm text-slate-500">Haqiqatdan ham ishchini o'chirishni xohlaysizmi? Bu amalni qaytarib bo'lmaydi.</p>
             <div className="mt-8 flex justify-end gap-3">
-              <button onClick={() => setDeleteConfirmId(null)} className="rounded-2xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-bold text-white/60 hover:bg-white/10">Bekor qilish</button>
-              <button onClick={confirmDeleteWorker} className="rounded-2xl bg-red-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-500/20 hover:bg-red-600">O'chirish</button>
+              <button onClick={() => setDeleteConfirmId(null)} className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Bekor qilish</button>
+              <button onClick={confirmDeleteWorker} className="rounded-xl bg-red-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all">O'chirish</button>
             </div>
           </div>
         </div>
@@ -643,7 +696,7 @@ export default function DispatcherPage() {
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(0, 0, 0, 0.1);
           border-radius: 10px;
         }
         @media print {
@@ -665,17 +718,17 @@ function StatCard({ icon, label, value, active, clickable, onClick }: {
   return (
     <div
       onClick={onClick}
-      className={`relative group overflow-hidden rounded-[28px] border border-white/5 bg-white/5 p-6 backdrop-blur-md transition-all ${clickable ? 'cursor-pointer hover:border-white/20 hover:scale-[1.02]' : ''}`}
+      className={`premium-card group relative overflow-hidden p-6 transition-all duration-300 ${clickable ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02]' : ''}`}
     >
       <div className="flex items-center justify-between">
-        <div className="rounded-2xl bg-white/5 p-3 group-hover:scale-110 transition-transform">
+        <div className="rounded-2xl bg-slate-50/80 p-3 transition-all duration-300 group-hover:scale-110 group-hover:bg-sky-50">
           {icon}
         </div>
         {active && <div className="h-2 w-2 rounded-full bg-red-500 animate-ping" />}
       </div>
       <div className="mt-4">
-        <p className="text-[10px] font-black uppercase tracking-widest text-white/30">{label}</p>
-        <p className="text-3xl font-black text-white">{value}</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+        <p className="text-3xl font-black text-slate-900">{value}</p>
       </div>
     </div>
   )
@@ -685,9 +738,9 @@ function TabButton({ active, onClick, label, icon }: { active: boolean, onClick:
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-[14px] px-6 py-3 text-sm font-bold transition-all ${active
-        ? 'bg-white/10 text-white shadow-xl border border-white/10'
-        : 'text-white/40 hover:text-white/60'
+      className={`flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold transition-all duration-200 ${active
+        ? 'bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-lg shadow-slate-900/20'
+        : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
         }`}
     >
       {icon}
@@ -698,49 +751,51 @@ function TabButton({ active, onClick, label, icon }: { active: boolean, onClick:
 
 function ReportTypeBtn({ active, icon, label, onClick, count, color = 'cyan' }: { active: boolean, icon: React.ReactNode, label: string, onClick: () => void, count?: number, color?: 'cyan' | 'amber' | 'blue' }) {
   const colorMap: Record<string, string> = {
-    cyan: 'border-cyan-500/30 text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20',
-    amber: 'border-amber-500/30 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20',
-    blue: 'border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500/20',
+    cyan: 'border-sky-200 text-sky-600 bg-sky-50 hover:bg-sky-100',
+    amber: 'border-amber-200 text-amber-600 bg-amber-50 hover:bg-amber-100',
+    blue: 'border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100',
   }
   return (
     <button
       onClick={onClick}
-      className={`relative flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-bold transition-all active:scale-95 ${active ? colorMap[color] : 'border-white/5 bg-white/5 text-white/40 hover:bg-white/10'
+      className={`relative flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-bold transition-all duration-200 active:scale-95 ${active ? colorMap[color] : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50'
         }`}
     >
       {icon}
       <span>{label}</span>
-      {count !== undefined && count > 0 && <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-black text-white">{count}</span>}
+      {count !== undefined && count > 0 && <span className="badge-danger absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black">{count}</span>}
     </button>
   )
 }
 
 function BigActionCard({ title, desc, icon, onClick, count, color = 'cyan' }: { title: string, desc: string, icon: React.ReactNode, onClick: () => void, count?: number, color?: 'cyan' | 'amber' | 'blue' | 'emerald' }) {
   const colorMap: Record<string, string> = {
-    cyan: 'from-cyan-500/20 shadow-cyan-500/5 hover:border-cyan-500/30 text-cyan-400',
-    amber: 'from-amber-500/20 shadow-amber-500/5 hover:border-amber-500/30 text-amber-400',
-    blue: 'from-blue-500/20 shadow-blue-500/5 hover:border-blue-500/30 text-blue-400',
-    emerald: 'from-emerald-500/20 shadow-emerald-500/5 hover:border-emerald-500/30 text-emerald-400',
+    cyan: 'from-sky-50 shadow-sky-500/5 hover:border-sky-300 text-sky-600 bg-white',
+    amber: 'from-amber-50 shadow-amber-500/5 hover:border-amber-300 text-amber-600 bg-white',
+    blue: 'from-blue-50 shadow-blue-500/5 hover:border-blue-300 text-blue-600 bg-white',
+    emerald: 'from-emerald-50 shadow-emerald-500/5 hover:border-emerald-300 text-emerald-600 bg-white',
   }
   return (
     <button
       onClick={onClick}
-      className={`relative group flex flex-col items-start p-8 rounded-[32px] border border-white/5 bg-gradient-to-br to-transparent transition-all hover:scale-[1.02] active:scale-[0.98] text-left ${colorMap[color]}`}
+      className={`premium-card group relative flex flex-col items-start p-8 bg-gradient-to-br to-transparent transition-all duration-300 hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] text-left ${colorMap[color]}`}
     >
-      <div className="rounded-2xl bg-white/5 p-4 mb-6 group-hover:scale-110 transition-transform">
+      <div className="rounded-2xl bg-slate-50/80 p-4 mb-6 transition-all duration-300 group-hover:scale-110 group-hover:bg-white">
         {icon}
       </div>
-      <h3 className="text-xl font-black text-white">{title}</h3>
-      <p className="mt-2 text-sm text-white/40 leading-relaxed">{desc}</p>
+      <h3 className="text-xl font-black text-slate-900">{title}</h3>
+      <p className="mt-2 text-sm text-slate-500 leading-relaxed">{desc}</p>
       {count !== undefined && count > 0 && (
-        <div className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-500/20 px-3 py-1 text-[10px] font-black text-red-400">
+        <div className="badge-warning badge mt-4 inline-flex items-center gap-2 rounded-lg px-3 py-1 text-[10px] font-black">
           <Clock size={12} />
-          {count} ta kutuvda
+          {count} ta qabul qilinmagan yozuv
         </div>
       )}
     </button>
   )
 }
+
+// ===== HISOBOT KARTASI =====
 
 function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, message }: {
   onSubmit: (e: React.FormEvent) => void
@@ -752,13 +807,13 @@ function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, messa
   message: { type: 'ok' | 'err'; text: string } | null
 }) {
   return (
-    <form onSubmit={onSubmit} className="rounded-[32px] border border-white/10 bg-white/5 p-8 backdrop-blur-xl shadow-2xl">
+    <form onSubmit={onSubmit} className="premium-card p-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-black text-white">{isEdit ? 'Xodimni tahrirlash' : 'Yangi xodim qo\'shish'}</h2>
-          <p className="text-sm text-white/40">Tizimga kirish uchun login va bekatlarni biriktiring.</p>
+          <h2 className="text-2xl font-black text-slate-900">{isEdit ? 'Xodimni tahrirlash' : 'Yangi xodim qo\'shish'}</h2>
+          <p className="text-sm text-slate-500">Tizimga kirish uchun login va bekatlarni biriktiring.</p>
         </div>
-        <button type="button" onClick={onCancel} className="rounded-xl p-2 text-white/30 hover:bg-white/10">
+        <button type="button" onClick={onCancel} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 transition-colors">
           <X size={24} />
         </button>
       </div>
@@ -773,16 +828,16 @@ function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, messa
           </div>
 
           <div>
-            <label className="mb-3 block text-[10px] font-black uppercase tracking-widest text-white/30">Lavozimi</label>
+            <label className="mb-3 block text-[10px] font-black uppercase tracking-widest text-slate-400">Lavozimi</label>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setForm({ ...form, role: 'worker' })} className={`flex-1 rounded-2xl py-4 text-xs font-bold border transition-all ${form.role === 'worker' ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400' : 'bg-white/5 border-white/5 text-white/40'}`}>Katta Elektromexanik</button>
-              <button type="button" onClick={() => setForm({ ...form, role: 'bekat_boshlighi' })} className={`flex-1 rounded-2xl py-4 text-xs font-bold border transition-all ${form.role === 'bekat_boshlighi' ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' : 'bg-white/5 border-white/5 text-white/40'}`}>Bekat Boshlig'i</button>
+              <button type="button" onClick={() => setForm({ ...form, role: 'worker' })} className={`flex-1 rounded-xl py-4 text-xs font-bold border transition-all duration-200 ${form.role === 'worker' ? 'bg-sky-50 border-sky-400 text-sky-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Katta Elektromexanik</button>
+              <button type="button" onClick={() => setForm({ ...form, role: 'bekat_boshlighi' })} className={`flex-1 rounded-xl py-4 text-xs font-bold border transition-all duration-200 ${form.role === 'bekat_boshlighi' ? 'bg-amber-50 border-amber-400 text-amber-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Bekat Boshlig'i</button>
             </div>
           </div>
         </div>
 
-        <div className="rounded-[24px] bg-white/5 p-6 border border-white/5">
-          <label className="mb-4 block text-[10px] font-black uppercase tracking-widest text-white/30">Bekatlarni biriktirish ({form.stationIds.length})</label>
+        <div className="rounded-2xl bg-slate-50/80 p-6 border border-slate-100">
+          <label className="mb-4 block text-[10px] font-black uppercase tracking-widest text-slate-400">Bekatlarni biriktirish ({form.stationIds.length})</label>
           <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
             {stations.map((s: any) => (
               <button
@@ -793,9 +848,9 @@ function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, messa
                   if (exists) setForm({ ...form, stationIds: form.stationIds.filter((id: string) => id !== s.id) })
                   else setForm({ ...form, stationIds: [...form.stationIds, s.id] })
                 }}
-                className={`flex items-center gap-2 rounded-xl p-3 text-xs font-bold border transition-all ${form.stationIds.includes(s.id) ? 'bg-white/10 border-white/20 text-white' : 'bg-white/5 border-white/5 text-white/30 hover:border-white/10'}`}
+                className={`flex items-center gap-2 rounded-xl p-3 text-xs font-bold border transition-all duration-200 ${form.stationIds.includes(s.id) ? 'bg-white border-slate-200 text-slate-900 shadow-sm' : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-200/50'}`}
               >
-                <div className={`h-1.5 w-1.5 rounded-full ${form.stationIds.includes(s.id) ? 'bg-cyan-400' : 'bg-transparent'}`} />
+                <div className={`h-1.5 w-1.5 rounded-full ${form.stationIds.includes(s.id) ? 'bg-sky-500' : 'bg-slate-200'}`} />
                 {s.name}
               </button>
             ))}
@@ -804,13 +859,13 @@ function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, messa
       </div>
 
       {message && (
-        <div className={`mt-8 rounded-2xl p-4 text-center text-sm font-bold ${message.type === 'ok' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+        <div className={`mt-8 rounded-xl p-4 text-center text-sm font-bold ${message.type === 'ok' ? 'badge-success' : 'badge-danger'}`}>
           {message.text}
         </div>
       )}
 
       <div className="mt-8 flex justify-end gap-3">
-        <button type="submit" className="rounded-2xl bg-white px-10 py-4 text-sm font-black text-slate-900 shadow-xl transition hover:scale-[1.02] active:scale-95">
+        <button type="submit" className="btn-gradient rounded-xl px-10 py-4 text-sm font-black text-white shadow-xl transition-all duration-200 hover:scale-[1.02] active:scale-95">
           {isEdit ? 'Yangilash' : 'Xodimni qo\'shish'}
         </button>
       </div>
@@ -821,13 +876,13 @@ function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, messa
 function FormGroup({ label, value, onChange, placeholder, type = 'text' }: { label: string, value: string, onChange: (val: string) => void, placeholder: string, type?: string }) {
   return (
     <div className="space-y-1.5">
-      <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-white/30">{label}</label>
+      <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-2xl border border-white/5 bg-white/5 px-5 py-4 text-sm text-white placeholder-white/20 outline-none transition focus:border-cyan-500/50 focus:bg-white/10"
+        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-sky-500/50 focus:bg-white"
       />
     </div>
   )
@@ -857,31 +912,32 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
   const isPending = !report.confirmedAt && report.entries.some((e) => (e.haftalikJadval || e.yillikJadval) && !e.adImzosi)
 
   return (
-    <div className={`overflow-hidden rounded-[28px] border border-white/10 bg-white/5 transition-all ${expanded ? 'ring-2 ring-cyan-500/20' : 'hover:bg-white/8'}`}>
+    <div className={`premium-card overflow-hidden transition-all duration-300 ${expanded ? 'shadow-xl ring-1 ring-sky-400/20' : 'hover:bg-white/80 shadow-sm'}`}>
       <div
         onClick={() => setExpanded(!expanded)}
         className="flex cursor-pointer items-center justify-between p-6"
       >
         <div className="flex items-center gap-4">
-          <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${isPending ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+          <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 ${isPending ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
             {isPending ? <Clock size={24} /> : <CheckCircle2 size={24} />}
           </div>
           <div>
-            <h3 className="text-sm font-black text-white">{report.workerName}</h3>
-            <p className="mt-1 text-[10px] font-bold text-white/30 uppercase tracking-widest">
+            <h3 className="text-sm font-black text-slate-900">{report.workerName}</h3>
+            <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               {new Date(report.submittedAt).toLocaleDateString('uz-UZ')} · {report.month}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <ChevronRight className={`text-white/20 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+          {isPending && <span className="badge-warning badge rounded-lg px-3 py-1 text-[10px] font-black">QABUL QILINMAGAN</span>}
+          <ChevronRight className={`text-slate-300 transition-transform duration-200 ${expanded ? 'rotate-90 text-sky-500' : ''}`} />
         </div>
       </div>
 
       {expanded && (
-        <div className="border-t border-white/10 p-6 pt-2">
+        <div className="border-t border-slate-100 p-6 pt-2">
           <div className="mb-4 flex items-center justify-between">
-            <span className="text-xs text-white/40">Ishchi: <span className="font-bold text-white/60">{report.workerName}</span></span>
+            <span className="text-xs text-slate-400">Ishchi: <span className="font-bold text-slate-600">{report.workerName}</span></span>
             <div className="flex gap-2">
               <button
                 onClick={(e) => {
@@ -938,63 +994,67 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
                   printWindow.document.close()
                   printWindow.print()
                 }}
-                className="rounded-xl border border-white/10 bg-white/5 p-2.5 text-white/60 hover:text-white"
+                className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 hover:text-sky-600 hover:border-sky-200 transition-all shadow-sm"
               >
                 <Download size={18} />
               </button>
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 relative">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 relative">
             <div className="sm:hidden absolute top-0 right-0 bg-blue-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
               O&apos;ngga suring →
             </div>
             <div className="overflow-x-auto overflow-y-hidden">
-              <table className="w-full border-collapse text-left text-[11px] text-white/80">
-                <thead className="border-b-2 border-cyan-500/50 bg-[#0b1728] font-bold text-white/70">
+              <table className="w-full border-collapse text-left text-[11px] text-slate-700">
+                <thead className="border-b-2 border-sky-500/50 bg-slate-100 font-bold text-slate-600">
                   <tr>
-                    <th rowSpan={2} className="w-8 border-r border-white/10 p-1.5 text-center text-[10px]">№</th>
-                    <th rowSpan={2} className="w-[16%] border-r border-white/10 p-1.5 text-center text-[10px]">4-haftalik<br /><span className="font-normal text-white/40">jadval</span></th>
-                    <th rowSpan={2} className="w-[16%] border-r border-white/10 p-1.5 text-center text-[10px]">Yillik<br /><span className="font-normal text-white/40">jadval</span></th>
-                    <th rowSpan={2} className="w-[12%] border-r border-white/10 p-1.5 text-[10px]">Yangi<br /><span className="font-normal text-white/40">ishlar</span></th>
-                    <th rowSpan={2} className="w-[12%] border-r border-white/10 p-1.5 text-[10px]">KMO<br /><span className="font-normal text-white/40">bartaraf</span></th>
-                    <th rowSpan={2} className="w-[12%] border-r border-white/10 p-1.5 text-[10px]">Majburiy<br /><span className="font-normal text-white/40">o&apos;zgartirish</span></th>
-                    <th colSpan={2} className="border-r border-white/10 p-1.5 text-center text-[10px]">Bajarilgan</th>
-                    <th rowSpan={2} className="bg-amber-500/10 p-1.5 text-center text-[10px]">AD<br />imzo</th>
+                    <th rowSpan={2} className="w-8 border-r border-slate-200 p-1.5 text-center text-[10px]">№</th>
+                    <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-1.5 text-center text-[10px] leading-tight">4-haftalik<br />jadval</th>
+                    <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-1.5 text-center text-[10px] leading-tight">Yillik<br />jadval bo&apos;yicha</th>
+                    <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-1.5 text-[10px] leading-tight">Yangi<br />ishlar ro&apos;yxati</th>
+                    <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-1.5 text-[10px] leading-tight">O&apos;tka-<br />zilgan KMO va<br />bartaraf etilgan<br />kamchiliklar</th>
+                    <th rowSpan={2} className="w-[13%] border-r border-slate-200 p-1.5 text-[10px] leading-tight">Majburiy<br />o&apos;zgartirish</th>
+                    <th colSpan={2} className="border-r border-slate-200 p-1.5 text-center text-[10px]">Bajarilgan</th>
+                    <th rowSpan={2} className="bg-amber-50 p-1.5 text-center text-[10px] text-amber-700">AD<br />imzo</th>
                   </tr>
-                  <tr className="bg-[#0b1728]/30">
-                    <th className="border-r border-t border-white/10 p-1.5 text-center text-[10px] text-cyan-300">Shn</th>
-                    <th className="border-r border-t border-white/10 p-1.5 text-center text-[10px] text-cyan-300">Imzo</th>
+                  <tr className="bg-slate-50">
+                    <th className="border-r border-t border-slate-200 p-1.5 text-center text-[10px] text-sky-600">Shn</th>
+                    <th className="border-r border-t border-slate-200 p-1.5 text-center text-[10px] text-sky-600">Imzo</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {report.entries.filter((e: ReportEntry) => e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish).map((e: ReportEntry, idx: number) => (
-                    <tr key={idx} className="group border-b border-white/10 hover:bg-[#0b1728]">
-                      <td className="border-r border-white/10 p-1.5 text-center font-bold text-cyan-400/50">{e.ragat}</td>
-                      <td className="border-r border-white/10 p-1.5 align-top whitespace-pre-wrap">{e.haftalikJadval || '—'}</td>
-                      <td className="border-r border-white/10 p-1.5 align-top whitespace-pre-wrap">{e.yillikJadval || '—'}</td>
-                      <td className="border-r border-white/10 p-1.5 align-top whitespace-pre-wrap">{e.yangiIshlar || '—'}</td>
-                      <td className="border-r border-white/10 p-1.5 align-top whitespace-pre-wrap">{e.kmoBartaraf || '—'}</td>
-                      <td className="border-r border-white/10 p-1.5 align-top whitespace-pre-wrap">{e.majburiyOzgarish || '—'}</td>
-                      <td className="border-r border-white/10 p-1.5 text-center align-middle text-[10px] font-medium text-cyan-300">{e.bajarildiShn || '—'}</td>
-                      <td className="border-r border-white/10 p-1.5 text-center align-middle text-[10px] italic text-cyan-300/80">{e.bajarildiImzo || '—'}</td>
-                      <td className="p-1.5 text-center align-middle">
-                        {e.adImzosi ? (
-                          <div className="flex items-center justify-center gap-1 rounded-lg bg-emerald-500/10 py-1.5 border border-emerald-500/20 text-emerald-400">
-                            <CheckCircle2 size={10} />
-                            <span className="text-[9px] font-bold">{e.adImzosi}</span>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => onConfirmRow(idx)}
-                            className="w-full rounded-lg bg-white/5 py-1.5 text-[9px] font-bold text-white/40 hover:bg-cyan-500 hover:text-white transition-all"
-                          >
-                            Tasdiqlash
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {report.entries.filter((e: ReportEntry) => e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish).map((e: ReportEntry, idx: number) => {
+                    // Asl massivdagi indexni topish
+                    const originalIndex = report.entries.findIndex(item => item === e)
+                    return (
+                      <tr key={originalIndex} className="group border-b border-slate-100 hover:bg-white transition-colors">
+                        <td className="border-r border-slate-200 p-1.5 text-center font-bold text-slate-400">{e.ragat}</td>
+                        <td className="border-r border-slate-200 p-1.5 align-top whitespace-pre-wrap">{e.haftalikJadval || '—'}</td>
+                        <td className="border-r border-slate-200 p-1.5 align-top whitespace-pre-wrap">{e.yillikJadval || '—'}</td>
+                        <td className="border-r border-slate-200 p-1.5 align-top whitespace-pre-wrap">{e.yangiIshlar || '—'}</td>
+                        <td className="border-r border-slate-200 p-1.5 align-top whitespace-pre-wrap">{e.kmoBartaraf || '—'}</td>
+                        <td className="border-r border-slate-200 p-1.5 align-top whitespace-pre-wrap">{e.majburiyOzgarish || '—'}</td>
+                        <td className="border-r border-slate-200 p-1.5 text-center align-middle text-[10px] font-medium text-sky-600">{e.bajarildiShn || '—'}</td>
+                        <td className="border-r border-slate-200 p-1.5 text-center align-middle text-[10px] italic text-slate-500">{e.bajarildiImzo || '—'}</td>
+                        <td className="p-1.5 text-center align-middle">
+                          {e.adImzosi ? (
+                            <div className="flex items-center justify-center gap-1 rounded-lg bg-emerald-50 py-1.5 border border-emerald-100 text-emerald-600">
+                              <CheckCircle2 size={10} />
+                              <span className="text-[9px] font-bold">{e.adImzosi}</span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => onConfirmRow(originalIndex)}
+                              className="w-full rounded-lg bg-sky-50 py-1.5 text-[9px] font-bold text-sky-600 hover:bg-sky-500 hover:text-white transition-all shadow-sm"
+                            >
+                              Tasdiqlash
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1027,27 +1087,27 @@ function PremiyaCard({ report, onConfirm }: {
   const isPending = !report.confirmedAt
 
   return (
-    <div className={`overflow-hidden rounded-[28px] border border-white/10 bg-white/5 transition-all ${expanded ? 'ring-2 ring-amber-500/20' : 'hover:bg-white/8'}`}>
+    <div className={`premium-card overflow-hidden transition-all duration-300 ${expanded ? 'shadow-xl ring-1 ring-amber-400/20' : 'hover:bg-white/80 shadow-sm'}`}>
       <div onClick={() => setExpanded(!expanded)} className="flex cursor-pointer items-center justify-between p-6">
         <div className="flex items-center gap-4">
-          <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${isPending ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+          <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 ${isPending ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
             <Award size={24} />
           </div>
           <div>
-            <h3 className="text-sm font-black text-white">{report.workerName} · Premiya</h3>
-            <p className="mt-1 text-[10px] font-bold text-white/30 uppercase tracking-widest">{report.month}</p>
+            <h3 className="text-sm font-black text-slate-900">{report.workerName} · Premiya</h3>
+            <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{report.month}</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {isPending && <span className="rounded-lg bg-amber-500/20 px-3 py-1 text-[10px] font-black text-amber-400">KUTUVDA</span>}
-          <ChevronRight className={`text-white/20 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+          {isPending && <span className="badge-warning badge rounded-lg px-3 py-1 text-[10px] font-black">QABUL QILINMAGAN</span>}
+          <ChevronRight className={`text-slate-300 transition-transform duration-200 ${expanded ? 'rotate-90 text-amber-500' : ''}`} />
         </div>
       </div>
 
       {expanded && (
-        <div className="border-t border-white/10 p-6 pt-2">
+        <div className="border-t border-slate-100 p-6 pt-2">
           <div className="mb-4 flex items-center justify-between">
-            <span className="text-xs text-white/40">{isPending ? 'Ro\'yxatni tekshirib tasdiqlang.' : `Tasdiqlangan: ${report.confirmedAt}`}</span>
+            <span className="text-xs text-slate-400">{isPending ? 'Ro\'yxatni tekshirib tasdiqlang.' : `Tasdiqlangan: ${report.confirmedAt}`}</span>
             <div className="flex gap-2">
               <button
                 onClick={async (e) => {
@@ -1064,7 +1124,7 @@ function PremiyaCard({ report, onConfirm }: {
                   autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30, styles: { font: 'helvetica', fontSize: 8 }, headStyles: { fillColor: [245, 158, 11] } })
                   doc.save(`Premiya_${report.stationName}_${report.month}.pdf`)
                 }}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 flex items-center justify-center gap-2 text-xs font-bold text-white hover:bg-white/10 transition-colors"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 flex items-center justify-center gap-2 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors shadow-sm"
               >
                 <Download size={14} />
                 Yuklab olish
@@ -1072,7 +1132,7 @@ function PremiyaCard({ report, onConfirm }: {
               {isPending && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onConfirm() }}
-                  className="rounded-xl bg-amber-500 px-6 py-2.5 text-xs font-black text-slate-900 shadow-lg shadow-amber-500/20 active:scale-95"
+                  className="rounded-xl bg-amber-500 px-6 py-2.5 text-xs font-black text-white shadow-lg shadow-amber-500/20 active:scale-95 transition-all hover:bg-amber-600"
                 >
                   Ro'yxatni Qabul Qilish
                 </button>
@@ -1080,9 +1140,9 @@ function PremiyaCard({ report, onConfirm }: {
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-black/20">
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50">
             <table className="w-full text-left text-[11px]">
-              <thead className="bg-white/5 text-[10px] font-black uppercase tracking-widest text-white/30">
+              <thead className="bg-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500">
                 <tr>
                   <th className="p-4 text-center w-12">№</th>
                   <th className="p-4">I.SH.</th>
@@ -1092,15 +1152,15 @@ function PremiyaCard({ report, onConfirm }: {
                   <th className="p-4">Eslatma</th>
                 </tr>
               </thead>
-              <tbody className="text-white/80">
+              <tbody className="text-slate-700">
                 {report.entries.map((e, idx: number) => (
-                  <tr key={idx} className="border-b border-white/5 last:border-0">
-                    <td className="p-4 text-center text-white/30 font-bold">{idx + 1}</td>
+                  <tr key={idx} className="border-b border-slate-200 last:border-0 hover:bg-white transition-colors">
+                    <td className="p-4 text-center text-slate-400 font-bold">{idx + 1}</td>
                     <td className="p-4 font-bold">{e.ish}</td>
-                    <td className="p-4 text-white/50">{e.lavozim}</td>
-                    <td className="p-4 text-center text-white/50">{e.tabelNomeri}</td>
-                    <td className="p-4 text-center font-black text-amber-400">{e.foiz}%</td>
-                    <td className="p-4 text-white/40">{e.eslatma}</td>
+                    <td className="p-4 text-slate-500">{e.lavozim}</td>
+                    <td className="p-4 text-center text-slate-500">{e.tabelNomeri}</td>
+                    <td className="p-4 text-center font-black text-amber-600">{e.foiz}%</td>
+                    <td className="p-4 text-slate-500">{e.eslatma}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1163,31 +1223,31 @@ function SchemasView({ stationId, userName }: { stationId: string, userName: str
     load()
   }
 
-  if (loading) return <div className="p-8 text-center text-white/20">Yuklanmoqda...</div>
+  if (loading) return <div className="p-8 text-center text-slate-300">Yuklanmoqda...</div>
 
   return (
     <div className="space-y-6">
       {schemaMsg && (
-        <div className={`rounded-2xl p-4 text-center text-sm font-bold ${schemaMsg.type === 'ok' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+        <div className={`rounded-xl p-4 text-center text-sm font-bold ${schemaMsg.type === 'ok' ? 'badge-success' : 'badge-danger'}`}>
           {schemaMsg.text}
         </div>
       )}
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-black uppercase tracking-widest text-white/30">Bekat xaritalari</h3>
-        <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 rounded-xl bg-white/5 px-4 py-2 text-xs font-bold text-white hover:bg-white/10">
+        <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Bekat xaritalari</h3>
+        <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 rounded-xl bg-white/60 backdrop-blur-sm border border-white/40 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-white hover:shadow-sm transition-all duration-200">
           <Plus size={16} />
           {showForm ? 'Bekor qilish' : 'Sxema yuklash'}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleAdd} className="grid items-end gap-4 rounded-3xl border border-white/5 bg-white/3 p-6 sm:grid-cols-[1fr_1fr_auto]">
+        <form onSubmit={handleAdd} className="premium-card grid items-end gap-6 p-6 sm:grid-cols-[1fr_1fr_auto]">
           <FormGroup label="Sxema nomi" value={newName} onChange={setNewName} placeholder="Bir ipli sxema" />
           <div className="space-y-1.5">
-            <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-white/30">Fayl (PDF)</label>
-            <input type="file" accept="application/pdf" onChange={(e) => setNewFile(e.target.files?.[0] || null)} className="w-full text-xs text-white/40 file:mr-4 file:rounded-xl file:border-0 file:bg-white/10 file:px-4 file:py-2 file:text-xs file:font-bold file:text-white" />
+            <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Fayl (PDF)</label>
+            <input type="file" accept="application/pdf" onChange={(e) => setNewFile(e.target.files?.[0] || null)} className="w-full text-xs text-slate-500 file:mr-4 file:rounded-xl file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-xs file:font-bold file:text-slate-700 hover:file:bg-slate-200 cursor-pointer" />
           </div>
-          <button disabled={uploading} type="submit" className="rounded-2xl bg-cyan-500 px-8 py-4 text-xs font-black text-white hover:opacity-90 disabled:opacity-50">
+          <button disabled={uploading} type="submit" className="btn-gradient rounded-xl px-8 py-4 text-xs font-black text-white shadow-lg shadow-sky-500/20 transition-all duration-200 disabled:opacity-50">
             {uploading ? 'Yuklanmoqda...' : 'SAQLASH'}
           </button>
         </form>
@@ -1195,29 +1255,29 @@ function SchemasView({ stationId, userName }: { stationId: string, userName: str
 
       <div className="grid gap-4 sm:grid-cols-2">
         {schemas.map(s => (
-          <div key={s.id} className="flex items-center justify-between rounded-[24px] border border-white/5 bg-white/3 p-5 transition-all hover:border-white/10">
+          <div key={s.id} className="premium-card flex items-center justify-between p-5 transition-all duration-200 hover:shadow-md group">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400"><MapPin size={24} /></div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-50 text-sky-600 transition-transform duration-200 group-hover:scale-110"><MapPin size={24} /></div>
               <div>
-                <h4 className="text-sm font-black text-white">{s.schemaType}</h4>
-                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">{s.fileName}</p>
+                <h4 className="text-sm font-black text-slate-900">{s.schemaType}</h4>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.fileName}</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setPreview(s.filePath)} className="rounded-xl bg-white/5 p-2.5 text-white/60 hover:text-white transition-all"><Eye size={18} /></button>
-              <button onClick={() => handleDelete(s.id)} className="rounded-xl bg-red-500/5 p-2.5 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-all"><Trash2 size={18} /></button>
+              <button onClick={() => setPreview(s.filePath)} className="rounded-xl bg-slate-50 p-2.5 text-slate-500 hover:text-sky-600 hover:bg-sky-50 transition-all duration-200 shadow-sm"><Eye size={18} /></button>
+              <button onClick={() => handleDelete(s.id)} className="rounded-xl bg-red-50 p-2.5 text-red-500 hover:text-red-700 hover:bg-red-100 transition-all duration-200 shadow-sm"><Trash2 size={18} /></button>
             </div>
           </div>
         ))}
-        {schemas.length === 0 && <div className="col-span-full py-12 text-center text-white/20">Hali sxemalar yuklanmagan.</div>}
+        {schemas.length === 0 && <div className="col-span-full py-12 text-center text-slate-300">Hali sxemalar yuklanmagan.</div>}
       </div>
 
       {preview && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-          <div className="h-full w-full max-w-6xl overflow-hidden rounded-[32px] border border-white/10 bg-[#06111f]">
-            <div className="flex items-center justify-between border-b border-white/10 px-8 py-4">
-              <h3 className="text-lg font-black text-white">Sxema: {schemas.find(s => s.filePath === preview)?.schemaType}</h3>
-              <button onClick={() => setPreview(null)} className="rounded-xl border border-white/10 p-2 text-white/40 hover:text-white"><X size={24} /></button>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
+          <div className="premium-card h-full w-full max-w-6xl overflow-hidden p-0 animate-scale-in">
+            <div className="flex items-center justify-between border-b border-slate-200 px-8 py-4">
+              <h3 className="text-lg font-black text-slate-900">Sxema: {schemas.find(s => s.filePath === preview)?.schemaType}</h3>
+              <button onClick={() => setPreview(null)} className="rounded-xl border border-slate-200 p-2 text-slate-400 hover:text-slate-900 transition-colors"><X size={24} /></button>
             </div>
             <iframe src={preview} className="h-[calc(100%-80px)] w-full" />
           </div>
@@ -1226,13 +1286,13 @@ function SchemasView({ stationId, userName }: { stationId: string, userName: str
 
       {/* Sxema o'chirish tasdiqlash modali */}
       {deleteSchemaConfirmId && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-[#06111f] p-8 shadow-2xl">
-            <h3 className="text-lg font-black text-white">Sxemani o'chirish</h3>
-            <p className="mt-2 text-sm text-white/40">Haqiqatdan ham sxemani o'chirishni xohlaysizmi?</p>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
+          <div className="premium-card w-full max-w-md p-8 animate-scale-in">
+            <h3 className="text-lg font-black text-slate-900">Sxemani o'chirish</h3>
+            <p className="mt-2 text-sm text-slate-500">Haqiqatdan ham sxemani o'chirishni xohlaysizmi?</p>
             <div className="mt-8 flex justify-end gap-3">
-              <button onClick={() => setDeleteSchemaConfirmId(null)} className="rounded-2xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-bold text-white/60 hover:bg-white/10">Bekor qilish</button>
-              <button onClick={confirmSchemaDelete} className="rounded-2xl bg-red-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-500/20 hover:bg-red-600">O'chirish</button>
+              <button onClick={() => setDeleteSchemaConfirmId(null)} className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Bekor qilish</button>
+              <button onClick={confirmSchemaDelete} className="btn-gradient rounded-xl px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-500/20">O'chirish</button>
             </div>
           </div>
         </div>
@@ -1241,69 +1301,404 @@ function SchemasView({ stationId, userName }: { stationId: string, userName: str
   )
 }
 
-function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry }: {
+function ArchiveView({ stations, allReports, allJournals, onConfirm, onConfirmEntry }: {
   stations: { id: string; name: string }[]
   allReports: WorkReport[]
+  allJournals: StationJournal[]
   onConfirm: (reportId: string) => void
   onConfirmEntry: (reportId: string, idx: number) => void
 }) {
   const [selStation, setSelStation] = useState<string | null>(null)
   const [selYear, setSelYear] = useState('2026')
   const [selMonth, setSelMonth] = useState<number | null>(null)
+  const [archiveTab, setArchiveTab] = useState<'hisobot' | 'du46' | 'shu2'>('hisobot')
+  const [viewJournal, setViewJournal] = useState<StationJournal | null>(null)
 
   const archiveReports = selStation && selMonth !== null
     ? allReports.filter((r) => r.stationId === selStation && r.month === `${selYear}-${String(selMonth + 1).padStart(2, '0')}`)
     : []
 
+  const du46Archive = selStation && selMonth !== null
+    ? allJournals.filter(j => j.stationId === selStation && j.journalType === 'du46' && j.updatedAt.startsWith(`${selYear}-${String(selMonth + 1).padStart(2, '0')}`))
+    : []
+
+  const shu2Archive = selStation && selMonth !== null
+    ? allJournals.filter(j => j.stationId === selStation && j.journalType === 'shu2' && j.updatedAt.startsWith(`${selYear}-${String(selMonth + 1).padStart(2, '0')}`))
+    : []
+
+  const selStationName = stations.find((s: any) => s.id === selStation)?.name || ''
+
   return (
-    <div className="grid gap-8 lg:grid-cols-[300px_1fr]">
-      <div className="space-y-4">
-        <h3 className="text-xs font-black uppercase tracking-widest text-white/30">Arxiv Bekatlari</h3>
-        <div className="grid gap-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-          {stations.map((st) => (
-            <button key={st.id} onClick={() => setSelStation(st.id)} className={`rounded-2xl border p-4 text-left transition-all ${selStation === st.id ? 'bg-amber-500/10 border-amber-500/50 text-white' : 'bg-white/5 border-white/5 text-white/40 hover:border-white/10'}`}>
-              <span className="font-bold">{st.name}</span>
-            </button>
-          ))}
+    <>
+      <div className="grid gap-8 lg:grid-cols-[300px_1fr] animate-fade-up">
+        {/* Chap: Bekatlar */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Arxiv Bekatlari</h3>
+          <div className="grid gap-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+            {stations.map((st) => (
+              <button key={st.id} onClick={() => { setSelStation(st.id); setArchiveTab('hisobot') }} className={`premium-card p-4 text-left transition-all duration-200 ${selStation === st.id ? 'bg-amber-50 ring-1 ring-amber-400/30 text-slate-900 shadow-md' : 'hover:bg-white/80 text-slate-500'}`}>
+                <span className="font-bold">{st.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* O'ng: Kontent */}
+        <div className="min-w-0 space-y-6">
+          {selStation ? (
+            <>
+              {/* Yil va oy tanlash */}
+              <div className="premium-card p-6">
+                <h2 className="text-2xl font-black text-slate-900">{selStationName} Arxiv</h2>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {Array.from({ length: Math.max(3, new Date().getFullYear() - 2026 + 3) }, (_, i) => 2026 + i).map(y => (
+                    <button key={y} onClick={() => setSelYear(y.toString())} className={`rounded-xl px-6 py-2 text-xs font-black transition-all duration-200 ${selYear === y.toString() ? 'bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{y} yil</button>
+                  ))}
+                </div>
+                <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-6">
+                  {MONTHS.map((m, i) => {
+                    const hasReport = allReports.some((r) => r.stationId === selStation && r.month === `${selYear}-${String(i + 1).padStart(2, '0')}`)
+                    const hasDU46 = allJournals.some(j => j.stationId === selStation && j.journalType === 'du46' && j.updatedAt.startsWith(`${selYear}-${String(i + 1).padStart(2, '0')}`))
+                    const hasSHU2 = allJournals.some(j => j.stationId === selStation && j.journalType === 'shu2' && j.updatedAt.startsWith(`${selYear}-${String(i + 1).padStart(2, '0')}`))
+                    const hasAny = hasReport || hasDU46 || hasSHU2
+                    return (
+                      <button key={i} onClick={() => setSelMonth(i)} className={`rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${selMonth === i ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xl' : hasAny ? 'bg-amber-50 border border-amber-100 text-amber-600 hover:bg-amber-100' : 'bg-slate-50 border border-slate-100 text-slate-300 hover:bg-slate-100'}`}>{m}</button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Arxiv tab-lar: Hisobotlar | DU-46 | SHU-2 */}
+              {selMonth !== null && (
+                <>
+                  <div className="flex gap-1 rounded-full bg-white/60 backdrop-blur-sm p-1.5 shadow-sm border border-white/40 w-fit">
+                    <button onClick={() => setArchiveTab('hisobot')} className={`rounded-full px-5 py-2.5 text-xs font-black uppercase tracking-widest transition-all ${archiveTab === 'hisobot' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'}`}>
+                      <span className="flex items-center gap-2"><FileText size={14} /> Hisobotlar</span>
+                    </button>
+                    <button onClick={() => setArchiveTab('du46')} className={`rounded-full px-5 py-2.5 text-xs font-black uppercase tracking-widest transition-all ${archiveTab === 'du46' ? 'bg-sky-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'}`}>
+                      <span className="flex items-center gap-2"><BookOpen size={14} /> DU-46</span>
+                    </button>
+                    <button onClick={() => setArchiveTab('shu2')} className={`rounded-full px-5 py-2.5 text-xs font-black uppercase tracking-widest transition-all ${archiveTab === 'shu2' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'}`}>
+                      <span className="flex items-center gap-2"><BookOpen size={14} /> SHU-2</span>
+                    </button>
+                  </div>
+
+                  {/* Hisobotlar */}
+                  {archiveTab === 'hisobot' && (
+                    <div className="space-y-4">
+                      {archiveReports.length === 0
+                        ? <div className="premium-card flex h-48 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Bu oy uchun hisobot yo'q</div>
+                        : archiveReports.map((r) => (
+                          <ReportCard key={r.id} report={r} onConfirm={() => onConfirm(r.id)} onConfirmRow={(idx: number) => onConfirmEntry(r.id, idx)} />
+                        ))
+                      }
+                    </div>
+                  )}
+
+                  {/* DU-46 Arxiv */}
+                  {archiveTab === 'du46' && (
+                    <div className="space-y-4">
+                      {du46Archive.length === 0
+                        ? <div className="premium-card flex h-48 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Bu oy uchun DU-46 jurnali yo'q</div>
+                        : du46Archive.map((j) => (
+                          <button
+                            key={j.id}
+                            onClick={() => setViewJournal(j)}
+                            className="w-full text-left premium-card p-6 hover:ring-2 hover:ring-sky-400/30 transition-all group"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-black text-slate-900">DU-46 Jurnali</h4>
+                                <p className="text-xs text-slate-400">{selStationName} · {j.updatedBy}</p>
+                              </div>
+                              <span className="text-sm font-bold text-sky-600 group-hover:translate-x-1 transition-transform">Ko'rish →</span>
+                            </div>
+                          </button>
+                        ))
+                      }
+                    </div>
+                  )}
+
+                  {/* SHU-2 Arxiv */}
+                  {archiveTab === 'shu2' && (
+                    <div className="space-y-4">
+                      {shu2Archive.length === 0
+                        ? <div className="premium-card flex h-48 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Bu oy uchun SHU-2 jurnali yo'q</div>
+                        : shu2Archive.map((j) => (
+                          <button
+                            key={j.id}
+                            onClick={() => setViewJournal(j)}
+                            className="w-full text-left premium-card p-6 hover:ring-2 hover:ring-amber-400/30 transition-all group"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-black text-slate-900">SHU-2 Jurnali</h4>
+                                <p className="text-xs text-slate-400">{selStationName} · {j.updatedBy}</p>
+                              </div>
+                              <span className="text-sm font-bold text-amber-600 group-hover:translate-x-1 transition-transform">Ko'rish →</span>
+                            </div>
+                          </button>
+                        ))
+                      }
+                    </div>
+                  )}
+                </>
+              )}
+
+              {selMonth === null && (
+                <div className="premium-card flex h-64 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Oyni tanlang</div>
+              )}
+            </>
+          ) : (
+            <div className="premium-card flex h-96 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Bekat tanlang</div>
+          )}
         </div>
       </div>
 
-      <div className="min-w-0 space-y-6">
-        {selStation ? (
-          <>
-            <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-              <h2 className="text-2xl font-black text-white">{stations.find((s: any) => s.id === selStation)?.name} Arxiv</h2>
-              <div className="mt-6 flex flex-wrap gap-2">
-                {Array.from({ length: Math.max(3, new Date().getFullYear() - 2026 + 3) }, (_, i) => 2026 + i).map(y => (
-                  <button key={y} onClick={() => setSelYear(y.toString())} className={`rounded-xl px-6 py-2 text-xs font-black ${selYear === y.toString() ? 'bg-white text-slate-900' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>{y} yil</button>
-                ))}
-              </div>
-              <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-6">
-                {MONTHS.map((m, i) => {
-                  const has = allReports.some((r) => r.stationId === selStation && r.month === `${selYear}-${String(i + 1).padStart(2, '0')}`)
-                  return (
-                    <button key={i} onClick={() => setSelMonth(i)} className={`rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-all ${selMonth === i ? 'bg-amber-500 text-slate-900 shadow-xl' : has ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400' : 'bg-white/5 border border-white/5 text-white/20'}`}>{m}</button>
-                  )
-                })}
-              </div>
-            </div>
+      {/* Journal View Modal — ishchi sahifasidagi kabi to'liq ko'rinish */}
+      {viewJournal && (
+        <div className="fixed inset-0 z-[500] bg-slate-50">
+          {viewJournal.journalType === 'du46' ? (
+            <DU46JournalView
+              stationId={viewJournal.stationId}
+              stationName={selStationName}
+              userName="Dispetcher"
+              userRole="dispatcher"
+              onClose={() => setViewJournal(null)}
+            />
+          ) : (
+            <SHU2JournalView
+              stationId={viewJournal.stationId}
+              stationName={selStationName}
+              userName="Dispetcher"
+              userRole="dispatcher"
+              onClose={() => setViewJournal(null)}
+            />
+          )}
+        </div>
+      )}
+    </>
+  )
+}
 
-            <div className="min-h-[300px]">
-              {selMonth !== null ? (
-                <div className="space-y-4">
-                  {archiveReports.length === 0 ? <EmptyState label="Archive bo'sh" /> : archiveReports.map((r) => (
-                    <ReportCard key={r.id} report={r} onConfirm={() => onConfirm(r.id)} onConfirmRow={(idx: number) => onConfirmEntry(r.id, idx)} />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex h-64 items-center justify-center rounded-[32px] border border-dashed border-white/10 text-white/20 text-sm font-black uppercase tracking-widest">Oyni tanlang</div>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="flex h-96 items-center justify-center rounded-[32px] border border-dashed border-white/10 text-white/20 text-sm font-black uppercase tracking-widest">Bekat tanlang</div>
-        )}
+// Journal Archive Card komponenti - to'liq ko'rinish + PDF yuklab olish
+function JournalArchiveCard({ journal, type, stationName }: {
+  journal: StationJournal
+  type: 'du46' | 'shu2'
+  stationName: string
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+  const entries = journal.entries as (DU46Entry | SHU2Entry)[]
+  const updatedDate = new Date(journal.updatedAt)
+  const dateStr = `${String(updatedDate.getDate()).padStart(2, '0')}.${String(updatedDate.getMonth() + 1).padStart(2, '0')}.${updatedDate.getFullYear()}`
+
+  const du46Entries = entries as DU46Entry[]
+  const shu2Entries = entries as SHU2Entry[]
+
+  const qabulCount = entries.filter(e => (e as any).dispetcherQabulQildi).length
+  const yuborildiCount = entries.filter(e => (e as any).yuborildi).length
+  const filteredEntries = entries.filter(e => type === 'du46' ? (e as DU46Entry).kamchilik || (e as DU46Entry).bartarafInfo : (e as SHU2Entry).yozuv)
+
+  // PDF yuklab olish
+  const handleDownload = async () => {
+    setDownloading(true)
+    try {
+      const { jsPDF } = await import('jspdf')
+      const { default: autoTable } = await import('jspdf-autotable')
+      const doc = new jsPDF({ orientation: type === 'du46' ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' })
+
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text(`${type === 'du46' ? 'DU-46' : 'SHU-2'} Jurnali - ${stationName}`, 14, 15)
+
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Sana: ${dateStr}`, 14, 22)
+      doc.text(`Yangilangan: ${journal.updatedBy}`, 14, 28)
+
+      if (type === 'du46') {
+        const tableColumn = ['№', 'Oy/kun', 'Soat', 'Kamchilik', 'Xabar usuli', 'Bartaraf info', 'Holat']
+        const tableRows = du46Entries
+          .filter(e => e.kamchilik || e.bartarafInfo)
+          .map((e, i) => [
+            e.nomber || String(i + 1),
+            e.oyKun1 || '',
+            e.soatMinut1 || '',
+            e.kamchilik || '',
+            e.xabarUsuli || '',
+            e.bartarafInfo || '',
+            (e as DU46Entry).dispetcherQabulQildi ? 'Qabul' : (e as DU46Entry).yuborildi ? 'Kutilmoqda' : 'Yangi'
+          ])
+
+        autoTable(doc, {
+          head: [tableColumn],
+          body: tableRows,
+          startY: 34,
+          theme: 'grid',
+          styles: { fontSize: 7, cellPadding: 2 },
+          headStyles: { fillColor: [59, 130, 246], fontSize: 7, fontStyle: 'bold' },
+          alternateRowStyles: { fillColor: [240, 248, 255] },
+        })
+      } else {
+        const tableColumn = ['№', 'Sana', 'Yozuv', 'Imzo', 'Holat']
+        const tableRows = shu2Entries
+          .filter(e => e.yozuv)
+          .map((e, i) => [
+            e.nomber || String(i + 1),
+            e.sana || '',
+            e.yozuv || '',
+            (e as SHU2Entry).tasdiqlandi ? ((e as SHU2Entry).tasdiqlaganImzo || (e as SHU2Entry).imzo) : '',
+            (e as SHU2Entry).dispetcherQabulQildi ? 'Qabul' : (e as SHU2Entry).yuborildi ? 'Kutilmoqda' : 'Yangi'
+          ])
+
+        autoTable(doc, {
+          head: [tableColumn],
+          body: tableRows,
+          startY: 34,
+          theme: 'grid',
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: [245, 158, 11], fontSize: 7, fontStyle: 'bold' },
+          alternateRowStyles: { fillColor: [255, 251, 235] },
+        })
+      }
+
+      doc.save(`${type.toUpperCase()}_${stationName}_${dateStr.replace(/\./g, '-')}.pdf`)
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  return (
+    <div className="premium-card overflow-hidden">
+      {/* Header */}
+      <div className={`flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-4 ${type === 'du46' ? 'bg-sky-50/50' : 'bg-amber-50/50'}`}>
+        <div className="flex items-center gap-3">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${type === 'du46' ? 'bg-sky-100 text-sky-600' : 'bg-amber-100 text-amber-600'}`}>
+            <BookOpen size={20} />
+          </div>
+          <div>
+            <h4 className="font-black text-slate-900 tracking-tight">{type === 'du46' ? 'DU-46' : 'SHU-2'} Jurnali</h4>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stationName} · {dateStr}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Yangilangan</p>
+            <p className="text-xs font-bold text-slate-600">{journal.updatedBy}</p>
+          </div>
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-all shadow-sm disabled:opacity-50 ${type === 'du46' ? 'bg-sky-600 text-white hover:bg-sky-700' : 'bg-amber-500 text-white hover:bg-amber-600'}`}
+          >
+            <Download size={14} /> {downloading ? '...' : 'PDF'}
+          </button>
+        </div>
       </div>
+
+      {/* Stats */}
+      <div className="flex flex-wrap items-center gap-4 border-b border-slate-100 px-6 py-3 bg-slate-50/50">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-sky-400" />
+          <span className="text-xs font-bold text-slate-500">Jami yozuvlar: <span className="text-slate-900">{filteredEntries.length}</span></span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-emerald-400" />
+          <span className="text-xs font-bold text-slate-500">Qabul: <span className="text-slate-900">{qabulCount}</span></span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-amber-400" />
+          <span className="text-xs font-bold text-slate-500">Yuborildi: <span className="text-slate-900">{yuborildiCount}</span></span>
+        </div>
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="ml-auto text-xs font-bold text-sky-600 hover:text-sky-700 uppercase tracking-widest transition-colors"
+        >
+          {expanded ? 'Yig\'ish ▲' : `Kengaytish (${filteredEntries.length}) ▼`}
+        </button>
+      </div>
+
+      {/* Full content when expanded - oylik hisobot kabi to'liq jadval */}
+      {expanded && (
+        <div className="overflow-x-auto">
+          {type === 'du46' ? (
+            <table className="w-full text-[10px]" style={{ minWidth: '1000px' }}>
+              <thead className="bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b-2 border-slate-200">
+                <tr>
+                  <th className="p-2.5 text-center border-r border-slate-100">№</th>
+                  <th className="p-2.5 text-center border-r border-slate-100">Oy/kun</th>
+                  <th className="p-2.5 text-center border-r border-slate-100">Soat</th>
+                  <th className="p-2.5 text-left border-r border-slate-100">Kamchilik</th>
+                  <th className="p-2.5 text-center border-r border-slate-100">Xabar usuli</th>
+                  <th className="p-2.5 text-left border-r border-slate-100">Bartaraf info</th>
+                  <th className="p-2.5 text-center">Holat</th>
+                </tr>
+              </thead>
+              <tbody>
+                {du46Entries.filter(e => e.kamchilik || e.bartarafInfo).map((e, i) => (
+                  <tr key={i} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                    <td className="p-2.5 text-center font-bold text-slate-400 border-r border-slate-50">{e.nomber || i + 1}</td>
+                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.oyKun1 || '—'}</td>
+                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.soatMinut1 || '—'}</td>
+                    <td className="p-2.5 text-slate-700 border-r border-slate-50 max-w-[250px] whitespace-pre-wrap">{e.kamchilik || '—'}</td>
+                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.xabarUsuli || '—'}</td>
+                    <td className="p-2.5 text-slate-700 max-w-[250px] whitespace-pre-wrap">{e.bartarafInfo || '—'}</td>
+                    <td className="p-2.5 text-center">
+                      {(e as DU46Entry).dispetcherQabulQildi
+                        ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600 border border-emerald-100">✓ Qabul</span>
+                        : (e as DU46Entry).yuborildi
+                          ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[8px] font-bold text-amber-600 border border-amber-100">⏳ Kutilmoqda</span>
+                          : <span className="text-[8px] font-bold text-slate-300">Yangi</span>
+                      }
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-[10px]" style={{ minWidth: '800px' }}>
+              <thead className="bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b-2 border-slate-200">
+                <tr>
+                  <th className="p-2.5 text-center border-r border-slate-100">№</th>
+                  <th className="p-2.5 text-center border-r border-slate-100">Sana</th>
+                  <th className="p-2.5 text-left border-r border-slate-100">Yozuv</th>
+                  <th className="p-2.5 text-center border-r border-slate-100">Imzo</th>
+                  <th className="p-2.5 text-center">Holat</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shu2Entries.filter(e => e.yozuv).map((e, i) => (
+                  <tr key={i} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                    <td className="p-2.5 text-center font-bold text-slate-400 border-r border-slate-50">{e.nomber || i + 1}</td>
+                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.sana || '—'}</td>
+                    <td className="p-2.5 text-slate-700 border-r border-slate-50 max-w-[400px] whitespace-pre-wrap">{e.yozuv || '—'}</td>
+                    <td className="p-2.5 text-center text-slate-500 border-r border-slate-50">{(e as SHU2Entry).tasdiqlandi ? ((e as SHU2Entry).tasdiqlaganImzo || (e as SHU2Entry).imzo) : '—'}</td>
+                    <td className="p-2.5 text-center">
+                      {(e as SHU2Entry).dispetcherQabulQildi
+                        ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600 border border-emerald-100">✓ Qabul</span>
+                        : (e as SHU2Entry).yuborildi
+                          ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[8px] font-bold text-amber-600 border border-amber-100">⏳ Kutilmoqda</span>
+                          : <span className="text-[8px] font-bold text-slate-300">Yangi</span>
+                      }
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {filteredEntries.length === 0 && (
+            <div className="py-12 text-center text-slate-300 font-black uppercase tracking-widest text-xs">Bu oyda ma'lumot yo'q</div>
+          )}
+        </div>
+      )}
+
+      {/* Collapsed state */}
+      {!expanded && (
+        <div className="px-6 py-4 text-center">
+          <p className="text-xs text-slate-400">To'liq ko'rish uchun <span className="font-bold text-sky-600">"Kengaytish"</span> tugmasini bosing</p>
+        </div>
+      )}
     </div>
   )
 }
@@ -1339,15 +1734,15 @@ function DownloadCard({ title, desc, existingFile, onUpload, onDelete }: {
   }
 
   return (
-    <div className="group relative overflow-hidden rounded-[32px] border border-white/5 bg-white/5 p-8 backdrop-blur-xl transition-all hover:scale-[1.02]">
-      <div className="mb-6 rounded-2xl bg-white/5 p-4 w-fit group-hover:scale-110 transition-transform">
+    <div className="premium-card group relative overflow-hidden p-8 transition-all duration-300 hover:scale-[1.02]">
+      <div className="mb-6 rounded-2xl bg-slate-50/80 p-4 w-fit transition-transform duration-300 group-hover:scale-110">
         <Download className="text-cyan-400" size={32} />
       </div>
-      <h3 className="text-xl font-black text-white">{title}</h3>
-      <p className="mt-2 text-sm text-white/40">{desc}</p>
+      <h3 className="text-xl font-black text-slate-900">{title}</h3>
+      <p className="mt-2 text-sm text-slate-500">{desc}</p>
 
       {dlMsg && (
-        <div className={`mt-4 rounded-2xl p-3 text-center text-xs font-bold ${dlMsg.type === 'ok' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+        <div className={`mt-4 rounded-xl p-3 text-center text-xs font-bold ${dlMsg.type === 'ok' ? 'badge-success' : 'badge-danger'}`}>
           {dlMsg.text}
         </div>
       )}
@@ -1355,18 +1750,18 @@ function DownloadCard({ title, desc, existingFile, onUpload, onDelete }: {
       <div className="mt-8 flex flex-col gap-3">
         {existingFile ? (
           <>
-            <div className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-2 text-[10px] font-bold text-white/40">
+            <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-2 text-[10px] font-bold text-slate-400">
               <span className="truncate max-w-[150px]">{existingFile.fileName}</span>
               <button
                 onClick={() => onDelete(existingFile.id)}
-                className="text-red-400 hover:text-red-300"
+                className="text-red-500 hover:text-red-600 transition-colors"
               >
                 O'chirish
               </button>
             </div>
             <button
               onClick={() => window.open(existingFile.filePath, '_blank')}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-500/20 hover:scale-105 transition-all"
+              className="btn-gradient flex w-full items-center justify-center gap-2 rounded-xl py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-500/20 transition-all duration-200 hover:scale-105"
             >
               <Eye size={18} />
               Hujjatni Ko'rish
@@ -1381,7 +1776,7 @@ function DownloadCard({ title, desc, existingFile, onUpload, onDelete }: {
               onChange={handleFileChange}
               disabled={isUploading}
             />
-            <div className={`flex w-full items-center justify-center gap-2 rounded-2xl bg-white/5 py-4 text-xs font-black uppercase tracking-widest text-white/60 hover:bg-white/10 hover:text-white transition-all ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <div className={`flex w-full items-center justify-center gap-2 rounded-xl bg-slate-50 py-4 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all duration-200 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
               {isUploading ? 'Yuklanmoqda...' : 'Hujjatni Yuklash'}
             </div>
           </label>
@@ -1399,30 +1794,30 @@ function WorkersModal({ workers, stations, onClose, onEdit, onDelete }: {
   onDelete: (id: string) => void
 }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-      <div className="h-[80vh] w-full max-w-4xl overflow-hidden rounded-[40px] border border-white/10 bg-[#06111f] shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/10 px-8 py-6">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
+      <div className="premium-card h-[80vh] w-full max-w-4xl overflow-hidden p-0 animate-scale-in">
+        <div className="flex items-center justify-between border-b border-slate-200 px-8 py-6 bg-slate-50/50">
           <div>
-            <h3 className="text-xl font-black text-white">Ishchilar bazasi</h3>
-            <p className="text-xs font-bold uppercase tracking-widest text-white/30">Jami: {workers.length} ta xodim</p>
+            <h3 className="text-xl font-black text-slate-900">Ishchilar bazasi</h3>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Jami: {workers.length} ta xodim</p>
           </div>
-          <button onClick={onClose} className="rounded-xl bg-white/5 p-3 text-white/40 hover:text-white"><X size={24} /></button>
+          <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-3 text-slate-400 hover:text-slate-900 transition-all duration-200 shadow-sm"><X size={24} /></button>
         </div>
 
-        <div className="h-[calc(80vh-100px)] overflow-y-auto p-8 custom-scrollbar">
+        <div className="h-[calc(80vh-100px)] overflow-y-auto p-8 custom-scrollbar bg-white">
           <div className="grid gap-4">
             {workers.map((w) => (
-              <div key={w.id} className="flex items-center justify-between rounded-3xl border border-white/5 bg-white/5 p-6 backdrop-blur-sm hover:border-white/10">
+              <div key={w.id} className="premium-card flex items-center justify-between p-6 transition-all duration-200 hover:shadow-md group">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-lg font-black text-white">{w.fullName.charAt(0)}</div>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-lg font-black text-white shadow-lg shadow-sky-500/20 transition-transform duration-200 group-hover:scale-110">{w.fullName.charAt(0)}</div>
                   <div>
-                    <h4 className="font-black text-white">{w.fullName}</h4>
-                    <p className="text-xs font-bold text-white/30 tracking-tight">{w.login} · {w.phone || 'Tel kiritilmagan'} · {w.role === 'worker' ? 'Mexanik' : 'Boshliq'}</p>
+                    <h4 className="font-black text-slate-900">{w.fullName}</h4>
+                    <p className="text-xs font-bold text-slate-500 tracking-tight">{w.login} · {w.phone || 'Tel kiritilmagan'} · {w.role === 'worker' ? 'Mexanik' : 'Boshliq'}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => onEdit(w)} className="rounded-xl bg-white/5 p-3 text-white/40 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all"><Edit size={20} /></button>
-                  <button onClick={() => onDelete(w.id)} className="rounded-xl bg-red-500/5 p-3 text-red-500/40 hover:text-red-400 hover:bg-red-500/10 transition-all"><Trash2 size={20} /></button>
+                  <button onClick={() => onEdit(w)} className="rounded-xl bg-slate-50 p-3 text-slate-400 hover:text-sky-600 hover:bg-sky-50 transition-all duration-200 border border-transparent hover:border-sky-100 shadow-sm"><Edit size={20} /></button>
+                  <button onClick={() => onDelete(w.id)} className="rounded-xl bg-red-50 p-3 text-red-500 hover:text-red-700 hover:bg-red-100 transition-all duration-200 border border-transparent hover:border-red-100 shadow-sm"><Trash2 size={20} /></button>
                 </div>
               </div>
             ))}
@@ -1435,6 +1830,6 @@ function WorkersModal({ workers, stations, onClose, onEdit, onDelete }: {
 
 function EmptyState({ label }: { label: string }) {
   return (
-    <div className="flex h-48 items-center justify-center rounded-[32px] border border-dashed border-white/10 text-white/20 text-xs font-black uppercase tracking-widest">{label}</div>
+    <div className="premium-card flex h-48 items-center justify-center text-slate-300 text-xs font-black uppercase tracking-widest">{label}</div>
   )
 }

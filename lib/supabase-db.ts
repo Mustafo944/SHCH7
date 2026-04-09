@@ -123,7 +123,7 @@ function mapDbUserToUser(row: DbUserRow): User {
 export async function getWorkers(): Promise<User[]> {
   const { data, error } = await supabase
     .from('users')
-    .select('*')
+    .select('id, login, full_name, role, position, station_ids, phone, created_at')
     .in('role', ['worker', 'bekat_boshlighi'])
     .order('created_at', { ascending: true });
 
@@ -131,7 +131,7 @@ export async function getWorkers(): Promise<User[]> {
   return (data as DbUserRow[]).map(mapDbUserToUser);
 }
 
-type WorkerPayload = Omit<User, 'id' | 'createdAt'>;
+type WorkerPayload = Omit<User, 'id' | 'createdAt'> & { password?: string };
 
 export async function addWorker(worker: WorkerPayload): Promise<User> {
   const { data: { session } } = await supabase.auth.getSession();
@@ -223,7 +223,7 @@ function mapDbReport(row: DbWorkReportRow): WorkReport {
 export async function getAllReports(): Promise<WorkReport[]> {
   const { data, error } = await supabase
     .from('work_reports')
-    .select('*')
+    .select('id, worker_id, worker_name, worker_phone, station_id, station_name, week_label, month, year, entries, submitted_at, confirmed_at, confirmed_by')
     .order('submitted_at', { ascending: false });
 
   if (error || !data) return [];
@@ -233,7 +233,7 @@ export async function getAllReports(): Promise<WorkReport[]> {
 export async function getReportsByWorker(workerId: string): Promise<WorkReport[]> {
   const { data, error } = await supabase
     .from('work_reports')
-    .select('*')
+    .select('id, worker_id, worker_name, worker_phone, station_id, station_name, week_label, month, year, entries, submitted_at, confirmed_at, confirmed_by')
     .eq('worker_id', workerId)
     .order('month', { ascending: false });
 
@@ -244,7 +244,7 @@ export async function getReportsByWorker(workerId: string): Promise<WorkReport[]
 export async function getReportsByStation(stationId: string): Promise<WorkReport[]> {
   const { data, error } = await supabase
     .from('work_reports')
-    .select('*')
+    .select('id, worker_id, worker_name, worker_phone, station_id, station_name, week_label, month, year, entries, submitted_at, confirmed_at, confirmed_by')
     .eq('station_id', stationId)
     .order('submitted_at', { ascending: false });
 
@@ -255,7 +255,7 @@ export async function getReportsByStation(stationId: string): Promise<WorkReport
 export async function getReportByWorkerAndMonth(workerId: string, month: string): Promise<WorkReport | null> {
   const { data, error } = await supabase
     .from('work_reports')
-    .select('*')
+    .select('id, worker_id, worker_name, worker_phone, station_id, station_name, week_label, month, year, entries, submitted_at, confirmed_at, confirmed_by')
     .eq('worker_id', workerId)
     .eq('month', month)
     .maybeSingle();
@@ -325,18 +325,22 @@ export async function confirmReport(reportId: string, dispatcherName: string): P
 export async function confirmReportEntry(
   reportId: string,
   entryIndex: number
-): Promise<WorkReport | null> {
-  const { data: current } = await supabase
+): Promise<WorkReport> {
+  const { data: current, error: fetchError } = await supabase
     .from('work_reports')
     .select('entries')
     .eq('id', reportId)
     .single();
 
-  if (!current) return null;
+  if (fetchError || !current) {
+    throw new Error(fetchError?.message || 'Report not found');
+  }
 
   const entries = [...(current.entries as ReportEntry[])];
   const entry = entries[entryIndex];
-  if (!entry) return null;
+  if (!entry) {
+    throw new Error('Entry not found');
+  }
 
   const hasMeaning =
     entry.haftalikJadval || entry.yillikJadval || entry.yangiIshlar || entry.kmoBartaraf || entry.majburiyOzgarish;
@@ -352,7 +356,9 @@ export async function confirmReportEntry(
     .select()
     .single();
 
-  if (error || !data) return null;
+  if (error || !data) {
+    throw new Error(error?.message || 'Update failed');
+  }
   return mapDbReport(data as DbWorkReportRow);
 }
 
@@ -403,7 +409,7 @@ function mapDbPremiya(row: DbPremiyaRow): PremiyaReport {
 export async function getPremiyaReports(): Promise<PremiyaReport[]> {
   const { data, error } = await supabase
     .from('premiya_reports')
-    .select('*')
+    .select('id, worker_id, worker_name, station_id, station_name, month, year, sex, entries, submitted_at, confirmed_at, confirmed_by')
     .order('submitted_at', { ascending: false });
 
   if (error || !data) return [];
@@ -413,7 +419,7 @@ export async function getPremiyaReports(): Promise<PremiyaReport[]> {
 export async function getPremiyasByWorker(workerId: string): Promise<PremiyaReport[]> {
   const { data, error } = await supabase
     .from('premiya_reports')
-    .select('*')
+    .select('id, worker_id, worker_name, station_id, station_name, month, year, sex, entries, submitted_at, confirmed_at, confirmed_by')
     .eq('worker_id', workerId)
     .order('month', { ascending: false });
 
@@ -424,7 +430,7 @@ export async function getPremiyasByWorker(workerId: string): Promise<PremiyaRepo
 export async function getPremiyasByStation(stationId: string): Promise<PremiyaReport[]> {
   const { data, error } = await supabase
     .from('premiya_reports')
-    .select('*')
+    .select('id, worker_id, worker_name, station_id, station_name, month, year, sex, entries, submitted_at, confirmed_at, confirmed_by')
     .eq('station_id', stationId)
     .order('submitted_at', { ascending: false });
 
@@ -435,7 +441,7 @@ export async function getPremiyasByStation(stationId: string): Promise<PremiyaRe
 export async function getPremiyaByWorkerAndMonth(workerId: string, month: string): Promise<PremiyaReport | null> {
   const { data, error } = await supabase
     .from('premiya_reports')
-    .select('*')
+    .select('id, worker_id, worker_name, station_id, station_name, month, year, sex, entries, submitted_at, confirmed_at, confirmed_by')
     .eq('worker_id', workerId)
     .eq('month', month)
     .maybeSingle();
@@ -519,7 +525,7 @@ function mapDbSchema(row: DbSchemaRow): StationSchema {
 export async function getSchemasByStation(stationId: string): Promise<StationSchema[]> {
   const { data, error } = await supabase
     .from('station_schemas')
-    .select('*')
+    .select('id, station_id, file_name, file_path, schema_type, uploaded_at, uploaded_by')
     .eq('station_id', stationId)
     .order('uploaded_at', { ascending: false });
 
@@ -632,7 +638,7 @@ export async function getJournal(
 ): Promise<StationJournal | null> {
   const { data, error } = await supabase
     .from('station_journals')
-    .select('*')
+    .select('id, station_id, journal_type, entries, updated_at, updated_by')
     .eq('station_id', stationId)
     .eq('journal_type', journalType)
     .single()
@@ -676,4 +682,19 @@ export async function upsertJournal(
 
   console.log('✅ upsertJournal muvaffaqiyatli:', data.id)
   return mapDbJournal(data as DbJournalRow)
+}
+
+// Barcha jurnallarni olish (dispetcher uchun)
+export async function getAllJournals(): Promise<StationJournal[]> {
+  const { data, error } = await supabase
+    .from('station_journals')
+    .select('id, station_id, journal_type, entries, updated_at, updated_by')
+    .order('updated_at', { ascending: false })
+
+  if (error) {
+    console.error('❌ getAllJournals xatosi:', error)
+    return []
+  }
+
+  return (data || []).map((row: DbJournalRow) => mapDbJournal(row))
 }

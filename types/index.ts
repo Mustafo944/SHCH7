@@ -8,7 +8,6 @@ export type Position = "katta_elektromexanik" | "bekat_boshlighi" | "dispatcher"
 export interface User {
   id: string;
   login: string;
-  password?: string;
   fullName: string;
   role: Role;
   position: Position;
@@ -122,6 +121,7 @@ export interface DU46Entry {
   // Umumiy
   yuborildi: boolean           // Dispetcherga yuborildi
   dispetcherQabulQildi?: boolean  // Dispetcher qabul qildi
+  dispetcherImzo?: string      // Dispetcher ismi (qabul qilganda)
 }
 
 // SHU-2 jurnal yozuvi
@@ -134,6 +134,7 @@ export interface SHU2Entry {
   tasdiqlaganImzo?: string    // Tasdiqlagan ishchi ismi
   yuborildi?: boolean         // Dispetcherga yuborildi
   dispetcherQabulQildi?: boolean  // Dispetcher qabul qildi
+  dispetcherImzo?: string     // Dispetcher ismi (qabul qilganda)
 }
 
 // Jurnal turi

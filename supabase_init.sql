@@ -1,4 +1,5 @@
 -- 1. users jadvaliga agar mavjud bo'lmasa ruxsatlar kiritish
+-- station_ids array ishlatiladi (eski station_id emas)
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   login TEXT UNIQUE NOT NULL,
@@ -11,7 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all for authenticated users" ON users FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- ESKI ochiq siyosat o'rniga yangi xavfsiz siyosatlar security.sql da
 
 -- 2. work_reports jadvali
 CREATE TABLE IF NOT EXISTS work_reports (
@@ -31,7 +32,17 @@ CREATE TABLE IF NOT EXISTS work_reports (
 );
 
 ALTER TABLE work_reports ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all for authenticated work_reports" ON work_reports FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- UNIQUE constraint: bir ishchi bir oyda faqat bitta hisobot
+-- Agar allaqachon bo'lsa xato bermaydi (DO block)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'work_reports_worker_month_unique'
+  ) THEN
+    ALTER TABLE work_reports ADD CONSTRAINT work_reports_worker_month_unique UNIQUE (worker_id, month);
+  END IF;
+END $$;
 
 -- 3. premiya_reports jadvali
 CREATE TABLE IF NOT EXISTS premiya_reports (
@@ -50,7 +61,16 @@ CREATE TABLE IF NOT EXISTS premiya_reports (
 );
 
 ALTER TABLE premiya_reports ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all for authenticated premiya_reports" ON premiya_reports FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- UNIQUE constraint: bir ishchi bir oyda faqat bitta premiya
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'premiya_reports_worker_month_unique'
+  ) THEN
+    ALTER TABLE premiya_reports ADD CONSTRAINT premiya_reports_worker_month_unique UNIQUE (worker_id, month);
+  END IF;
+END $$;
 
 -- 4. station_schemas jadvali
 CREATE TABLE IF NOT EXISTS station_schemas (
@@ -64,7 +84,7 @@ CREATE TABLE IF NOT EXISTS station_schemas (
 );
 
 ALTER TABLE station_schemas ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all for authenticated station_schemas" ON station_schemas FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- ESKI ochiq siyosat o'rniga yangi xavfsiz siyosatlar security.sql da
 
 -- 5. station_journals jadvali (DU-46 va SHU-2)
 CREATE TABLE IF NOT EXISTS station_journals (
@@ -78,7 +98,16 @@ CREATE TABLE IF NOT EXISTS station_journals (
 );
 
 ALTER TABLE station_journals ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all for authenticated station_journals" ON station_journals FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- UNIQUE constraint: bir stansiya bir jurnal turida faqat bitta yozuv
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'station_journals_station_type_unique'
+  ) THEN
+    ALTER TABLE station_journals ADD CONSTRAINT station_journals_station_type_unique UNIQUE (station_id, journal_type);
+  END IF;
+END $$;
 
 -- 6. Jadvallar uchun REALTIME ni faollashtirish
 -- Supabase ning Realtime uzatuvchisi (WebSocket) ga ushbu jadvallarni ulaymiz.

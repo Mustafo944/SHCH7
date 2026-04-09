@@ -10,7 +10,15 @@
       "Bash(node *)",
       "Bash(npm install *)",
       "Bash(select-string *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(select-object *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(wc *)",
+      "Bash(type *)",
+      "Bash(timeout *)",
+      "Bash(curl *)",
+      "Bash(dir *)"
     ]
   },
   "$version": 3
