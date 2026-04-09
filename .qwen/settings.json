@@ -18,7 +18,8 @@
       "Bash(type *)",
       "Bash(timeout *)",
       "Bash(curl *)",
-      "Bash(dir *)"
+      "Bash(dir *)",
+      "Bash(git push)"
     ]
   },
   "$version": 3

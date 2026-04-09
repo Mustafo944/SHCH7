@@ -965,10 +965,33 @@ function WorkerGraphicsView() {
 function WorkerSchemasView({ stationId, stationName }: { stationId: string, stationName: string }) {
   const [schemas, setSchemasState] = useState<StationSchema[]>([])
   const [preview, setPreview] = useState<string | null>(null)
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (stationId) getSchemasByStation(stationId).then(setSchemasState)
+    // Cleanup blob URL on unmount
+    return () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl)
+    }
   }, [stationId])
+
+  // Firefox uchun blob URL orqali ko'rsatish
+  const handlePreview = async (filePath: string) => {
+    try {
+      // Agar oldin blob URL bo'lsa, tozalash
+      if (blobUrl) URL.revokeObjectURL(blobUrl)
+
+      const response = await fetch(filePath)
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      setBlobUrl(url)
+      setPreview(url)
+    } catch (err) {
+      console.error('PDF yuklash xatosi:', err)
+      // Fallback: to'g'ridan-to'g'ri URL
+      setPreview(filePath)
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fade-up">
@@ -980,7 +1003,7 @@ function WorkerSchemasView({ stationId, stationName }: { stationId: string, stat
             <h4 className="text-lg font-black text-slate-900 tracking-tight">{s.schemaType}</h4>
             <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.fileName}</p>
             <div className="mt-8 flex gap-3">
-              <button onClick={() => setPreview(s.filePath)} className="flex-1 rounded-2xl bg-slate-50/80 border border-slate-200/60 py-4 text-xs font-black uppercase text-slate-600 hover:bg-sky-600 hover:text-white backdrop-blur-sm transition-all active:scale-95 shadow-sm">Ko'rish</button>
+              <button onClick={() => handlePreview(s.filePath)} className="flex-1 rounded-2xl bg-slate-50/80 border border-slate-200/60 py-4 text-xs font-black uppercase text-slate-600 hover:bg-sky-600 hover:text-white backdrop-blur-sm transition-all active:scale-95 shadow-sm">Ko'rish</button>
               <a href={s.filePath} download className="rounded-2xl bg-slate-50/80 border border-slate-200/60 p-4 text-slate-400 hover:bg-slate-900 hover:text-white backdrop-blur-sm transition-all shadow-sm active:scale-95"><Download size={20} /></a>
             </div>
           </div>
@@ -993,7 +1016,7 @@ function WorkerSchemasView({ stationId, stationName }: { stationId: string, stat
           <div className="h-full w-full overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-200/60 px-8 py-4 bg-slate-50/80">
               <h3 className="text-lg font-black text-slate-900 tracking-tight">Sxema Ko'rish</h3>
-              <button onClick={() => setPreview(null)} className="rounded-xl border border-slate-200/60 bg-white/80 p-2 text-slate-400 hover:text-slate-900 backdrop-blur-sm transition-all shadow-sm"><X size={24} /></button>
+              <button onClick={() => { setPreview(null); if (blobUrl) URL.revokeObjectURL(blobUrl) }} className="rounded-xl border border-slate-200/60 bg-white/80 p-2 text-slate-400 hover:text-slate-900 backdrop-blur-sm transition-all shadow-sm"><X size={24} /></button>
             </div>
             <iframe src={preview} className="h-[calc(100%-80px)] w-full" />
           </div>
