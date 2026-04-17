@@ -477,7 +477,7 @@ export default function DispatcherPage() {
   `}
                   >
                     {stations.map(st => {
-                      const count = (pendingCounts[st.id] || 0) + (premiyaPendingCounts[st.id] || 0)
+                      const count = (pendingCounts[st.id] || 0) + (premiyaPendingCounts[st.id] || 0) + (journalPendingCounts[st.id] || 0)
                       const isSelected = selectedStation === st.id
                       return (
                         <button

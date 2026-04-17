@@ -119,6 +119,7 @@ export interface DU46Entry {
   bartarafBBImzo: string       // BB ismi (tasdiqladi dan keyin)
   bartarafBBVaqt: string       // BB tasdiqlagan vaqti (soat:daqiqa)
   // Umumiy
+  createdByRole?: 'worker' | 'bekat_boshlighi'  // Qatorni kim yaratgan
   yuborildi: boolean           // Dispetcherga yuborildi
   dispetcherQabulQildi?: boolean  // Dispetcher qabul qildi
   dispetcherImzo?: string      // Dispetcher ismi (qabul qilganda)
