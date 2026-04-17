@@ -14,7 +14,8 @@ import {
   upsertPremiyaReport,
   getSchemasByStation,
   getGlobalGraphics,
-  signOut
+  signOut,
+  getPendingJournalCounts
 } from '@/lib/supabase-db'
 import type { User, WorkReport, ReportEntry, PremiyaReport, PremiyaEntry, StationSchema, JournalType } from '@/types'
 import { MONTHS } from '@/lib/constants'
@@ -54,6 +55,14 @@ export default function WorkerPage() {
   const [selectedReport, setSelectedReport] = useState<WorkReport | null>(null)
   const [selectedPremiya, setSelectedPremiya] = useState<PremiyaReport | null>(null)
   const [loading, setLoading] = useState(true)
+  const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
+
+  const loadPendingCounts = useCallback(async (sid: string, role: string) => {
+    try {
+      const counts = await getPendingJournalCounts(sid, role)
+      setPendingCounts(counts)
+    } catch {}
+  }, [])
 
   const loadWorkReports = useCallback(async (userId: string) => {
     try {
@@ -98,6 +107,21 @@ export default function WorkerPage() {
     }
     init()
   }, [router, refreshData])
+
+  useEffect(() => {
+    if (!activeStationId || !session?.role) return
+    
+    loadPendingCounts(activeStationId, session.role)
+
+    const journalChannel = supabase
+      .channel(`worker_journals_${activeStationId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals', filter: `station_id=eq.${activeStationId}` }, () => {
+        loadPendingCounts(activeStationId, session!.role)
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(journalChannel) }
+  }, [activeStationId, session?.role, loadPendingCounts])
 
   useEffect(() => {
     if (!session?.id) return
@@ -232,6 +256,7 @@ export default function WorkerPage() {
                   icon={<BookOpen size={32} />}
                   color="cyan"
                   onClick={() => setView('journalSelect')}
+                  badge={pendingCounts.du46 + pendingCounts.shu2}
                 />
               </div>
             </div>
@@ -381,6 +406,8 @@ export default function WorkerPage() {
             <JournalSelectModal
               onSelect={(type) => setView(type === 'du46' ? 'du46' : 'shu2')}
               onClose={() => setView('home')}
+              du46Count={pendingCounts.du46}
+              shu2Count={pendingCounts.shu2}
             />
           )}
           {view === 'du46' && (
@@ -407,14 +434,19 @@ export default function WorkerPage() {
   )
 }
 
-function BigActionCard({ title, desc, icon, onClick, color = 'cyan' }: { title: string, desc: string, icon: React.ReactNode, onClick: () => void, color?: 'cyan' | 'amber' | 'blue' }) {
+function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badge = 0 }: { title: string, desc: string, icon: React.ReactNode, onClick: () => void, color?: 'cyan' | 'amber' | 'blue', badge?: number }) {
   const colorMap: Record<string, string> = {
     cyan: 'hover:border-sky-300 hover:shadow-sky-100/50 text-sky-600',
     amber: 'hover:border-amber-300 hover:shadow-amber-100/50 text-amber-600',
     blue: 'hover:border-blue-300 hover:shadow-blue-100/50 text-blue-600',
   }
   return (
-    <button onClick={onClick} className={`premium-card group flex flex-col items-start p-8 bg-gradient-to-br from-white to-slate-50/50 transition-all hover:scale-[1.02] active:scale-[0.98] text-left animate-fade-up ${colorMap[color]}`}>
+    <button onClick={onClick} className={`premium-card group relative flex flex-col items-start p-8 bg-gradient-to-br from-white to-slate-50/50 transition-all hover:scale-[1.02] active:scale-[0.98] text-left animate-fade-up ${colorMap[color]}`}>
+      {badge > 0 && (
+        <div className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-xs font-black text-white shadow-lg shadow-red-500/30 animate-bounce">
+          {badge > 9 ? '9+' : badge}
+        </div>
+      )}
       <div className={`rounded-2xl bg-slate-50 p-4 mb-6 group-hover:scale-110 group-hover:bg-white border border-slate-100 transition-all shadow-sm ${color === 'cyan' ? 'text-sky-600' : color === 'amber' ? 'text-amber-600' : 'text-blue-600'}`}>{icon}</div>
       <h3 className="text-xl font-black text-slate-900 tracking-tight">{title}</h3>
       <p className="mt-2 text-sm text-slate-500 leading-relaxed font-medium">{desc}</p>

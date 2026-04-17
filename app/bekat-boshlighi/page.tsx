@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
+import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import {
   getStations,
@@ -9,7 +10,8 @@ import {
 import { DU46JournalView } from '@/components/JournalView'
 import {
   getCurrentSession,
-  signOut
+  signOut,
+  getPendingJournalCounts
 } from '@/lib/supabase-db'
 import type { User } from '@/types'
 import {
@@ -25,6 +27,14 @@ export default function BekatBoshlighiPage() {
   const [loading, setLoading] = useState(true)
   const [selectedStation, setSelectedStation] = useState<string | null>(null)
   const [showJournal, setShowJournal] = useState(false)
+  const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
+
+  const loadPendingCounts = useCallback(async (sid: string, role: string) => {
+    try {
+      const counts = await getPendingJournalCounts(sid, role)
+      setPendingCounts(counts)
+    } catch {}
+  }, [])
 
   const allStations = getStations()
 
@@ -46,6 +56,20 @@ export default function BekatBoshlighiPage() {
     }
     init()
   }, [router])
+
+  useEffect(() => {
+    if (!selectedStation || !session?.role) return
+    loadPendingCounts(selectedStation, session.role)
+
+    const journalChannel = supabase
+      .channel(`bb_journals_${selectedStation}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals', filter: `station_id=eq.${selectedStation}` }, () => {
+        loadPendingCounts(selectedStation, session!.role)
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(journalChannel) }
+  }, [selectedStation, session?.role, loadPendingCounts])
 
   if (loading) return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-sky-50">
@@ -156,8 +180,13 @@ export default function BekatBoshlighiPage() {
               <div className="flex justify-center py-12">
                 <button
                   onClick={() => setShowJournal(true)}
-                  className="group flex flex-col items-center rounded-[32px] border border-slate-200 bg-white p-12 shadow-sm backdrop-blur-md transition-all hover:border-blue-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+                  className="group relative flex flex-col items-center rounded-[32px] border border-slate-200 bg-white p-12 shadow-sm backdrop-blur-md transition-all hover:border-blue-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
                 >
+                  {pendingCounts.du46 > 0 && (
+                    <div className="absolute -top-4 -right-4 flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-lg font-black text-white shadow-xl shadow-red-500/40 animate-bounce">
+                      +{pendingCounts.du46}
+                    </div>
+                  )}
                   <div className="mb-6 rounded-2xl bg-gradient-to-br from-blue-500 to-sky-500 p-6 group-hover:from-blue-600 group-hover:to-sky-600 transition-colors shadow-lg">
                     <BookOpen size={48} className="text-white" />
                   </div>

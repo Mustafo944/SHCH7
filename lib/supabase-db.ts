@@ -666,6 +666,63 @@ export async function getJournal(
   return mapDbJournal(data as DbJournalRow)
 }
 
+export async function getPendingJournalCounts(
+  stationId: string,
+  role: string
+): Promise<{ du46: number; shu2: number }> {
+  try {
+    const { data, error } = await supabase
+      .from('station_journals')
+      .select('journal_type, entries')
+      .eq('station_id', stationId)
+      .in('journal_type', ['du46', 'shu2'])
+
+    let du46 = 0
+    let shu2 = 0
+
+    if (data && !error) {
+      for (const row of data) {
+        if (row.journal_type === 'du46') {
+          const ents = (row.entries || []) as DU46Entry[]
+          let count = 0
+          for (const e of ents) {
+            if (e.yuborildi) continue
+            
+            const creator = e.createdByRole || 'worker'
+            
+            if (role === 'worker') {
+              // 3-ustun: Worker tomonidan tasdiqlanishi kerak bo'lganlar (agar BB kiritgan bo'lsa)
+              if (creator === 'bekat_boshlighi' && e.kamchilikBajarildi && !e.kamchilikBBTasdiqladi) {
+                count++
+              }
+              // 12-ustun: Worker o'zi "bajarildi" qilishi kerak bo'lganlar
+              else if (e.kamchilikBBTasdiqladi && !e.bartarafBajarildi) {
+                count++
+              }
+            } else if (role === 'bekat_boshlighi') {
+              // 3-ustun: BB tomonidan tasdiqlanishi kerak bo'lganlar (agar worker kiritgan bo'lsa)
+              if (creator === 'worker' && e.kamchilikBajarildi && !e.kamchilikBBTasdiqladi) {
+                count++
+              }
+              // 12-ustun: BB tomonidan tasdiqlanishi kerak bo'lganlar (worker bajarildi qilgandan keyin)
+              else if (e.bartarafBajarildi && !e.bartarafBBTasdiqladi) {
+                count++
+              }
+            }
+          }
+          du46 = count
+        } else if (row.journal_type === 'shu2') {
+          // SHU-2 mantiqini ham shu yerda hisoblash mumkin
+        }
+      }
+    }
+    return { du46, shu2 }
+  } catch (err) {
+    return { du46: 0, shu2: 0 }
+  }
+}
+
+
 export async function upsertJournal(
   stationId: string,
   journalType: JournalType,

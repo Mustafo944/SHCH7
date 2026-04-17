@@ -642,12 +642,8 @@ export function DU46JournalView({
                 const hasNoCreator = !e.createdByRole && !e.kamchilik && !e.oyKun1 && !e.soatMinut1
                 const canWriteCol3 = !e.yuborildi && !e.kamchilikBBTasdiqladi && (iAmCreator || hasNoCreator) && !isDispatcher
 
-                // Ustun 12: BB yaratgan bo'lsa, ishchi yoza olmaydi — faqat tasdiqlaydi
-                const canWriteCol12 = !e.yuborildi && !e.bartarafBBTasdiqladi && e.kamchilikBBTasdiqladi && !isDispatcher && (
-                  creator === 'worker' ? isWorker :
-                  creator === 'bekat_boshlighi' ? isBB :
-                  false
-                )
+                // Ustun 12 (Bartaraf): faqat elektromexanik (worker) yoza oladi, yaratuvchidan qat'i nazar
+                const canWriteCol12 = !e.yuborildi && !e.bartarafBBTasdiqladi && e.kamchilikBBTasdiqladi && !isDispatcher && isWorker
 
                 // 4-9 ustunlar (oraliq): yaratuvchi yoza oladi
                 const canWriteMiddle = !e.yuborildi && !isDispatcher && (iAmCreator || hasNoCreator)
@@ -832,7 +828,7 @@ export function DU46JournalView({
                       {/* Tasdiqlash vaqti (pastda) */}
                       {e.bartarafInfo && e.bartarafBajarildi && e.kamchilikBBTasdiqladi && (
                         <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center justify-end">
-                          {!e.bartarafBBTasdiqladi && iAmConfirmer && !e.yuborildi ? (
+                          {!e.bartarafBBTasdiqladi && isBB && !e.yuborildi ? (
                             <TimeInput
                               value={e.bartarafBBVaqt || ''}
                               onChange={val => update(i, 'bartarafBBVaqt', val)}
@@ -878,8 +874,8 @@ export function DU46JournalView({
 
                       {/* ── Bajarildi / Tasdiqlash tugmalari ── */}
                       <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
-                        {/* Yozuvchi: Bajarildi tugmasi */}
-                        {e.bartarafInfo && iAmCreator && !e.bartarafBajarildi && !e.yuborildi && (
+                        {/* Elektromexanik: Bajarildi tugmasi */}
+                        {e.bartarafInfo && isWorker && !e.bartarafBajarildi && !e.yuborildi && (
                           <button
                             onClick={() => handleBartarafBajarildi(i)}
                             disabled={!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi}
@@ -899,8 +895,8 @@ export function DU46JournalView({
                           </div>
                         )}
 
-                        {/* Tasdiqlash tugmasi (ikkinchi rol) */}
-                        {e.bartarafInfo && !e.bartarafBBTasdiqladi && iAmConfirmer && !e.yuborildi && (
+                        {/* Bekat Boshlig'i: Tasdiqlash tugmasi (doimo) */}
+                        {e.bartarafInfo && !e.bartarafBBTasdiqladi && isBB && !e.yuborildi && (
                           <div className="flex flex-col items-center gap-1 w-full">
                             <button
                               onClick={() => handleBartarafTasdiqlash(i)}
