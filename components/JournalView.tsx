@@ -320,15 +320,6 @@ export function DU46JournalView({
       if (j && j.entries.length > 0) {
         let loadedEntries = j.entries as DU46Entry[]
         
-        // Dispetcher sahifani ochganda qabul qilinmaganlarni avtomatik qabul qilish
-        if (isDispatcher) {
-          const hasPending = loadedEntries.some(e => e.yuborildi && !e.dispetcherQabulQildi)
-          if (hasPending) {
-            loadedEntries = loadedEntries.map(e => e.yuborildi ? { ...e, dispetcherQabulQildi: true, dispetcherImzo: userName } : e)
-            await upsertJournal(stationId, 'du46', loadedEntries, userName)
-          }
-        }
-        
         const allSubmitted = loadedEntries.every(e => e.yuborildi)
         if (allSubmitted) {
           setEntries([...loadedEntries, EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46()])
@@ -1053,15 +1044,6 @@ export function SHU2JournalView({
       const j = await getJournal(stationId, 'shu2')
       if (j && j.entries.length > 0) {
         let currentEntries = j.entries as SHU2Entry[]
-        
-        // Dispetcher sahifani ochganda qabul qilinmaganlarni avtomatik qabul qilish
-        if (isDispatcher) {
-          const hasPending = currentEntries.some(e => e.yuborildi && !e.dispetcherQabulQildi)
-          if (hasPending) {
-            currentEntries = currentEntries.map(e => e.yuborildi ? { ...e, dispetcherQabulQildi: true, dispetcherImzo: userName } : e)
-            await upsertJournal(stationId, 'shu2', currentEntries, userName)
-          }
-        }
         
         setEntries(currentEntries)
       }
