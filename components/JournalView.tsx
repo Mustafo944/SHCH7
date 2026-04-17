@@ -1317,7 +1317,7 @@ export function SHU2JournalView({
                               <div className="flex flex-col items-center gap-1 w-full">
                                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Qabul qilindi:</span>
                                 <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-1.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 w-full justify-center shadow-sm">
-                                  <CheckCircle2 size={10} strokeWidth={3} /> <span className="truncate">{e.dispetcherImzo || 'Aloqa dispetcheri'}</span>
+                                  <CheckCircle2 size={10} strokeWidth={3} /> <span className="truncate">Aloqa dispetcheri</span>
                                 </div>
                               </div>
                             )}
