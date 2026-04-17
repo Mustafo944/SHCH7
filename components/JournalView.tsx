@@ -1258,7 +1258,11 @@ export function SHU2JournalView({
             </thead>
             <tbody>
               {entries.map((e, i) => {
-                const isLocked = !!e.tasdiqlandi
+                const dispHidesRow = isDispatcher && !e.yuborildi
+                const displaySana = dispHidesRow ? '' : (e.sana || '')
+                const displayYozuv = dispHidesRow ? '' : (e.yozuv || '')
+                const isLocked = dispHidesRow ? false : !!e.tasdiqlandi
+
                 return (
                   <tr key={i} className={`border-b border-slate-200 hover:bg-blue-50/50 transition-colors animate-fade-up ${isLocked ? 'bg-emerald-50/30' : ''}`} style={{ animationDelay: `${i * 50}ms` }}>
                     <td className="border-r border-slate-200 p-1 text-center bg-slate-50/30">
@@ -1272,14 +1276,14 @@ export function SHU2JournalView({
                     </td>
                     <td className="border-r border-slate-200 p-0.5">
                       <DateInput
-                        value={e.sana}
+                        value={displaySana}
                         onChange={val => update(i, 'sana', val)}
                         readOnly={!isWorker || isLocked}
                         placeholder="kk-oo-yyyy"
                       />
                     </td>
                     <td className="border-r border-slate-200 p-0.5">
-                      <textarea value={e.yozuv} onChange={ev => update(i, 'yozuv', ev.target.value)}
+                      <textarea value={displayYozuv} onChange={ev => update(i, 'yozuv', ev.target.value)}
                         readOnly={!isWorker || isLocked}
                         spellCheck={false}
                         lang="uz"
