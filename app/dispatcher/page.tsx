@@ -778,19 +778,18 @@ function BigActionCard({ title, desc, icon, onClick, count, color = 'cyan' }: { 
   return (
     <button
       onClick={onClick}
-      className={`premium-card group relative flex flex-col items-start p-8 bg-gradient-to-br to-transparent transition-all duration-300 hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] text-left ${colorMap[color]}`}
+      className={`premium-card group relative flex flex-col items-center justify-center p-10 bg-gradient-to-br to-transparent transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] text-center ${colorMap[color]}`}
     >
-      <div className="rounded-2xl bg-slate-50/80 p-4 mb-6 transition-all duration-300 group-hover:scale-110 group-hover:bg-white">
-        {icon}
-      </div>
-      <h3 className="text-xl font-black text-slate-900">{title}</h3>
-      <p className="mt-2 text-sm text-slate-500 leading-relaxed">{desc}</p>
       {count !== undefined && count > 0 && (
-        <div className="badge-warning badge mt-4 inline-flex items-center gap-2 rounded-lg px-3 py-1 text-[10px] font-black">
-          <Clock size={12} />
-          {count} ta qabul qilinmagan yozuv
+        <div className="absolute -top-4 -right-4 flex h-10 w-10 animate-bounce items-center justify-center rounded-full bg-red-500 text-lg font-black text-white shadow-xl shadow-red-500/40 z-10">
+          +{count}
         </div>
       )}
+      <div className="rounded-2xl bg-slate-50/80 p-5 mb-4 transition-all duration-300 group-hover:scale-110 group-hover:bg-white inline-flex shadow-sm">
+        {icon}
+      </div>
+      <h3 className="text-xl font-black text-slate-900 tracking-tight">{title}</h3>
+      <p className="mt-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">{desc}</p>
     </button>
   )
 }

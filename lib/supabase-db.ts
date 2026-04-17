@@ -687,9 +687,9 @@ export async function getPendingJournalCounts(
           let count = 0
           for (const e of ents) {
             if (e.yuborildi) continue
-            
+
             const creator = e.createdByRole || 'worker'
-            
+
             if (role === 'worker') {
               // Worker faqat BB tomonidan "Boshlandi" qilinganlarni tasdiqlashi kutilyapti
               if (creator === 'bekat_boshlighi' && e.kamchilikBajarildi && !e.kamchilikBBTasdiqladi) {
