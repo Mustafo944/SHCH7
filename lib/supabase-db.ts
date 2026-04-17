@@ -691,20 +691,16 @@ export async function getPendingJournalCounts(
             const creator = e.createdByRole || 'worker'
             
             if (role === 'worker') {
-              // 3-ustun: Worker tomonidan tasdiqlanishi kerak bo'lganlar (agar BB kiritgan bo'lsa)
+              // Worker faqat BB tomonidan "Boshlandi" qilinganlarni tasdiqlashi kutilyapti
               if (creator === 'bekat_boshlighi' && e.kamchilikBajarildi && !e.kamchilikBBTasdiqladi) {
                 count++
               }
-              // 12-ustun: Worker o'zi "bajarildi" qilishi kerak bo'lganlar
-              else if (e.kamchilikBBTasdiqladi && !e.bartarafBajarildi) {
-                count++
-              }
             } else if (role === 'bekat_boshlighi') {
-              // 3-ustun: BB tomonidan tasdiqlanishi kerak bo'lganlar (agar worker kiritgan bo'lsa)
+              // 3-ustun: Worker boshlaganini BB tasdiqlashi kutilyapti
               if (creator === 'worker' && e.kamchilikBajarildi && !e.kamchilikBBTasdiqladi) {
                 count++
               }
-              // 12-ustun: BB tomonidan tasdiqlanishi kerak bo'lganlar (worker bajarildi qilgandan keyin)
+              // 12-ustun: Worker bajarildi qilganini BB tasdiqlashi kutilyapti
               else if (e.bartarafBajarildi && !e.bartarafBBTasdiqladi) {
                 count++
               }
