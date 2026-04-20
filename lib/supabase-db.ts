@@ -708,7 +708,14 @@ export async function getPendingJournalCounts(
           }
           du46 = count
         } else if (row.journal_type === 'shu2') {
-          // SHU-2 mantiqini ham shu yerda hisoblash mumkin
+          // SHU-2: worker dispetcher qabul qilganini kutadi
+          const ents = (row.entries || []) as SHU2Entry[]
+          if (role === 'worker') {
+            // Worker uchun: yuborilgan lekin dispetcher qabul qilmagan qatorlar
+            const pending = ents.filter(e => e.yuborildi && !e.dispetcherQabulQildi).length
+            shu2 += pending
+          }
+          // bekat_boshlighi uchun SHU-2 da kutish yo'q
         }
       }
     }

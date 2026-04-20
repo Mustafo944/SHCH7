@@ -283,12 +283,14 @@ export function DU46JournalView({
   userName,
   userRole,
   onClose,
+  onAccepted,
 }: {
   stationId: string
   stationName: string
   userName: string
   userRole: 'worker' | 'bekat_boshlighi' | 'dispatcher'
   onClose: () => void
+  onAccepted?: () => void
 }) {
   const [entries, setEntries] = useState<DU46Entry[]>([EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46()])
   const [loading, setLoading] = useState(true)
@@ -338,7 +340,7 @@ export function DU46JournalView({
     loadJournalData()
 
     const channel = supabase
-      .channel(`journal_${stationId}`)
+      .channel(`journal_du46_${userRole}_${stationId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'station_journals', filter: `station_id=eq.${stationId}` },
@@ -506,10 +508,15 @@ export function DU46JournalView({
 
   const handleDispetcherQabulQilish = async () => {
     const prev = [...entries]
-    const updated = entries.map(e => e.yuborildi ? { ...e, dispetcherQabulQildi: true, dispetcherImzo: userName } : e)
+    const updated = entries.map(e =>
+      e.yuborildi && !e.dispetcherQabulQildi
+        ? { ...e, dispetcherQabulQildi: true, dispetcherImzo: userName }
+        : e
+    )
     try {
       await saveEntries(updated, prev)
       showMsg('Qabul qilindi ✓')
+      onAccepted?.()  // parent ni xabar ber
     } catch { /* */ }
   }
 
@@ -1024,12 +1031,14 @@ export function SHU2JournalView({
   userName,
   userRole,
   onClose,
+  onAccepted,
 }: {
   stationId: string
   stationName: string
   userName: string
   userRole: 'worker' | 'bekat_boshlighi' | 'dispatcher'
   onClose: () => void
+  onAccepted?: () => void
 }) {
   const [entries, setEntries] = useState<SHU2Entry[]>(Array.from({ length: 7 }, (_, i) => ({ ...EMPTY_SHU2(), nomber: String(i + 1) })))
   const [loading, setLoading] = useState(true)
@@ -1058,7 +1067,7 @@ export function SHU2JournalView({
     loadJournalData()
 
     const channel = supabase
-      .channel(`journal_shu2_${stationId}`)
+      .channel(`journal_shu2_${userRole}_${stationId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'station_journals', filter: `station_id=eq.${stationId}` },
@@ -1137,11 +1146,16 @@ export function SHU2JournalView({
   const handleQabulQilish = async () => {
     const prev = [...entries]
     try {
-      const updated = entries.map(e => e.yuborildi ? { ...e, dispetcherQabulQildi: true } : e)
+      const updated = entries.map(e =>
+        e.yuborildi && !e.dispetcherQabulQildi
+          ? { ...e, dispetcherQabulQildi: true, dispetcherImzo: userName }
+          : e
+      )
       setEntries(updated)
       await upsertJournal(stationId, 'shu2', updated, userName)
       setMsg('Qabul qilindi ✓')
       setTimeout(() => setMsg(null), 2000)
+      onAccepted?.()  // parent ni xabar ber
     } catch (err) {
       console.error('❌ SHU-2 Qabul qilish xatosi:', err)
       setEntries(prev)
@@ -1159,6 +1173,7 @@ export function SHU2JournalView({
       await upsertJournal(stationId, 'shu2', updated, userName)
       setMsg('Qabul qilindi ✓')
       setTimeout(() => setMsg(null), 2000)
+      onAccepted?.()  // parent ni xabar ber
     } catch (err) {
       console.error('❌ SHU-2 qator qabul qilish xatosi:', err)
       setEntries(prev)

@@ -162,7 +162,9 @@ export default function DispatcherPage() {
         console.log('🚀 Realtime: Yangi hisobot!')
         loadWorkReports()
       })
-      .subscribe()
+      .subscribe((status) => {
+        console.log('📡 work_reports kanal:', status)
+      })
 
     const premiyaReportsChannel = supabase
       .channel('dispatcher_premiya_reports')
@@ -170,15 +172,19 @@ export default function DispatcherPage() {
         console.log('🚀 Realtime: Yangi premiya!')
         loadPremiyaReports()
       })
-      .subscribe()
+      .subscribe((status) => {
+        console.log('📡 premiya_reports kanal:', status)
+      })
 
     const journalsChannel = supabase
       .channel('dispatcher_journals')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals' }, () => {
-        console.log('🚀 Realtime: Jurnal yangilandi!')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals' }, (payload) => {
+        console.log('🚀 Realtime: Jurnal yangilandi!', payload.eventType)
         loadJournals()
       })
-      .subscribe()
+      .subscribe((status) => {
+        console.log('📡 station_journals kanal:', status)
+      })
 
     return () => {
       supabase.removeChannel(workReportsChannel)
@@ -418,7 +424,18 @@ export default function DispatcherPage() {
               clickable
             />
             <StatCard icon={<Clock className="text-amber-400" />} label="Kutilmoqda" value={totalPending} active={totalPending > 0} />
-            <StatCard icon={<CheckCircle2 className="text-emerald-400" />} label="Tasdiqlangan" value={allReports.filter(r => r.confirmedAt).length} />
+            <StatCard icon={<CheckCircle2 className="text-emerald-400" />} label="Tasdiqlangan" value={
+              allReports.filter(r => r.confirmedAt).length +
+              allJournals.reduce((sum, j) => {
+                if (j.journalType === 'shu2') {
+                  return sum + (j.entries as SHU2Entry[]).filter(e => e.dispetcherQabulQildi).length
+                }
+                if (j.journalType === 'du46') {
+                  return sum + (j.entries as DU46Entry[]).filter(e => e.dispetcherQabulQildi).length
+                }
+                return sum
+              }, 0)
+            } />
           </div>
 
           {/* Navigation Tabs */}
@@ -555,6 +572,7 @@ export default function DispatcherPage() {
                             userName={session?.fullName || ''}
                             userRole="dispatcher"
                             onClose={() => { setActiveJournalType(null); setSelectedReportType(null) }}
+                            onAccepted={loadJournals}
                           />
                         )}
                         {selectedReportType === 'jurnallar' && activeJournalType === 'shu2' && (
@@ -564,6 +582,7 @@ export default function DispatcherPage() {
                             userName={session?.fullName || ''}
                             userRole="dispatcher"
                             onClose={() => { setActiveJournalType(null); setSelectedReportType(null) }}
+                            onAccepted={loadJournals}
                           />
                         )}
                         {!selectedReportType && (

@@ -11,4 +11,15 @@ if (!anonKey) {
   throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is missing')
 }
 
-export const supabase = createClient(url, anonKey)
+export const supabase = createClient(url, anonKey, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
+  global: {
+    headers: {
+      'x-my-custom-header': 'smart-shch',
+    },
+  },
+})

@@ -416,7 +416,12 @@ export default function WorkerPage() {
               stationName={stationName}
               userName={session?.fullName || ''}
               userRole="worker"
-              onClose={() => setView('home')}
+              onClose={() => {
+                setView('home')
+                if (activeStationId && session?.role) {
+                  loadPendingCounts(activeStationId, session.role)
+                }
+              }}
             />
           )}
           {view === 'shu2' && (
@@ -425,7 +430,17 @@ export default function WorkerPage() {
               stationName={stationName}
               userName={session?.fullName || ''}
               userRole="worker"
-              onClose={() => setView('home')}
+              onClose={() => {
+                setView('home')
+                if (activeStationId && session?.role) {
+                  loadPendingCounts(activeStationId, session.role)
+                }
+              }}
+              onAccepted={() => {
+                if (activeStationId && session?.role) {
+                  loadPendingCounts(activeStationId, session.role)
+                }
+              }}
             />
           )}
         </main>
