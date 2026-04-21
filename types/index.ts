@@ -31,6 +31,7 @@ export interface ReportEntry {
   bajarildiShn: string;
   bajarildiImzo: string;
   adImzosi: string;
+  bajarilganSana?: string; // Bugun bajarilganini bilish uchun
 }
 
 export interface WorkReport {

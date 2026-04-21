@@ -11,6 +11,7 @@ import {
   getReportsByWorker,
   getPremiyasByWorker,
   upsertReport,
+  updateReportEntries,
   upsertPremiyaReport,
   getSchemasByStation,
   getGlobalGraphics,
@@ -490,64 +491,96 @@ function HeaderCard({ title, subtitle, status, color = 'cyan' }: { title: string
 }
 
 function JournalForm({ session, stationId, stationName, month, onSubmit, onCancel }: { session: User, stationId: string, stationName: string, month: number, onSubmit: () => void, onCancel: () => void }) {
-  const [entries, setEntries] = useState<ReportEntry[]>(Array.from({ length: TOTAL_ROWS }, (_, i) => ({
-    ragat: String(i + 1), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: ''
-  })))
+  const today = new Date()
+  const daysInMonth = new Date(today.getFullYear(), month + 1, 0).getDate()
+  const monthStr = `${today.getFullYear()}-${String(month + 1).padStart(2, '0')}`
+
+  // 31 qator - har bir oyning har kuni uchun (ragat = kun raqami)
+  const makeInitialEntries = (days: number): ReportEntry[] =>
+    Array.from({ length: days }, (_, i) => ({
+      ragat: String(i + 1),
+      haftalikJadval: '', yillikJadval: '', yangiIshlar: '',
+      kmoBartaraf: '', majburiyOzgarish: '',
+      bajarildiShn: '', bajarildiImzo: '', adImzosi: '',
+      bajarilganSana: ''
+    }))
+
+  const [entries, setEntries] = useState<ReportEntry[]>(() => makeInitialEntries(daysInMonth))
+  const [reportId, setReportId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [savingIdx, setSavingIdx] = useState<number | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const [formOk, setFormOk] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalType, setModalType] = useState<'4-haftalik' | 'yillik'>('4-haftalik')
   const [modalIdx, setModalIdx] = useState(0)
   const [modalSearch, setModalSearch] = useState('')
   const [selectedBolim, setSelectedBolim] = useState<number | null>(null)
-  const monthStr = `${new Date().getFullYear()}-${String(month + 1).padStart(2, '0')}`
 
   useEffect(() => {
     getReportsByWorker(session.id).then(reports => {
       const draft = reports.find(r => r.month === monthStr)
-      if (draft) setEntries(draft.entries)
+      if (draft) {
+        setReportId(draft.id)
+        // Mavjud qatorlarni birlashtirish — yangi kunlar bo'sh qolsin
+        const savedEntries = draft.entries
+        setEntries(prev => prev.map((row, i) => savedEntries[i] ? savedEntries[i] : row))
+      }
     })
   }, [session.id, monthStr])
 
-  const addRow = () => {
-    setEntries([...entries, {
-      ragat: String(entries.length + 1), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: ''
-    }])
-  }
-  const removeRow = () => {
-    if (entries.length <= 1) return
-    const last = entries[entries.length - 1]
-    // Tasdiqlangan qatorni o'chirib bo'lmaydi
-    if (last.adImzosi) return
-    setEntries(entries.slice(0, -1))
-  }
   const openSelectModal = (idx: number, type: '4-haftalik' | 'yillik') => {
     setModalIdx(idx)
     setModalType(type)
     setModalSearch('')
-    setSelectedBolim(null)   // ← bo'lim tanlanmagan holda ochiladi
+    setSelectedBolim(null)
     setModalOpen(true)
   }
 
+  // Reja yuborish — faqat reja mazmuni yuboriladi, bajarildi belgilanmaydi
   async function handleSubmit() {
     setSubmitting(true)
     try {
-      const updatedEntries = entries.map(e => {
-        const hasData = e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish;
-        return {
-          ...e,
-          bajarildiShn: hasData ? (e.bajarildiShn || session.fullName) : '',
-          bajarildiImzo: hasData ? (e.bajarildiImzo || session.fullName) : ''
-        }
+      const saved = await upsertReport({
+        workerId: session.id,
+        workerName: session.fullName,
+        workerPhone: session.phone || '',
+        stationId,
+        stationName,
+        entries,   // bajarildiShn/Imzo bo'sh — dispetcher tasdiqlamaguncha
+        month: monthStr,
+        year: String(today.getFullYear()),
+        weekLabel: 'Oylik Reja'
       })
-      await upsertReport({
-        workerId: session.id, workerName: session.fullName, workerPhone: session.phone || '', stationId, stationName, entries: updatedEntries, month: monthStr, year: String(new Date().getFullYear()), weekLabel: 'Oylik Reja'
-      })
-      onSubmit()
+      setReportId(saved.id)
+      setFormOk('Rejada yuborildi ✓')
+      setTimeout(() => { setFormOk(null); onSubmit() }, 1500)
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Xatolik')
       setTimeout(() => setFormError(null), 3000)
     } finally { setSubmitting(false) }
+  }
+
+  // Har kuni bitta qatorni "Bajarildi" deb belgilash
+  async function handleMarkDone(i: number) {
+    if (!reportId) return
+    setSavingIdx(i)
+    try {
+      const now = new Date()
+      const timeStr = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+      const updated = entries.map((e, idx) =>
+        idx === i
+          ? { ...e, bajarildiShn: session.fullName, bajarildiImzo: session.fullName, bajarilganSana: timeStr }
+          : e
+      )
+      setEntries(updated)
+      await updateReportEntries(reportId, updated)
+      setFormOk('Bajarildi ✓')
+      setTimeout(() => setFormOk(null), 1500)
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Xatolik')
+      setTimeout(() => setFormError(null), 3000)
+    } finally { setSavingIdx(null) }
   }
 
   const handleDownloadPDF = async () => {
@@ -561,11 +594,11 @@ function JournalForm({ session, stationId, stationName, month, onSubmit, onCance
     doc.setFont('helvetica', 'normal')
     doc.text(`${MONTHS[month]} · ${session.fullName}`, 14, 22)
 
-    const cols = ['№', '4-haftalik jadval', 'Yillik jadval', 'Yangi ishlar', 'KMO bartaraf', "Majburiy o'zgartirish", 'Shn', 'Imzo', 'AD']
+    const cols = ['Sana', '4-haftalik jadval', 'Yillik jadval', 'Yangi ishlar', 'KMO bartaraf', "Majburiy o'zgartirish", 'Shn', 'Imzo', 'AD']
     const rows = entries
       .filter(e => e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish)
       .map(e => [
-        e.ragat, e.haftalikJadval || '', e.yillikJadval || '',
+        `${e.ragat}-kun`, e.haftalikJadval || '', e.yillikJadval || '',
         e.yangiIshlar || '', e.kmoBartaraf || '', e.majburiyOzgarish || '',
         e.bajarildiShn || '', e.bajarildiImzo || '', e.adImzosi || 'Kutilmoqda'
       ])
@@ -575,168 +608,221 @@ function JournalForm({ session, stationId, stationName, month, onSubmit, onCance
       styles: { fontSize: 6, cellPadding: 2, overflow: 'linebreak' },
       headStyles: { fillColor: [8, 23, 40], textColor: [255, 255, 255], fontSize: 5.5, fontStyle: 'bold', halign: 'center' },
       alternateRowStyles: { fillColor: [240, 248, 255] },
-      columnStyles: { 0: { halign: 'center', cellWidth: 8 } }
+      columnStyles: { 0: { halign: 'center', cellWidth: 12 } }
     })
     doc.save(`Oylik-Reja_${stationName}_${MONTHS[month]}.pdf`)
   }
 
+  const isConfirmed = entries.some(e => e.adImzosi)
+  const todayDay = today.getMonth() === month ? today.getDate() : null
+
   return (
     <div className="space-y-6 animate-fade-up">
-      <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} status="yangi" />
-      <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm relative shadow-sm">
-        <div className="sm:hidden absolute top-0 right-0 bg-blue-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
-          O&apos;ngga suring →
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-black text-slate-900">Oylik Reja</h2>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{MONTHS[month]} · {stationName}</p>
         </div>
-        <div className="overflow-x-auto overflow-y-hidden">
-          <table style={{ minWidth: "1200px" }} className="w-full border-collapse text-left text-[11px] text-slate-700">
-            <thead className="border-b-2 border-sky-500/30 bg-slate-50 font-bold text-slate-600">
+        <div className="flex items-center gap-2">
+          {isConfirmed && (
+            <span className="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-1.5 text-[10px] font-black text-emerald-600 uppercase tracking-widest">✅ Dispetcher Tasdiqlagan</span>
+          )}
+          {(formError || formOk) && (
+            <span className={`rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border ${formError ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+              {formError || formOk}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
+        <div className="sm:hidden flex items-center gap-2 bg-blue-50 border-b border-blue-100 px-4 py-2">
+          <span className="text-[10px] font-bold text-blue-500">← O&apos;ngga suring →</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table style={{ minWidth: '1300px' }} className="w-full border-collapse text-[11px] text-slate-700">
+            <thead className="bg-slate-50 border-b-2 border-sky-200">
               <tr>
-                <th rowSpan={2} className="w-10 border-r border-slate-200 p-2 text-center">№</th>
-                <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-2 text-center">
+                <th className="w-14 border-r border-slate-200 p-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Sana</th>
+                <th className="w-[18%] border-r border-slate-200 p-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">
                   4-haftalik jadval
-                  <br />
-                  <span className="text-[9px] font-normal text-slate-400">(oynada tanlash)</span>
+                  <span className="block text-[8px] font-normal text-slate-400 normal-case tracking-normal">oynada tanlash</span>
                 </th>
-                <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-2 text-center">
-                  Yillik jadval bo&apos;yicha
-                  <br />
-                  <span className="text-[9px] font-normal text-slate-400">(oynada tanlash)</span>
+                <th className="w-[18%] border-r border-slate-200 p-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  Yillik jadval
+                  <span className="block text-[8px] font-normal text-slate-400 normal-case tracking-normal">oynada tanlash</span>
                 </th>
-                <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-2">Yangi ishlar ro&apos;yxati</th>
-                <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-2">O&apos;tkazilgan KMO va bartaraf etilgan kamchiliklar</th>
-                <th rowSpan={2} className="w-[13%] border-r border-slate-200 p-2">Rejaga kiritilgan majburiy o&apos;zgartirishlar</th>
-                <th colSpan={2} className="border-r border-slate-200 bg-slate-50 p-2 text-center">Bajarilgan ishlar</th>
-                <th rowSpan={2} className="w-[8%] bg-amber-50 p-2 text-center text-amber-700">AD imzosi</th>
-              </tr>
-              <tr className="bg-slate-100/50">
-                <th className="border-r border-t border-slate-200 p-2 text-center font-bold text-sky-600">Shn</th>
-                <th className="border-r border-t border-slate-200 p-2 text-center font-bold text-sky-600">Imzo</th>
+                <th className="w-[12%] border-r border-slate-200 p-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Yangi Ishlar</th>
+                <th className="w-[12%] border-r border-slate-200 p-3 text-[10px] font-black uppercase tracking-widest text-slate-500">KMO Bartaraf</th>
+                <th className="w-[12%] border-r border-slate-200 p-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Majburiy O&apos;zg.</th>
+                <th className="w-[14%] border-r border-slate-200 p-3 text-center text-[10px] font-black uppercase tracking-widest text-amber-600 bg-amber-50">AD Imzosi</th>
+                <th className="w-[10%] p-3 text-center text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50">Bajarildi</th>
               </tr>
             </thead>
             <tbody>
-              {entries.map((e, i) => (
-                <tr key={i} className="group border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                  <td className="border-r border-slate-100 p-1 align-top">
-                    <input
-                      value={e.ragat}
-                      readOnly={!!e.adImzosi}
-                      onChange={(ev) => { const n = [...entries]; n[i].ragat = ev.target.value; setEntries(n) }}
-                      className={`w-full rounded bg-transparent text-center font-bold text-sky-600 outline-none focus:bg-white ${e.adImzosi ? 'opacity-40' : ''}`}
-                    />
-                  </td>
-                  <td className="relative border-r border-slate-100 p-1 align-top">
-                    <textarea
-                      value={e.haftalikJadval}
-                      readOnly={!!e.adImzosi}
-                      onChange={(ev) => { const n = [...entries]; n[i].haftalikJadval = ev.target.value; setEntries(n) }}
-                      className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-sky-500/50 shadow-inner ${e.adImzosi ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
-                    />
-                    {!e.adImzosi && (
-                      <button
-                        onClick={() => openSelectModal(i, '4-haftalik')}
-                        className="absolute bottom-2 right-2 rounded bg-sky-100 p-1 text-sky-600 shadow-sm transition hover:bg-sky-600 hover:text-white"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
-                      </button>
-                    )}
-                  </td>
-                  <td className="relative border-r border-slate-100 p-1 align-top">
-                    <textarea
-                      value={e.yillikJadval}
-                      readOnly={!!e.adImzosi}
-                      onChange={(ev) => { const n = [...entries]; n[i].yillikJadval = ev.target.value; setEntries(n) }}
-                      className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-sky-500/50 shadow-inner ${e.adImzosi ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
-                    />
-                    {!e.adImzosi && (
-                      <button
-                        onClick={() => openSelectModal(i, 'yillik')}
-                        className="absolute bottom-2 right-2 rounded bg-sky-100 p-1 text-sky-600 shadow-sm transition hover:bg-sky-600 hover:text-white"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
-                      </button>
-                    )}
-                  </td>
-                  <td className="border-r border-slate-100 p-1 align-top">
-                    <textarea
-                      value={e.yangiIshlar}
-                      readOnly={!!e.adImzosi}
-                      onChange={(ev) => { const n = [...entries]; n[i].yangiIshlar = ev.target.value; setEntries(n) }}
-                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-sky-500/50 ${e.adImzosi ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    />
-                  </td>
-                  <td className="border-r border-slate-100 p-1 align-top">
-                    <textarea
-                      value={e.kmoBartaraf}
-                      readOnly={!!e.adImzosi}
-                      onChange={(ev) => { const n = [...entries]; n[i].kmoBartaraf = ev.target.value; setEntries(n) }}
-                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-sky-500/50 ${e.adImzosi ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    />
-                  </td>
-                  <td className="border-r border-slate-100 p-1 align-top">
-                    <textarea
-                      value={e.majburiyOzgarish}
-                      readOnly={!!e.adImzosi}
-                      onChange={(ev) => { const n = [...entries]; n[i].majburiyOzgarish = ev.target.value; setEntries(n) }}
-                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-sky-500/50 ${e.adImzosi ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    />
-                  </td>
-                  <td className="border-r border-slate-100 p-2 text-center align-middle font-medium text-sky-600">
-                    {e.bajarildiShn}
-                  </td>
-                  <td className="border-r border-slate-100 p-2 text-center align-middle italic text-slate-400">
-                    {e.bajarildiImzo}
-                  </td>
-                  <td className="p-2 text-center align-middle">
-                    {e.adImzosi ? (
-                      <span className="inline-block whitespace-pre-wrap rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100">{e.adImzosi}</span>
-                    ) : (
-                      <span className="text-[10px] text-slate-300 italic">Kutilmoqda...</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {entries.map((e, i) => {
+                const dayNum = i + 1
+                const isToday = todayDay === dayNum
+                const hasContent = e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish
+                const isDone = !!e.bajarildiShn
+                const isApproved = !!e.adImzosi
+                const canMarkDone = isConfirmed && isApproved && hasContent && !isDone
+
+                return (
+                  <tr key={i} className={`border-b border-slate-100 transition-colors ${
+                    isDone ? 'bg-emerald-50/30' :
+                    isToday && hasContent ? 'bg-amber-50/50' :
+                    'hover:bg-slate-50/60'
+                  }`}>
+                    {/* SANA */}
+                    <td className="border-r border-slate-100 p-2 text-center">
+                      <div className={`flex flex-col items-center justify-center rounded-xl p-1.5 ${
+                        isToday ? 'bg-sky-500 text-white' : 'text-slate-600'
+                      }`}>
+                        <span className="text-[16px] font-black leading-none">{dayNum}</span>
+                        <span className="text-[8px] font-bold uppercase opacity-70">{MONTHS[month].slice(0, 3)}</span>
+                      </div>
+                    </td>
+                    {/* 4-HAFTALIK */}
+                    <td className="relative border-r border-slate-100 p-1 align-top">
+                      <textarea
+                        value={e.haftalikJadval}
+                        readOnly={isApproved}
+                        onChange={ev => { const n = [...entries]; n[i].haftalikJadval = ev.target.value; setEntries(n) }}
+                        className={`min-h-[56px] w-full resize-none rounded-lg px-2 py-1.5 text-[11px] outline-none transition-colors ${
+                          isApproved ? 'bg-transparent text-slate-600 cursor-default' : 'bg-slate-50 hover:bg-white focus:ring-1 focus:ring-sky-400'
+                        }`}
+                      />
+                      {!isApproved && (
+                        <button
+                          onClick={() => openSelectModal(i, '4-haftalik')}
+                          className="absolute bottom-2 right-2 flex h-5 w-5 items-center justify-center rounded-md bg-sky-100 text-sky-600 text-xs font-black hover:bg-sky-500 hover:text-white transition-all"
+                        >+</button>
+                      )}
+                    </td>
+                    {/* YILLIK */}
+                    <td className="relative border-r border-slate-100 p-1 align-top">
+                      <textarea
+                        value={e.yillikJadval}
+                        readOnly={isApproved}
+                        onChange={ev => { const n = [...entries]; n[i].yillikJadval = ev.target.value; setEntries(n) }}
+                        className={`min-h-[56px] w-full resize-none rounded-lg px-2 py-1.5 text-[11px] outline-none transition-colors ${
+                          isApproved ? 'bg-transparent text-slate-600 cursor-default' : 'bg-slate-50 hover:bg-white focus:ring-1 focus:ring-sky-400'
+                        }`}
+                      />
+                      {!isApproved && (
+                        <button
+                          onClick={() => openSelectModal(i, 'yillik')}
+                          className="absolute bottom-2 right-2 flex h-5 w-5 items-center justify-center rounded-md bg-sky-100 text-sky-600 text-xs font-black hover:bg-sky-500 hover:text-white transition-all"
+                        >+</button>
+                      )}
+                    </td>
+                    {/* YANGI ISHLAR */}
+                    <td className="border-r border-slate-100 p-1 align-top">
+                      <textarea
+                        value={e.yangiIshlar}
+                        readOnly={isApproved}
+                        onChange={ev => { const n = [...entries]; n[i].yangiIshlar = ev.target.value; setEntries(n) }}
+                        className={`min-h-[56px] w-full resize-none rounded-lg px-2 py-1.5 text-[11px] outline-none ${
+                          isApproved ? 'bg-transparent cursor-default' : 'bg-transparent hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-sky-400'
+                        }`}
+                      />
+                    </td>
+                    {/* KMO */}
+                    <td className="border-r border-slate-100 p-1 align-top">
+                      <textarea
+                        value={e.kmoBartaraf}
+                        readOnly={isApproved}
+                        onChange={ev => { const n = [...entries]; n[i].kmoBartaraf = ev.target.value; setEntries(n) }}
+                        className={`min-h-[56px] w-full resize-none rounded-lg px-2 py-1.5 text-[11px] outline-none ${
+                          isApproved ? 'bg-transparent cursor-default' : 'bg-transparent hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-sky-400'
+                        }`}
+                      />
+                    </td>
+                    {/* MAJBURIY */}
+                    <td className="border-r border-slate-100 p-1 align-top">
+                      <textarea
+                        value={e.majburiyOzgarish}
+                        readOnly={isApproved}
+                        onChange={ev => { const n = [...entries]; n[i].majburiyOzgarish = ev.target.value; setEntries(n) }}
+                        className={`min-h-[56px] w-full resize-none rounded-lg px-2 py-1.5 text-[11px] outline-none ${
+                          isApproved ? 'bg-transparent cursor-default' : 'bg-transparent hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-sky-400'
+                        }`}
+                      />
+                    </td>
+                    {/* AD IMZOSI */}
+                    <td className="border-r border-slate-100 p-2 text-center align-middle bg-amber-50/30">
+                      {e.adImzosi ? (
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[9px] font-black text-emerald-600 border border-emerald-100">
+                          ✅ Tasdiqlandi
+                        </span>
+                      ) : hasContent ? (
+                        <span className="text-[9px] text-amber-400 font-bold">⏳ Kutilmoqda</span>
+                      ) : (
+                        <span className="text-[9px] text-slate-200">—</span>
+                      )}
+                    </td>
+                    {/* BAJARILDI */}
+                    <td className="p-2 text-center align-middle bg-emerald-50/20">
+                      {isDone ? (
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="text-[9px] font-black text-emerald-600">✓ Bajarildi</span>
+                          <span className="text-[8px] text-slate-400">{e.bajarilganSana?.split(' ')[0]}</span>
+                        </div>
+                      ) : canMarkDone ? (
+                        <button
+                          onClick={() => handleMarkDone(i)}
+                          disabled={savingIdx === i}
+                          className="w-full rounded-xl bg-emerald-600 px-2 py-2 text-[9px] font-black text-white uppercase tracking-widest shadow-sm hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50"
+                        >
+                          {savingIdx === i ? '...' : '✓ Bajarildi'}
+                        </button>
+                      ) : (
+                        <span className="text-[9px] text-slate-200">—</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
-        <div className="flex items-center gap-3 border-t border-slate-200/60 bg-slate-50/50 p-4">
-          <button
-            onClick={addRow}
-            className="flex items-center gap-2 rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-700 shadow-sm backdrop-blur-sm transition hover:bg-slate-100"
-          >
-            <Plus size={14} />
-            Qator qo&apos;shish
-          </button>
-          <button
-            onClick={removeRow}
-            className="flex items-center gap-2 rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-400 backdrop-blur-sm transition hover:border-red-200 hover:text-red-500"
-          >
-            <X size={14} />
-            Qator o&apos;chirish
-          </button>
-        </div>
-      </div>
-      {formError && (
-        <div className="rounded-2xl border border-red-200/60 bg-red-50/80 p-4 text-center text-sm font-bold text-red-600 backdrop-blur-sm">{formError}</div>
-      )}
-      <div className="flex gap-4">
-        <button onClick={handleDownloadPDF}
-          className="rounded-2xl border border-slate-200/60 bg-white/80 px-6 py-5 font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition flex items-center gap-2 shadow-sm backdrop-blur-sm">
-          <Download size={18} /> PDF
-        </button>
-        <button onClick={handleSubmit} disabled={submitting} className="btn-gradient flex-1 py-5 font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all">{submitting ? 'Yuborilmoqda...' : 'Yuborish'}</button>
-        <button onClick={onCancel} className="rounded-2xl bg-white/80 border border-slate-200/60 px-10 font-bold text-slate-400 hover:text-slate-900 transition shadow-sm backdrop-blur-sm">Bekor qilish</button>
       </div>
 
+      {/* Actions */}
+      <div className="flex gap-3">
+        <button
+          onClick={handleDownloadPDF}
+          className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-xs font-bold text-slate-600 shadow-sm hover:bg-slate-50 transition-all"
+        >
+          <Download size={16} /> PDF
+        </button>
+        {!isConfirmed && (
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="btn-gradient flex-1 py-4 font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all"
+          >
+            {submitting ? 'Yuborilmoqda...' : 'Dispetcherga Yuborish'}
+          </button>
+        )}
+        <button
+          onClick={onCancel}
+          className="rounded-2xl border border-slate-200 bg-white px-8 py-4 text-xs font-bold text-slate-400 hover:text-slate-900 transition-all"
+        >Orqaga</button>
+      </div>
+
+      {/* Vazifa tanlash modali */}
       {modalOpen && (
-        <div className="fixed inset-0 z-[300] flex items-start justify-center bg-slate-900/40 p-4 pt-[10vh] backdrop-blur-md transition-all">
+        <div className="fixed inset-0 z-[300] flex items-start justify-center bg-slate-900/40 p-4 pt-[10vh] backdrop-blur-md">
           <div className="relative flex h-[70vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in">
-            <div className="flex items-center justify-between border-b border-slate-200/60 px-8 py-5 bg-slate-50/80">
+            <div className="flex items-center justify-between border-b border-slate-200 px-8 py-5 bg-slate-50">
               <h3 className="text-lg font-black text-slate-900 tracking-tight">
-                {modalType === '4-haftalik' ? '4-haftalik jadval' : 'Yillik jadval'} — vazifa tanlash
+                {modalType === '4-haftalik' ? '4-haftalik jadval' : 'Yillik jadval'} — {modalIdx + 1}-kun uchun vazifa
               </h3>
-              <button onClick={() => setModalOpen(false)} className="rounded-xl border border-slate-200/60 bg-white p-2 text-slate-400 hover:text-slate-900 transition-all shadow-sm"><X size={20} /></button>
+              <button onClick={() => setModalOpen(false)} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 hover:text-slate-900 transition shadow-sm"><X size={20} /></button>
             </div>
-            <div className="border-b border-slate-100 px-8 py-4 bg-white">
+            <div className="border-b border-slate-100 px-8 py-4">
               <input
                 value={modalSearch}
                 onChange={e => setModalSearch(e.target.value)}
@@ -749,86 +835,58 @@ function JournalForm({ session, stationId, stationName, month, onSubmit, onCance
               {selectedBolim === null && !modalSearch ? (
                 <div className="grid grid-cols-1 gap-3">
                   {(modalType === 'yillik' ? YILLIK_REJA : TORT_HAFTALIK_REJA).map((b, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedBolim(idx)}
-                      className="flex w-full items-center justify-between rounded-2xl border border-slate-200/60 bg-white/80 p-5 text-left backdrop-blur-sm transition-all hover:border-sky-300 hover:shadow-md hover:bg-sky-50/30 group"
-                    >
+                    <button key={idx} onClick={() => setSelectedBolim(idx)}
+                      className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:border-sky-300 hover:shadow-md hover:bg-sky-50/30 group">
                       <span className="font-bold text-slate-700 group-hover:text-sky-600 transition-colors uppercase tracking-tight text-sm">{b.bolim}</span>
-                      <span className="rounded-lg bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase text-slate-400 border border-slate-200/60">{b.ishlar.length} ta ish</span>
+                      <span className="rounded-lg bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase text-slate-400 border border-slate-200">{b.ishlar.length} ta ish</span>
                     </button>
                   ))}
                 </div>
               ) : (
                 <div className="space-y-2">
                   {selectedBolim !== null && (
-                    <div className="mb-4 flex items-center justify-between border-b border-slate-200/60 pb-3">
-                      <button onClick={() => { setSelectedBolim(null); setModalSearch(''); }} className="flex items-center gap-1.5 rounded-lg bg-slate-100/80 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-200 hover:text-slate-700">
-                        <ChevronLeft size={14} /> Ortga ro&apos;yxatga
+                    <div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-3">
+                      <button onClick={() => { setSelectedBolim(null); setModalSearch('') }}
+                        className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-200 transition">
+                        <ChevronLeft size={14} /> Ortga
                       </button>
-                      <span className="text-xs font-bold text-sky-600 truncate max-w-[200px] text-right">
+                      <span className="text-xs font-bold text-sky-600 truncate max-w-[200px]">
                         {(modalType === 'yillik' ? YILLIK_REJA : TORT_HAFTALIK_REJA)[selectedBolim].bolim}
                       </span>
                     </div>
                   )}
-                  {(selectedBolim !== null
-                    ? (modalType === 'yillik' ? YILLIK_REJA_FLAT : TORT_HAFTALIK_REJA_FLAT).filter(t => t.bolim === (modalType === 'yillik' ? YILLIK_REJA : TORT_HAFTALIK_REJA)[selectedBolim].bolim)
-                    : (modalType === 'yillik' ? YILLIK_REJA_FLAT : TORT_HAFTALIK_REJA_FLAT)
-                  )
-                    .filter((task: ParsedTaskItem) =>
-                      task.ish.toLowerCase().includes(modalSearch.toLowerCase()) ||
-                      task.davriylik.toLowerCase().includes(modalSearch.toLowerCase()) ||
-                      task.bajaruvchi.toLowerCase().includes(modalSearch.toLowerCase()) ||
-                      task.manba.toLowerCase().includes(modalSearch.toLowerCase()) ||
-                      task.raqam.toLowerCase().includes(modalSearch.toLowerCase())
-                    )
-                    .map((task: ParsedTaskItem, ti: number) => (
-                      <button
-                        key={ti}
-                        onClick={() => {
-                          const n = [...entries]
-
-                          const text =
-                            `[${task.manba}${task.raqam ? ` ${task.raqam}` : ''}] ${task.ish}\n` +
-                            `Davriyligi: ${task.davriylik}\n` +
-                            `Bajaruvchi: ${task.bajaruvchi}`
-
-                          if (modalType === '4-haftalik') {
-                            n[modalIdx].haftalikJadval = text
-                          } else {
-                            n[modalIdx].yillikJadval = text
-                          }
-
-                          setEntries(n)
-                          setModalOpen(false)
-                          setSelectedBolim(null)
-                        }}
-                        className="w-full rounded-xl border border-slate-200/60 bg-white/80 p-3 text-left backdrop-blur-sm transition-all hover:border-sky-300 hover:shadow-md hover:bg-sky-50/30 group"
-                      >
-                        <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-                          <p className="text-[10px] text-sky-600">
-                            📌 {task.bolim}
-                          </p>
-                          <p className="text-[10px] text-amber-600/70">
-                            📄 {task.manba} {task.raqam}
-                          </p>
-                          <p className="text-[10px] text-slate-400">
-                            🕐 {task.davriylik}
-                          </p>
-                          <p className="text-[10px] text-slate-400">
-                            👤 {task.bajaruvchi}
-                          </p>
-                        </div>
-                        <p className="mt-2 whitespace-pre-wrap text-xs font-bold text-slate-700 group-hover:text-slate-900">
-                          {task.ish}
-                        </p>
-                        {task.jurnal && (
-                          <div className="mt-2 inline-block rounded-md bg-sky-50/80 px-2 py-1 text-[9px] uppercase tracking-widest text-sky-600 border border-sky-100/60">
-                            Jurnal: {task.jurnal}
-                          </div>
-                        )}
-                      </button>
-                    ))}
+                  {(
+                    selectedBolim !== null
+                      ? (modalType === 'yillik' ? YILLIK_REJA_FLAT : TORT_HAFTALIK_REJA_FLAT).filter(t => t.bolim === (modalType === 'yillik' ? YILLIK_REJA : TORT_HAFTALIK_REJA)[selectedBolim].bolim)
+                      : (modalType === 'yillik' ? YILLIK_REJA_FLAT : TORT_HAFTALIK_REJA_FLAT)
+                  ).filter((task: ParsedTaskItem) =>
+                    task.ish.toLowerCase().includes(modalSearch.toLowerCase()) ||
+                    task.manba.toLowerCase().includes(modalSearch.toLowerCase()) ||
+                    task.raqam.toLowerCase().includes(modalSearch.toLowerCase())
+                  ).map((task: ParsedTaskItem, ti: number) => (
+                    <button key={ti}
+                      onClick={() => {
+                        const n = [...entries]
+                        const text = `[${task.manba}${task.raqam ? ` ${task.raqam}` : ''}] ${task.ish}\nDavriyligi: ${task.davriylik}\nBajaruvchi: ${task.bajaruvchi}`
+                        if (modalType === '4-haftalik') n[modalIdx].haftalikJadval = text
+                        else n[modalIdx].yillikJadval = text
+                        setEntries(n)
+                        setModalOpen(false)
+                        setSelectedBolim(null)
+                      }}
+                      className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left transition-all hover:border-sky-300 hover:shadow-md hover:bg-sky-50/30 group"
+                    >
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-1">
+                        <span className="text-[10px] font-black text-sky-600 uppercase tracking-widest">{task.manba} {task.raqam}</span>
+                        <span className="text-[9px] text-amber-600/80">🕐 {task.davriylik}</span>
+                        <span className="text-[9px] text-slate-400">👤 {task.bajaruvchi}</span>
+                      </div>
+                      <p className="text-xs font-bold text-slate-700 group-hover:text-slate-900 whitespace-pre-wrap">{task.ish}</p>
+                      {task.jurnal && (
+                        <span className="mt-1.5 inline-block rounded-md bg-sky-50 px-2 py-0.5 text-[9px] uppercase tracking-widest text-sky-600 border border-sky-100">Jurnal: {task.jurnal}</span>
+                      )}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>

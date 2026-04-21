@@ -80,6 +80,7 @@ export default function DispatcherPage() {
   const [showWorkersModal, setShowWorkersModal] = useState(false)
   const [activeJournalType, setActiveJournalType] = useState<JournalType | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [showDailyModal, setShowDailyModal] = useState<'bajarilgan' | 'bajarilmagan' | null>(null)
 
   const [form, setForm] = useState({
     fullName: '',
@@ -259,6 +260,44 @@ export default function DispatcherPage() {
       Object.values(journalPendingCounts).reduce((a, b) => a + b, 0)
   }, [pendingCounts, premiyaPendingCounts, journalPendingCounts])
 
+  // ─── Bugun bajarilgan / bajarilmagan hisob ───────────────────────────────
+  const todayStr = useMemo(() => {
+    const n = new Date()
+    return `${String(n.getDate()).padStart(2, '0')}.${String(n.getMonth() + 1).padStart(2, '0')}.${n.getFullYear()}`
+  }, [])
+
+  type DailyTask = { stationName: string; workerName: string; ish: string; day: string }
+
+  const bugunBajarilganList = useMemo((): DailyTask[] => {
+    const list: DailyTask[] = []
+    allReports.filter(r => r.confirmedAt).forEach(r => {
+      r.entries.forEach(e => {
+        const ish = e.haftalikJadval || e.yillikJadval || e.yangiIshlar
+        // bajarilganSana today'ga mos kelsa
+        if (ish && e.bajarildiShn && e.bajarilganSana?.startsWith(todayStr)) {
+          list.push({ stationName: r.stationName, workerName: r.workerName, ish: ish.split('\n')[0].slice(0, 80), day: e.ragat })
+        }
+      })
+    })
+    return list
+  }, [allReports, todayStr])
+
+  const bugunBajarilmaganList = useMemo((): DailyTask[] => {
+    const list: DailyTask[] = []
+    const todayDay = new Date().getDate()
+    allReports.filter(r => r.confirmedAt).forEach(r => {
+      r.entries.forEach(e => {
+        const dayNum = parseInt(e.ragat)
+        const ish = e.haftalikJadval || e.yillikJadval || e.yangiIshlar
+        // Bugun bo'lishi kerak edi, lekin bajarilmagan
+        if (!isNaN(dayNum) && dayNum === todayDay && ish && e.adImzosi && !e.bajarildiShn) {
+          list.push({ stationName: r.stationName, workerName: r.workerName, ish: ish.split('\n')[0].slice(0, 80), day: e.ragat })
+        }
+      })
+    })
+    return list
+  }, [allReports])
+
   async function handleAddWorker(e: React.FormEvent) {
     e.preventDefault()
     if (!form.fullName || !form.login || (!editingWorkerId && !form.password)) {
@@ -423,19 +462,24 @@ export default function DispatcherPage() {
               onClick={() => setShowWorkersModal(true)}
               clickable
             />
-            <StatCard icon={<Clock className="text-amber-400" />} label="Kutilmoqda" value={totalPending} active={totalPending > 0} />
-            <StatCard icon={<CheckCircle2 className="text-emerald-400" />} label="Tasdiqlangan" value={
-              allReports.filter(r => r.confirmedAt).length +
-              allJournals.reduce((sum, j) => {
-                if (j.journalType === 'shu2') {
-                  return sum + (j.entries as SHU2Entry[]).filter(e => e.dispetcherQabulQildi).length
-                }
-                if (j.journalType === 'du46') {
-                  return sum + (j.entries as DU46Entry[]).filter(e => e.dispetcherQabulQildi).length
-                }
-                return sum
-              }, 0)
-            } />
+            <StatCard
+              icon={<CheckCircle2 className="text-emerald-400" />}
+              label="Bugun Bajarilgan"
+              value={bugunBajarilganList.length}
+              active={bugunBajarilganList.length > 0}
+              onClick={() => setShowDailyModal('bajarilgan')}
+              clickable
+              color="emerald"
+            />
+            <StatCard
+              icon={<Clock className="text-red-400" />}
+              label="Bugun Bajarilmagan"
+              value={bugunBajarilmaganList.length}
+              active={bugunBajarilmaganList.length > 0}
+              onClick={() => setShowDailyModal('bajarilmagan')}
+              clickable
+              color="red"
+            />
           </div>
 
           {/* Navigation Tabs */}
@@ -697,11 +741,62 @@ export default function DispatcherPage() {
       {deleteConfirmId && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
           <div className="premium-card w-full max-w-md p-8 animate-scale-in">
-            <h3 className="text-lg font-black text-slate-900">Ishchini o'chirish</h3>
-            <p className="mt-2 text-sm text-slate-500">Haqiqatdan ham ishchini o'chirishni xohlaysizmi? Bu amalni qaytarib bo'lmaydi.</p>
+            <h3 className="text-lg font-black text-slate-900">Ishchini o&apos;chirish</h3>
+            <p className="mt-2 text-sm text-slate-500">Haqiqatdan ham ishchini o&apos;chirishni xohlaysizmi? Bu amalni qaytarib bo&apos;lmaydi.</p>
             <div className="mt-8 flex justify-end gap-3">
               <button onClick={() => setDeleteConfirmId(null)} className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Bekor qilish</button>
-              <button onClick={confirmDeleteWorker} className="rounded-xl bg-red-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all">O'chirish</button>
+              <button onClick={confirmDeleteWorker} className="rounded-xl bg-red-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all">O&apos;chirish</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bugun Bajarilgan / Bajarilmagan Modal */}
+      {showDailyModal && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md" onClick={() => setShowDailyModal(null)}>
+          <div className="premium-card w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className={`flex items-center justify-between px-8 py-6 border-b border-slate-100 ${
+              showDailyModal === 'bajarilgan' ? 'bg-emerald-50/60' : 'bg-red-50/60'
+            }`}>
+              <div>
+                <h3 className={`text-xl font-black ${showDailyModal === 'bajarilgan' ? 'text-emerald-700' : 'text-red-700'}`}>
+                  {showDailyModal === 'bajarilgan' ? '✅ Bugun Bajarilgan Ishlar' : '❌ Bugun Bajarilmagan Ishlar'}
+                </h3>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                  {new Date().toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+              <button onClick={() => setShowDailyModal(null)} className="rounded-xl bg-white border border-slate-200 p-3 text-slate-400 hover:text-slate-800 transition shadow-sm">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-3">
+              {(showDailyModal === 'bajarilgan' ? bugunBajarilganList : bugunBajarilmaganList).length === 0 ? (
+                <div className="flex h-40 items-center justify-center text-slate-300 text-xs font-black uppercase tracking-widest">
+                  {showDailyModal === 'bajarilgan' ? 'Bugun hech narsa bajarilmagan' : 'Hammasi bajarilgan! 🎉'}
+                </div>
+              ) : (
+                (showDailyModal === 'bajarilgan' ? bugunBajarilganList : bugunBajarilmaganList).map((t, i) => (
+                  <div key={i} className={`flex items-start gap-4 rounded-2xl border p-4 ${
+                    showDailyModal === 'bajarilgan' ? 'border-emerald-100 bg-emerald-50/40' : 'border-red-100 bg-red-50/40'
+                  }`}>
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-black text-sm ${
+                      showDailyModal === 'bajarilgan' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {t.day}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-black text-slate-900 truncate">{t.ish}</p>
+                      <p className="mt-1 text-[10px] font-bold text-slate-400">{t.stationName} · {t.workerName}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${
+                      showDailyModal === 'bajarilgan' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {showDailyModal === 'bajarilgan' ? '✓ Bajarildi' : '✗ Kechikmoqda'}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -726,29 +821,39 @@ export default function DispatcherPage() {
   )
 }
 
-function StatCard({ icon, label, value, active, clickable, onClick }: {
+function StatCard({ icon, label, value, active, clickable, onClick, color }: {
   icon: React.ReactNode,
   label: string,
   value: string | number,
   active?: boolean,
   clickable?: boolean,
-  onClick?: () => void
+  onClick?: () => void,
+  color?: 'emerald' | 'red' | 'amber'
 }) {
+  const dotColor = color === 'emerald' ? 'bg-emerald-500' : color === 'red' ? 'bg-red-500' : 'bg-amber-500'
+  const hoverBg = color === 'emerald' ? 'group-hover:bg-emerald-50' : color === 'red' ? 'group-hover:bg-red-50' : 'group-hover:bg-sky-50'
+  const numColor = active && color === 'emerald' ? 'text-emerald-600' : active && color === 'red' ? 'text-red-600' : 'text-slate-900'
+
   return (
     <div
       onClick={onClick}
       className={`premium-card group relative overflow-hidden p-6 transition-all duration-300 ${clickable ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02]' : ''}`}
     >
       <div className="flex items-center justify-between">
-        <div className="rounded-2xl bg-slate-50/80 p-3 transition-all duration-300 group-hover:scale-110 group-hover:bg-sky-50">
+        <div className={`rounded-2xl bg-slate-50/80 p-3 transition-all duration-300 group-hover:scale-110 ${hoverBg}`}>
           {icon}
         </div>
-        {active && <div className="h-2 w-2 rounded-full bg-red-500 animate-ping" />}
+        {active && <div className={`h-2.5 w-2.5 rounded-full ${dotColor} shadow-[0_0_8px_2px_rgba(16,185,129,0.25)] animate-ping`} />}
       </div>
       <div className="mt-4">
         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
-        <p className="text-3xl font-black text-slate-900">{value}</p>
+        <p className={`text-3xl font-black transition-colors ${numColor}`}>{value}</p>
       </div>
+      {clickable && (
+        <div className="absolute bottom-3 right-4 text-[9px] font-black uppercase tracking-widest text-slate-300 group-hover:text-slate-500 transition-colors">
+          Tafsilot →
+        </div>
+      )}
     </div>
   )
 }
