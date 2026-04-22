@@ -37,6 +37,7 @@ import {
   FileText,
   Award,
   ChevronRight,
+  ChevronDown,
   CheckCircle2,
   Clock,
   X,
@@ -46,7 +47,8 @@ import {
   Eye,
   Menu,
   BookOpen,
-  MapIcon
+  MapIcon,
+  AlertTriangle
 } from 'lucide-react'
 
 type Tab = 'bekatlar' | 'arxiv' | 'grafiklar'
@@ -80,6 +82,7 @@ export default function DispatcherPage() {
   const [showWorkersModal, setShowWorkersModal] = useState(false)
   const [activeJournalType, setActiveJournalType] = useState<JournalType | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [todayModal, setTodayModal] = useState<'bajarilgan' | 'bajarilmagan' | null>(null)
 
   const [form, setForm] = useState({
     fullName: '',
@@ -259,6 +262,55 @@ export default function DispatcherPage() {
       Object.values(journalPendingCounts).reduce((a, b) => a + b, 0)
   }, [pendingCounts, premiyaPendingCounts, journalPendingCounts])
 
+  // ─── BUGUNGI KUNLIK BAJARILGAN / BAJARILMAGAN ISHLAR ───────────────
+  // Bugungi sana raqami (masalan: 21 aprelda → "21")
+  const todayStr = String(new Date().getDate())
+  const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+
+  // Joriy oy uchun barcha hisobotlardan bugungi ishlarni ajratib olish
+  const todayTasks = useMemo(() => {
+    const result: {
+      stationId: string
+      stationName: string
+      workerName: string
+      entry: ReportEntry
+      bajarilgan: boolean
+      month: string
+    }[] = []
+
+    allReports
+      .filter(r => r.month === currentMonthStr)
+      .forEach(r => {
+        r.entries.forEach(e => {
+          // ragat ustuni sana vazifasini bajaradi - raqamni solishtirish
+          const hasContent = e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish
+          const taskDay = parseInt(e.ragat.trim(), 10)
+          const todayDay = parseInt(todayStr, 10)
+          const isPastOrToday = !isNaN(taskDay) && taskDay <= todayDay
+          const bajarilgan = !!(e.bajarildiShn && e.bajarildiImzo)
+
+          if (hasContent && isPastOrToday) {
+            // Agar vazifa bugungi bo'lsa, Yoki eski vazifa bo'lib hali bajarilmagan bo'lsa (qarz)
+            if (taskDay === todayDay || !bajarilgan) {
+              result.push({
+                stationId: r.stationId,
+                stationName: r.stationName,
+                workerName: r.workerName,
+                entry: e,
+                bajarilgan,
+                month: r.month,
+              })
+            }
+          }
+        })
+      })
+
+    return result
+  }, [allReports, todayStr, currentMonthStr])
+
+  const todayBajarilgan = todayTasks.filter(t => t.bajarilgan)
+  const todayBajarilmagan = todayTasks.filter(t => !t.bajarilgan)
+
   async function handleAddWorker(e: React.FormEvent) {
     e.preventDefault()
     if (!form.fullName || !form.login || (!editingWorkerId && !form.password)) {
@@ -423,19 +475,21 @@ export default function DispatcherPage() {
               onClick={() => setShowWorkersModal(true)}
               clickable
             />
-            <StatCard icon={<Clock className="text-amber-400" />} label="Kutilmoqda" value={totalPending} active={totalPending > 0} />
-            <StatCard icon={<CheckCircle2 className="text-emerald-400" />} label="Tasdiqlangan" value={
-              allReports.filter(r => r.confirmedAt).length +
-              allJournals.reduce((sum, j) => {
-                if (j.journalType === 'shu2') {
-                  return sum + (j.entries as SHU2Entry[]).filter(e => e.dispetcherQabulQildi).length
-                }
-                if (j.journalType === 'du46') {
-                  return sum + (j.entries as DU46Entry[]).filter(e => e.dispetcherQabulQildi).length
-                }
-                return sum
-              }, 0)
-            } />
+            <StatCard
+              icon={<CheckCircle2 className="text-emerald-400" />}
+              label="Bugun bajarilgan"
+              value={todayBajarilgan.length}
+              onClick={() => setTodayModal('bajarilgan')}
+              clickable
+            />
+            <StatCard
+              icon={<AlertTriangle className="text-red-400" />}
+              label="Bugun bajarilmagan"
+              value={todayBajarilmagan.length}
+              active={todayBajarilmagan.length > 0}
+              onClick={() => setTodayModal('bajarilmagan')}
+              clickable
+            />
           </div>
 
           {/* Navigation Tabs */}
@@ -694,6 +748,16 @@ export default function DispatcherPage() {
       )}
 
       {/* O'chirish tasdiqlash modali */}
+      {/* ─── BUGUNGI ISHLAR MODAL ──────────────────────────────── */}
+      {todayModal && (
+        <TodayTasksModal
+          type={todayModal}
+          tasks={todayModal === 'bajarilgan' ? todayBajarilgan : todayBajarilmagan}
+          stations={stations}
+          onClose={() => setTodayModal(null)}
+        />
+      )}
+
       {deleteConfirmId && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
           <div className="premium-card w-full max-w-md p-8 animate-scale-in">
@@ -921,13 +985,27 @@ function ReportList({ reports, onConfirm, onConfirmRow }: {
   )
 }
 
+/** NSH ma'lumotini entry matnidan parse qiladi */
+function parseNshFromEntry(entry: ReportEntry): string {
+  // haftalikJadval va yillikJAdval ichidan [NSH-01 7.1] formatidagi textni ajratish
+  const text = entry.haftalikJadval || entry.yillikJadval || ''
+  const match = text.match(/^\[([^\]]+)\]/)
+  if (match) return match[1]
+  // Agar formatlangan bo'lmasa, qisqartirib qaytarish
+  if (text.length > 40) return text.slice(0, 40) + '...'
+  return text || 'Boshqa'
+}
+
 function ReportCard({ report, onConfirm, onConfirmRow }: {
   report: WorkReport
   onConfirm: () => void
   onConfirmRow: (idx: number) => void
 }) {
-  const [expanded, setExpanded] = useState(false)
-  const isPending = !report.confirmedAt && report.entries.some((e) => (e.haftalikJadval || e.yillikJadval) && !e.adImzosi)
+  const [expanded, setExpanded] = useState(false);
+
+  const isPlanPending = !report.confirmedAt;
+  const isAccepted = !!report.confirmedAt;
+  const pendingDailyCount = (report.entries || []).filter(e => e.bajarildiShn && !e.adImzosi).length;
 
   return (
     <div className={`premium-card overflow-hidden transition-all duration-300 ${expanded ? 'shadow-xl ring-1 ring-sky-400/20' : 'hover:bg-white/80 shadow-sm'}`}>
@@ -936,81 +1014,113 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
         className="flex cursor-pointer items-center justify-between p-6"
       >
         <div className="flex items-center gap-4">
-          <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 ${isPending ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
-            {isPending ? <Clock size={24} /> : <CheckCircle2 size={24} />}
+          <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 ${isPlanPending
+              ? 'bg-amber-50 text-amber-600'
+              : pendingDailyCount > 0
+                ? 'bg-sky-50 text-sky-600'
+                : 'bg-emerald-50 text-emerald-600'
+            }`}>
+            {isPlanPending ? <Clock size={24} /> : pendingDailyCount > 0 ? <FileText size={24} /> : <CheckCircle2 size={24} />}
           </div>
           <div>
             <h3 className="text-sm font-black text-slate-900">{report.workerName}</h3>
             <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              {new Date(report.submittedAt).toLocaleDateString('uz-UZ')} · {report.month}
+              {report.month ? (() => { const [y, m] = report.month.split('-'); const months = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr']; return `${months[parseInt(m, 10) - 1]} ${y}`; })() : ''}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          {isPending && <span className="badge-warning badge rounded-lg px-3 py-1 text-[10px] font-black">QABUL QILINMAGAN</span>}
+        <div className="flex items-center gap-3">
+          {isPlanPending && <span className="badge-warning badge rounded-lg px-3 py-1 text-[10px] font-black">REJA KUTILMOQDA</span>}
+          {isAccepted && pendingDailyCount > 0 && (
+            <span className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-1 text-[10px] font-black text-sky-600">
+              {pendingDailyCount} ta tasdiqlash
+            </span>
+          )}
+          {isAccepted && pendingDailyCount === 0 && (
+            <span className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1 text-[10px] font-black text-emerald-600">✓ QABUL QILINGAN</span>
+          )}
           <ChevronRight className={`text-slate-300 transition-transform duration-200 ${expanded ? 'rotate-90 text-sky-500' : ''}`} />
         </div>
       </div>
 
       {expanded && (
-        <div className="border-t border-slate-100 p-6 pt-2">
-          <div className="mb-4 flex items-center justify-between">
+        <div className="border-t border-slate-100 p-6 pt-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <span className="text-xs text-slate-400">Ishchi: <span className="font-bold text-slate-600">{report.workerName}</span></span>
             <div className="flex gap-2">
+              {isPlanPending && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onConfirm() }}
+                  className="flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95"
+                >
+                  <CheckCircle2 size={14} />
+                  Rejani Qabul Qilish
+                </button>
+              )}
               <button
                 onClick={(e) => {
-                  e.stopPropagation()
-                  const printWindow = window.open('', '_blank')
-                  if (!printWindow) return
+                  e.stopPropagation();
+                  const printWindow = window.open('', '_blank');
+                  if (!printWindow) return;
+                  const entriesHtml = (report.entries || [])
+                    .filter((e: any) => e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish)
+                    .map((e: any) => `
+                      <tr>
+                        <td style="text-align:center">${e.ragat || ''}</td>
+                        <td>${e.haftalikJadval || ''}</td>
+                        <td>${e.yillikJadval || ''}</td>
+                        <td>${e.yangiIshlar || ''}</td>
+                        <td>${e.kmoBartaraf || ''}</td>
+                        <td>${e.majburiyOzgarish || ''}</td>
+                        <td style="text-align:center">${e.bajarildiShn || ''}</td>
+                        <td style="text-align:center">${e.bajarildiImzo || ''}</td>
+                        <td style="text-align:center">${e.adImzosi || 'Kutilmoqda'}</td>
+                      </tr>
+                    `).join('');
+
                   printWindow.document.write(`
-                    <html><head><title>${report.workerName} — ${report.month}</title>
-                    <style>
-                      body { font-family: sans-serif; font-size: 11px; color: #000; margin: 20px; }
-                      h2 { font-size: 14px; margin-bottom: 4px; }
-                      p { margin: 2px 0 12px; color: #555; }
-                      table { width: 100%; border-collapse: collapse; }
-                      th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; font-size: 10px; }
-                      thead th { background: #f0f0f0; font-weight: bold; text-align: center; }
-                      tr:nth-child(even) { background: #fafafa; }
-                    </style></head><body>
-                    <h2>${report.workerName}</h2>
-                    <p>Bekat: ${report.stationName} &nbsp;|&nbsp; Oy: ${report.month}</p>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th rowspan="2">№</th>
-                          <th rowspan="2">4-haftalik jadval</th>
-                          <th rowspan="2">Yillik jadval bo'yicha</th>
-                          <th rowspan="2">Yangi ishlar ro'yxati</th>
-                          <th rowspan="2">O'tkazilgan KMO va bartaraf etilgan kamchiliklar</th>
-                          <th rowspan="2">Rejaga kiritilgan majburiy o'zgartirishlar</th>
-                          <th colspan="2">Bajarilgan ishlar</th>
-                          <th rowspan="2">AD imzosi</th>
-                        </tr>
-                        <tr>
-                          <th>Shn</th>
-                          <th>Imzo</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${report.entries.filter((e: ReportEntry) => e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish).map((e: ReportEntry) => `
+                    <html>
+                    <head>
+                      <title>${report.workerName} — ${report.month}</title>
+                      <style>
+                        body { font-family: sans-serif; font-size: 11px; color: #000; margin: 20px; }
+                        h2 { font-size: 14px; margin-bottom: 4px; }
+                        p { margin: 2px 0 12px; color: #555; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; font-size: 10px; }
+                        thead th { background: #f0f0f0; font-weight: bold; text-align: center; }
+                        tr:nth-child(even) { background: #fafafa; }
+                      </style>
+                    </head>
+                    <body>
+                      <h2>${report.workerName}</h2>
+                      <p>Bekat: ${report.stationName} &nbsp;|&nbsp; Oy: ${report.month}</p>
+                      <table>
+                        <thead>
                           <tr>
-                            <td style="text-align:center">${e.ragat}</td>
-                            <td>${e.haftalikJadval || ''}</td>
-                            <td>${e.yillikJadval || ''}</td>
-                            <td>${e.yangiIshlar || ''}</td>
-                            <td>${e.kmoBartaraf || ''}</td>
-                            <td>${e.majburiyOzgarish || ''}</td>
-                            <td style="text-align:center">${e.bajarildiShn || ''}</td>
-                            <td style="text-align:center">${e.bajarildiImzo || ''}</td>
-                            <td style="text-align:center">${e.adImzosi || 'Kutilmoqda'}</td>
-                          </tr>`).join('')}
-                      </tbody>
-                    </table>
-                    </body></html>
-                  `)
-                  printWindow.document.close()
-                  printWindow.print()
+                            <th rowspan="2">№</th>
+                            <th rowspan="2">4-haftalik jadval</th>
+                            <th rowspan="2">Yillik jadval bo'yicha</th>
+                            <th rowspan="2">Yangi ishlar ro'yxati</th>
+                            <th rowspan="2">O'tkazilgan KMO va bartaraf etilgan kamchiliklar</th>
+                            <th rowspan="2">Rejaga kiritilgan majburiy o'zgartirishlar</th>
+                            <th colspan="2">Bajarilgan ishlar</th>
+                            <th rowspan="2">AD imzosi</th>
+                          </tr>
+                          <tr>
+                            <th>Shn</th>
+                            <th>Imzo</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${entriesHtml}
+                        </tbody>
+                      </table>
+                    </body>
+                    </html>
+                  `);
+                  printWindow.document.close();
+                  printWindow.print();
                 }}
                 className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 hover:text-sky-600 hover:border-sky-200 transition-all shadow-sm"
               >
@@ -1020,58 +1130,56 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 relative">
-            <div className="sm:hidden absolute top-0 right-0 bg-blue-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
-              O&apos;ngga suring →
-            </div>
-            <div className="overflow-x-auto overflow-y-hidden">
-              <table className="w-full border-collapse text-left text-[11px] text-slate-700">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-[11px] text-slate-700 min-w-[800px]">
                 <thead className="border-b-2 border-sky-500/50 bg-slate-100 font-bold text-slate-600">
                   <tr>
-                    <th rowSpan={2} className="w-8 border-r border-slate-200 p-1.5 text-center text-[10px]">№</th>
-                    <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-1.5 text-center text-[10px] leading-tight">4-haftalik<br />jadval</th>
-                    <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-1.5 text-center text-[10px] leading-tight">Yillik<br />jadval bo&apos;yicha</th>
-                    <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-1.5 text-[10px] leading-tight">Yangi<br />ishlar ro&apos;yxati</th>
-                    <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-1.5 text-[10px] leading-tight">O&apos;tka-<br />zilgan KMO va<br />bartaraf etilgan<br />kamchiliklar</th>
-                    <th rowSpan={2} className="w-[13%] border-r border-slate-200 p-1.5 text-[10px] leading-tight">Majburiy<br />o&apos;zgartirish</th>
-                    <th colSpan={2} className="border-r border-slate-200 p-1.5 text-center text-[10px]">Bajarilgan</th>
-                    <th rowSpan={2} className="bg-amber-50 p-1.5 text-center text-[10px] text-amber-700">AD<br />imzo</th>
+                    <th rowSpan={2} className="w-8 border-r border-slate-200 p-2 text-center text-[10px]">№</th>
+                    <th rowSpan={2} className="border-r border-slate-200 p-2 text-center text-[10px]">4-haftalik jadval</th>
+                    <th rowSpan={2} className="border-r border-slate-200 p-2 text-center text-[10px]">Yillik jadval</th>
+                    <th rowSpan={2} className="border-r border-slate-200 p-2 text-center text-[10px]">Yangi ishlar</th>
+                    <th rowSpan={2} className="border-r border-slate-200 p-2 text-center text-[10px]">KMO bartaraf</th>
+                    <th rowSpan={2} className="border-r border-slate-200 p-2 text-center text-[10px]">Majburiy o'zgarish</th>
+                    <th colSpan={2} className="border-r border-slate-200 p-2 text-center text-[10px]">Bajarilgan</th>
+                    <th rowSpan={2} className="bg-amber-50 p-2 text-center text-[10px] text-amber-700">AD imzo</th>
                   </tr>
                   <tr className="bg-slate-50">
-                    <th className="border-r border-t border-slate-200 p-1.5 text-center text-[10px] text-sky-600">Shn</th>
-                    <th className="border-r border-t border-slate-200 p-1.5 text-center text-[10px] text-sky-600">Imzo</th>
+                    <th className="border-r border-t border-slate-200 p-2 text-center text-[10px]">Shn</th>
+                    <th className="border-r border-t border-slate-200 p-2 text-center text-[10px]">Imzo</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {report.entries.filter((e: ReportEntry) => e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish).map((e: ReportEntry, idx: number) => {
-                    // Asl massivdagi indexni topish
-                    const originalIndex = report.entries.findIndex(item => item === e)
+                  {(report.entries || []).filter(e => e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish).map((e, idx) => {
+                    const originalIndex = report.entries.findIndex(item => item === e);
                     return (
-                      <tr key={originalIndex} className="group border-b border-slate-100 hover:bg-white transition-colors">
-                        <td className="border-r border-slate-200 p-1.5 text-center font-bold text-slate-400">{e.ragat}</td>
-                        <td className="border-r border-slate-200 p-1.5 align-top whitespace-pre-wrap">{e.haftalikJadval || '—'}</td>
-                        <td className="border-r border-slate-200 p-1.5 align-top whitespace-pre-wrap">{e.yillikJadval || '—'}</td>
-                        <td className="border-r border-slate-200 p-1.5 align-top whitespace-pre-wrap">{e.yangiIshlar || '—'}</td>
-                        <td className="border-r border-slate-200 p-1.5 align-top whitespace-pre-wrap">{e.kmoBartaraf || '—'}</td>
-                        <td className="border-r border-slate-200 p-1.5 align-top whitespace-pre-wrap">{e.majburiyOzgarish || '—'}</td>
-                        <td className="border-r border-slate-200 p-1.5 text-center align-middle text-[10px] font-medium text-sky-600">{e.bajarildiShn || '—'}</td>
-                        <td className="border-r border-slate-200 p-1.5 text-center align-middle text-[10px] italic text-slate-500">{e.bajarildiImzo || '—'}</td>
-                        <td className="p-1.5 text-center align-middle">
+                      <tr key={idx} className="border-b border-slate-100 hover:bg-white transition-colors">
+                        <td className="border-r border-slate-200 p-2 text-center font-bold text-slate-400">{e.ragat}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.haftalikJadval || '—'}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.yillikJadval || '—'}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.yangiIshlar || '—'}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.kmoBartaraf || '—'}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.majburiyOzgarish || '—'}</td>
+                        <td className="border-r border-slate-200 p-2 text-center align-middle text-[10px] font-medium text-sky-600">{e.bajarildiShn || '—'}</td>
+                        <td className="border-r border-slate-200 p-2 text-center align-middle text-[10px] italic text-slate-500">{e.bajarildiImzo || '—'}</td>
+                        <td className="p-2 text-center align-middle">
                           {e.adImzosi ? (
                             <div className="flex items-center justify-center gap-1 rounded-lg bg-emerald-50 py-1.5 border border-emerald-100 text-emerald-600">
                               <CheckCircle2 size={10} />
-                              <span className="text-[9px] font-bold">{e.adImzosi}</span>
+                              <span className="text-[9px] font-bold">{e.adImzosi || ''}</span>
                             </div>
-                          ) : (
+                          ) : e.bajarildiShn ? (
                             <button
                               onClick={() => onConfirmRow(originalIndex)}
                               className="w-full rounded-lg bg-sky-50 py-1.5 text-[9px] font-bold text-sky-600 hover:bg-sky-500 hover:text-white transition-all shadow-sm"
                             >
                               Tasdiqlash
                             </button>
+                          ) : (
+                            <div className="text-[9px] italic text-slate-300">Kutilmoqda...</div>
                           )}
                         </td>
                       </tr>
-                    )
+                    );
                   })}
                 </tbody>
               </table>
@@ -1080,7 +1188,7 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
         </div>
       )}
     </div>
-  )
+  );
 }
 
 function PremiyaList({ reports, onConfirm }: {
@@ -1849,5 +1957,127 @@ function WorkersModal({ workers, stations, onClose, onEdit, onDelete }: {
 function EmptyState({ label }: { label: string }) {
   return (
     <div className="premium-card flex h-48 items-center justify-center text-slate-300 text-xs font-black uppercase tracking-widest">{label}</div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BUGUNGI ISHLAR MODAL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function TodayTasksModal({ type, tasks, stations, onClose }: {
+  type: 'bajarilgan' | 'bajarilmagan'
+  tasks: { stationId: string; stationName: string; workerName: string; entry: ReportEntry; bajarilgan: boolean; month: string }[]
+  stations: { id: string; name: string }[]
+  onClose: () => void
+}) {
+  const isBajarilgan = type === 'bajarilgan'
+
+  // Bekatlar bo'yicha guruhlab olish
+  const grouped = useMemo(() => {
+    const map: Record<string, { stationName: string; items: typeof tasks }> = {}
+    tasks.forEach(t => {
+      if (!map[t.stationId]) map[t.stationId] = { stationName: t.stationName, items: [] }
+      map[t.stationId].items.push(t)
+    })
+    return map
+  }, [tasks])
+
+  const todayDate = new Date()
+  const todayFormatted = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
+      <div className="flex h-[80vh] w-full max-w-3xl flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
+        {/* Header */}
+        <div className={`flex items-center justify-between border-b px-8 py-6 ${isBajarilgan
+            ? 'border-emerald-100 bg-emerald-50/50'
+            : 'border-red-100 bg-red-50/50'
+          }`}>
+          <div>
+            <h3 className="text-xl font-black text-slate-900 tracking-tight">
+              {isBajarilgan ? 'Bugun bajarilgan ishlar' : 'Bugun bajarilmagan ishlar'}
+            </h3>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+              {todayFormatted} · {tasks.length} ta ish
+            </p>
+          </div>
+          <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-slate-50/30">
+          {tasks.length === 0 ? (
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center">
+                <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${isBajarilgan ? 'bg-emerald-50 text-emerald-400' : 'bg-slate-100 text-slate-300'
+                  }`}>
+                  {isBajarilgan ? <CheckCircle2 size={32} /> : <Clock size={32} />}
+                </div>
+                <p className="text-sm font-black text-slate-400 uppercase tracking-widest">
+                  {isBajarilgan ? 'Bugun hali bajarilgan ish yo\'q' : 'Barcha ishlar bajarilgan!'}
+                </p>
+              </div>
+            </div>
+          ) : (
+            Object.entries(grouped).map(([stationId, { stationName, items }]) => (
+              <div key={stationId} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                {/* Bekat sarlavhasi */}
+                <div className={`flex items-center gap-3 border-b px-5 py-3 ${isBajarilgan ? 'border-emerald-100 bg-emerald-50/30' : 'border-red-100 bg-red-50/30'
+                  }`}>
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black ${isBajarilgan
+                      ? 'bg-emerald-100 text-emerald-600'
+                      : 'bg-red-100 text-red-600'
+                    }`}>
+                    {items.length}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900">{stationName}</h4>
+                    <p className="text-[10px] font-bold text-slate-400">{items[0]?.workerName}</p>
+                  </div>
+                </div>
+
+                {/* Ishlar ro'yxati */}
+                {items.map((task, ti) => {
+                  const text = task.entry.haftalikJadval || task.entry.yillikJadval || task.entry.yangiIshlar || task.entry.kmoBartaraf || task.entry.majburiyOzgarish || ''
+                  // Sana hisoblash: month "2026-04", ragat "4" -> "04.04.2026"
+                  let dateFormatted = task.entry.ragat
+                  if (task.entry.ragat && task.month && task.month.includes('-')) {
+                    const [yyyy, mm] = task.month.split('-')
+                    dateFormatted = `${String(task.entry.ragat.trim()).padStart(2, '0')}.${mm}.${yyyy}`
+                  }
+
+                  return (
+                    <div key={ti} className="flex items-start gap-4 border-b border-slate-100 last:border-0 px-5 py-4 hover:bg-slate-50/50 transition-colors">
+                      <div className={`flex flex-col items-center justify-center min-w-[110px] rounded-xl p-3 border shadow-sm ${isBajarilgan ? 'bg-emerald-50/80 border-emerald-100' : 'bg-red-50/80 border-red-100'
+                        }`}>
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${isBajarilgan ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {isBajarilgan ? 'Bajarilgan sana' : 'Bajarilishi kerak edi:'}
+                        </span>
+                        <span className={`text-sm font-black mt-1 ${isBajarilgan ? 'text-emerald-700' : 'text-red-700'}`}>
+                          {dateFormatted}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0 border-l border-slate-100 pl-4">
+                        <p className="text-[11px] font-medium text-slate-700 leading-relaxed whitespace-pre-wrap">{text}</p>
+                        {isBajarilgan && task.entry.bajarildiShn && (
+                          <p className="mt-2 text-[10px] font-bold text-emerald-600">Bajardi: {task.entry.bajarildiShn}</p>
+                        )}
+                        {!isBajarilgan && (
+                          <p className="mt-2 flex items-center gap-1 text-[10px] font-bold text-red-500">
+                            <Clock size={12} /> Bajarilmagan (Qolib ketgan ish)
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
   )
 }

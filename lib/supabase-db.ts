@@ -89,25 +89,25 @@ export async function signIn(login: string, password: string): Promise<User | nu
 
   if (!profile) return null;
 
-  const userRole = profile.role;
-  // Cookie ga yozib qo'yamiz (middleware uchun)
-  if (typeof document !== 'undefined') {
-    document.cookie = `user_role=${userRole}; path=/; max-age=86400`; // 1 kunlik
-  }
-
   return mapDbUserToUser(profile as DbUserRow);
 }
 
 export async function signOut(): Promise<void> {
-  if (typeof document !== 'undefined') {
-    document.cookie = `user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-  }
   await supabase.auth.signOut();
 }
 
 export async function getCurrentSession(): Promise<User | null> {
-  // getUser() — xavfsiz usul (server tomonida token tekshiriladi)
-  const { data: { user }, error } = await supabase.auth.getUser();
+  let user = null;
+  let error = null;
+
+  try {
+    const res = await supabase.auth.getUser();
+    user = res.data.user;
+    error = res.error;
+  } catch (err) {
+    console.warn('Supabase auth.getUser() lock error:', err);
+    return null;
+  }
 
   if (error || !user) return null;
 
@@ -296,12 +296,12 @@ export async function upsertReport(
         station_id: report.stationId,
         station_name: report.stationName,
         week_label: report.weekLabel,
-        month: report.month,
+        month: report.month, // Removing suffix hack, using actual month
         year: report.year,
         entries: report.entries,
         submitted_at: new Date().toISOString(),
       },
-      { onConflict: 'worker_id,month' }
+      { onConflict: 'worker_id,month,station_id' }
     )
     .select()
     .single();
@@ -311,27 +311,13 @@ export async function upsertReport(
 }
 
 export async function confirmReport(reportId: string, dispatcherName: string): Promise<WorkReport | null> {
-  const { data: current } = await supabase
-    .from('work_reports')
-    .select('entries')
-    .eq('id', reportId)
-    .single();
-
-  if (!current) return null;
-
-  const entries = (current.entries as ReportEntry[]).map((e: ReportEntry) => {
-    const hasMeaning =
-      e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish;
-
-    return hasMeaning ? { ...e, adImzosi: `✅ Tasdiqlandi: Aloqa dispetcheri` } : e;
-  });
-
+  // Oylik rejani qabul qilish — faqat confirmedAt/confirmedBy set bo'ladi
+  // Entry-larning adImzosi ga tegmaydi! Kunlik tasdiqlash confirmReportEntry orqali bo'ladi.
   const { data, error } = await supabase
     .from('work_reports')
     .update({
       confirmed_at: new Date().toISOString(),
       confirmed_by: dispatcherName,
-      entries,
     })
     .eq('id', reportId)
     .select()
@@ -480,13 +466,13 @@ export async function upsertPremiyaReport(
         worker_name: report.workerName,
         station_id: report.stationId,
         station_name: report.stationName,
-        month: report.month,
+        month: report.month, // Removing suffix hack
         year: report.year,
         sex: report.sex,
         entries: report.entries,
         submitted_at: new Date().toISOString(),
       },
-      { onConflict: 'worker_id,month' }
+      { onConflict: 'worker_id,month,station_id' }
     )
     .select()
     .single();
