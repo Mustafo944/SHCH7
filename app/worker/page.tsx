@@ -260,7 +260,20 @@ export default function WorkerPage() {
               <div className="relative overflow-hidden rounded-3xl border border-sky-100/60 bg-white/80 p-8 shadow-xl backdrop-blur-sm">
                 <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-sky-200/20 blur-3xl opacity-50" />
                 <h2 className="text-3xl font-black text-slate-900">{session?.fullName}</h2>
-                <p className="mt-1 text-sm font-bold text-sky-600 uppercase tracking-widest">{session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : "Katta Elektromexanik"}</p>
+                <div className="mt-2 flex items-center gap-3">
+                  <p className="text-sm font-bold text-sky-600 uppercase tracking-widest">
+                    {session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : "Katta Elektromexanik"}
+                  </p>
+                  {stationName && stationName !== '...' && (
+                    <>
+                      <div className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                      <div className="flex items-center gap-1.5 rounded-lg bg-slate-100/80 px-2 py-1 border border-slate-200/60 shadow-sm text-xs font-black uppercase tracking-widest text-slate-500">
+                        <MapIcon size={14} className="text-slate-400" />
+                        {stationName} BEKATI
+                      </div>
+                    </>
+                  )}
+                </div>
                 <div className="mt-8 grid grid-cols-2 gap-4">
                   <div onClick={() => setWorkerModal('bugunBajarilgan')} className="cursor-pointer flex flex-col items-start justify-center rounded-2xl bg-emerald-50/80 p-5 border border-emerald-100 shadow-sm hover:scale-[1.02] transition-transform">
                     <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Bugun bajarilgan ishlar</p>
