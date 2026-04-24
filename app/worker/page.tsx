@@ -129,7 +129,7 @@ export default function WorkerPage() {
   useEffect(() => {
     if (!session?.id) return
 
-    // в”Ђв”Ђв”Ђ Realtime Subscriptions в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // ─── Realtime Subscriptions ───────────────
     const workReportsChannel = supabase
       .channel(`worker_reports_${session.id}`)
       .on(
@@ -370,13 +370,13 @@ export default function WorkerPage() {
               <HeaderCard title="Hisobot Ko'rinishi" subtitle={`${selectedReport.month} В· ${stationName}`} status={selectedReport.confirmedAt || selectedReport.entries.every(e => !e.haftalikJadval && !e.yillikJadval && !e.yangiIshlar && !e.kmoBartaraf && !e.majburiyOzgarish || e.adImzosi) ? 'tasdiqlandi' : 'kutilmoqda'} />
               <div className="mt-6 mb-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm relative shadow-sm">
                 <div className="sm:hidden absolute top-0 right-0 bg-blue-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
-                  O&apos;ngga suring в†’
+                  O&apos;ngga suring →
                 </div>
                 <div className="overflow-x-auto overflow-y-hidden">
                   <table style={{ minWidth: "1200px" }} className="w-full border-collapse text-left text-[11px] text-slate-700">
                     <thead className="border-b-2 border-sky-500/30 bg-slate-50 font-bold text-slate-600">
                       <tr>
-                        <th rowSpan={2} className="w-10 border-r border-slate-200 p-2 text-center">в„–</th>
+                        <th rowSpan={2} className="w-10 border-r border-slate-200 p-2 text-center">№</th>
                         <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-2 text-center">4-haftalik jadval</th>
                         <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-2 text-center">Yillik jadval bo&apos;yicha</th>
                         <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-2">Yangi ishlar ro&apos;yxati</th>
@@ -423,7 +423,7 @@ export default function WorkerPage() {
               <div className="mt-8 overflow-x-auto rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-sm">
                 <table className="w-full text-left text-[11px]">
                   <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    <tr><th className="p-4 text-center w-12">в„–</th><th className="p-4">I.SH.</th><th className="p-4">Lavozimi</th><th className="p-4 text-center">Tabel в„–</th><th className="p-4 text-center">Rag'bat. %</th><th className="p-4">Eslatma</th></tr>
+                    <tr><th className="p-4 text-center w-12">№</th><th className="p-4">I.SH.</th><th className="p-4">Lavozimi</th><th className="p-4 text-center">Tabel №</th><th className="p-4 text-center">Rag'bat. %</th><th className="p-4">Eslatma</th></tr>
                   </thead>
                   <tbody className="text-slate-700">
                     {selectedPremiya.entries.map((e, idx) => (
@@ -442,7 +442,7 @@ export default function WorkerPage() {
                     doc.text(`Premiya Ro'yxati - ${stationName}`, 14, 15)
                     doc.setFontSize(10)
                     doc.text(`Sana: ${selectedPremiya.month}`, 14, 22)
-                    const tableColumn = ['в„–', 'I.SH.', 'Lavozimi', 'Tabel в„–', "Rag'bat. %", 'Eslatma']
+                    const tableColumn = ['№', 'I.SH.', 'Lavozimi', 'Tabel №', "Rag'bat. %", 'Eslatma']
                     const tableRows = selectedPremiya.entries.filter(e => e.ish || e.lavozim || e.foiz).map((e, idx) => [String(idx + 1), e.ish, e.lavozim, e.tabelNomeri, e.foiz ? e.foiz + '%' : '', e.eslatma])
                     autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30, styles: { font: 'helvetica', fontSize: 8 }, headStyles: { fillColor: [245, 158, 11] } })
                     doc.save(`Premiya_${stationName}_${selectedPremiya.month}.pdf`)

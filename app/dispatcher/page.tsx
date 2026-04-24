@@ -158,7 +158,7 @@ export default function DispatcherPage() {
   }, [router, refreshData])
 
   useEffect(() => {
-    // в”Ђв”Ђв”Ђ Realtime Subscriptions в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // ─── Realtime Subscriptions ───────────────
     const workReportsChannel = supabase
       .channel('dispatcher_work_reports')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'work_reports' }, () => {
@@ -262,7 +262,7 @@ export default function DispatcherPage() {
       Object.values(journalPendingCounts).reduce((a, b) => a + b, 0)
   }, [pendingCounts, premiyaPendingCounts, journalPendingCounts])
 
-  // в”Ђв”Ђв”Ђ BUGUNGI KUNLIK BAJARILGAN / BAJARILMAGAN ISHLAR в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // ─── BUGUNGI KUNLIK BAJARILGAN / BAJARILMAGAN ISHLAR ───────────────
   const todayStr = String(new Date().getDate())
   const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
 
@@ -390,11 +390,11 @@ export default function DispatcherPage() {
     if (!session) return
     try {
       await confirmReportEntry(reportId, entryIndex)
-      setFormMsg({ type: 'ok', text: 'вњ… Tasdiqlandi!' })
+      setFormMsg({ type: 'ok', text: '✅ Tasdiqlandi!' })
       setTimeout(() => setFormMsg(null), 2000)
       refreshData()
     } catch (err: unknown) {
-      console.error('вќЊ Tasdiqlash xatosi:', err)
+      console.error('❌ Tasdiqlash xatosi:', err)
       setFormMsg({
         type: 'err',
         text: err instanceof Error ? err.message : "Xatolik yuz berdi"
@@ -746,7 +746,7 @@ export default function DispatcherPage() {
       )}
 
       {/* O'chirish tasdiqlash modali */}
-      {/* в”Ђв”Ђв”Ђ BUGUNGI ISHLAR MODAL в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
+      {/* ─── BUGUNGI ISHLAR MODAL ──────────────────────────────── */}
       {todayModal && (
         <TodayTasksModal
           type={todayModal}
@@ -819,7 +819,7 @@ function StatCard({ icon, label, value, active, clickable, onClick, color }: {
       </div>
       {clickable && (
         <div className="absolute bottom-3 right-4 text-[9px] font-black uppercase tracking-widest text-slate-300 group-hover:text-slate-500 transition-colors">
-          Tafsilot в†’
+          Tafsilot →
         </div>
       )}
     </div>
@@ -914,7 +914,7 @@ function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, messa
           <div className="grid gap-4 sm:grid-cols-2">
             <FormGroup label="F.I.SH" value={form.fullName} onChange={(val) => setForm({ ...form, fullName: val })} placeholder="Masalan: Azizov Aziz" />
             <FormGroup label="Login" value={form.login} onChange={(val) => setForm({ ...form, login: val })} placeholder="azizov123" />
-            <FormGroup label="Parol" value={form.password} onChange={(val) => setForm({ ...form, password: val })} placeholder="вЂўвЂўвЂўвЂўвЂўвЂўвЂўвЂў" type="password" />
+            <FormGroup label="Parol" value={form.password} onChange={(val) => setForm({ ...form, password: val })} placeholder="••••••••" type="password" />
             <FormGroup label="Telefon" value={form.phone} onChange={(val) => setForm({ ...form, phone: val })} placeholder="+99890..." />
           </div>
 
@@ -1046,7 +1046,7 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
             </span>
           )}
           {isAccepted && pendingDailyCount === 0 && (
-            <span className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1 text-[10px] font-black text-emerald-600">вњ“ QABUL QILINGAN</span>
+            <span className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1 text-[10px] font-black text-emerald-600">✓ QABUL QILINGAN</span>
           )}
           <ChevronRight className={`text-slate-300 transition-transform duration-200 ${expanded ? 'rotate-90 text-sky-500' : ''}`} />
         </div>
@@ -1107,7 +1107,7 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
                       <table>
                         <thead>
                           <tr>
-                            <th rowspan="2">в„–</th>
+                            <th rowspan="2">№</th>
                             <th rowspan="2">4-haftalik jadval</th>
                             <th rowspan="2">Yillik jadval bo'yicha</th>
                             <th rowspan="2">Yangi ishlar ro'yxati</th>
@@ -1143,7 +1143,7 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
               <table className="w-full border-collapse text-left text-[11px] text-slate-700 min-w-[800px]">
                 <thead className="border-b-2 border-sky-500/50 bg-slate-100 font-bold text-slate-600">
                   <tr>
-                    <th rowSpan={2} className="w-8 border-r border-slate-200 p-2 text-center text-[10px]">в„–</th>
+                    <th rowSpan={2} className="w-8 border-r border-slate-200 p-2 text-center text-[10px]">№</th>
                     <th rowSpan={2} className="border-r border-slate-200 p-2 text-center text-[10px]">4-haftalik jadval</th>
                     <th rowSpan={2} className="border-r border-slate-200 p-2 text-center text-[10px]">Yillik jadval</th>
                     <th rowSpan={2} className="border-r border-slate-200 p-2 text-center text-[10px]">Yangi ishlar</th>
@@ -1254,7 +1254,7 @@ function PremiyaCard({ report, onConfirm }: {
                   doc.text(`Premiya Ro'yxati - ${report.stationName}`, 14, 15)
                   doc.setFontSize(10)
                   doc.text(`Sana: ${report.month}`, 14, 22)
-                  const tableColumn = ['в„–', 'I.SH.', 'Lavozimi', 'Tabel в„–', "Rag'bat. %", 'Eslatma']
+                  const tableColumn = ['№', 'I.SH.', 'Lavozimi', 'Tabel №', "Rag'bat. %", 'Eslatma']
                   const tableRows = report.entries.filter((en: any) => en.ish || en.lavozim || en.foiz).map((en: any, idx: number) => [String(idx + 1), en.ish, en.lavozim, en.tabelNomeri, en.foiz ? en.foiz + '%' : '', en.eslatma])
                   autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30, styles: { font: 'helvetica', fontSize: 8 }, headStyles: { fillColor: [245, 158, 11] } })
                   doc.save(`Premiya_${report.stationName}_${report.month}.pdf`)
@@ -1279,10 +1279,10 @@ function PremiyaCard({ report, onConfirm }: {
             <table className="w-full text-left text-[11px]">
               <thead className="bg-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500">
                 <tr>
-                  <th className="p-4 text-center w-12">в„–</th>
+                  <th className="p-4 text-center w-12">№</th>
                   <th className="p-4">I.SH.</th>
                   <th className="p-4">Lavozimi</th>
-                  <th className="p-4 text-center">Tabel в„–</th>
+                  <th className="p-4 text-center">Tabel №</th>
                   <th className="p-4 text-center">Rag&apos;bat. %</th>
                   <th className="p-4">Eslatma</th>
                 </tr>
@@ -1546,7 +1546,7 @@ function ArchiveView({ stations, allReports, allJournals, onConfirm, onConfirmEn
                                 <h4 className="font-black text-slate-900">DU-46 Jurnali</h4>
                                 <p className="text-xs text-slate-400">{selStationName} В· {j.updatedBy}</p>
                               </div>
-                              <span className="text-sm font-bold text-sky-600 group-hover:translate-x-1 transition-transform">Ko'rish в†’</span>
+                              <span className="text-sm font-bold text-sky-600 group-hover:translate-x-1 transition-transform">Ko'rish →</span>
                             </div>
                           </button>
                         ))
@@ -1570,7 +1570,7 @@ function ArchiveView({ stations, allReports, allJournals, onConfirm, onConfirmEn
                                 <h4 className="font-black text-slate-900">SHU-2 Jurnali</h4>
                                 <p className="text-xs text-slate-400">{selStationName} В· {j.updatedBy}</p>
                               </div>
-                              <span className="text-sm font-bold text-amber-600 group-hover:translate-x-1 transition-transform">Ko'rish в†’</span>
+                              <span className="text-sm font-bold text-amber-600 group-hover:translate-x-1 transition-transform">Ko'rish →</span>
                             </div>
                           </button>
                         ))
@@ -1653,7 +1653,7 @@ function JournalArchiveCard({ journal, type, stationName }: {
       doc.text(`Yangilangan: ${journal.updatedBy}`, 14, 28)
 
       if (type === 'du46') {
-        const tableColumn = ['в„–', 'Oy/kun', 'Soat', 'Kamchilik', 'Xabar usuli', 'Bartaraf info', 'Holat']
+        const tableColumn = ['№', 'Oy/kun', 'Soat', 'Kamchilik', 'Xabar usuli', 'Bartaraf info', 'Holat']
         const tableRows = du46Entries
           .filter(e => e.kamchilik || e.bartarafInfo)
           .map((e, i) => [
@@ -1676,7 +1676,7 @@ function JournalArchiveCard({ journal, type, stationName }: {
           alternateRowStyles: { fillColor: [240, 248, 255] },
         })
       } else {
-        const tableColumn = ['в„–', 'Sana', 'Yozuv', 'Imzo', 'Holat']
+        const tableColumn = ['№', 'Sana', 'Yozuv', 'Imzo', 'Holat']
         const tableRows = shu2Entries
           .filter(e => e.yozuv)
           .map((e, i) => [
@@ -1750,7 +1750,7 @@ function JournalArchiveCard({ journal, type, stationName }: {
           onClick={() => setExpanded(!expanded)}
           className="ml-auto text-xs font-bold text-sky-600 hover:text-sky-700 uppercase tracking-widest transition-colors"
         >
-          {expanded ? 'Yig\'ish в–І' : `Kengaytish (${filteredEntries.length}) в–ј`}
+          {expanded ? 'Yig\'ish ▲' : `Kengaytish (${filteredEntries.length}) ▼`}
         </button>
       </div>
 
@@ -1761,7 +1761,7 @@ function JournalArchiveCard({ journal, type, stationName }: {
             <table className="w-full text-[10px]" style={{ minWidth: '1000px' }}>
               <thead className="bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b-2 border-slate-200">
                 <tr>
-                  <th className="p-2.5 text-center border-r border-slate-100">в„–</th>
+                  <th className="p-2.5 text-center border-r border-slate-100">№</th>
                   <th className="p-2.5 text-center border-r border-slate-100">Oy/kun</th>
                   <th className="p-2.5 text-center border-r border-slate-100">Soat</th>
                   <th className="p-2.5 text-left border-r border-slate-100">Kamchilik</th>
@@ -1781,9 +1781,9 @@ function JournalArchiveCard({ journal, type, stationName }: {
                     <td className="p-2.5 text-slate-700 max-w-[250px] whitespace-pre-wrap">{e.bartarafInfo || '—'}</td>
                     <td className="p-2.5 text-center">
                       {(e as DU46Entry).dispetcherQabulQildi
-                        ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600 border border-emerald-100">вњ“ Qabul</span>
+                        ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600 border border-emerald-100">✓ Qabul</span>
                         : (e as DU46Entry).yuborildi
-                          ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[8px] font-bold text-amber-600 border border-amber-100">вЏі Kutilmoqda</span>
+                          ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[8px] font-bold text-amber-600 border border-amber-100">⏳ Kutilmoqda</span>
                           : <span className="text-[8px] font-bold text-slate-300">Yangi</span>
                       }
                     </td>
@@ -1795,7 +1795,7 @@ function JournalArchiveCard({ journal, type, stationName }: {
             <table className="w-full text-[10px]" style={{ minWidth: '800px' }}>
               <thead className="bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b-2 border-slate-200">
                 <tr>
-                  <th className="p-2.5 text-center border-r border-slate-100">в„–</th>
+                  <th className="p-2.5 text-center border-r border-slate-100">№</th>
                   <th className="p-2.5 text-center border-r border-slate-100">Sana</th>
                   <th className="p-2.5 text-left border-r border-slate-100">Yozuv</th>
                   <th className="p-2.5 text-center border-r border-slate-100">Imzo</th>
@@ -1811,9 +1811,9 @@ function JournalArchiveCard({ journal, type, stationName }: {
                     <td className="p-2.5 text-center text-slate-500 border-r border-slate-50">{(e as SHU2Entry).tasdiqlandi ? ((e as SHU2Entry).tasdiqlaganImzo || (e as SHU2Entry).imzo) : '—'}</td>
                     <td className="p-2.5 text-center">
                       {(e as SHU2Entry).dispetcherQabulQildi
-                        ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600 border border-emerald-100">вњ“ Qabul</span>
+                        ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600 border border-emerald-100">✓ Qabul</span>
                         : (e as SHU2Entry).yuborildi
-                          ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[8px] font-bold text-amber-600 border border-amber-100">вЏі Kutilmoqda</span>
+                          ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[8px] font-bold text-amber-600 border border-amber-100">⏳ Kutilmoqda</span>
                           : <span className="text-[8px] font-bold text-slate-300">Yangi</span>
                       }
                     </td>
@@ -1969,9 +1969,9 @@ function EmptyState({ label }: { label: string }) {
   )
 }
 
-// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+// ═══════════════════════════════════════════════════════════════════════════════
 // BUGUNGI ISHLAR MODAL
-// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function TodayTasksModal({ type, tasks, stations, onClose }: {
   type: 'bajarilgan' | 'bajarilmagan'
