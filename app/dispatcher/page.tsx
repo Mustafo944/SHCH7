@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -782,7 +782,7 @@ export default function DispatcherPage() {
           border-radius: 10px;
         }
         @media print {
-          .print\:hidden { display: none !important; }
+          .print\\:hidden { display: none !important; }
         }
       `}</style>
     </div>

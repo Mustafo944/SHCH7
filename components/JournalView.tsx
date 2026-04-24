@@ -320,7 +320,7 @@ export function DU46JournalView({
     try {
       const j = await getJournal(stationId, 'du46')
       if (j && j.entries.length > 0) {
-        let loadedEntries = j.entries as DU46Entry[]
+        const loadedEntries = j.entries as DU46Entry[]
         
         const allSubmitted = loadedEntries.every(e => e.yuborildi)
         if (allSubmitted) {
@@ -349,7 +349,7 @@ export function DU46JournalView({
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [stationId, loadJournalData])
+  }, [stationId, userRole, loadJournalData])
 
   // ─── Yordamchi: qaysi rol yaratgan ────────────────────────────────
   /** Qator kim tomonidan yaratilgan bo'lsa, shu rolni qaytaradi. Agar belgilanmagan bo'lsa default `worker` */
@@ -642,7 +642,6 @@ export function DU46JournalView({
             </thead>
             <tbody>
               {entries.map((e, i) => {
-                const creator = getCreator(e)
                 const iAmCreator = isCreator(e)
                 const iAmConfirmer = isConfirmer(e)
 
@@ -1052,7 +1051,7 @@ export function SHU2JournalView({
     try {
       const j = await getJournal(stationId, 'shu2')
       if (j && j.entries.length > 0) {
-        let currentEntries = j.entries as SHU2Entry[]
+        const currentEntries = j.entries as SHU2Entry[]
         
         setEntries(currentEntries)
       }
@@ -1076,7 +1075,7 @@ export function SHU2JournalView({
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [stationId, loadJournalData])
+  }, [stationId, userRole, loadJournalData])
 
   const update = (i: number, field: keyof SHU2Entry, val: string) => {
     const n = [...entries]

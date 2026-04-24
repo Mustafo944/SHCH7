@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -64,7 +64,9 @@ export default function WorkerPage() {
     try {
       const counts = await getPendingJournalCounts(sid, role)
       setPendingCounts(counts)
-    } catch { }
+    } catch (err) {
+      console.error('Error pending counts', err)
+    }
   }, [])
 
   const loadWorkReports = useCallback(async (userId: string) => {
@@ -124,7 +126,7 @@ export default function WorkerPage() {
       .subscribe()
 
     return () => { supabase.removeChannel(journalChannel) }
-  }, [activeStationId, session?.role, loadPendingCounts])
+  }, [activeStationId, session, session?.role, loadPendingCounts])
 
   useEffect(() => {
     if (!session?.id) return
@@ -515,11 +517,11 @@ export default function WorkerPage() {
       </div>
       <style jsx global>{`
         @media print {
-          .print\:hidden { display: none !important; }
+          .print\\:hidden { display: none !important; }
         }
       `}</style>
     </div>
   )
-}
 
-
+}  
+ 
