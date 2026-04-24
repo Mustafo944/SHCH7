@@ -1,11 +1,11 @@
 import { supabase } from './supabase';
 import type { User, WorkReport, PremiyaReport, StationSchema, ReportEntry, GrafikTuri } from '@/types';
 
-// ─── Stations ────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Stations в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 import { getStations, getStation } from './store';
 export { getStations, getStation };
 
-// ─── DB SELECT konstantalari (takrorlanishni kamaytirish) ─────────────────────
+// в”Ђв”Ђв”Ђ DB SELECT konstantalari (takrorlanishni kamaytirish) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 const USER_COLUMNS = 'id, login, full_name, role, position, station_ids, phone, created_at' as const;
 
 const WORK_REPORT_COLUMNS = 'id, worker_id, worker_name, worker_phone, station_id, station_name, week_label, month, year, entries, submitted_at, confirmed_at, confirmed_by' as const;
@@ -16,7 +16,7 @@ const SCHEMA_COLUMNS = 'id, station_id, file_name, file_path, schema_type, uploa
 
 const JOURNAL_COLUMNS = 'id, station_id, journal_type, entries, updated_at, updated_by' as const;
 
-// ─── Local DB row types ──────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Local DB row types в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 interface DbUserRow {
   id: string;
   login: string;
@@ -69,7 +69,7 @@ interface DbSchemaRow {
   uploaded_by: string | null;
 }
 
-// ─── Auth ────────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Auth в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 export async function signIn(login: string, password: string): Promise<User | null> {
   const email = `${login}@shch-buxoro.local`;
@@ -124,7 +124,7 @@ export async function getCurrentSession(): Promise<User | null> {
   return mapDbUserToUser(profile as DbUserRow);
 }
 
-// ─── Users ───────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Users в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 function mapDbUserToUser(row: DbUserRow): User {
   return {
@@ -219,7 +219,7 @@ export async function deleteWorker(id: string): Promise<void> {
   }
 }
 
-// ─── Work Reports ────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Work Reports в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 function mapDbReport(row: DbWorkReportRow): WorkReport {
   return {
@@ -311,11 +311,25 @@ export async function upsertReport(
 }
 
 export async function confirmReport(reportId: string, dispatcherName: string): Promise<WorkReport | null> {
-  // Oylik rejani qabul qilish — faqat confirmedAt/confirmedBy set bo'ladi
-  // Entry-larning adImzosi ga tegmaydi! Kunlik tasdiqlash confirmReportEntry orqali bo'ladi.
+  const { data: current } = await supabase
+    .from('work_reports')
+    .select('entries')
+    .eq('id', reportId)
+    .single();
+
+  if (!current) return null;
+
+  const entries = (current.entries as ReportEntry[]).map((e: ReportEntry) => {
+    const hasMeaning =
+      e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish;
+
+    return hasMeaning ? { ...e, adImzosi: `✅ Tasdiqlandi: Aloqa dispetcheri` } : e;
+  });
+
   const { data, error } = await supabase
     .from('work_reports')
     .update({
+      entries,
       confirmed_at: new Date().toISOString(),
       confirmed_by: dispatcherName,
     })
@@ -351,7 +365,7 @@ export async function confirmReportEntry(
     entry.haftalikJadval || entry.yillikJadval || entry.yangiIshlar || entry.kmoBartaraf || entry.majburiyOzgarish;
 
   if (hasMeaning) {
-    entries[entryIndex] = { ...entry, adImzosi: `✅ Tasdiqlandi: Aloqa dispetcheri` };
+    entries[entryIndex] = { ...entry, adImzosi: `вњ… Tasdiqlandi: Aloqa dispetcheri` };
   }
 
   const { data, error } = await supabase
@@ -364,6 +378,22 @@ export async function confirmReportEntry(
   if (error || !data) {
     throw new Error(error?.message || 'Update failed');
   }
+  return mapDbReport(data as DbWorkReportRow);
+}
+
+// Worker har kuni "Bajarildi" bosganida entries ni yangilaydi (confirmed_at o'zgarmaydi)
+export async function updateReportEntries(
+  reportId: string,
+  entries: ReportEntry[]
+): Promise<WorkReport> {
+  const { data, error } = await supabase
+    .from('work_reports')
+    .update({ entries })
+    .eq('id', reportId)
+    .select()
+    .single();
+
+  if (error || !data) throw new Error(error?.message || 'Update failed');
   return mapDbReport(data as DbWorkReportRow);
 }
 
@@ -392,7 +422,7 @@ export async function getStationPendingCount(): Promise<Record<string, number>> 
   return counts;
 }
 
-// ─── Premiya Reports ─────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Premiya Reports в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 function mapDbPremiya(row: DbPremiyaRow): PremiyaReport {
   return {
@@ -513,7 +543,7 @@ export async function getPendingPremiyaCount(): Promise<Record<string, number>> 
   return counts;
 }
 
-// ─── Station Schemas ─────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Station Schemas в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 function mapDbSchema(row: DbSchemaRow): StationSchema {
   return {
@@ -718,7 +748,7 @@ export async function upsertJournal(
   entries: DU46Entry[] | SHU2Entry[],
   updatedBy: string
 ): Promise<StationJournal> {
-  console.log('💾 upsertJournal chaqirildi:', { stationId, journalType, entriesCount: entries.length, updatedBy })
+  console.log('рџ’ѕ upsertJournal chaqirildi:', { stationId, journalType, entriesCount: entries.length, updatedBy })
 
   const { data, error } = await supabase
     .from('station_journals')
@@ -736,16 +766,16 @@ export async function upsertJournal(
     .single()
 
   if (error) {
-    console.error('❌ upsertJournal xatosi:', error)
+    console.error('вќЊ upsertJournal xatosi:', error)
     throw new Error(error?.message ?? 'Upsert failed')
   }
 
   if (!data) {
-    console.error('❌ upsertJournal: data qaytmadi')
+    console.error('вќЊ upsertJournal: data qaytmadi')
     throw new Error('Upsert failed - no data returned')
   }
 
-  console.log('✅ upsertJournal muvaffaqiyatli:', data.id)
+  console.log('вњ… upsertJournal muvaffaqiyatli:', data.id)
   return mapDbJournal(data as DbJournalRow)
 }
 
@@ -757,7 +787,7 @@ export async function getAllJournals(): Promise<StationJournal[]> {
     .order('updated_at', { ascending: false })
 
   if (error) {
-    console.error('❌ getAllJournals xatosi:', error)
+    console.error('вќЊ getAllJournals xatosi:', error)
     return []
   }
 

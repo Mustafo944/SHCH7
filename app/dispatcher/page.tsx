@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -47,7 +47,7 @@ import {
   Eye,
   Menu,
   BookOpen,
-  MapIcon,
+  Map as MapIcon,
   AlertTriangle
 } from 'lucide-react'
 
@@ -158,35 +158,35 @@ export default function DispatcherPage() {
   }, [router, refreshData])
 
   useEffect(() => {
-    // ─── Realtime Subscriptions ───────────────
+    // в”Ђв”Ђв”Ђ Realtime Subscriptions в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
     const workReportsChannel = supabase
       .channel('dispatcher_work_reports')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'work_reports' }, () => {
-        console.log('🚀 Realtime: Yangi hisobot!')
+        console.log('рџљЂ Realtime: Yangi hisobot!')
         loadWorkReports()
       })
       .subscribe((status) => {
-        console.log('📡 work_reports kanal:', status)
+        console.log('рџ“Ў work_reports kanal:', status)
       })
 
     const premiyaReportsChannel = supabase
       .channel('dispatcher_premiya_reports')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'premiya_reports' }, () => {
-        console.log('🚀 Realtime: Yangi premiya!')
+        console.log('рџљЂ Realtime: Yangi premiya!')
         loadPremiyaReports()
       })
       .subscribe((status) => {
-        console.log('📡 premiya_reports kanal:', status)
+        console.log('рџ“Ў premiya_reports kanal:', status)
       })
 
     const journalsChannel = supabase
       .channel('dispatcher_journals')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals' }, (payload) => {
-        console.log('🚀 Realtime: Jurnal yangilandi!', payload.eventType)
+        console.log('рџљЂ Realtime: Jurnal yangilandi!', payload.eventType)
         loadJournals()
       })
       .subscribe((status) => {
-        console.log('📡 station_journals kanal:', status)
+        console.log('рџ“Ў station_journals kanal:', status)
       })
 
     return () => {
@@ -262,12 +262,10 @@ export default function DispatcherPage() {
       Object.values(journalPendingCounts).reduce((a, b) => a + b, 0)
   }, [pendingCounts, premiyaPendingCounts, journalPendingCounts])
 
-  // ─── BUGUNGI KUNLIK BAJARILGAN / BAJARILMAGAN ISHLAR ───────────────
-  // Bugungi sana raqami (masalan: 21 aprelda → "21")
+  // в”Ђв”Ђв”Ђ BUGUNGI KUNLIK BAJARILGAN / BAJARILMAGAN ISHLAR в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   const todayStr = String(new Date().getDate())
   const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
 
-  // Joriy oy uchun barcha hisobotlardan bugungi ishlarni ajratib olish
   const todayTasks = useMemo(() => {
     const result: {
       stationId: string
@@ -282,7 +280,6 @@ export default function DispatcherPage() {
       .filter(r => r.month === currentMonthStr)
       .forEach(r => {
         r.entries.forEach(e => {
-          // ragat ustuni sana vazifasini bajaradi - raqamni solishtirish
           const hasContent = e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish
           const taskDay = parseInt(e.ragat.trim(), 10)
           const todayDay = parseInt(todayStr, 10)
@@ -290,7 +287,6 @@ export default function DispatcherPage() {
           const bajarilgan = !!(e.bajarildiShn && e.bajarildiImzo)
 
           if (hasContent && isPastOrToday) {
-            // Agar vazifa bugungi bo'lsa, Yoki eski vazifa bo'lib hali bajarilmagan bo'lsa (qarz)
             if (taskDay === todayDay || !bajarilgan) {
               result.push({
                 stationId: r.stationId,
@@ -394,11 +390,11 @@ export default function DispatcherPage() {
     if (!session) return
     try {
       await confirmReportEntry(reportId, entryIndex)
-      setFormMsg({ type: 'ok', text: '✅ Tasdiqlandi!' })
+      setFormMsg({ type: 'ok', text: 'вњ… Tasdiqlandi!' })
       setTimeout(() => setFormMsg(null), 2000)
       refreshData()
     } catch (err: unknown) {
-      console.error('❌ Tasdiqlash xatosi:', err)
+      console.error('вќЊ Tasdiqlash xatosi:', err)
       setFormMsg({
         type: 'err',
         text: err instanceof Error ? err.message : "Xatolik yuz berdi"
@@ -481,6 +477,7 @@ export default function DispatcherPage() {
               value={todayBajarilgan.length}
               onClick={() => setTodayModal('bajarilgan')}
               clickable
+              color="emerald"
             />
             <StatCard
               icon={<AlertTriangle className="text-red-400" />}
@@ -489,6 +486,7 @@ export default function DispatcherPage() {
               active={todayBajarilmagan.length > 0}
               onClick={() => setTodayModal('bajarilmagan')}
               clickable
+              color="red"
             />
           </div>
 
@@ -748,7 +746,7 @@ export default function DispatcherPage() {
       )}
 
       {/* O'chirish tasdiqlash modali */}
-      {/* ─── BUGUNGI ISHLAR MODAL ──────────────────────────────── */}
+      {/* в”Ђв”Ђв”Ђ BUGUNGI ISHLAR MODAL в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
       {todayModal && (
         <TodayTasksModal
           type={todayModal}
@@ -761,15 +759,16 @@ export default function DispatcherPage() {
       {deleteConfirmId && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
           <div className="premium-card w-full max-w-md p-8 animate-scale-in">
-            <h3 className="text-lg font-black text-slate-900">Ishchini o'chirish</h3>
-            <p className="mt-2 text-sm text-slate-500">Haqiqatdan ham ishchini o'chirishni xohlaysizmi? Bu amalni qaytarib bo'lmaydi.</p>
+            <h3 className="text-lg font-black text-slate-900">Ishchini o&apos;chirish</h3>
+            <p className="mt-2 text-sm text-slate-500">Haqiqatdan ham ishchini o&apos;chirishni xohlaysizmi? Bu amalni qaytarib bo&apos;lmaydi.</p>
             <div className="mt-8 flex justify-end gap-3">
               <button onClick={() => setDeleteConfirmId(null)} className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Bekor qilish</button>
-              <button onClick={confirmDeleteWorker} className="rounded-xl bg-red-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all">O'chirish</button>
+              <button onClick={confirmDeleteWorker} className="rounded-xl bg-red-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all">O&apos;chirish</button>
             </div>
           </div>
         </div>
       )}
+
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
@@ -790,29 +789,39 @@ export default function DispatcherPage() {
   )
 }
 
-function StatCard({ icon, label, value, active, clickable, onClick }: {
+function StatCard({ icon, label, value, active, clickable, onClick, color }: {
   icon: React.ReactNode,
   label: string,
   value: string | number,
   active?: boolean,
   clickable?: boolean,
-  onClick?: () => void
+  onClick?: () => void,
+  color?: 'emerald' | 'red' | 'amber'
 }) {
+  const dotColor = color === 'emerald' ? 'bg-emerald-500' : color === 'red' ? 'bg-red-500' : 'bg-amber-500'
+  const hoverBg = color === 'emerald' ? 'group-hover:bg-emerald-50' : color === 'red' ? 'group-hover:bg-red-50' : 'group-hover:bg-sky-50'
+  const numColor = active && color === 'emerald' ? 'text-emerald-600' : active && color === 'red' ? 'text-red-600' : 'text-slate-900'
+
   return (
     <div
       onClick={onClick}
       className={`premium-card group relative overflow-hidden p-6 transition-all duration-300 ${clickable ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02]' : ''}`}
     >
       <div className="flex items-center justify-between">
-        <div className="rounded-2xl bg-slate-50/80 p-3 transition-all duration-300 group-hover:scale-110 group-hover:bg-sky-50">
+        <div className={`rounded-2xl bg-slate-50/80 p-3 transition-all duration-300 group-hover:scale-110 ${hoverBg}`}>
           {icon}
         </div>
-        {active && <div className="h-2 w-2 rounded-full bg-red-500 animate-ping" />}
+        {active && <div className={`h-2.5 w-2.5 rounded-full ${dotColor} shadow-[0_0_8px_2px_rgba(16,185,129,0.25)] animate-ping`} />}
       </div>
       <div className="mt-4">
         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
-        <p className="text-3xl font-black text-slate-900">{value}</p>
+        <p className={`text-3xl font-black transition-colors ${numColor}`}>{value}</p>
       </div>
+      {clickable && (
+        <div className="absolute bottom-3 right-4 text-[9px] font-black uppercase tracking-widest text-slate-300 group-hover:text-slate-500 transition-colors">
+          Tafsilot в†’
+        </div>
+      )}
     </div>
   )
 }
@@ -905,7 +914,7 @@ function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, messa
           <div className="grid gap-4 sm:grid-cols-2">
             <FormGroup label="F.I.SH" value={form.fullName} onChange={(val) => setForm({ ...form, fullName: val })} placeholder="Masalan: Azizov Aziz" />
             <FormGroup label="Login" value={form.login} onChange={(val) => setForm({ ...form, login: val })} placeholder="azizov123" />
-            <FormGroup label="Parol" value={form.password} onChange={(val) => setForm({ ...form, password: val })} placeholder="••••••••" type="password" />
+            <FormGroup label="Parol" value={form.password} onChange={(val) => setForm({ ...form, password: val })} placeholder="вЂўвЂўвЂўвЂўвЂўвЂўвЂўвЂў" type="password" />
             <FormGroup label="Telefon" value={form.phone} onChange={(val) => setForm({ ...form, phone: val })} placeholder="+99890..." />
           </div>
 
@@ -1037,7 +1046,7 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
             </span>
           )}
           {isAccepted && pendingDailyCount === 0 && (
-            <span className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1 text-[10px] font-black text-emerald-600">✓ QABUL QILINGAN</span>
+            <span className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1 text-[10px] font-black text-emerald-600">вњ“ QABUL QILINGAN</span>
           )}
           <ChevronRight className={`text-slate-300 transition-transform duration-200 ${expanded ? 'rotate-90 text-sky-500' : ''}`} />
         </div>
@@ -1081,7 +1090,7 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
                   printWindow.document.write(`
                     <html>
                     <head>
-                      <title>${report.workerName} — ${report.month}</title>
+                      <title>${report.workerName} вЂ” ${report.month}</title>
                       <style>
                         body { font-family: sans-serif; font-size: 11px; color: #000; margin: 20px; }
                         h2 { font-size: 14px; margin-bottom: 4px; }
@@ -1098,7 +1107,7 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
                       <table>
                         <thead>
                           <tr>
-                            <th rowspan="2">№</th>
+                            <th rowspan="2">в„–</th>
                             <th rowspan="2">4-haftalik jadval</th>
                             <th rowspan="2">Yillik jadval bo'yicha</th>
                             <th rowspan="2">Yangi ishlar ro'yxati</th>
@@ -1134,7 +1143,7 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
               <table className="w-full border-collapse text-left text-[11px] text-slate-700 min-w-[800px]">
                 <thead className="border-b-2 border-sky-500/50 bg-slate-100 font-bold text-slate-600">
                   <tr>
-                    <th rowSpan={2} className="w-8 border-r border-slate-200 p-2 text-center text-[10px]">№</th>
+                    <th rowSpan={2} className="w-8 border-r border-slate-200 p-2 text-center text-[10px]">в„–</th>
                     <th rowSpan={2} className="border-r border-slate-200 p-2 text-center text-[10px]">4-haftalik jadval</th>
                     <th rowSpan={2} className="border-r border-slate-200 p-2 text-center text-[10px]">Yillik jadval</th>
                     <th rowSpan={2} className="border-r border-slate-200 p-2 text-center text-[10px]">Yangi ishlar</th>
@@ -1154,13 +1163,13 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
                     return (
                       <tr key={idx} className="border-b border-slate-100 hover:bg-white transition-colors">
                         <td className="border-r border-slate-200 p-2 text-center font-bold text-slate-400">{e.ragat}</td>
-                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.haftalikJadval || '—'}</td>
-                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.yillikJadval || '—'}</td>
-                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.yangiIshlar || '—'}</td>
-                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.kmoBartaraf || '—'}</td>
-                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.majburiyOzgarish || '—'}</td>
-                        <td className="border-r border-slate-200 p-2 text-center align-middle text-[10px] font-medium text-sky-600">{e.bajarildiShn || '—'}</td>
-                        <td className="border-r border-slate-200 p-2 text-center align-middle text-[10px] italic text-slate-500">{e.bajarildiImzo || '—'}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.haftalikJadval || 'вЂ”'}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.yillikJadval || 'вЂ”'}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.yangiIshlar || 'вЂ”'}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.kmoBartaraf || 'вЂ”'}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.majburiyOzgarish || 'вЂ”'}</td>
+                        <td className="border-r border-slate-200 p-2 text-center align-middle text-[10px] font-medium text-sky-600">{e.bajarildiShn || 'вЂ”'}</td>
+                        <td className="border-r border-slate-200 p-2 text-center align-middle text-[10px] italic text-slate-500">{e.bajarildiImzo || 'вЂ”'}</td>
                         <td className="p-2 text-center align-middle">
                           {e.adImzosi ? (
                             <div className="flex items-center justify-center gap-1 rounded-lg bg-emerald-50 py-1.5 border border-emerald-100 text-emerald-600">
@@ -1220,7 +1229,7 @@ function PremiyaCard({ report, onConfirm }: {
             <Award size={24} />
           </div>
           <div>
-            <h3 className="text-sm font-black text-slate-900">{report.workerName} · Premiya</h3>
+            <h3 className="text-sm font-black text-slate-900">{report.workerName} В· Premiya</h3>
             <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{report.month}</p>
           </div>
         </div>
@@ -1245,7 +1254,7 @@ function PremiyaCard({ report, onConfirm }: {
                   doc.text(`Premiya Ro'yxati - ${report.stationName}`, 14, 15)
                   doc.setFontSize(10)
                   doc.text(`Sana: ${report.month}`, 14, 22)
-                  const tableColumn = ['№', 'I.SH.', 'Lavozimi', 'Tabel №', "Rag'bat. %", 'Eslatma']
+                  const tableColumn = ['в„–', 'I.SH.', 'Lavozimi', 'Tabel в„–', "Rag'bat. %", 'Eslatma']
                   const tableRows = report.entries.filter((en: any) => en.ish || en.lavozim || en.foiz).map((en: any, idx: number) => [String(idx + 1), en.ish, en.lavozim, en.tabelNomeri, en.foiz ? en.foiz + '%' : '', en.eslatma])
                   autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30, styles: { font: 'helvetica', fontSize: 8 }, headStyles: { fillColor: [245, 158, 11] } })
                   doc.save(`Premiya_${report.stationName}_${report.month}.pdf`)
@@ -1270,10 +1279,10 @@ function PremiyaCard({ report, onConfirm }: {
             <table className="w-full text-left text-[11px]">
               <thead className="bg-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500">
                 <tr>
-                  <th className="p-4 text-center w-12">№</th>
+                  <th className="p-4 text-center w-12">в„–</th>
                   <th className="p-4">I.SH.</th>
                   <th className="p-4">Lavozimi</th>
-                  <th className="p-4 text-center">Tabel №</th>
+                  <th className="p-4 text-center">Tabel в„–</th>
                   <th className="p-4 text-center">Rag&apos;bat. %</th>
                   <th className="p-4">Eslatma</th>
                 </tr>
@@ -1535,9 +1544,9 @@ function ArchiveView({ stations, allReports, allJournals, onConfirm, onConfirmEn
                             <div className="flex items-center justify-between">
                               <div>
                                 <h4 className="font-black text-slate-900">DU-46 Jurnali</h4>
-                                <p className="text-xs text-slate-400">{selStationName} · {j.updatedBy}</p>
+                                <p className="text-xs text-slate-400">{selStationName} В· {j.updatedBy}</p>
                               </div>
-                              <span className="text-sm font-bold text-sky-600 group-hover:translate-x-1 transition-transform">Ko'rish →</span>
+                              <span className="text-sm font-bold text-sky-600 group-hover:translate-x-1 transition-transform">Ko'rish в†’</span>
                             </div>
                           </button>
                         ))
@@ -1559,9 +1568,9 @@ function ArchiveView({ stations, allReports, allJournals, onConfirm, onConfirmEn
                             <div className="flex items-center justify-between">
                               <div>
                                 <h4 className="font-black text-slate-900">SHU-2 Jurnali</h4>
-                                <p className="text-xs text-slate-400">{selStationName} · {j.updatedBy}</p>
+                                <p className="text-xs text-slate-400">{selStationName} В· {j.updatedBy}</p>
                               </div>
-                              <span className="text-sm font-bold text-amber-600 group-hover:translate-x-1 transition-transform">Ko'rish →</span>
+                              <span className="text-sm font-bold text-amber-600 group-hover:translate-x-1 transition-transform">Ko'rish в†’</span>
                             </div>
                           </button>
                         ))
@@ -1581,7 +1590,7 @@ function ArchiveView({ stations, allReports, allJournals, onConfirm, onConfirmEn
         </div>
       </div>
 
-      {/* Journal View Modal — ishchi sahifasidagi kabi to'liq ko'rinish */}
+      {/* Journal View Modal вЂ” ishchi sahifasidagi kabi to'liq ko'rinish */}
       {viewJournal && (
         <div className="fixed inset-0 z-[500] bg-slate-50">
           {viewJournal.journalType === 'du46' ? (
@@ -1644,7 +1653,7 @@ function JournalArchiveCard({ journal, type, stationName }: {
       doc.text(`Yangilangan: ${journal.updatedBy}`, 14, 28)
 
       if (type === 'du46') {
-        const tableColumn = ['№', 'Oy/kun', 'Soat', 'Kamchilik', 'Xabar usuli', 'Bartaraf info', 'Holat']
+        const tableColumn = ['в„–', 'Oy/kun', 'Soat', 'Kamchilik', 'Xabar usuli', 'Bartaraf info', 'Holat']
         const tableRows = du46Entries
           .filter(e => e.kamchilik || e.bartarafInfo)
           .map((e, i) => [
@@ -1667,7 +1676,7 @@ function JournalArchiveCard({ journal, type, stationName }: {
           alternateRowStyles: { fillColor: [240, 248, 255] },
         })
       } else {
-        const tableColumn = ['№', 'Sana', 'Yozuv', 'Imzo', 'Holat']
+        const tableColumn = ['в„–', 'Sana', 'Yozuv', 'Imzo', 'Holat']
         const tableRows = shu2Entries
           .filter(e => e.yozuv)
           .map((e, i) => [
@@ -1705,7 +1714,7 @@ function JournalArchiveCard({ journal, type, stationName }: {
           </div>
           <div>
             <h4 className="font-black text-slate-900 tracking-tight">{type === 'du46' ? 'DU-46' : 'SHU-2'} Jurnali</h4>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stationName} · {dateStr}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stationName} В· {dateStr}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -1741,7 +1750,7 @@ function JournalArchiveCard({ journal, type, stationName }: {
           onClick={() => setExpanded(!expanded)}
           className="ml-auto text-xs font-bold text-sky-600 hover:text-sky-700 uppercase tracking-widest transition-colors"
         >
-          {expanded ? 'Yig\'ish ▲' : `Kengaytish (${filteredEntries.length}) ▼`}
+          {expanded ? 'Yig\'ish в–І' : `Kengaytish (${filteredEntries.length}) в–ј`}
         </button>
       </div>
 
@@ -1752,7 +1761,7 @@ function JournalArchiveCard({ journal, type, stationName }: {
             <table className="w-full text-[10px]" style={{ minWidth: '1000px' }}>
               <thead className="bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b-2 border-slate-200">
                 <tr>
-                  <th className="p-2.5 text-center border-r border-slate-100">№</th>
+                  <th className="p-2.5 text-center border-r border-slate-100">в„–</th>
                   <th className="p-2.5 text-center border-r border-slate-100">Oy/kun</th>
                   <th className="p-2.5 text-center border-r border-slate-100">Soat</th>
                   <th className="p-2.5 text-left border-r border-slate-100">Kamchilik</th>
@@ -1765,16 +1774,16 @@ function JournalArchiveCard({ journal, type, stationName }: {
                 {du46Entries.filter(e => e.kamchilik || e.bartarafInfo).map((e, i) => (
                   <tr key={i} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                     <td className="p-2.5 text-center font-bold text-slate-400 border-r border-slate-50">{e.nomber || i + 1}</td>
-                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.oyKun1 || '—'}</td>
-                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.soatMinut1 || '—'}</td>
-                    <td className="p-2.5 text-slate-700 border-r border-slate-50 max-w-[250px] whitespace-pre-wrap">{e.kamchilik || '—'}</td>
-                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.xabarUsuli || '—'}</td>
-                    <td className="p-2.5 text-slate-700 max-w-[250px] whitespace-pre-wrap">{e.bartarafInfo || '—'}</td>
+                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.oyKun1 || 'вЂ”'}</td>
+                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.soatMinut1 || 'вЂ”'}</td>
+                    <td className="p-2.5 text-slate-700 border-r border-slate-50 max-w-[250px] whitespace-pre-wrap">{e.kamchilik || 'вЂ”'}</td>
+                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.xabarUsuli || 'вЂ”'}</td>
+                    <td className="p-2.5 text-slate-700 max-w-[250px] whitespace-pre-wrap">{e.bartarafInfo || 'вЂ”'}</td>
                     <td className="p-2.5 text-center">
                       {(e as DU46Entry).dispetcherQabulQildi
-                        ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600 border border-emerald-100">✓ Qabul</span>
+                        ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600 border border-emerald-100">вњ“ Qabul</span>
                         : (e as DU46Entry).yuborildi
-                          ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[8px] font-bold text-amber-600 border border-amber-100">⏳ Kutilmoqda</span>
+                          ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[8px] font-bold text-amber-600 border border-amber-100">вЏі Kutilmoqda</span>
                           : <span className="text-[8px] font-bold text-slate-300">Yangi</span>
                       }
                     </td>
@@ -1786,7 +1795,7 @@ function JournalArchiveCard({ journal, type, stationName }: {
             <table className="w-full text-[10px]" style={{ minWidth: '800px' }}>
               <thead className="bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b-2 border-slate-200">
                 <tr>
-                  <th className="p-2.5 text-center border-r border-slate-100">№</th>
+                  <th className="p-2.5 text-center border-r border-slate-100">в„–</th>
                   <th className="p-2.5 text-center border-r border-slate-100">Sana</th>
                   <th className="p-2.5 text-left border-r border-slate-100">Yozuv</th>
                   <th className="p-2.5 text-center border-r border-slate-100">Imzo</th>
@@ -1797,14 +1806,14 @@ function JournalArchiveCard({ journal, type, stationName }: {
                 {shu2Entries.filter(e => e.yozuv).map((e, i) => (
                   <tr key={i} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                     <td className="p-2.5 text-center font-bold text-slate-400 border-r border-slate-50">{e.nomber || i + 1}</td>
-                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.sana || '—'}</td>
-                    <td className="p-2.5 text-slate-700 border-r border-slate-50 max-w-[400px] whitespace-pre-wrap">{e.yozuv || '—'}</td>
-                    <td className="p-2.5 text-center text-slate-500 border-r border-slate-50">{(e as SHU2Entry).tasdiqlandi ? ((e as SHU2Entry).tasdiqlaganImzo || (e as SHU2Entry).imzo) : '—'}</td>
+                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.sana || 'вЂ”'}</td>
+                    <td className="p-2.5 text-slate-700 border-r border-slate-50 max-w-[400px] whitespace-pre-wrap">{e.yozuv || 'вЂ”'}</td>
+                    <td className="p-2.5 text-center text-slate-500 border-r border-slate-50">{(e as SHU2Entry).tasdiqlandi ? ((e as SHU2Entry).tasdiqlaganImzo || (e as SHU2Entry).imzo) : 'вЂ”'}</td>
                     <td className="p-2.5 text-center">
                       {(e as SHU2Entry).dispetcherQabulQildi
-                        ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600 border border-emerald-100">✓ Qabul</span>
+                        ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600 border border-emerald-100">вњ“ Qabul</span>
                         : (e as SHU2Entry).yuborildi
-                          ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[8px] font-bold text-amber-600 border border-amber-100">⏳ Kutilmoqda</span>
+                          ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[8px] font-bold text-amber-600 border border-amber-100">вЏі Kutilmoqda</span>
                           : <span className="text-[8px] font-bold text-slate-300">Yangi</span>
                       }
                     </td>
@@ -1938,7 +1947,7 @@ function WorkersModal({ workers, stations, onClose, onEdit, onDelete }: {
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-lg font-black text-white shadow-lg shadow-sky-500/20 transition-transform duration-200 group-hover:scale-110">{w.fullName.charAt(0)}</div>
                   <div>
                     <h4 className="font-black text-slate-900">{w.fullName}</h4>
-                    <p className="text-xs font-bold text-slate-500 tracking-tight">{w.login} · {w.phone || 'Tel kiritilmagan'} · {w.role === 'worker' ? 'Mexanik' : 'Boshliq'}</p>
+                    <p className="text-xs font-bold text-slate-500 tracking-tight">{w.login} В· {w.phone || 'Tel kiritilmagan'} В· {w.role === 'worker' ? 'Mexanik' : 'Boshliq'}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -1960,9 +1969,9 @@ function EmptyState({ label }: { label: string }) {
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 // BUGUNGI ISHLAR MODAL
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
 function TodayTasksModal({ type, tasks, stations, onClose }: {
   type: 'bajarilgan' | 'bajarilmagan'
@@ -1998,7 +2007,7 @@ function TodayTasksModal({ type, tasks, stations, onClose }: {
               {isBajarilgan ? 'Bugun bajarilgan ishlar' : 'Bugun bajarilmagan ishlar'}
             </h3>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-              {todayFormatted} · {tasks.length} ta ish
+              {todayFormatted} В· {tasks.length} ta ish
             </p>
           </div>
           <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">

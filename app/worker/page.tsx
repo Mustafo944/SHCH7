@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -11,6 +11,7 @@ import {
   getReportsByWorker,
   getPremiyasByWorker,
   upsertReport,
+  updateReportEntries,
   upsertPremiyaReport,
   getSchemasByStation,
   getGlobalGraphics,
@@ -128,7 +129,7 @@ export default function WorkerPage() {
   useEffect(() => {
     if (!session?.id) return
 
-    // ─── Realtime Subscriptions ───────────────
+    // в”Ђв”Ђв”Ђ Realtime Subscriptions в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
     const workReportsChannel = supabase
       .channel(`worker_reports_${session.id}`)
       .on(
@@ -140,7 +141,7 @@ export default function WorkerPage() {
           filter: `worker_id=eq.${session.id}`
         },
         () => {
-          console.log('🚀 Realtime: Hisobot holati o\'zgardi!')
+          console.log('рџљЂ Realtime: Hisobot holati o\'zgardi!')
           loadWorkReports(session.id)
         }
       )
@@ -157,7 +158,7 @@ export default function WorkerPage() {
           filter: `worker_id=eq.${session.id}`
         },
         () => {
-          console.log('🚀 Realtime: Premiya holati o\'zgardi!')
+          console.log('рџљЂ Realtime: Premiya holati o\'zgardi!')
           loadPremiyaReports(session.id)
         }
       )
@@ -246,7 +247,7 @@ export default function WorkerPage() {
             <div className="grid gap-6 sm:grid-cols-2 pt-10">
               {session?.stationIds?.map(sid => (
                 <button key={sid} onClick={() => { setActiveStationId(sid); setView('home') }} className="group flex flex-col items-center p-12 rounded-3xl border border-slate-200/60 bg-white/80 shadow-lg backdrop-blur-sm transition-all hover:border-sky-300 hover:scale-[1.02] hover:shadow-xl active:scale-95 animate-fade-up">
-                  <div className="mb-6 text-5xl group-hover:scale-110 transition-transform">📍</div>
+                  <div className="mb-6 text-5xl group-hover:scale-110 transition-transform">рџ“Ќ</div>
                   <span className="text-xl font-black text-slate-900 tracking-tight">{getStation(sid)?.name}</span>
                   <p className="mt-2 text-xs font-bold text-slate-400 uppercase tracking-widest">Bekatni tanlash</p>
                 </button>
@@ -366,16 +367,16 @@ export default function WorkerPage() {
 
           {view === 'viewReport' && selectedReport && (
             <div className="animate-fade-up">
-              <HeaderCard title="Hisobot Ko'rinishi" subtitle={`${selectedReport.month} · ${stationName}`} status={selectedReport.confirmedAt || selectedReport.entries.every(e => !e.haftalikJadval && !e.yillikJadval && !e.yangiIshlar && !e.kmoBartaraf && !e.majburiyOzgarish || e.adImzosi) ? 'tasdiqlandi' : 'kutilmoqda'} />
+              <HeaderCard title="Hisobot Ko'rinishi" subtitle={`${selectedReport.month} В· ${stationName}`} status={selectedReport.confirmedAt || selectedReport.entries.every(e => !e.haftalikJadval && !e.yillikJadval && !e.yangiIshlar && !e.kmoBartaraf && !e.majburiyOzgarish || e.adImzosi) ? 'tasdiqlandi' : 'kutilmoqda'} />
               <div className="mt-6 mb-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm relative shadow-sm">
                 <div className="sm:hidden absolute top-0 right-0 bg-blue-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
-                  O&apos;ngga suring →
+                  O&apos;ngga suring в†’
                 </div>
                 <div className="overflow-x-auto overflow-y-hidden">
                   <table style={{ minWidth: "1200px" }} className="w-full border-collapse text-left text-[11px] text-slate-700">
                     <thead className="border-b-2 border-sky-500/30 bg-slate-50 font-bold text-slate-600">
                       <tr>
-                        <th rowSpan={2} className="w-10 border-r border-slate-200 p-2 text-center">№</th>
+                        <th rowSpan={2} className="w-10 border-r border-slate-200 p-2 text-center">в„–</th>
                         <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-2 text-center">4-haftalik jadval</th>
                         <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-2 text-center">Yillik jadval bo&apos;yicha</th>
                         <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-2">Yangi ishlar ro&apos;yxati</th>
@@ -393,11 +394,11 @@ export default function WorkerPage() {
                       {selectedReport.entries.map((e, idx) => (
                         <tr key={idx} className="group border-b border-slate-100 hover:bg-slate-50/80">
                           <td className="border-r border-slate-100 p-2 text-center font-bold text-sky-600/50">{e.ragat}</td>
-                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.haftalikJadval || '—'}</td>
-                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.yillikJadval || '—'}</td>
-                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.yangiIshlar || '—'}</td>
-                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.kmoBartaraf || '—'}</td>
-                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.majburiyOzgarish || '—'}</td>
+                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.haftalikJadval || 'вЂ”'}</td>
+                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.yillikJadval || 'вЂ”'}</td>
+                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.yangiIshlar || 'вЂ”'}</td>
+                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.kmoBartaraf || 'вЂ”'}</td>
+                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.majburiyOzgarish || 'вЂ”'}</td>
                           <td className="border-r border-slate-100 p-2 text-center align-middle font-medium text-sky-600">{e.bajarildiShn}</td>
                           <td className="border-r border-slate-100 p-2 text-center align-middle italic text-slate-400">{e.bajarildiImzo}</td>
                           <td className="p-2 text-center align-middle">
@@ -418,11 +419,11 @@ export default function WorkerPage() {
 
           {view === 'viewPremiya' && selectedPremiya && (
             <div className="animate-fade-up">
-              <HeaderCard title="Premiya Ro'yxati" subtitle={`${selectedPremiya.month} · ${stationName}`} status={selectedPremiya.confirmedAt ? 'tasdiqlandi' : 'kutilmoqda'} color="amber" />
+              <HeaderCard title="Premiya Ro'yxati" subtitle={`${selectedPremiya.month} В· ${stationName}`} status={selectedPremiya.confirmedAt ? 'tasdiqlandi' : 'kutilmoqda'} color="amber" />
               <div className="mt-8 overflow-x-auto rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-sm">
                 <table className="w-full text-left text-[11px]">
                   <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    <tr><th className="p-4 text-center w-12">№</th><th className="p-4">I.SH.</th><th className="p-4">Lavozimi</th><th className="p-4 text-center">Tabel №</th><th className="p-4 text-center">Rag'bat. %</th><th className="p-4">Eslatma</th></tr>
+                    <tr><th className="p-4 text-center w-12">в„–</th><th className="p-4">I.SH.</th><th className="p-4">Lavozimi</th><th className="p-4 text-center">Tabel в„–</th><th className="p-4 text-center">Rag'bat. %</th><th className="p-4">Eslatma</th></tr>
                   </thead>
                   <tbody className="text-slate-700">
                     {selectedPremiya.entries.map((e, idx) => (
@@ -441,7 +442,7 @@ export default function WorkerPage() {
                     doc.text(`Premiya Ro'yxati - ${stationName}`, 14, 15)
                     doc.setFontSize(10)
                     doc.text(`Sana: ${selectedPremiya.month}`, 14, 22)
-                    const tableColumn = ['№', 'I.SH.', 'Lavozimi', 'Tabel №', "Rag'bat. %", 'Eslatma']
+                    const tableColumn = ['в„–', 'I.SH.', 'Lavozimi', 'Tabel в„–', "Rag'bat. %", 'Eslatma']
                     const tableRows = selectedPremiya.entries.filter(e => e.ish || e.lavozim || e.foiz).map((e, idx) => [String(idx + 1), e.ish, e.lavozim, e.tabelNomeri, e.foiz ? e.foiz + '%' : '', e.eslatma])
                     autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30, styles: { font: 'helvetica', fontSize: 8 }, headStyles: { fillColor: [245, 158, 11] } })
                     doc.save(`Premiya_${stationName}_${selectedPremiya.month}.pdf`)
@@ -520,3 +521,4 @@ export default function WorkerPage() {
     </div>
   )
 }
+
