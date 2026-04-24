@@ -394,11 +394,11 @@ export default function WorkerPage() {
                       {selectedReport.entries.map((e, idx) => (
                         <tr key={idx} className="group border-b border-slate-100 hover:bg-slate-50/80">
                           <td className="border-r border-slate-100 p-2 text-center font-bold text-sky-600/50">{e.ragat}</td>
-                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.haftalikJadval || 'вЂ”'}</td>
-                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.yillikJadval || 'вЂ”'}</td>
-                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.yangiIshlar || 'вЂ”'}</td>
-                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.kmoBartaraf || 'вЂ”'}</td>
-                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.majburiyOzgarish || 'вЂ”'}</td>
+                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.haftalikJadval || '—'}</td>
+                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.yillikJadval || '—'}</td>
+                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.yangiIshlar || '—'}</td>
+                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.kmoBartaraf || '—'}</td>
+                          <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.majburiyOzgarish || '—'}</td>
                           <td className="border-r border-slate-100 p-2 text-center align-middle font-medium text-sky-600">{e.bajarildiShn}</td>
                           <td className="border-r border-slate-100 p-2 text-center align-middle italic text-slate-400">{e.bajarildiImzo}</td>
                           <td className="p-2 text-center align-middle">
@@ -521,4 +521,5 @@ export default function WorkerPage() {
     </div>
   )
 }
+
 

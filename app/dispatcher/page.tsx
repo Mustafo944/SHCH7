@@ -1090,7 +1090,7 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
                   printWindow.document.write(`
                     <html>
                     <head>
-                      <title>${report.workerName} вЂ” ${report.month}</title>
+                      <title>${report.workerName} — ${report.month}</title>
                       <style>
                         body { font-family: sans-serif; font-size: 11px; color: #000; margin: 20px; }
                         h2 { font-size: 14px; margin-bottom: 4px; }
@@ -1163,13 +1163,13 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
                     return (
                       <tr key={idx} className="border-b border-slate-100 hover:bg-white transition-colors">
                         <td className="border-r border-slate-200 p-2 text-center font-bold text-slate-400">{e.ragat}</td>
-                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.haftalikJadval || 'вЂ”'}</td>
-                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.yillikJadval || 'вЂ”'}</td>
-                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.yangiIshlar || 'вЂ”'}</td>
-                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.kmoBartaraf || 'вЂ”'}</td>
-                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.majburiyOzgarish || 'вЂ”'}</td>
-                        <td className="border-r border-slate-200 p-2 text-center align-middle text-[10px] font-medium text-sky-600">{e.bajarildiShn || 'вЂ”'}</td>
-                        <td className="border-r border-slate-200 p-2 text-center align-middle text-[10px] italic text-slate-500">{e.bajarildiImzo || 'вЂ”'}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.haftalikJadval || '—'}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.yillikJadval || '—'}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.yangiIshlar || '—'}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.kmoBartaraf || '—'}</td>
+                        <td className="border-r border-slate-200 p-2 align-top whitespace-pre-wrap">{e.majburiyOzgarish || '—'}</td>
+                        <td className="border-r border-slate-200 p-2 text-center align-middle text-[10px] font-medium text-sky-600">{e.bajarildiShn || '—'}</td>
+                        <td className="border-r border-slate-200 p-2 text-center align-middle text-[10px] italic text-slate-500">{e.bajarildiImzo || '—'}</td>
                         <td className="p-2 text-center align-middle">
                           {e.adImzosi ? (
                             <div className="flex items-center justify-center gap-1 rounded-lg bg-emerald-50 py-1.5 border border-emerald-100 text-emerald-600">
@@ -1590,7 +1590,7 @@ function ArchiveView({ stations, allReports, allJournals, onConfirm, onConfirmEn
         </div>
       </div>
 
-      {/* Journal View Modal вЂ” ishchi sahifasidagi kabi to'liq ko'rinish */}
+      {/* Journal View Modal — ishchi sahifasidagi kabi to'liq ko'rinish */}
       {viewJournal && (
         <div className="fixed inset-0 z-[500] bg-slate-50">
           {viewJournal.journalType === 'du46' ? (
@@ -1774,11 +1774,11 @@ function JournalArchiveCard({ journal, type, stationName }: {
                 {du46Entries.filter(e => e.kamchilik || e.bartarafInfo).map((e, i) => (
                   <tr key={i} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                     <td className="p-2.5 text-center font-bold text-slate-400 border-r border-slate-50">{e.nomber || i + 1}</td>
-                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.oyKun1 || 'вЂ”'}</td>
-                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.soatMinut1 || 'вЂ”'}</td>
-                    <td className="p-2.5 text-slate-700 border-r border-slate-50 max-w-[250px] whitespace-pre-wrap">{e.kamchilik || 'вЂ”'}</td>
-                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.xabarUsuli || 'вЂ”'}</td>
-                    <td className="p-2.5 text-slate-700 max-w-[250px] whitespace-pre-wrap">{e.bartarafInfo || 'вЂ”'}</td>
+                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.oyKun1 || '—'}</td>
+                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.soatMinut1 || '—'}</td>
+                    <td className="p-2.5 text-slate-700 border-r border-slate-50 max-w-[250px] whitespace-pre-wrap">{e.kamchilik || '—'}</td>
+                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.xabarUsuli || '—'}</td>
+                    <td className="p-2.5 text-slate-700 max-w-[250px] whitespace-pre-wrap">{e.bartarafInfo || '—'}</td>
                     <td className="p-2.5 text-center">
                       {(e as DU46Entry).dispetcherQabulQildi
                         ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600 border border-emerald-100">вњ“ Qabul</span>
@@ -1806,9 +1806,9 @@ function JournalArchiveCard({ journal, type, stationName }: {
                 {shu2Entries.filter(e => e.yozuv).map((e, i) => (
                   <tr key={i} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                     <td className="p-2.5 text-center font-bold text-slate-400 border-r border-slate-50">{e.nomber || i + 1}</td>
-                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.sana || 'вЂ”'}</td>
-                    <td className="p-2.5 text-slate-700 border-r border-slate-50 max-w-[400px] whitespace-pre-wrap">{e.yozuv || 'вЂ”'}</td>
-                    <td className="p-2.5 text-center text-slate-500 border-r border-slate-50">{(e as SHU2Entry).tasdiqlandi ? ((e as SHU2Entry).tasdiqlaganImzo || (e as SHU2Entry).imzo) : 'вЂ”'}</td>
+                    <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.sana || '—'}</td>
+                    <td className="p-2.5 text-slate-700 border-r border-slate-50 max-w-[400px] whitespace-pre-wrap">{e.yozuv || '—'}</td>
+                    <td className="p-2.5 text-center text-slate-500 border-r border-slate-50">{(e as SHU2Entry).tasdiqlandi ? ((e as SHU2Entry).tasdiqlaganImzo || (e as SHU2Entry).imzo) : '—'}</td>
                     <td className="p-2.5 text-center">
                       {(e as SHU2Entry).dispetcherQabulQildi
                         ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600 border border-emerald-100">вњ“ Qabul</span>
@@ -2090,3 +2090,4 @@ function TodayTasksModal({ type, tasks, stations, onClose }: {
     </div>
   )
 }
+
