@@ -14,6 +14,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="uz">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#0284c7" />
+        <link rel="apple-touch-icon" href="/uty-logo.png" />
+      </head>
       <body className={inter.className}>{children}</body>
     </html>
   );
