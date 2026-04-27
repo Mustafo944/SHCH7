@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Download, X, Search, CheckCircle2, Clock, Map as MapIcon, ChevronRight, Plus, ChevronLeft } from 'lucide-react'
+import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft } from 'lucide-react'
 import { getGlobalGraphics, getSchemasByStation, upsertReport, upsertPremiyaReport, getPremiyasByWorker } from '@/lib/supabase-db'
-import type { User, WorkReport, ReportEntry, PremiyaReport, PremiyaEntry, StationSchema } from '@/types'
+import type { User, WorkReport, ReportEntry, PremiyaEntry, StationSchema } from '@/types'
 import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, type ParsedTaskItem } from '@/lib/reja-data'
 import { MONTHS } from '@/lib/constants'
 
@@ -28,7 +28,7 @@ export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badg
   )
 }
 
-export function HeaderCard({ title, subtitle, status, color = 'cyan' }: { title: string, subtitle: string, status: string, color?: string }) {
+export function HeaderCard({ title, subtitle, status }: { title: string, subtitle: string, status: string, color?: string }) {
   const statusColors: Record<string, string> = {
     tasdiqlandi: 'badge-success',
     kutilmoqda: 'badge-warning',
@@ -317,8 +317,12 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           className="rounded-2xl border border-slate-200/60 bg-white/80 px-6 py-5 font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition flex items-center gap-2 shadow-sm backdrop-blur-sm">
           <Download size={18} /> PDF
         </button>
-        <button onClick={handleSubmit} disabled={submitting} className="btn-gradient flex-1 py-5 font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all">{submitting ? 'Yuborilmoqda...' : 'Yuborish'}</button>
-        <button onClick={onCancel} className="rounded-2xl bg-white/80 border border-slate-200/60 px-10 font-bold text-slate-400 hover:text-slate-900 transition shadow-sm backdrop-blur-sm">Bekor qilish</button>
+        {!isConfirmed && (
+          <button onClick={handleSubmit} disabled={submitting} className="btn-gradient flex-1 py-5 font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all">{submitting ? 'Yuborilmoqda...' : 'Yuborish'}</button>
+        )}
+        <button onClick={onCancel} className="rounded-2xl bg-white/80 border border-slate-200/60 px-10 font-bold text-slate-400 hover:text-slate-900 transition shadow-sm backdrop-blur-sm">
+          {isConfirmed ? 'Orqaga' : 'Bekor qilish'}
+        </button>
       </div>
 
       {modalOpen && (
@@ -615,7 +619,7 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
     return () => {
       if (blobUrl) URL.revokeObjectURL(blobUrl)
     }
-  }, [stationId])
+  }, [stationId, blobUrl])
 
   // Firefox uchun blob URL orqali ko'rsatish
   const handlePreview = async (filePath: string) => {

@@ -143,7 +143,7 @@ export default function WorkerPage() {
           filter: `worker_id=eq.${session.id}`
         },
         () => {
-          console.log('рџљЂ Realtime: Hisobot holati o\'zgardi!')
+          console.log('🚀 Realtime: Hisobot holati o\'zgardi!')
           loadWorkReports(session.id)
         }
       )
@@ -160,7 +160,7 @@ export default function WorkerPage() {
           filter: `worker_id=eq.${session.id}`
         },
         () => {
-          console.log('рџљЂ Realtime: Premiya holati o\'zgardi!')
+          console.log('🚀 Realtime: Premiya holati o\'zgardi!')
           loadPremiyaReports(session.id)
         }
       )
@@ -249,7 +249,7 @@ export default function WorkerPage() {
             <div className="grid gap-6 sm:grid-cols-2 pt-10">
               {session?.stationIds?.map(sid => (
                 <button key={sid} onClick={() => { setActiveStationId(sid); setView('home') }} className="group flex flex-col items-center p-12 rounded-3xl border border-slate-200/60 bg-white/80 shadow-lg backdrop-blur-sm transition-all hover:border-sky-300 hover:scale-[1.02] hover:shadow-xl active:scale-95 animate-fade-up">
-                  <div className="mb-6 text-5xl group-hover:scale-110 transition-transform">рџ“Ќ</div>
+                  <div className="mb-6 text-5xl group-hover:scale-110 transition-transform">📍</div>
                   <span className="text-xl font-black text-slate-900 tracking-tight">{getStation(sid)?.name}</span>
                   <p className="mt-2 text-xs font-bold text-slate-400 uppercase tracking-widest">Bekatni tanlash</p>
                 </button>
@@ -523,5 +523,4 @@ export default function WorkerPage() {
     </div>
   )
 
-}  
- 
+}

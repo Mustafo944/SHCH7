@@ -162,31 +162,31 @@ export default function DispatcherPage() {
     const workReportsChannel = supabase
       .channel('dispatcher_work_reports')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'work_reports' }, () => {
-        console.log('рџљЂ Realtime: Yangi hisobot!')
+        console.log('🚀 Realtime: Yangi hisobot!')
         loadWorkReports()
       })
       .subscribe((status) => {
-        console.log('рџ“Ў work_reports kanal:', status)
+        console.log('📡 work_reports kanal:', status)
       })
 
     const premiyaReportsChannel = supabase
       .channel('dispatcher_premiya_reports')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'premiya_reports' }, () => {
-        console.log('рџљЂ Realtime: Yangi premiya!')
+        console.log('🚀 Realtime: Yangi premiya!')
         loadPremiyaReports()
       })
       .subscribe((status) => {
-        console.log('рџ“Ў premiya_reports kanal:', status)
+        console.log('📡 premiya_reports kanal:', status)
       })
 
     const journalsChannel = supabase
       .channel('dispatcher_journals')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals' }, (payload) => {
-        console.log('рџљЂ Realtime: Jurnal yangilandi!', payload.eventType)
+        console.log('🚀 Realtime: Jurnal yangilandi!', payload.eventType)
         loadJournals()
       })
       .subscribe((status) => {
-        console.log('рџ“Ў station_journals kanal:', status)
+        console.log('📡 station_journals kanal:', status)
       })
 
     return () => {
@@ -725,7 +725,6 @@ export default function DispatcherPage() {
       {showWorkersModal && (
         <WorkersModal
           workers={workers}
-          stations={stations}
           onClose={() => setShowWorkersModal(false)}
           onEdit={(w: User) => {
             setEditingWorkerId(w.id)
@@ -751,7 +750,6 @@ export default function DispatcherPage() {
         <TodayTasksModal
           type={todayModal}
           tasks={todayModal === 'bajarilgan' ? todayBajarilgan : todayBajarilmagan}
-          stations={stations}
           onClose={() => setTodayModal(null)}
         />
       )}
@@ -1921,9 +1919,8 @@ function DownloadCard({ title, desc, existingFile, onUpload, onDelete }: {
   )
 }
 
-function WorkersModal({ workers, stations, onClose, onEdit, onDelete }: {
+function WorkersModal({ workers, onClose, onEdit, onDelete }: {
   workers: User[]
-  stations: { id: string; name: string }[]
   onClose: () => void
   onEdit: (w: User) => void
   onDelete: (id: string) => void
@@ -1973,10 +1970,9 @@ function EmptyState({ label }: { label: string }) {
 // BUGUNGI ISHLAR MODAL
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function TodayTasksModal({ type, tasks, stations, onClose }: {
+function TodayTasksModal({ type, tasks, onClose }: {
   type: 'bajarilgan' | 'bajarilmagan'
   tasks: { stationId: string; stationName: string; workerName: string; entry: ReportEntry; bajarilgan: boolean; month: string }[]
-  stations: { id: string; name: string }[]
   onClose: () => void
 }) {
   const isBajarilgan = type === 'bajarilgan'

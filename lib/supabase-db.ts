@@ -748,7 +748,7 @@ export async function upsertJournal(
   entries: DU46Entry[] | SHU2Entry[],
   updatedBy: string
 ): Promise<StationJournal> {
-  console.log('рџ’ѕ upsertJournal chaqirildi:', { stationId, journalType, entriesCount: entries.length, updatedBy })
+  console.log('💾 upsertJournal chaqirildi:', { stationId, journalType, entriesCount: entries.length, updatedBy })
 
   const { data, error } = await supabase
     .from('station_journals')

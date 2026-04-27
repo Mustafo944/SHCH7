@@ -33,7 +33,9 @@ export default function BekatBoshlighiPage() {
     try {
       const counts = await getPendingJournalCounts(sid, role)
       setPendingCounts(counts)
-    } catch {}
+    } catch (err) {
+      console.error('Error fetching pending counts', err)
+    }
   }, [])
 
   const allStations = getStations()
@@ -69,7 +71,7 @@ export default function BekatBoshlighiPage() {
       .subscribe()
 
     return () => { supabase.removeChannel(journalChannel) }
-  }, [selectedStation, session?.role, loadPendingCounts])
+  }, [selectedStation, session, loadPendingCounts])
 
   if (loading) return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-sky-50">
