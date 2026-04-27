@@ -1173,15 +1173,8 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
                           {e.adImzosi ? (
                             <div className="flex items-center justify-center gap-1 rounded-lg bg-emerald-50 py-1.5 border border-emerald-100 text-emerald-600">
                               <CheckCircle2 size={10} />
-                              <span className="text-[9px] font-bold">{e.adImzosi || ''}</span>
+                              <span className="text-[9px] font-bold">✅ {e.adImzosi}</span>
                             </div>
-                          ) : e.bajarildiShn ? (
-                            <button
-                              onClick={() => onConfirmRow(originalIndex)}
-                              className="w-full rounded-lg bg-sky-50 py-1.5 text-[9px] font-bold text-sky-600 hover:bg-sky-500 hover:text-white transition-all shadow-sm"
-                            >
-                              Tasdiqlash
-                            </button>
                           ) : (
                             <div className="text-[9px] italic text-slate-300">Kutilmoqda...</div>
                           )}

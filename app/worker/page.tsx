@@ -405,7 +405,7 @@ export default function WorkerPage() {
                           <td className="border-r border-slate-100 p-2 text-center align-middle italic text-slate-400">{e.bajarildiImzo}</td>
                           <td className="p-2 text-center align-middle">
                             {e.adImzosi ? (
-                              <span className="inline-block whitespace-pre-wrap rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100">{e.adImzosi}</span>
+                              <span className="inline-block whitespace-pre-wrap rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100">✅ {e.adImzosi}</span>
                             ) : (
                               <span className="text-[10px] text-slate-300 italic">Kutilmoqda...</span>
                             )}

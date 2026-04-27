@@ -311,25 +311,9 @@ export async function upsertReport(
 }
 
 export async function confirmReport(reportId: string, dispatcherName: string): Promise<WorkReport | null> {
-  const { data: current } = await supabase
-    .from('work_reports')
-    .select('entries')
-    .eq('id', reportId)
-    .single();
-
-  if (!current) return null;
-
-  const entries = (current.entries as ReportEntry[]).map((e: ReportEntry) => {
-    const hasMeaning =
-      e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish;
-
-    return hasMeaning ? { ...e, adImzosi: `✅ Tasdiqlandi: Aloqa dispetcheri` } : e;
-  });
-
   const { data, error } = await supabase
     .from('work_reports')
     .update({
-      entries,
       confirmed_at: new Date().toISOString(),
       confirmed_by: dispatcherName,
     })

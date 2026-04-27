@@ -115,6 +115,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     const newEntries = [...entries]
     newEntries[idx].bajarildiShn = session.fullName
     newEntries[idx].bajarildiImzo = session.fullName
+    newEntries[idx].adImzosi = session.fullName
     setEntries(newEntries)
 
     setSubmitting(true)
@@ -268,11 +269,9 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                   </td>
                   <td className="p-2 text-center align-middle">
                     {e.adImzosi ? (
-                      <span className="inline-block whitespace-pre-wrap rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100">{e.adImzosi}</span>
+                      <span className="inline-block whitespace-pre-wrap rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100">✅ {e.adImzosi}</span>
                     ) : isConfirmed ? (
-                      e.bajarildiShn ? (
-                        <span className="text-[10px] text-sky-500 italic block mt-1 font-medium">Tasdiqlash kutilmoqda</span>
-                      ) : (e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish) ? (
+                      (e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish) ? (
                         <button
                           onClick={() => handleBajarildi(i)}
                           disabled={submitting}
