@@ -1976,45 +1976,48 @@ function TodayTasksModal({ type, tasks, onClose }: {
   onClose: () => void
 }) {
   const isBajarilgan = type === 'bajarilgan'
+  const [expandedStation, setExpandedStation] = useState<string | null>(null)
 
   // Bekatlar bo'yicha guruhlab olish
   const grouped = useMemo(() => {
-    const map: Record<string, { stationName: string; items: typeof tasks }> = {}
+    const map: Record<string, { stationName: string; workerName: string; items: typeof tasks }> = {}
     tasks.forEach(t => {
-      if (!map[t.stationId]) map[t.stationId] = { stationName: t.stationName, items: [] }
+      if (!map[t.stationId]) map[t.stationId] = { stationName: t.stationName, workerName: t.workerName, items: [] }
       map[t.stationId].items.push(t)
     })
     return map
   }, [tasks])
+
+  const stationEntries = Object.entries(grouped)
 
   const todayDate = new Date()
   const todayFormatted = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
-      <div className="flex h-[80vh] w-full max-w-3xl flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
+      <div className="flex h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
         {/* Header */}
-        <div className={`flex items-center justify-between border-b px-8 py-6 ${isBajarilgan
+        <div className={`flex items-center justify-between border-b px-6 sm:px-8 py-5 sm:py-6 ${isBajarilgan
             ? 'border-emerald-100 bg-emerald-50/50'
             : 'border-red-100 bg-red-50/50'
           }`}>
           <div>
-            <h3 className="text-xl font-black text-slate-900 tracking-tight">
+            <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
               {isBajarilgan ? 'Bugun bajarilgan ishlar' : 'Bugun bajarilmagan ishlar'}
             </h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-              {todayFormatted} В· {tasks.length} ta ish
+            <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+              {todayFormatted} · {tasks.length} ta ish · {stationEntries.length} ta bekat
             </p>
           </div>
-          <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
-            <X size={24} />
+          <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-2.5 sm:p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
+            <X size={22} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-slate-50/30">
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/30">
           {tasks.length === 0 ? (
-            <div className="flex h-full items-center justify-center">
+            <div className="flex h-full items-center justify-center p-6">
               <div className="text-center">
                 <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${isBajarilgan ? 'bg-emerald-50 text-emerald-400' : 'bg-slate-100 text-slate-300'
                   }`}>
@@ -2025,28 +2028,67 @@ function TodayTasksModal({ type, tasks, onClose }: {
                 </p>
               </div>
             </div>
-          ) : (
-            Object.entries(grouped).map(([stationId, { stationName, items }]) => (
-              <div key={stationId} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                {/* Bekat sarlavhasi */}
-                <div className={`flex items-center gap-3 border-b px-5 py-3 ${isBajarilgan ? 'border-emerald-100 bg-emerald-50/30' : 'border-red-100 bg-red-50/30'
-                  }`}>
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black ${isBajarilgan
-                      ? 'bg-emerald-100 text-emerald-600'
-                      : 'bg-red-100 text-red-600'
+          ) : expandedStation === null ? (
+            /* ─── 1-BOSQICH: BEKATLAR RO'YXATI ─── */
+            <div className="p-4 sm:p-6 space-y-2">
+              {stationEntries.map(([stationId, { stationName, workerName, items }]) => (
+                <button
+                  key={stationId}
+                  onClick={() => setExpandedStation(stationId)}
+                  className={`w-full flex items-center justify-between rounded-2xl border p-4 sm:p-5 transition-all hover:shadow-md active:scale-[0.98] group ${
+                    isBajarilgan
+                      ? 'border-emerald-100 bg-white hover:border-emerald-300 hover:bg-emerald-50/30'
+                      : 'border-red-100 bg-white hover:border-red-300 hover:bg-red-50/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                    <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl text-sm sm:text-base font-black shadow-sm ${
+                      isBajarilgan
+                        ? 'bg-emerald-100 text-emerald-600 border border-emerald-200'
+                        : 'bg-red-100 text-red-600 border border-red-200'
                     }`}>
-                    {items.length}
+                      +{items.length}
+                    </div>
+                    <div className="text-left min-w-0">
+                      <h4 className="text-sm sm:text-base font-black text-slate-900 truncate">{stationName}</h4>
+                      <p className="text-[10px] sm:text-xs font-bold text-slate-400 truncate">{workerName}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900">{stationName}</h4>
-                    <p className="text-[10px] font-bold text-slate-400">{items[0]?.workerName}</p>
+                  <ChevronRight size={20} className="shrink-0 text-slate-300 group-hover:text-slate-600 transition-colors" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            /* ─── 2-BOSQICH: TANLANGAN BEKATNING ISHLARI ─── */
+            <div>
+              {/* Orqaga tugma */}
+              <div className={`sticky top-0 z-10 flex items-center gap-3 border-b px-4 sm:px-6 py-3 ${
+                isBajarilgan ? 'border-emerald-100 bg-emerald-50/80' : 'border-red-100 bg-red-50/80'
+              } backdrop-blur-sm`}>
+                <button
+                  onClick={() => setExpandedStation(null)}
+                  className="flex items-center gap-1.5 rounded-xl bg-white/80 border border-slate-200/60 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-white hover:text-slate-900 transition-all shadow-sm"
+                >
+                  <ChevronLeft size={16} />
+                  <span className="hidden sm:inline">Bekatlar</span>
+                </button>
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-black ${
+                    isBajarilgan ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
+                  }`}>
+                    {grouped[expandedStation]?.items.length}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-black text-slate-900 truncate">{grouped[expandedStation]?.stationName}</h4>
+                    <p className="text-[9px] font-bold text-slate-400 truncate">{grouped[expandedStation]?.workerName}</p>
                   </div>
                 </div>
+              </div>
 
-                {/* Ishlar ro'yxati */}
-                {items.map((task, ti) => {
+              {/* Ishlar ro'yxati */}
+              <div className="p-3 sm:p-5 space-y-2.5">
+                {grouped[expandedStation]?.items.map((task, ti) => {
                   const text = task.entry.haftalikJadval || task.entry.yillikJadval || task.entry.yangiIshlar || task.entry.kmoBartaraf || task.entry.majburiyOzgarish || ''
-                  // Sana hisoblash: month "2026-04", ragat "4" -> "04.04.2026"
                   let dateFormatted = task.entry.ragat
                   if (task.entry.ragat && task.month && task.month.includes('-')) {
                     const [yyyy, mm] = task.month.split('-')
@@ -2054,32 +2096,37 @@ function TodayTasksModal({ type, tasks, onClose }: {
                   }
 
                   return (
-                    <div key={ti} className="flex items-start gap-4 border-b border-slate-100 last:border-0 px-5 py-4 hover:bg-slate-50/50 transition-colors">
-                      <div className={`flex flex-col items-center justify-center min-w-[110px] rounded-xl p-3 border shadow-sm ${isBajarilgan ? 'bg-emerald-50/80 border-emerald-100' : 'bg-red-50/80 border-red-100'
+                    <div key={ti} className={`rounded-xl border p-3 sm:p-4 transition-colors ${
+                      isBajarilgan ? 'border-emerald-100 bg-white hover:bg-emerald-50/20' : 'border-red-100 bg-white hover:bg-red-50/20'
+                    }`}>
+                      {/* Mobilda: sana tepada kichik, mazmun pastda katta */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-wide border ${
+                          isBajarilgan
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                            : 'bg-red-50 text-red-600 border-red-100'
                         }`}>
-                        <span className={`text-[9px] font-black uppercase tracking-widest ${isBajarilgan ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {isBajarilgan ? 'Bajarilgan sana' : 'Bajarilishi kerak edi:'}
+                          {isBajarilgan ? <CheckCircle2 size={10} /> : <Clock size={10} />}
+                          {isBajarilgan ? dateFormatted : `${dateFormatted} gacha`}
                         </span>
-                        <span className={`text-sm font-black mt-1 ${isBajarilgan ? 'text-emerald-700' : 'text-red-700'}`}>
-                          {dateFormatted}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0 border-l border-slate-100 pl-4">
-                        <p className="text-[11px] font-medium text-slate-700 leading-relaxed whitespace-pre-wrap">{text}</p>
                         {isBajarilgan && task.entry.bajarildiShn && (
-                          <p className="mt-2 text-[10px] font-bold text-emerald-600">Bajardi: {task.entry.bajarildiShn}</p>
-                        )}
-                        {!isBajarilgan && (
-                          <p className="mt-2 flex items-center gap-1 text-[10px] font-bold text-red-500">
-                            <Clock size={12} /> Bajarilmagan (Qolib ketgan ish)
-                          </p>
+                          <span className="text-[9px] sm:text-[10px] font-bold text-emerald-500 truncate">
+                            ✓ {task.entry.bajarildiShn}
+                          </span>
                         )}
                       </div>
+                      {/* Ish mazmuni — mobilda kattaroq */}
+                      <p className="text-xs sm:text-[13px] font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">{text}</p>
+                      {!isBajarilgan && (
+                        <p className="mt-2 flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-red-400">
+                          <Clock size={10} /> Muddati o'tgan — bajarilmagan
+                        </p>
+                      )}
                     </div>
                   )
                 })}
               </div>
-            ))
+            </div>
           )}
         </div>
       </div>
