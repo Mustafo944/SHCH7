@@ -278,7 +278,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                           disabled={submitting}
                           className="rounded-lg bg-sky-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-sky-600 transition-all active:scale-95 disabled:opacity-50"
                         >
-                          Bajarildi
+                          Bajarish
                         </button>
                       ) : null
                     ) : (

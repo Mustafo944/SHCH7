@@ -365,7 +365,7 @@ export async function confirmReportEntry(
     entry.haftalikJadval || entry.yillikJadval || entry.yangiIshlar || entry.kmoBartaraf || entry.majburiyOzgarish;
 
   if (hasMeaning) {
-    entries[entryIndex] = { ...entry, adImzosi: `вњ… Tasdiqlandi: Aloqa dispetcheri` };
+    entries[entryIndex] = { ...entry, adImzosi: `✅ Tasdiqlandi: Aloqa dispetcheri` };
   }
 
   const { data, error } = await supabase
