@@ -37,6 +37,7 @@ import {
   FileText,
   Award,
   ChevronRight,
+  ChevronLeft,
   ChevronDown,
   CheckCircle2,
   Clock,
