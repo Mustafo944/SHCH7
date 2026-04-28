@@ -1169,7 +1169,7 @@ export function SHU2JournalView({
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [stationId, userRole, loadJournalData])
+  }, [stationId, userRole, journalMonth, loadJournalData])
 
   const update = (i: number, field: keyof SHU2Entry, val: string) => {
     const n = [...entries]

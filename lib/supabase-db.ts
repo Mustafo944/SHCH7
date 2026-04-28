@@ -126,7 +126,9 @@ export async function getCachedSession(): Promise<User | null> {
       try {
         const parsed = JSON.parse(cached);
         if (parsed.id === session.user.id) return parsed;
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Local storage parsing error:', e);
+      }
     }
   }
 
