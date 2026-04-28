@@ -100,7 +100,7 @@
         "ish": "Stansiyalarda signalizatsiyani to'g'riligini tekshirish xamda kirish, chiqish va marshrut svetoforlarini ruxsat beruvchidan, ta'qiqlovchiga o'tishini tekshirish; signalizatsiya to'g'riligini tekshirish.",
         "davriylik": "Bir yilda bir marta",
         "bajaruvchi": "SHN, SHNM",
-        "jurnal": "SHU-2 DU-46",
+        "jurnal": "SHU-2,DU-46",
         "nsh": "NSH-01 7.1"
       },
       {
@@ -273,7 +273,7 @@
         "ish": "Kirish, chiqish va marshrut svetoforlarni, shuningdek poyezdlarni to'xtamasdan xarakatlanishini ta'minlaydigan yo'llardagi svetoforlarni  ruxsat beruvchi ko'rinishlarini , elektr ta'minoti asosiy va zaxira fiderlariga o'tishi va qayta o'tishida berkilib qolmasligini  tekshirish",
         "davriylik": "Bir yilda bir marta",
         "bajaruvchi": "SHNS va ECH xodimi",
-        "jurnal": "DU-46 AKT",
+        "jurnal": "DU-46, AKT",
         "nsh": "NSH-01 8.14"
       },
       {
@@ -395,7 +395,7 @@
         "ish": "Lokomotiv signalizatsiyasi uchun uzatiladigan relsdagi kodli tok kuchini o'lchash.",
         "davriylik": "Chorakda bir marta",
         "bajaruvchi": "SHN, SHNM",
-        "jurnal": "SHU-64,SHU 79",
+        "jurnal": "SHU-64,SHU-79",
         "nsh": "NSH-01 10.4"
       },
       {
@@ -762,7 +762,7 @@
         "ish": "UKSPS datchiklarini nazorat qilish sxemasining ishlashini tekshirish.",
         "davriylik": "Kvartalda bir marta",
         "bajaruvchi": "SHN, SHNM",
-        "jurnal": "SHU-2 DU-46",
+        "jurnal": "SHU-,DU-46",
         "nsh": "NSH-01 15.5"
       }
     ]
@@ -844,7 +844,7 @@
         "ish": "Yerga nisbatan kabel ekran izolyatsiyasi qarshiligini o'lchash, apparat - dasturiy vositalari bilan jihozlangan SMB qurilmalari ekranining butunligini tekshirish.",
         "davriylik": "Bir yilda ikki bor",
         "bajaruvchi": "SHNS,SHN",
-        "jurnal": "SHU-2 DU-46",
+        "jurnal": "SHU-2,DU-46",
         "nsh": "NSH-01 17.1.11"
       }
     ]
@@ -870,7 +870,7 @@
         "ish": "To'g'rilagichni xolatini tekshirish va to'g'rilangan kuchlanishni o'lchash",
         "davriylik": "Bir yilda ikki marta",
         "bajaruvchi": "SHN",
-        "jurnal": "SHU-63 SHU-2",
+        "jurnal": "SHU-63,SHU-2",
         "nsh": "NSH-01 18.1.4"
       },
       {
@@ -884,7 +884,7 @@
         "ish": "Stansiya va peregonlarda o'zgaruvchan tokli rezerv ta'minotning mavjudligi va sozligini tekshirish.",
         "davriylik": "Kvartalda bir marta",
         "bajaruvchi": "SHN",
-        "jurnal": "SHU-62 SHU-2",
+        "jurnal": "SHU-62,SHU-2",
         "nsh": "NSH-01 18.1.6"
       },
       {
@@ -898,7 +898,7 @@
         "ish": "EM postlaridagi kirish panelida va kabel qutilarida asosiy va zaxira fiderlarida kuchlanishni o'lchash.",
         "davriylik": "Bir yilda ikki marta",
         "bajaruvchi": "SHN,ECH",
-        "jurnal": "SHU-62 SHU-2",
+        "jurnal": "SHU-62,SHU-2",
         "nsh": "NSH-01 18.1.8"
       },
       {

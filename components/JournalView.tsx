@@ -6,6 +6,22 @@ import { getJournal, upsertJournal } from '@/lib/supabase-db'
 import type { DU46Entry, SHU2Entry, JournalType } from '@/types'
 import { X, Plus, Trash2, BookOpen, CheckCircle2, Send, Download, ChevronLeft } from 'lucide-react'
 import { TORT_HAFTALIK_REJA_FLAT, TORT_HAFTALIK_REJA } from '@/lib/reja-data'
+import { MONTHS } from '@/lib/constants'
+
+function getCurrentJournalMonth(): string {
+  const today = new Date()
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
+}
+
+function getJournalMonthLabel(month: string): string {
+  const [year, rawMonth] = month.split('-')
+  const monthIndex = Number(rawMonth) - 1
+  return `${MONTHS[monthIndex] || rawMonth} ${year}`
+}
+
+export function getJournalMonthKey(monthIndex: number, year = new Date().getFullYear()): string {
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}`
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // HELPERS: Sana va vaqtni avto-formatlash
@@ -142,6 +158,68 @@ export function JournalSelectModal({
 // ═══════════════════════════════════════════════════════════════════════════════
 // DU-46 VAZIFA TANLASH MODAL
 // ═══════════════════════════════════════════════════════════════════════════════
+
+export function JournalMonthSelectModal({
+  journalType,
+  onSelect,
+  onClose,
+  year = new Date().getFullYear(),
+}: {
+  journalType: JournalType
+  onSelect: (month: string, monthIndex: number) => void
+  onClose: () => void
+  year?: number
+}) {
+  const currentMonth = new Date().getMonth()
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-md">
+      <div className="w-full max-w-2xl overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
+        <div className="flex items-center justify-between border-b border-slate-200 px-8 py-6 bg-slate-50/50">
+          <div>
+            <h3 className="text-xl font-black text-slate-900 tracking-tight">
+              {journalType === 'du46' ? 'DU-46' : 'SHU-2'} oyini tanlang
+            </h3>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{year} yil</p>
+          </div>
+          <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
+            <X size={24} />
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-3 p-8 sm:grid-cols-3 md:grid-cols-4">
+          {MONTHS.map((monthName, index) => {
+            const isCurrent = index === currentMonth
+            const currentYear = new Date().getFullYear()
+            const isFuture = year > currentYear || (year === currentYear && index > currentMonth)
+            return (
+              <button
+                key={monthName}
+                onClick={() => !isFuture && onSelect(getJournalMonthKey(index, year), index)}
+                disabled={isFuture}
+                className={`group flex flex-col rounded-2xl border p-5 text-left shadow-sm transition-all ${isFuture
+                    ? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed opacity-50'
+                    : isCurrent
+                      ? 'border-sky-300 bg-sky-50 text-slate-900 shadow-sky-500/10 active:scale-[0.98]'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-sky-200 hover:bg-sky-50/50 active:scale-[0.98]'
+                  }`}
+              >
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <span className={`mt-3 text-sm font-black uppercase tracking-tight ${isFuture ? 'text-slate-300' : 'group-hover:text-sky-600'}`}>
+                  {monthName}
+                </span>
+                {isFuture && (
+                  <span className="mt-1 text-[9px] font-bold text-red-300">🔒 Hali kelmagan</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function TaskSelectModal({
   onSelect,
@@ -282,6 +360,7 @@ export function DU46JournalView({
   stationName,
   userName,
   userRole,
+  journalMonth = getCurrentJournalMonth(),
   onClose,
   onAccepted,
 }: {
@@ -289,19 +368,23 @@ export function DU46JournalView({
   stationName: string
   userName: string
   userRole: 'worker' | 'bekat_boshlighi' | 'dispatcher'
+  journalMonth?: string
   onClose: () => void
   onAccepted?: () => void
 }) {
   const [entries, setEntries] = useState<DU46Entry[]>([EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46()])
+  const [allEntries, setAllEntries] = useState<DU46Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<string | null>(null)
   const [taskModalIdx, setTaskModalIdx] = useState<number | null>(null)
 
-  // Bugungi sana
+  // Bugungi sana va tanlangan oy
   const today = new Date()
   const selectedDay = String(today.getDate()).padStart(2, '0')
-  const selectedMonth = String(today.getMonth() + 1).padStart(2, '0')
-  const selectedYear = String(today.getFullYear())
+  const [jYear, jMonth] = (journalMonth || '').split('-')
+  const selectedYear = jYear || String(today.getFullYear())
+  const selectedMonth = jMonth || String(today.getMonth() + 1).padStart(2, '0')
+  const journalMonthLabel = getJournalMonthLabel(journalMonth)
 
   // ─── Rollar ────────────────────────────────────────────────────────
   const isWorker = userRole === 'worker'
@@ -317,30 +400,42 @@ export function DU46JournalView({
 
   // ─── Ma'lumotlarni yuklash ─────────────────────────────────────────
   const loadJournalData = useCallback(async () => {
+    setLoading(true)
     try {
       const j = await getJournal(stationId, 'du46')
       if (j && j.entries.length > 0) {
-        const loadedEntries = j.entries as DU46Entry[]
+        const loadedAllEntries = j.entries as DU46Entry[]
+        setAllEntries(loadedAllEntries)
         
-        const allSubmitted = loadedEntries.every(e => e.yuborildi)
-        if (allSubmitted) {
-          setEntries([...loadedEntries, EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46()])
+        // Faqat tanlangan oydagi yozuvlarni ajratamiz (agar journalMonth mavjud bo'lmasa, hammasi null/undefined deb olinadi va default oyga tushadi)
+        const monthEntries = loadedAllEntries.filter(e => e.journalMonth === journalMonth || (!e.journalMonth && journalMonth === getCurrentJournalMonth()))
+        
+        if (monthEntries.length > 0) {
+          const allSubmitted = monthEntries.every(e => e.yuborildi)
+          if (allSubmitted) {
+            setEntries([...monthEntries, EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46()])
+          } else {
+            setEntries(monthEntries)
+          }
         } else {
-          setEntries(loadedEntries)
+          setEntries([EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46()])
         }
+      } else {
+        setAllEntries([])
+        setEntries([EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46()])
       }
     } catch (err) {
       console.error('❌ Journal yuklash xatosi:', err)
     } finally {
       setLoading(false)
     }
-  }, [stationId])
+  }, [stationId, journalMonth])
 
   useEffect(() => {
     loadJournalData()
 
     const channel = supabase
-      .channel(`journal_du46_${userRole}_${stationId}`)
+      .channel(`journal_du46_${userRole}_${stationId}_${journalMonth}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'station_journals', filter: `station_id=eq.${stationId}` },
@@ -349,7 +444,7 @@ export function DU46JournalView({
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [stationId, userRole, loadJournalData])
+  }, [stationId, userRole, journalMonth, loadJournalData])
 
   // ─── Yordamchi: qaysi rol yaratgan ────────────────────────────────
   /** Qator kim tomonidan yaratilgan bo'lsa, shu rolni qaytaradi. Agar belgilanmagan bo'lsa default `worker` */
@@ -394,11 +489,19 @@ export function DU46JournalView({
   // ─── Saqlash (optimistik) ──────────────────────────────────────────
   const saveEntries = async (updated: DU46Entry[], prev: DU46Entry[]) => {
     setEntries(updated)
+    
+    // Tanlangan oydagi ma'lumotlarni umumiy ro'yxatga qo'shamiz
+    const updatedWithMonth = updated.map(e => ({ ...e, journalMonth }))
+    const otherMonths = allEntries.filter(e => e.journalMonth !== journalMonth && !( !e.journalMonth && journalMonth === getCurrentJournalMonth() ))
+    const newAllEntries = [...otherMonths, ...updatedWithMonth]
+    setAllEntries(newAllEntries)
+
     try {
-      await upsertJournal(stationId, 'du46', updated, userName)
+      await upsertJournal(stationId, 'du46', newAllEntries, userName)
     } catch (err) {
       console.error('❌ Saqlash xatosi:', err)
       setEntries(prev)
+      setAllEntries(allEntries) // roll back
       showMsg(err instanceof Error ? err.message : 'Xatolik', 3000)
       throw err
     }
@@ -424,21 +527,18 @@ export function DU46JournalView({
     } catch { /* saveEntries ichida xato ko'rsatiladi */ }
   }
 
-  /** Tasdiqlash rolni bosadi */
+  /** Tasdiqlash rolni bosadi — vaqt avtomatik qo'yiladi */
   const handleKamchilikTasdiqlash = async (i: number) => {
-    const vaqt = entries[i].kamchilikBBVaqt
-    if (!vaqt) {
-      showMsg('Tasdiqlash vaqtini kiriting!', 3000)
-      return
-    }
+    const now = new Date()
+    const autoVaqt = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
     const prev = [...entries]
     const updated = [...entries]
     updated[i] = {
       ...updated[i],
       kamchilikBBTasdiqladi: true,
-      kamchilikBBTasdiqladiAt: new Date().toISOString(),
+      kamchilikBBTasdiqladiAt: now.toISOString(),
       kamchilikBBImzo: userName,
-      kamchilikBBVaqt: vaqt,
+      kamchilikBBVaqt: autoVaqt,
     }
     try {
       await saveEntries(updated, prev)
@@ -466,21 +566,18 @@ export function DU46JournalView({
     } catch { /* */ }
   }
 
-  /** Tasdiqlash rolni bosadi */
+  /** Tasdiqlash rolni bosadi — vaqt avtomatik qo'yiladi */
   const handleBartarafTasdiqlash = async (i: number) => {
-    const vaqt = entries[i].bartarafBBVaqt
-    if (!vaqt) {
-      showMsg('Tasdiqlash vaqtini kiriting!', 3000)
-      return
-    }
+    const now = new Date()
+    const autoVaqt = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
     const prev = [...entries]
     const updated = [...entries]
     updated[i] = {
       ...updated[i],
       bartarafBBTasdiqladi: true,
-      bartarafBBTasdiqladiAt: new Date().toISOString(),
+      bartarafBBTasdiqladiAt: now.toISOString(),
       bartarafBBImzo: userName,
-      bartarafBBVaqt: vaqt,
+      bartarafBBVaqt: autoVaqt,
     }
     try {
       await saveEntries(updated, prev)
@@ -692,18 +789,10 @@ export function DU46JournalView({
                         />
                       </div>
 
-                      {/* Tasdiqlash vaqti (pastda) */}
+                      {/* Tasdiqlash vaqti (pastda) — avtomatik qo'yiladi */}
                       {e.kamchilik && e.kamchilikBajarildi && (
                         <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center justify-end">
-                          {!e.kamchilikBBTasdiqladi && iAmConfirmer && !e.yuborildi ? (
-                            <TimeInput
-                              value={e.kamchilikBBVaqt || ''}
-                              onChange={val => update(i, 'kamchilikBBVaqt', val)}
-                              readOnly={false}
-                              placeholder="Vaqt"
-                              className="rounded-xl border border-amber-200 bg-amber-50 text-amber-700 focus:border-amber-400 shadow-inner"
-                            />
-                          ) : e.kamchilikBBTasdiqladi && e.kamchilikBBVaqt ? (
+                          {e.kamchilikBBTasdiqladi && e.kamchilikBBVaqt ? (
                             <div className="w-full rounded-xl bg-amber-100 px-2 py-2 text-center text-[10px] font-black text-amber-700 border border-amber-200 shadow-sm">
                               {e.kamchilikBBVaqt}
                             </div>
@@ -832,18 +921,10 @@ export function DU46JournalView({
                         />
                       </div>
 
-                      {/* Tasdiqlash vaqti (pastda) */}
+                      {/* Tasdiqlash vaqti (pastda) — avtomatik qo'yiladi */}
                       {e.bartarafInfo && e.bartarafBajarildi && e.kamchilikBBTasdiqladi && (
                         <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center justify-end">
-                          {!e.bartarafBBTasdiqladi && isBB && !e.yuborildi ? (
-                            <TimeInput
-                              value={e.bartarafBBVaqt || ''}
-                              onChange={val => update(i, 'bartarafBBVaqt', val)}
-                              readOnly={false}
-                              placeholder="Vaqt"
-                              className="rounded-xl border border-amber-200 bg-amber-50 text-amber-700 focus:border-amber-400 shadow-inner"
-                            />
-                          ) : e.bartarafBBTasdiqladi && e.bartarafBBVaqt ? (
+                          {e.bartarafBBTasdiqladi && e.bartarafBBVaqt ? (
                             <div className="w-full rounded-xl bg-amber-100 px-2 py-2 text-center text-[10px] font-black text-amber-700 border border-amber-200 shadow-sm">
                               {e.bartarafBBVaqt}
                             </div>
@@ -1029,6 +1110,7 @@ export function SHU2JournalView({
   stationName,
   userName,
   userRole,
+  journalMonth = getCurrentJournalMonth(),
   onClose,
   onAccepted,
 }: {
@@ -1036,10 +1118,12 @@ export function SHU2JournalView({
   stationName: string
   userName: string
   userRole: 'worker' | 'bekat_boshlighi' | 'dispatcher'
+  journalMonth?: string
   onClose: () => void
   onAccepted?: () => void
 }) {
   const [entries, setEntries] = useState<SHU2Entry[]>(Array.from({ length: 7 }, (_, i) => ({ ...EMPTY_SHU2(), nomber: String(i + 1) })))
+  const [allEntries, setAllEntries] = useState<SHU2Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<string | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
@@ -1051,22 +1135,32 @@ export function SHU2JournalView({
     try {
       const j = await getJournal(stationId, 'shu2')
       if (j && j.entries.length > 0) {
-        const currentEntries = j.entries as SHU2Entry[]
+        const loadedAllEntries = j.entries as SHU2Entry[]
+        setAllEntries(loadedAllEntries)
         
-        setEntries(currentEntries)
+        const monthEntries = loadedAllEntries.filter(e => e.journalMonth === journalMonth || (!e.journalMonth && journalMonth === getCurrentJournalMonth()))
+        
+        if (monthEntries.length > 0) {
+          setEntries(monthEntries)
+        } else {
+          setEntries(Array.from({ length: 7 }, (_, i) => ({ ...EMPTY_SHU2(), nomber: String(i + 1) })))
+        }
+      } else {
+        setAllEntries([])
+        setEntries(Array.from({ length: 7 }, (_, i) => ({ ...EMPTY_SHU2(), nomber: String(i + 1) })))
       }
     } catch (err) {
       console.error('❌ SHU-2 journal yuklash xatosi:', err)
     } finally {
       setLoading(false)
     }
-  }, [stationId])
+  }, [stationId, journalMonth])
 
   useEffect(() => {
     loadJournalData()
 
     const channel = supabase
-      .channel(`journal_shu2_${userRole}_${stationId}`)
+      .channel(`journal_shu2_${userRole}_${stationId}_${journalMonth}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'station_journals', filter: `station_id=eq.${stationId}` },
@@ -1184,8 +1278,14 @@ export function SHU2JournalView({
   const handleDownload = async () => {
     const { jsPDF } = await import('jspdf')
     const { default: autoTable } = await import('jspdf-autotable')
+    
     const todayDate = new Date()
-    const dateStr = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`
+    const [jYear, jMonth] = (journalMonth || '').split('-')
+    const selectedYear = jYear || String(todayDate.getFullYear())
+    const selectedMonth = jMonth || String(todayDate.getMonth() + 1).padStart(2, '0')
+    const selectedDay = String(todayDate.getDate()).padStart(2, '0')
+    const dateStr = `${selectedDay}.${selectedMonth}.${selectedYear}`
+
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
     doc.setFontSize(10)
@@ -1224,7 +1324,11 @@ export function SHU2JournalView({
   const hasPending = validEntries.some(e => e.yuborildi && !e.dispetcherQabulQildi)
 
   const todayDate = new Date()
-  const dateStr = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`
+  const [jYear, jMonth] = (journalMonth || '').split('-')
+  const selectedYear = jYear || String(todayDate.getFullYear())
+  const selectedMonth = jMonth || String(todayDate.getMonth() + 1).padStart(2, '0')
+  const selectedDay = String(todayDate.getDate()).padStart(2, '0')
+  const dateStr = `${selectedDay}.${selectedMonth}.${selectedYear}`
 
   if (loading) return <div className="flex h-64 items-center justify-center text-slate-300 font-bold uppercase tracking-widest">Yuklanmoqda...</div>
 

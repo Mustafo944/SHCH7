@@ -7,7 +7,7 @@ import {
   getStations,
   getStation,
 } from '@/lib/store'
-import { DU46JournalView } from '@/components/JournalView'
+import { DU46JournalView, JournalMonthSelectModal } from '@/components/JournalView'
 import {
   getCurrentSession,
   signOut,
@@ -27,6 +27,8 @@ export default function BekatBoshlighiPage() {
   const [loading, setLoading] = useState(true)
   const [selectedStation, setSelectedStation] = useState<string | null>(null)
   const [showJournal, setShowJournal] = useState(false)
+  const [showMonthSelect, setShowMonthSelect] = useState(false)
+  const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
 
   const loadPendingCounts = useCallback(async (sid: string, role: string) => {
@@ -153,6 +155,16 @@ export default function BekatBoshlighiPage() {
                 </div>
               )}
             </div>
+          ) : showMonthSelect ? (
+            <JournalMonthSelectModal
+              journalType="du46"
+              onSelect={(monthKey) => {
+                setSelectedJournalMonth(monthKey)
+                setShowMonthSelect(false)
+                setShowJournal(true)
+              }}
+              onClose={() => setShowMonthSelect(false)}
+            />
           ) : showJournal ? (
             /* DU-46 Journal */
             <DU46JournalView
@@ -160,6 +172,7 @@ export default function BekatBoshlighiPage() {
               stationName={stationName || ''}
               userName={session?.fullName || ''}
               userRole="bekat_boshlighi"
+              journalMonth={selectedJournalMonth}
               onClose={() => setShowJournal(false)}
             />
           ) : (
@@ -181,7 +194,7 @@ export default function BekatBoshlighiPage() {
               {/* Faqat DU-46 tugmasi */}
               <div className="flex justify-center py-12">
                 <button
-                  onClick={() => setShowJournal(true)}
+                  onClick={() => setShowMonthSelect(true)}
                   className="group relative flex flex-col items-center rounded-[32px] border border-slate-200 bg-white p-12 shadow-sm backdrop-blur-md transition-all hover:border-blue-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {pendingCounts.du46 > 0 && (

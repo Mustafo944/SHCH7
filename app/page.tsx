@@ -2,8 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { signIn, getCurrentSession } from '@/lib/supabase-db'
+import { signIn, getCachedSession } from '@/lib/supabase-db'
 import { User, Eye, EyeOff, Lock } from 'lucide-react'
+
+function getRoleHome(role: string) {
+  if (role === 'dispatcher') return '/dispatcher'
+  if (role === 'bekat_boshlighi') return '/bekat-boshlighi'
+  return '/worker'
+}
 
 export default function LoginPage() {
   const [login, setLogin] = useState('')
@@ -14,15 +20,16 @@ export default function LoginPage() {
   const router = useRouter()
 
   useEffect(() => {
+    let active = true
+
     async function checkSession() {
-      const session = await getCurrentSession()  // Supabase bilan tekshiradi
-      if (session) {
-        if (session.role === 'dispatcher') router.push('/dispatcher')
-        else if (session.role === 'bekat_boshlighi') router.push('/bekat-boshlighi')
-        else router.push('/worker')
-      }
+      const session = await getCachedSession()
+      if (active && session) router.replace(getRoleHome(session.role))
     }
+
     checkSession()
+
+    return () => { active = false }
   }, [router])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -34,18 +41,7 @@ export default function LoginPage() {
       const user = await signIn(login.trim(), password)
 
       if (user) {
-        switch (user.role) {
-          case 'dispatcher':
-            router.push('/dispatcher')
-            break
-          case 'bekat_boshlighi':
-            router.push('/bekat-boshlighi')
-            break
-          case 'worker':
-          default:
-            router.push('/worker')
-            break
-        }
+        router.push(getRoleHome(user.role))
       } else {
         setError("Login yoki parol noto'g'ri")
       }

@@ -20,7 +20,7 @@ import {
 } from '@/lib/supabase-db'
 import type { User, WorkReport, ReportEntry, PremiyaReport, PremiyaEntry, StationSchema, JournalType } from '@/types'
 import { MONTHS } from '@/lib/constants'
-import { JournalSelectModal, DU46JournalView, SHU2JournalView } from '@/components/JournalView'
+import { JournalSelectModal, JournalMonthSelectModal, DU46JournalView, SHU2JournalView } from '@/components/JournalView'
 import { BigActionCard, HeaderCard, JournalForm, WorkerGraphicsView, WorkerSchemasView, PremiyaForm, WorkerTasksModal } from '@/components/worker/WorkerComponents'
 import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, type ParsedTaskItem } from '@/lib/reja-data'
 import {
@@ -48,16 +48,17 @@ const PREMIYA_ROWS = 12
 export default function WorkerPage() {
   const router = useRouter()
   const [session, setSessionState] = useState<User | null>(null)
-  const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'selectPlanType' | 'journal' | 'viewReport' | 'premiyaForm' | 'viewPremiya' | 'sxemalar' | 'grafiklar' | 'journalSelect' | 'du46' | 'shu2' | 'kunlikIshlar'>('home')
+  const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'selectPlanType' | 'journal' | 'viewReport' | 'premiyaForm' | 'viewPremiya' | 'sxemalar' | 'grafiklar' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'kunlikIshlar'>('home')
 
   const [reports, setReports] = useState<WorkReport[]>([])
   const [premiyaReports, setPremiyaReports] = useState<PremiyaReport[]>([])
   const [activeStationId, setActiveStationId] = useState<string>('')
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
   const [selectedReport, setSelectedReport] = useState<WorkReport | null>(null)
-  const [selectedPremiya, setSelectedPremiya] = useState<PremiyaReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
+  const [selectedJournalType, setSelectedJournalType] = useState<JournalType | null>(null)
+  const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
   const [workerModal, setWorkerModal] = useState<'bugunBajarilgan' | 'qolibKetgan' | null>(null)
 
   const loadPendingCounts = useCallback(async (sid: string, role: string) => {
@@ -466,10 +467,23 @@ export default function WorkerPage() {
           )}
           {view === 'journalSelect' && (
             <JournalSelectModal
-              onSelect={(type) => setView(type === 'du46' ? 'du46' : 'shu2')}
+              onSelect={(type) => {
+                setSelectedJournalType(type === 'du46' ? 'du46' : 'shu2')
+                setView('journalMonthSelect')
+              }}
               onClose={() => setView('home')}
               du46Count={pendingCounts.du46}
               shu2Count={pendingCounts.shu2}
+            />
+          )}
+          {view === 'journalMonthSelect' && selectedJournalType && (
+            <JournalMonthSelectModal
+              journalType={selectedJournalType}
+              onSelect={(monthKey) => {
+                setSelectedJournalMonth(monthKey)
+                setView(selectedJournalType)
+              }}
+              onClose={() => setView('journalSelect')}
             />
           )}
           {view === 'du46' && (
@@ -478,6 +492,7 @@ export default function WorkerPage() {
               stationName={stationName}
               userName={session?.fullName || ''}
               userRole="worker"
+              journalMonth={selectedJournalMonth}
               onClose={() => {
                 setView('home')
                 if (activeStationId && session?.role) {
@@ -492,6 +507,7 @@ export default function WorkerPage() {
               stationName={stationName}
               userName={session?.fullName || ''}
               userRole="worker"
+              journalMonth={selectedJournalMonth}
               onClose={() => {
                 setView('home')
                 if (activeStationId && session?.role) {

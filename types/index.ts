@@ -28,10 +28,25 @@ export interface ReportEntry {
   yangiIshlar: string;
   kmoBartaraf: string;
   majburiyOzgarish: string;
+  
+  // Har bir ustun uchun jurnallar ro'yxati
+  jurnalHaftalik?: string;
+  jurnalYillik?: string;
+  jurnalYangi?: string;
+  jurnalKmo?: string;
+  jurnalMajburiy?: string;
+
+  // Har bir ustun uchun bajarilganlik holati
+  doneHaftalik?: boolean;
+  doneYillik?: boolean;
+  doneYangi?: boolean;
+  doneKmo?: boolean;
+  doneMajburiy?: boolean;
+
   bajarildiShn: string;
   bajarildiImzo: string;
   adImzosi: string;
-  bajarilganSana?: string; // Bugun bajarilganini bilish uchun
+  bajarilganSana?: string;
 }
 
 export interface WorkReport {
@@ -124,6 +139,7 @@ export interface DU46Entry {
   yuborildi: boolean           // Dispetcherga yuborildi
   dispetcherQabulQildi?: boolean  // Dispetcher qabul qildi
   dispetcherImzo?: string      // Dispetcher ismi (qabul qilganda)
+  journalMonth?: string
 }
 
 // SHU-2 jurnal yozuvi

@@ -28,7 +28,7 @@ import {
 } from '@/lib/supabase-db'
 import type { User, WorkReport, PremiyaReport, StationSchema, JournalType, ReportEntry, StationJournal, DU46Entry, SHU2Entry } from '@/types'
 import { MONTHS } from '@/lib/constants'
-import { JournalSelectModal, DU46JournalView, SHU2JournalView } from '@/components/JournalView'
+import { JournalSelectModal, JournalMonthSelectModal, DU46JournalView, SHU2JournalView } from '@/components/JournalView'
 import {
   LogOut,
   Plus,
@@ -82,6 +82,7 @@ export default function DispatcherPage() {
   const [showAddWorker, setShowAddWorker] = useState(false)
   const [showWorkersModal, setShowWorkersModal] = useState(false)
   const [activeJournalType, setActiveJournalType] = useState<JournalType | null>(null)
+  const [activeJournalMonth, setActiveJournalMonth] = useState<string>('')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [todayModal, setTodayModal] = useState<'bajarilgan' | 'bajarilmagan' | null>(null)
 
@@ -618,23 +619,32 @@ export default function DispatcherPage() {
                             shu2Count={shu2PendingCounts[selectedStation || ''] || 0}
                           />
                         )}
-                        {selectedReportType === 'jurnallar' && activeJournalType === 'du46' && (
+                        {selectedReportType === 'jurnallar' && activeJournalType && !activeJournalMonth && (
+                          <JournalMonthSelectModal
+                            journalType={activeJournalType}
+                            onSelect={(monthKey) => setActiveJournalMonth(monthKey)}
+                            onClose={() => setActiveJournalType(null)}
+                          />
+                        )}
+                        {selectedReportType === 'jurnallar' && activeJournalType === 'du46' && activeJournalMonth && (
                           <DU46JournalView
                             stationId={selectedStation}
                             stationName={stations.find(s => s.id === selectedStation)?.name || ''}
                             userName={session?.fullName || ''}
                             userRole="dispatcher"
-                            onClose={() => { setActiveJournalType(null); setSelectedReportType(null) }}
+                            journalMonth={activeJournalMonth}
+                            onClose={() => { setActiveJournalMonth(''); setActiveJournalType(null); setSelectedReportType(null) }}
                             onAccepted={loadJournals}
                           />
                         )}
-                        {selectedReportType === 'jurnallar' && activeJournalType === 'shu2' && (
+                        {selectedReportType === 'jurnallar' && activeJournalType === 'shu2' && activeJournalMonth && (
                           <SHU2JournalView
                             stationId={selectedStation}
                             stationName={stations.find(s => s.id === selectedStation)?.name || ''}
                             userName={session?.fullName || ''}
                             userRole="dispatcher"
-                            onClose={() => { setActiveJournalType(null); setSelectedReportType(null) }}
+                            journalMonth={activeJournalMonth}
+                            onClose={() => { setActiveJournalMonth(''); setActiveJournalType(null); setSelectedReportType(null) }}
                             onAccepted={loadJournals}
                           />
                         )}

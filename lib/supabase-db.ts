@@ -81,10 +81,21 @@ export async function signIn(login: string, password: string): Promise<User | nu
 
   if (authError || !authData.user) return null;
 
+  const user = await getUserProfileById(authData.user.id);
+  
+  if (user && typeof document !== 'undefined') {
+    document.cookie = `user-role=${user.role}; path=/; max-age=86400;`;
+    localStorage.setItem('user-profile', JSON.stringify(user));
+  }
+  
+  return user;
+}
+
+async function getUserProfileById(userId: string): Promise<User | null> {
   const { data: profile } = await supabase
     .from('users')
     .select(USER_COLUMNS)
-    .eq('login', login)
+    .eq('id', userId)
     .single();
 
   if (!profile) return null;
@@ -93,7 +104,38 @@ export async function signIn(login: string, password: string): Promise<User | nu
 }
 
 export async function signOut(): Promise<void> {
+  if (typeof document !== 'undefined') {
+    document.cookie = 'user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    localStorage.removeItem('user-profile');
+  }
   await supabase.auth.signOut();
+}
+
+export async function getCachedSession(): Promise<User | null> {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  if (error || !session?.user) return null;
+
+  // Local storage dan o'qish (Tezlik uchun)
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem('user-profile');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.id === session.user.id) return parsed;
+      } catch (e) {}
+    }
+  }
+
+  const profile = await getUserProfileById(session.user.id);
+  if (profile && typeof window !== 'undefined') {
+    localStorage.setItem('user-profile', JSON.stringify(profile));
+  }
+  
+  return profile;
 }
 
 export async function getCurrentSession(): Promise<User | null> {
@@ -111,17 +153,7 @@ export async function getCurrentSession(): Promise<User | null> {
 
   if (error || !user) return null;
 
-  const login = user.email?.replace('@shch-buxoro.local', '') ?? '';
-
-  const { data: profile } = await supabase
-    .from('users')
-    .select(USER_COLUMNS)
-    .eq('login', login)
-    .single();
-
-  if (!profile) return null;
-
-  return mapDbUserToUser(profile as DbUserRow);
+  return getUserProfileById(user.id);
 }
 
 // в”Ђв”Ђв”Ђ Users в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
