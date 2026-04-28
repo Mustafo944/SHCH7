@@ -56,6 +56,7 @@ export default function WorkerPage() {
   const [activeStationId, setActiveStationId] = useState<string>('')
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
   const [selectedReport, setSelectedReport] = useState<WorkReport | null>(null)
+  const [selectedPremiya, setSelectedPremiya] = useState<PremiyaReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
   const [selectedJournalType, setSelectedJournalType] = useState<JournalType | null>(null)
