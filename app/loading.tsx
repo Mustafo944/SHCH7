@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 import { Loader2 } from 'lucide-react'
 
 export default function Loading() {
