@@ -52,7 +52,12 @@ export default function BekatBoshlighiPage() {
   useEffect(() => {
     async function init() {
       const u = await getCurrentSession()
-      if (!u || u.role !== 'bekat_boshlighi') {
+      if (!u) {
+        await signOut()
+        router.replace('/')
+        return
+      }
+      if (u.role !== 'bekat_boshlighi') {
         router.replace('/')
         return
       }

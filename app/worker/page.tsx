@@ -98,7 +98,12 @@ export default function WorkerPage() {
   useEffect(() => {
     async function init() {
       const u = await getCurrentSession()   // Supabase bilan tekshiradi
-      if (!u || u.role === 'dispatcher') {
+      if (!u) {
+        await signOut()
+        router.replace('/')
+        return
+      }
+      if (u.role === 'dispatcher') {
         router.replace('/')
         return
       }
