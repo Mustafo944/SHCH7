@@ -1,11 +1,11 @@
 import { supabase } from './supabase';
 import type { User, WorkReport, PremiyaReport, StationSchema, ReportEntry, GrafikTuri } from '@/types';
 
-// в”Ђв”Ђв”Ђ Stations в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Stations
 import { getStations, getStation } from './store';
 export { getStations, getStation };
 
-// в”Ђв”Ђв”Ђ DB SELECT konstantalari (takrorlanishni kamaytirish) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// DB SELECT konstantalari (takrorlanishni kamaytirish)
 const USER_COLUMNS = 'id, login, full_name, role, position, station_ids, phone, created_at' as const;
 
 const WORK_REPORT_COLUMNS = 'id, worker_id, worker_name, worker_phone, station_id, station_name, week_label, month, year, entries, submitted_at, confirmed_at, confirmed_by' as const;
@@ -16,7 +16,7 @@ const SCHEMA_COLUMNS = 'id, station_id, file_name, file_path, schema_type, uploa
 
 const JOURNAL_COLUMNS = 'id, station_id, journal_type, entries, updated_at, updated_by' as const;
 
-// в”Ђв”Ђв”Ђ Local DB row types в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Local DB row types
 interface DbUserRow {
   id: string;
   login: string;
@@ -69,7 +69,7 @@ interface DbSchemaRow {
   uploaded_by: string | null;
 }
 
-// в”Ђв”Ђв”Ђ Auth в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Auth
 
 export async function signIn(login: string, password: string): Promise<User | null> {
   const email = `${login}@shch-buxoro.local`;
@@ -158,7 +158,7 @@ export async function getCurrentSession(): Promise<User | null> {
   return getUserProfileById(user.id);
 }
 
-// в”Ђв”Ђв”Ђ Users в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Users
 
 function mapDbUserToUser(row: DbUserRow): User {
   return {
@@ -253,7 +253,7 @@ export async function deleteWorker(id: string): Promise<void> {
   }
 }
 
-// в”Ђв”Ђв”Ђ Work Reports в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Work Reports
 
 function mapDbReport(row: DbWorkReportRow): WorkReport {
   return {
@@ -440,7 +440,7 @@ export async function getStationPendingCount(): Promise<Record<string, number>> 
   return counts;
 }
 
-// в”Ђв”Ђв”Ђ Premiya Reports в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Premiya Reports
 
 function mapDbPremiya(row: DbPremiyaRow): PremiyaReport {
   return {
@@ -561,7 +561,7 @@ export async function getPendingPremiyaCount(): Promise<Record<string, number>> 
   return counts;
 }
 
-// в”Ђв”Ђв”Ђ Station Schemas в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Station Schemas
 
 function mapDbSchema(row: DbSchemaRow): StationSchema {
   return {
@@ -784,16 +784,16 @@ export async function upsertJournal(
     .single()
 
   if (error) {
-    console.error('вќЊ upsertJournal xatosi:', error)
+    console.error('❌ upsertJournal xatosi:', error)
     throw new Error(error?.message ?? 'Upsert failed')
   }
 
   if (!data) {
-    console.error('вќЊ upsertJournal: data qaytmadi')
+    console.error('❌ upsertJournal: data qaytmadi')
     throw new Error('Upsert failed - no data returned')
   }
 
-  console.log('вњ… upsertJournal muvaffaqiyatli:', data.id)
+  console.log('✅ upsertJournal muvaffaqiyatli:', data.id)
   return mapDbJournal(data as DbJournalRow)
 }
 
@@ -805,7 +805,7 @@ export async function getAllJournals(): Promise<StationJournal[]> {
     .order('updated_at', { ascending: false })
 
   if (error) {
-    console.error('вќЊ getAllJournals xatosi:', error)
+    console.error('❌ getAllJournals xatosi:', error)
     return []
   }
 

@@ -25,21 +25,7 @@ export default function LoginPage() {
     let active = true
 
     async function checkSession() {
-      // Tezkor tekshiruv (local storage)
-      if (typeof window !== 'undefined') {
-        const cached = localStorage.getItem('user-profile')
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached)
-            if (parsed && parsed.role) {
-              if (active) router.replace(getRoleHome(parsed.role))
-              return // Tezkor kirish
-            }
-          } catch (e) {
-            console.error('Keshni o`qishda xatolik', e)
-          }
-        }
-      }
+
 
       const session = await getCachedSession()
       if (active) {
@@ -95,6 +81,23 @@ export default function LoginPage() {
         <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-sky-200/30 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
         <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-200/20 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
       </div>
+
+      {/* Full screen loading overlay when submitting */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-md transition-all duration-300">
+          <div className="flex flex-col items-center gap-6 animate-fade-up">
+            <div className="relative flex h-24 w-24 items-center justify-center">
+              <div className="absolute inset-0 animate-ping rounded-full bg-blue-400/20" />
+              <div className="absolute inset-2 animate-spin rounded-full border-4 border-blue-500/20 border-t-blue-600" />
+              <img src="/uty-logo.png" alt="UTY" className="h-10 w-10 object-contain animate-pulse" />
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <h2 className="text-xl font-black uppercase tracking-widest text-slate-800">Ma'lumotlar tekshirilmoqda</h2>
+              <p className="text-xs font-bold text-blue-600 uppercase tracking-widest animate-pulse">Iltimos kuting...</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Login card */}
       <div className="relative z-10 w-full max-w-md animate-fade-up">
