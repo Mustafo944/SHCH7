@@ -153,6 +153,7 @@ export interface SHU2Entry {
   yuborildi?: boolean         // Dispetcherga yuborildi
   dispetcherQabulQildi?: boolean  // Dispetcher qabul qildi
   dispetcherImzo?: string     // Dispetcher ismi (qabul qilganda)
+  journalMonth?: string
 }
 
 // Jurnal turi
