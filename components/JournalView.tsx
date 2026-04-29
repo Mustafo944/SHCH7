@@ -1198,6 +1198,8 @@ export function SHU2JournalView({
         tasdiqlandi: true,
         tasdiqlaganImzo: userName,
         imzo: userName,
+        yuborildi: true,
+        dispetcherQabulQildi: true,
       }
       setEntries(updated)
       await upsertJournal(stationId, 'shu2', updated, userName)
@@ -1212,73 +1214,7 @@ export function SHU2JournalView({
     }
   }
 
-  const handleYuborish = async () => {
-    try {
-      const updated = entries.map(e =>
-        (e.sana?.trim() || e.yozuv?.trim()) && !e.yuborildi
-          ? { ...e, yuborildi: true }
-          : e
-      )
-      await upsertJournal(stationId, 'shu2', updated, userName)
-      setEntries(updated)
-      setShowConfirmModal(false)
-      setMsg('Dispetcherga yuborildi ✓')
-      setTimeout(() => setMsg(null), 2000)
-    } catch (err) {
-      console.error('❌ SHU-2 yuborish xatosi:', err)
-      setMsg(err instanceof Error ? err.message : 'Xatolik')
-    }
-  }
-
-  const onYuborishClick = () => {
-    const newEntries = entries.filter(e => (e.sana?.trim() || e.yozuv?.trim()) && !e.yuborildi)
-    if (newEntries.length === 0) {
-      const anyText = entries.some(e => e.sana?.trim() || e.yozuv?.trim())
-      setMsg(anyText ? 'Barcha yozuvlar yuborilgan ✓' : 'Avval yozuv kiriting!')
-      setTimeout(() => setMsg(null), 2000)
-      return
-    }
-    handleYuborish()
-  }
-
-  const handleQabulQilish = async () => {
-    const prev = [...entries]
-    try {
-      const updated = entries.map(e =>
-        e.yuborildi && !e.dispetcherQabulQildi
-          ? { ...e, dispetcherQabulQildi: true, dispetcherImzo: userName }
-          : e
-      )
-      setEntries(updated)
-      await upsertJournal(stationId, 'shu2', updated, userName)
-      setMsg('Qabul qilindi ✓')
-      setTimeout(() => setMsg(null), 2000)
-      onAccepted?.()  // parent ni xabar ber
-    } catch (err) {
-      console.error('❌ SHU-2 Qabul qilish xatosi:', err)
-      setEntries(prev)
-      setMsg(err instanceof Error ? err.message : 'Xatolik')
-      setTimeout(() => setMsg(null), 3000)
-    }
-  }
-
-  const handleSHU2RowAccept = async (i: number) => {
-    const prev = [...entries]
-    try {
-      const updated = [...entries]
-      updated[i] = { ...updated[i], dispetcherQabulQildi: true, dispetcherImzo: userName }
-      setEntries(updated)
-      await upsertJournal(stationId, 'shu2', updated, userName)
-      setMsg('Qabul qilindi ✓')
-      setTimeout(() => setMsg(null), 2000)
-      onAccepted?.()  // parent ni xabar ber
-    } catch (err) {
-      console.error('❌ SHU-2 qator qabul qilish xatosi:', err)
-      setEntries(prev)
-      setMsg(err instanceof Error ? err.message : 'Xatolik')
-      setTimeout(() => setMsg(null), 3000)
-    }
-  }
+  // Yuborish va Qabul qilish funksiyalari (SHU-2 uchun) o'chirildi, chunki Bajarildi tugmasi hammasini qiladi
 
   const handleDownload = async () => {
     const { jsPDF } = await import('jspdf')
@@ -1415,32 +1351,17 @@ export function SHU2JournalView({
                     <td className="p-1">
                       <div className="flex flex-col items-center gap-1">
                         {isLocked ? (
-                          <>
-                            <div className="flex flex-col items-center gap-1 w-full">
-                              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bajardi:</span>
-                              <div className="flex items-center gap-2 rounded-xl bg-sky-50 px-3 py-1.5 text-[10px] font-bold text-sky-600 border border-sky-100 w-full justify-center shadow-sm">
-                                <CheckCircle2 size={10} strokeWidth={3} /> <span className="truncate">{e.tasdiqlaganImzo || e.imzo}</span>
-                              </div>
+                          <div className="flex flex-col items-center gap-1 w-full">
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bajardi:</span>
+                            <div className="flex items-center gap-2 rounded-xl bg-sky-50 px-3 py-1.5 text-[10px] font-bold text-sky-600 border border-sky-100 w-full justify-center shadow-sm">
+                              <CheckCircle2 size={10} strokeWidth={3} /> <span className="truncate">{e.tasdiqlaganImzo || e.imzo}</span>
                             </div>
-                            {e.dispetcherQabulQildi && (
-                              <div className="flex flex-col items-center gap-1 w-full">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Qabul qilindi:</span>
-                                <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-1.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 w-full justify-center shadow-sm">
-                                  <CheckCircle2 size={10} strokeWidth={3} /> <span className="truncate">Aloqa dispetcheri</span>
-                                </div>
-                              </div>
-                            )}
-                          </>
+                          </div>
                         ) : isWorker ? (
                           <button onClick={() => handleTasdiqlash(i)}
                             disabled={!(e.sana?.trim() && e.yozuv?.trim())}
                             className={`w-full rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${e.sana?.trim() && e.yozuv?.trim() ? 'btn-gradient' : 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed'}`}>
                             ✓ Bajarildi
-                          </button>
-                        ) : isDispatcher && e.yuborildi && !e.dispetcherQabulQildi ? (
-                          <button onClick={() => handleSHU2RowAccept(i)}
-                            className="w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 bg-emerald-600 text-white hover:bg-emerald-700 border-transparent">
-                            ✓ Qabul qilish
                           </button>
                         ) : (
                           <span className="text-[10px] font-black text-slate-200">—</span>
@@ -1465,50 +1386,9 @@ export function SHU2JournalView({
           </div>
         )}
 
-        {isWorker && hasAnyEntry && (
-          <div className="relative z-10 mt-8 flex justify-end">
-            <button
-              type="button"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onYuborishClick() }}
-              className="pointer-events-auto relative z-50 flex items-center gap-3 rounded-[32px] bg-sky-600 px-10 py-5 font-black text-white shadow-xl shadow-sky-500/20 transition-all hover:bg-sky-700 hover:scale-[1.02] active:scale-95"
-            >
-              <Send size={20} strokeWidth={2.5} />
-              <span className="uppercase tracking-[0.1em]">Dispetcherga yuborish</span>
-            </button>
-          </div>
-        )}
 
-        {isDispatcher && hasPending && (
-          <div className="relative z-10 mt-8 flex justify-end">
-            <button
-              type="button"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleQabulQilish() }}
-              className="pointer-events-auto relative z-50 flex items-center gap-3 rounded-[32px] bg-emerald-600 px-10 py-5 font-black text-white shadow-xl shadow-emerald-500/20 transition-all hover:bg-emerald-700 hover:scale-[1.02] active:scale-95"
-            >
-              <CheckCircle2 size={20} strokeWidth={2.5} />
-              <span className="uppercase tracking-[0.1em]">Qabul qilish</span>
-            </button>
-          </div>
-        )}
-      </div>
 
-      {showConfirmModal && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/30 backdrop-blur-md p-4">
-          <div className="w-full max-w-sm rounded-[40px] bg-white p-8 shadow-2xl animate-scale-in">
-            <div className="flex justify-center mb-6">
-              <div className="w-20 h-20 rounded-full bg-sky-50 flex items-center justify-center text-sky-600 border border-sky-100">
-                <Send size={40} strokeWidth={2} />
-              </div>
-            </div>
-            <h3 className="text-xl font-black text-slate-900 text-center mb-2 tracking-tight">Qayta yuborish</h3>
-            <p className="text-sm text-slate-500 text-center mb-10 leading-relaxed font-medium">Bu jurnal ma&apos;lumotlari oldin yuborilgan. Yozuvlarni dispetcherga yana qayta yubormoqchimisiz?</p>
-            <div className="flex gap-4">
-              <button onClick={handleYuborish} className="flex-1 rounded-2xl bg-sky-600 py-4 font-black text-white shadow-xl shadow-sky-500/20 hover:bg-sky-700 transition-all active:scale-95 uppercase tracking-widest text-xs">Ha, yuborilsin</button>
-              <button onClick={() => setShowConfirmModal(false)} className="flex-1 rounded-2xl bg-white border border-slate-200 py-4 font-black text-slate-400 hover:text-slate-900 transition-all active:scale-95 uppercase tracking-widest text-xs">Bekor qilish</button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   )
 }

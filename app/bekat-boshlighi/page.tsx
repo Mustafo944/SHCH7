@@ -9,6 +9,7 @@ import {
   getStation,
 } from '@/lib/store'
 import { DU46JournalView, JournalMonthSelectModal } from '@/components/JournalView'
+import { WorkerSchemasView } from '@/components/worker/WorkerComponents'
 import {
   getCurrentSession,
   signOut,
@@ -19,7 +20,8 @@ import {
   LogOut,
   MapPin,
   BookOpen,
-  AlertCircle
+  AlertCircle,
+  Map as MapIcon
 } from 'lucide-react'
 
 export default function BekatBoshlighiPage() {
@@ -29,6 +31,7 @@ export default function BekatBoshlighiPage() {
   const [selectedStation, setSelectedStation] = useState<string | null>(null)
   const [showJournal, setShowJournal] = useState(false)
   const [showMonthSelect, setShowMonthSelect] = useState(false)
+  const [showSchemas, setShowSchemas] = useState(false)
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
 
@@ -186,7 +189,10 @@ export default function BekatBoshlighiPage() {
             <div className="space-y-6 animate-fade-up">
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => setSelectedStation(null)}
+                  onClick={() => {
+                    if (showSchemas) setShowSchemas(false)
+                    else setSelectedStation(null)
+                  }}
                   className="rounded-xl bg-white p-3 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition shadow-sm ring-1 ring-slate-200"
                 >
                   <MapPin size={24} />
@@ -197,25 +203,40 @@ export default function BekatBoshlighiPage() {
                 </div>
               </div>
 
-              {/* Faqat DU-46 tugmasi */}
-              <div className="flex justify-center py-12">
-                <button
-                  onClick={() => setShowMonthSelect(true)}
-                  className="group relative flex flex-col items-center rounded-[32px] border border-slate-200 bg-white p-12 shadow-sm backdrop-blur-md transition-all hover:border-blue-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  {pendingCounts.du46 > 0 && (
-                    <div className="absolute -top-4 -right-4 flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-lg font-black text-white shadow-xl shadow-red-500/40 animate-bounce">
-                      +{pendingCounts.du46}
+              {showSchemas ? (
+                <WorkerSchemasView stationId={selectedStation} stationName={stationName || ''} />
+              ) : (
+                <div className="flex flex-col sm:flex-row justify-center gap-6 py-12">
+                  <button
+                    onClick={() => setShowMonthSelect(true)}
+                    className="group relative flex flex-col items-center rounded-[32px] border border-slate-200 bg-white p-12 shadow-sm backdrop-blur-md transition-all hover:border-blue-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] w-full sm:w-80"
+                  >
+                    {pendingCounts.du46 > 0 && (
+                      <div className="absolute -top-4 -right-4 flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-lg font-black text-white shadow-xl shadow-red-500/40 animate-bounce">
+                        +{pendingCounts.du46}
+                      </div>
+                    )}
+                    <div className="mb-6 rounded-2xl bg-gradient-to-br from-blue-500 to-sky-500 p-6 group-hover:from-blue-600 group-hover:to-sky-600 transition-colors shadow-lg">
+                      <BookOpen size={48} className="text-white" />
                     </div>
-                  )}
-                  <div className="mb-6 rounded-2xl bg-gradient-to-br from-blue-500 to-sky-500 p-6 group-hover:from-blue-600 group-hover:to-sky-600 transition-colors shadow-lg">
-                    <BookOpen size={48} className="text-white" />
-                  </div>
-                  <h3 className="text-2xl font-black text-slate-900">DU-46 Jurnali</h3>
-                  <p className="mt-2 text-sm text-slate-500">Ko&apos;rik, tekshiruvlar tahlili va nosozliklar jurnali</p>
-                  <p className="mt-1 text-xs text-blue-500">Tasdiqlash uchun oching</p>
-                </button>
-              </div>
+                    <h3 className="text-2xl font-black text-slate-900">DU-46 Jurnali</h3>
+                    <p className="mt-2 text-sm text-slate-500 text-center">Ko&apos;rik, tekshiruvlar tahlili va nosozliklar jurnali</p>
+                    <p className="mt-1 text-xs text-blue-500">Tasdiqlash uchun oching</p>
+                  </button>
+
+                  <button
+                    onClick={() => setShowSchemas(true)}
+                    className="group relative flex flex-col items-center rounded-[32px] border border-slate-200 bg-white p-12 shadow-sm backdrop-blur-md transition-all hover:border-blue-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] w-full sm:w-80"
+                  >
+                    <div className="mb-6 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-500 p-6 group-hover:from-indigo-600 group-hover:to-blue-600 transition-colors shadow-lg">
+                      <MapIcon size={48} className="text-white" />
+                    </div>
+                    <h3 className="text-2xl font-black text-slate-900">Bekat Sxemalari</h3>
+                    <p className="mt-2 text-sm text-slate-500 text-center">Bir ipli va ikki ipli sxemalar</p>
+                    <p className="mt-1 text-xs text-blue-500">Ko&apos;rish uchun oching</p>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </main>
