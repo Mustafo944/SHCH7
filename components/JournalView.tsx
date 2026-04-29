@@ -1387,8 +1387,7 @@ export function SHU2JournalView({
         )}
 
 
-
-
+      </div>
     </div>
   )
 }
