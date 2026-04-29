@@ -897,8 +897,10 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
   const unsupportedRequired = requiredJournals.filter(j => !(j in SUPPORTED_JOURNALS))
   const allDone = selectedTaskType && (supportedRequired.length === 0 || supportedRequired.every(j => visitedJournals.has(j)))
 
-  const handleJournalClose = (journalName: string) => {
-    setVisitedJournals(prev => new Set(prev).add(journalName))
+  const handleJournalClose = (journalName: string, isDone = false) => {
+    if (isDone) {
+      setVisitedJournals(prev => new Set(prev).add(journalName))
+    }
     setActiveJournal(null)
   }
 
@@ -906,7 +908,7 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
   if (activeJournal === 'du46') {
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-        <DU46JournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" onClose={() => handleJournalClose('DU-46')} />
+        <DU46JournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" onClose={() => handleJournalClose('DU-46', false)} onAccepted={() => handleJournalClose('DU-46', true)} />
       </div>,
       document.body
     )
@@ -914,7 +916,7 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
   if (activeJournal === 'shu2') {
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-        <SHU2JournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" onClose={() => handleJournalClose('SHU-2')} />
+        <SHU2JournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" onClose={() => handleJournalClose('SHU-2', false)} onAccepted={() => handleJournalClose('SHU-2', true)} />
       </div>,
       document.body
     )

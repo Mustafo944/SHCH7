@@ -400,8 +400,8 @@ export function DU46JournalView({
   }
 
   // ─── Ma'lumotlarni yuklash ─────────────────────────────────────────
-  const loadJournalData = useCallback(async () => {
-    setLoading(true)
+  const loadJournalData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true)
     try {
       const j = await getJournal(stationId, 'du46')
       if (j && j.entries.length > 0) {
@@ -428,19 +428,19 @@ export function DU46JournalView({
     } catch (err) {
       console.error('❌ Journal yuklash xatosi:', err)
     } finally {
-      setLoading(false)
+      if (!isSilent) setLoading(false)
     }
   }, [stationId, journalMonth])
 
   useEffect(() => {
-    loadJournalData()
+    loadJournalData(false)
 
     const channel = supabase
       .channel(`journal_du46_${userRole}_${stationId}_${journalMonth}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'station_journals', filter: `station_id=eq.${stationId}` },
-        () => loadJournalData()
+        () => loadJournalData(true)
       )
       .subscribe()
 
@@ -525,6 +525,7 @@ export function DU46JournalView({
     try {
       await saveEntries(updated, prev)
       showMsg('Boshlandi belgilandi ✓')
+      onAccepted?.() // worker action completed
     } catch { /* saveEntries ichida xato ko'rsatiladi */ }
   }
 
@@ -564,6 +565,7 @@ export function DU46JournalView({
     try {
       await saveEntries(updated, prev)
       showMsg('Bajarildi belgilandi ✓')
+      onAccepted?.() // worker action completed
     } catch { /* */ }
   }
 
@@ -1132,7 +1134,8 @@ export function SHU2JournalView({
   const isWorker = userRole === 'worker'
   const isDispatcher = userRole === 'dispatcher'
 
-  const loadJournalData = useCallback(async () => {
+  const loadJournalData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true)
     try {
       const j = await getJournal(stationId, 'shu2')
       if (j && j.entries.length > 0) {
@@ -1153,19 +1156,19 @@ export function SHU2JournalView({
     } catch (err) {
       console.error('❌ SHU-2 journal yuklash xatosi:', err)
     } finally {
-      setLoading(false)
+      if (!isSilent) setLoading(false)
     }
   }, [stationId, journalMonth])
 
   useEffect(() => {
-    loadJournalData()
+    loadJournalData(false)
 
     const channel = supabase
       .channel(`journal_shu2_${userRole}_${stationId}_${journalMonth}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'station_journals', filter: `station_id=eq.${stationId}` },
-        () => loadJournalData()
+        () => loadJournalData(true)
       )
       .subscribe()
 
@@ -1199,6 +1202,7 @@ export function SHU2JournalView({
       setEntries(updated)
       await upsertJournal(stationId, 'shu2', updated, userName)
       setMsg('Tasdiqlandi ✓')
+      onAccepted?.() // worker action completed
       setTimeout(() => setMsg(null), 2000)
     } catch (err) {
       console.error('❌ SHU-2 Tasdiqlash xatosi:', err)

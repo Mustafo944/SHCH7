@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(true)
   const [error, setError] = useState('')
   const router = useRouter()
 
@@ -24,8 +25,30 @@ export default function LoginPage() {
     let active = true
 
     async function checkSession() {
+      // Tezkor tekshiruv (local storage)
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('user-profile')
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached)
+            if (parsed && parsed.role) {
+              if (active) router.replace(getRoleHome(parsed.role))
+              return // Tezkor kirish
+            }
+          } catch (e) {
+            console.error('Keshni o`qishda xatolik', e)
+          }
+        }
+      }
+
       const session = await getCachedSession()
-      if (active && session) router.replace(getRoleHome(session.role))
+      if (active) {
+        if (session) {
+          router.replace(getRoleHome(session.role))
+        } else {
+          setCheckingSession(false)
+        }
+      }
     }
 
     checkSession()
@@ -51,6 +74,17 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (checkingSession) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-sky-50">
+        <div className="flex flex-col items-center gap-4 animate-fade-up">
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500/20 border-t-blue-600" />
+          <p className="text-sm font-semibold uppercase tracking-widest text-blue-600 animate-pulse">Tizimga kirilmoqda...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
