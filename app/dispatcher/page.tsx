@@ -466,6 +466,23 @@ export default function DispatcherPage() {
         </header>
 
         <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 sm:p-8">
+          {/* Navigation Tabs */}
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-up">
+            <div className="flex gap-1 rounded-2xl bg-white/70 backdrop-blur-sm p-1.5 shadow-sm border border-purple-100/50">
+              <TabButton active={tab === 'bekatlar'} onClick={() => setTab('bekatlar')} label="Bekatlar" icon={<MapPin size={18} />} />
+              <TabButton active={tab === 'arxiv'} onClick={() => setTab('arxiv')} label="Arxiv" icon={<FileText size={18} />} />
+              <TabButton active={tab === 'grafiklar'} onClick={() => setTab('grafiklar')} label="Grafiklar" icon={<Download size={18} />} />
+            </div>
+
+            <button
+              onClick={() => setShowAddWorker(!showAddWorker)}
+              className="btn-gradient flex items-center justify-center gap-2 rounded-2xl px-6 py-4 font-bold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl active:scale-95"
+            >
+              <Plus size={20} />
+              <span>Xodim qo&apos;shish</span>
+            </button>
+          </div>
+
           {/* Dashboard Stats */}
           <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4 animate-fade-up">
             <StatCard icon={<MapPin />} label="Bekatlar" value={stations.length} color="purple" />
@@ -494,23 +511,6 @@ export default function DispatcherPage() {
               clickable
               color="red"
             />
-          </div>
-
-          {/* Navigation Tabs */}
-          <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between animate-fade-up">
-            <div className="flex gap-1 rounded-2xl bg-white/70 backdrop-blur-sm p-1.5 shadow-sm border border-purple-100/50">
-              <TabButton active={tab === 'bekatlar'} onClick={() => setTab('bekatlar')} label="Bekatlar" icon={<MapPin size={18} />} />
-              <TabButton active={tab === 'arxiv'} onClick={() => setTab('arxiv')} label="Arxiv" icon={<FileText size={18} />} />
-              <TabButton active={tab === 'grafiklar'} onClick={() => setTab('grafiklar')} label="Grafiklar" icon={<Download size={18} />} />
-            </div>
-
-            <button
-              onClick={() => setShowAddWorker(!showAddWorker)}
-              className="btn-gradient flex items-center justify-center gap-2 rounded-2xl px-6 py-4 font-bold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl active:scale-95"
-            >
-              <Plus size={20} />
-              <span>Xodim qo&apos;shish</span>
-            </button>
           </div>
 
           {showAddWorker && (
