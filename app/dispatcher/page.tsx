@@ -466,6 +466,28 @@ export default function DispatcherPage() {
         </header>
 
         <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 sm:p-8">
+          {/* Navigation Tabs */}
+          <div className="mb-4 flex gap-1 rounded-2xl bg-white/70 backdrop-blur-sm p-1.5 shadow-sm border border-purple-100/50 animate-fade-up">
+            <TabButton className="flex-1 justify-center" active={tab === 'bekatlar'} onClick={() => setTab('bekatlar')} label="Bekatlar" icon={<MapPin size={18} />} />
+            <TabButton className="flex-1 justify-center" active={tab === 'arxiv'} onClick={() => setTab('arxiv')} label="Arxiv" icon={<FileText size={18} />} />
+            <TabButton className="flex-1 justify-center" active={tab === 'grafiklar'} onClick={() => setTab('grafiklar')} label="Grafiklar" icon={<Download size={18} />} />
+          </div>
+
+          <button
+            onClick={() => setShowAddWorker(!showAddWorker)}
+            className="mb-8 btn-gradient w-full flex items-center justify-center gap-2 rounded-2xl px-6 py-4 font-bold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl active:scale-95 animate-fade-up"
+          >
+            <Plus size={20} />
+            <span>Xodim qo&apos;shish</span>
+          </button>
+
+          <div className="mb-4 flex items-center justify-between animate-fade-up px-2">
+            <h2 className="text-[13px] font-black uppercase tracking-widest text-purple-900/80">Statistika</h2>
+            <div className="text-purple-900/40">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </div>
+          </div>
+
           {/* Dashboard Stats */}
           <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4 animate-fade-up">
             <StatCard icon={<MapPin />} label="Bekatlar" value={stations.length} color="purple" />
@@ -494,23 +516,6 @@ export default function DispatcherPage() {
               clickable
               color="red"
             />
-          </div>
-
-          {/* Navigation Tabs */}
-          <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between animate-fade-up">
-            <div className="flex gap-1 rounded-2xl bg-white/70 backdrop-blur-sm p-1.5 shadow-sm border border-purple-100/50">
-              <TabButton active={tab === 'bekatlar'} onClick={() => setTab('bekatlar')} label="Bekatlar" icon={<MapPin size={18} />} />
-              <TabButton active={tab === 'arxiv'} onClick={() => setTab('arxiv')} label="Arxiv" icon={<FileText size={18} />} />
-              <TabButton active={tab === 'grafiklar'} onClick={() => setTab('grafiklar')} label="Grafiklar" icon={<Download size={18} />} />
-            </div>
-
-            <button
-              onClick={() => setShowAddWorker(!showAddWorker)}
-              className="btn-gradient flex items-center justify-center gap-2 rounded-2xl px-6 py-4 font-bold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl active:scale-95"
-            >
-              <Plus size={20} />
-              <span>Xodim qo&apos;shish</span>
-            </button>
           </div>
 
           {showAddWorker && (
@@ -852,11 +857,11 @@ function StatCard({ icon, label, value, active, clickable, onClick, color = 'pur
   )
 }
 
-function TabButton({ active, onClick, label, icon }: { active: boolean, onClick: () => void, label: string, icon: React.ReactNode }) {
+function TabButton({ active, onClick, label, icon, className = '' }: { active: boolean, onClick: () => void, label: string, icon: React.ReactNode, className?: string }) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-all duration-200 ${active
+      className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-all duration-200 ${className} ${active
         ? 'bg-gradient-to-r from-purple-600 to-violet-500 text-white shadow-lg shadow-purple-500/25'
         : 'text-slate-500 hover:text-purple-700 hover:bg-purple-50/60'
         }`}
