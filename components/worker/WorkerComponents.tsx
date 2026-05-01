@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
+﻿/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen } from 'lucide-react'
@@ -13,9 +13,9 @@ const PREMIYA_ROWS = 12
 
 export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badge = 0 }: { title: string, desc: string, icon: React.ReactNode, onClick: () => void, color?: 'cyan' | 'amber' | 'blue', badge?: number }) {
   const colorMap: Record<string, string> = {
-    cyan: 'hover:border-sky-300 hover:shadow-sky-100/50 text-sky-600',
+    cyan: 'hover:border-purple-300 hover:shadow-purple-100/50 text-purple-600',
     amber: 'hover:border-amber-300 hover:shadow-amber-100/50 text-amber-600',
-    blue: 'hover:border-blue-300 hover:shadow-blue-100/50 text-blue-600',
+    blue: 'hover:border-purple-300 hover:shadow-purple-100/50 text-purple-600',
   }
   return (
     <button onClick={onClick} className={`premium-card group relative flex flex-col items-start p-8 bg-gradient-to-br from-white to-slate-50/50 transition-all hover:scale-[1.02] active:scale-[0.98] text-left animate-fade-up ${colorMap[color]}`}>
@@ -24,7 +24,7 @@ export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badg
           {badge > 9 ? '9+' : badge}
         </div>
       )}
-      <div className={`rounded-2xl bg-slate-50 p-4 mb-6 group-hover:scale-110 group-hover:bg-white border border-slate-100 transition-all shadow-sm ${color === 'cyan' ? 'text-sky-600' : color === 'amber' ? 'text-amber-600' : 'text-blue-600'}`}>{icon}</div>
+      <div className={`rounded-2xl bg-slate-50 p-4 mb-6 group-hover:scale-110 group-hover:bg-white border border-slate-100 transition-all shadow-sm ${color === 'cyan' ? 'text-purple-600' : color === 'amber' ? 'text-amber-600' : 'text-purple-600'}`}>{icon}</div>
       <h3 className="text-xl font-black text-slate-900 tracking-tight">{title}</h3>
       <p className="mt-2 text-sm text-slate-500 leading-relaxed font-medium">{desc}</p>
     </button>
@@ -170,9 +170,9 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     doc.text(`Oylik Reja - ${stationName}`, 14, 15)
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
-    doc.text(`${MONTHS[month]} · ${session.fullName}`, 14, 22)
+    doc.text(`${MONTHS[month]} В· ${session.fullName}`, 14, 22)
 
-    const cols = ['№', '4-haftalik jadval', 'Yillik jadval', 'Yangi ishlar', 'KMO bartaraf', "Majburiy o'zgartirish", 'Shn', 'Imzo', 'AD']
+    const cols = ['в„–', '4-haftalik jadval', 'Yillik jadval', 'Yangi ishlar', 'KMO bartaraf', "Majburiy o'zgartirish", 'Shn', 'Imzo', 'AD']
     const rows = entries
       .filter(e => e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish)
       .map(e => [
@@ -193,16 +193,16 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 
   return (
     <div className="space-y-6 animate-fade-up">
-      <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} status="yangi" />
+      <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} В· ${stationName}`} status="yangi" />
       <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm relative shadow-sm">
-        <div className="sm:hidden absolute top-0 right-0 bg-blue-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
-          O&apos;ngga suring →
+        <div className="sm:hidden absolute top-0 right-0 bg-purple-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
+          O&apos;ngga suring в†’
         </div>
         <div className="overflow-x-auto overflow-y-hidden">
           <table style={{ minWidth: "1200px" }} className="w-full border-collapse text-left text-[11px] text-slate-700">
-            <thead className="border-b-2 border-sky-500/30 bg-slate-50 font-bold text-slate-600">
+            <thead className="border-b-2 border-purple-500/30 bg-slate-50 font-bold text-slate-600">
               <tr>
-                <th rowSpan={2} className="w-10 border-r border-slate-200 p-2 text-center">№</th>
+                <th rowSpan={2} className="w-10 border-r border-slate-200 p-2 text-center">в„–</th>
                 <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-2 text-center">
                   4-haftalik jadval
                   <br />
@@ -220,8 +220,8 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                 <th rowSpan={2} className="w-[8%] bg-amber-50 p-2 text-center text-amber-700">AD imzosi</th>
               </tr>
               <tr className="bg-slate-100/50">
-                <th className="border-r border-t border-slate-200 p-2 text-center font-bold text-sky-600">Shn</th>
-                <th className="border-r border-t border-slate-200 p-2 text-center font-bold text-sky-600">Imzo</th>
+                <th className="border-r border-t border-slate-200 p-2 text-center font-bold text-purple-600">Shn</th>
+                <th className="border-r border-t border-slate-200 p-2 text-center font-bold text-purple-600">Imzo</th>
               </tr>
             </thead>
             <tbody>
@@ -232,7 +232,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                       value={e.ragat}
                       readOnly={!!e.adImzosi || isConfirmed}
                       onChange={(ev) => { const n = [...entries]; n[i].ragat = ev.target.value; setEntries(n) }}
-                      className={`w-full rounded bg-transparent text-center font-bold text-sky-600 outline-none focus:bg-white ${(!!e.adImzosi || isConfirmed) ? 'opacity-40' : ''}`}
+                      className={`w-full rounded bg-transparent text-center font-bold text-purple-600 outline-none focus:bg-white ${(!!e.adImzosi || isConfirmed) ? 'opacity-40' : ''}`}
                     />
                   </td>
                   <td className="relative border-r border-slate-100 p-1 align-top">
@@ -241,7 +241,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                         value={e.haftalikJadval}
                         readOnly={!!e.adImzosi || isConfirmed}
                         onChange={(ev) => { const n = [...entries]; n[i].haftalikJadval = ev.target.value; setEntries(n) }}
-                        className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-sky-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
+                        className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
                       />
                       {e.doneHaftalik && (
                         <div className="absolute top-1 right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-sm" title="Bajarildi">
@@ -252,7 +252,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                     {(!e.adImzosi && !isConfirmed) && (
                       <button
                         onClick={() => openSelectModal(i, '4-haftalik')}
-                        className="absolute bottom-2 right-2 rounded bg-sky-100 p-1 text-sky-600 shadow-sm transition hover:bg-sky-600 hover:text-white"
+                        className="absolute bottom-2 right-2 rounded bg-purple-100 p-1 text-purple-600 shadow-sm transition hover:bg-purple-600 hover:text-white"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
                       </button>
@@ -264,7 +264,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                         value={e.yillikJadval}
                         readOnly={!!e.adImzosi || isConfirmed}
                         onChange={(ev) => { const n = [...entries]; n[i].yillikJadval = ev.target.value; setEntries(n) }}
-                        className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-sky-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
+                        className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
                       />
                       {e.doneYillik && (
                         <div className="absolute top-1 right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-sm" title="Bajarildi">
@@ -275,7 +275,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                     {(!e.adImzosi && !isConfirmed) && (
                       <button
                         onClick={() => openSelectModal(i, 'yillik')}
-                        className="absolute bottom-2 right-2 rounded bg-sky-100 p-1 text-sky-600 shadow-sm transition hover:bg-sky-600 hover:text-white"
+                        className="absolute bottom-2 right-2 rounded bg-purple-100 p-1 text-purple-600 shadow-sm transition hover:bg-purple-600 hover:text-white"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
                       </button>
@@ -286,7 +286,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                       value={e.yangiIshlar}
                       readOnly={!!e.adImzosi || isConfirmed}
                       onChange={(ev) => { const n = [...entries]; n[i].yangiIshlar = ev.target.value; setEntries(n) }}
-                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-sky-500/50 ${(!!e.adImzosi || isConfirmed) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     />
                   </td>
                   <td className="border-r border-slate-100 p-1 align-top">
@@ -294,7 +294,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                       value={e.kmoBartaraf}
                       readOnly={!!e.adImzosi || isConfirmed}
                       onChange={(ev) => { const n = [...entries]; n[i].kmoBartaraf = ev.target.value; setEntries(n) }}
-                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-sky-500/50 ${(!!e.adImzosi || isConfirmed) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed) ? 'opacity-60 cursor-not-allowed' : ''}`}
                     />
                   </td>
                   <td className="border-r border-slate-100 p-1 align-top">
@@ -302,10 +302,10 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                       value={e.majburiyOzgarish}
                       readOnly={!!e.adImzosi || isConfirmed}
                       onChange={(ev) => { const n = [...entries]; n[i].majburiyOzgarish = ev.target.value; setEntries(n) }}
-                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-sky-500/50 ${(!!e.adImzosi || isConfirmed) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed) ? 'opacity-60 cursor-not-allowed' : ''}`}
                     />
                   </td>
-                  <td className="border-r border-slate-100 p-2 text-center align-middle font-medium text-sky-600">
+                  <td className="border-r border-slate-100 p-2 text-center align-middle font-medium text-purple-600">
                     {e.bajarildiShn}
                   </td>
                   <td className="border-r border-slate-100 p-2 text-center align-middle italic text-slate-400">
@@ -313,7 +313,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                   </td>
                   <td className="p-2 text-center align-middle">
                     {e.adImzosi ? (
-                      <span className="inline-block whitespace-pre-wrap rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100">✅ {e.adImzosi}</span>
+                      <span className="inline-block whitespace-pre-wrap rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100">вњ… {e.adImzosi}</span>
                     ) : isConfirmed ? (
                       (() => {
                         const hasHaftalik = !!e.haftalikJadval && !e.doneHaftalik
@@ -329,7 +329,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                             <button
                               onClick={() => handleBajarishClick(i)}
                               disabled={submitting}
-                              className="rounded-lg bg-sky-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-sky-600 transition-all active:scale-95 disabled:opacity-50"
+                              className="rounded-lg bg-purple-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-purple-600 transition-all active:scale-95 disabled:opacity-50"
                             >
                               Bajarish
                             </button>
@@ -386,7 +386,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           <div className="relative flex h-[70vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-200/60 px-8 py-5 bg-slate-50/80">
               <h3 className="text-lg font-black text-slate-900 tracking-tight">
-                {modalType === '4-haftalik' ? '4-haftalik jadval' : 'Yillik jadval'} — vazifa tanlash
+                {modalType === '4-haftalik' ? '4-haftalik jadval' : 'Yillik jadval'} вЂ” vazifa tanlash
               </h3>
               <button onClick={() => setModalOpen(false)} className="rounded-xl border border-slate-200/60 bg-white p-2 text-slate-400 hover:text-slate-900 transition-all shadow-sm"><X size={20} /></button>
             </div>
@@ -406,9 +406,9 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                     <button
                       key={idx}
                       onClick={() => setSelectedBolim(idx)}
-                      className="flex w-full items-center justify-between rounded-2xl border border-slate-200/60 bg-white/80 p-5 text-left backdrop-blur-sm transition-all hover:border-sky-300 hover:shadow-md hover:bg-sky-50/30 group"
+                      className="flex w-full items-center justify-between rounded-2xl border border-slate-200/60 bg-white/80 p-5 text-left backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-md hover:bg-purple-50/30 group"
                     >
-                      <span className="font-bold text-slate-700 group-hover:text-sky-600 transition-colors uppercase tracking-tight text-sm">{b.bolim}</span>
+                      <span className="font-bold text-slate-700 group-hover:text-purple-600 transition-colors uppercase tracking-tight text-sm">{b.bolim}</span>
                       <span className="rounded-lg bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase text-slate-400 border border-slate-200/60">{b.ishlar.length} ta ish</span>
                     </button>
                   ))}
@@ -420,7 +420,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                       <button onClick={() => { setSelectedBolim(null); setModalSearch(''); }} className="flex items-center gap-1.5 rounded-lg bg-slate-100/80 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-200 hover:text-slate-700">
                         <ChevronLeft size={14} /> Ortga ro&apos;yxatga
                       </button>
-                      <span className="text-xs font-bold text-sky-600 truncate max-w-[200px] text-right">
+                      <span className="text-xs font-bold text-purple-600 truncate max-w-[200px] text-right">
                         {(modalType === 'yillik' ? YILLIK_REJA : TORT_HAFTALIK_REJA)[selectedBolim].bolim}
                       </span>
                     </div>
@@ -460,27 +460,27 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                           setModalOpen(false)
                           setSelectedBolim(null)
                         }}
-                        className="w-full rounded-xl border border-slate-200/60 bg-white/80 p-3 text-left backdrop-blur-sm transition-all hover:border-sky-300 hover:shadow-md hover:bg-sky-50/30 group"
+                        className="w-full rounded-xl border border-slate-200/60 bg-white/80 p-3 text-left backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-md hover:bg-purple-50/30 group"
                       >
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-                          <p className="text-[10px] text-sky-600">
-                            📌 {task.bolim}
+                          <p className="text-[10px] text-purple-600">
+                            рџ“Њ {task.bolim}
                           </p>
                           <p className="text-[10px] text-amber-600/70">
-                            📄 {task.manba} {task.raqam}
+                            рџ“„ {task.manba} {task.raqam}
                           </p>
                           <p className="text-[10px] text-slate-400">
-                            🕐 {task.davriylik}
+                            рџ•ђ {task.davriylik}
                           </p>
                           <p className="text-[10px] text-slate-400">
-                            👤 {task.bajaruvchi}
+                            рџ‘¤ {task.bajaruvchi}
                           </p>
                         </div>
                         <p className="mt-2 whitespace-pre-wrap text-xs font-bold text-slate-700 group-hover:text-slate-900">
                           {task.ish}
                         </p>
                         {task.jurnal && (
-                          <div className="mt-2 inline-block rounded-md bg-sky-50/80 px-2 py-1 text-[9px] uppercase tracking-widest text-sky-600 border border-sky-100/60">
+                          <div className="mt-2 inline-block rounded-md bg-purple-50/80 px-2 py-1 text-[9px] uppercase tracking-widest text-purple-600 border border-purple-100/60">
                             Jurnal: {task.jurnal}
                           </div>
                         )}
@@ -544,7 +544,7 @@ export function PremiyaForm({ session, stationId, stationName, month, onSubmit, 
 
   return (
     <div className="space-y-6 animate-fade-up">
-      <HeaderCard title="Premiya To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} status="yangi" color="amber" />
+      <HeaderCard title="Premiya To'ldirish" subtitle={`${MONTHS[month]} В· ${stationName}`} status="yangi" color="amber" />
       <div className="flex gap-2">
         <button onClick={addRow} className="rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 backdrop-blur-sm transition-all shadow-sm">+ Qator qo'shish</button>
         <button onClick={removeRow} className="rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-400 hover:text-red-500 hover:border-red-100 backdrop-blur-sm transition-all shadow-sm">- Qator o'chirish</button>
@@ -552,7 +552,7 @@ export function PremiyaForm({ session, stationId, stationName, month, onSubmit, 
       <div className="overflow-x-auto rounded-2xl border border-slate-200/60 bg-white/80 p-4 shadow-sm backdrop-blur-sm">
         <table className="w-full text-left text-[11px] min-w-[800px]">
           <thead className="text-[10px] font-black uppercase text-slate-400 bg-slate-50/80">
-            <tr><th className="p-4 text-center w-12">№</th><th className="p-4">I.SH.</th><th className="p-4">Lavozimi</th><th className="p-4 text-center">Tabel №</th><th className="p-4 text-center">Rag'bat. %</th><th className="p-4">Eslatma</th></tr>
+            <tr><th className="p-4 text-center w-12">в„–</th><th className="p-4">I.SH.</th><th className="p-4">Lavozimi</th><th className="p-4 text-center">Tabel в„–</th><th className="p-4 text-center">Rag'bat. %</th><th className="p-4">Eslatma</th></tr>
           </thead>
           <tbody className="bg-white/50">
             {entries.map((e, i) => (
@@ -600,8 +600,8 @@ export function WorkerGraphicsView() {
     file?: StationSchema
   }) {
     return (
-      <div className="premium-card group relative overflow-hidden rounded-2xl bg-white/80 p-6 backdrop-blur-sm transition-all hover:border-sky-300 hover:shadow-xl">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 transition-all group-hover:scale-110 group-hover:bg-white border border-slate-100 shadow-sm">
+      <div className="premium-card group relative overflow-hidden rounded-2xl bg-white/80 p-6 backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-xl">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 transition-all group-hover:scale-110 group-hover:bg-white border border-slate-100 shadow-sm">
           <Download size={24} />
         </div>
 
@@ -614,7 +614,7 @@ export function WorkerGraphicsView() {
           <button
             onClick={() => file && setPreview(file.filePath)}
             disabled={!file}
-            className="rounded-xl bg-slate-50/80 border border-slate-100 py-3 text-[10px] font-black uppercase text-slate-500 hover:bg-sky-600 hover:text-white backdrop-blur-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-95"
+            className="rounded-xl bg-slate-50/80 border border-slate-100 py-3 text-[10px] font-black uppercase text-slate-500 hover:bg-purple-600 hover:text-white backdrop-blur-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-95"
           >
             Ko'rish
           </button>
@@ -715,12 +715,12 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
       <HeaderCard title="Bekat Sxemalari" subtitle={stationName} status="ko'rish" color="blue" />
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {schemas.map(s => (
-          <div key={s.id} className="premium-card group relative overflow-hidden rounded-2xl bg-white/80 p-8 backdrop-blur-sm transition-all hover:border-sky-300 hover:shadow-xl">
-            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 transition-all group-hover:scale-110 group-hover:bg-white border border-slate-100 shadow-sm"><MapIcon size={28} /></div>
+          <div key={s.id} className="premium-card group relative overflow-hidden rounded-2xl bg-white/80 p-8 backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-xl">
+            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 transition-all group-hover:scale-110 group-hover:bg-white border border-slate-100 shadow-sm"><MapIcon size={28} /></div>
             <h4 className="text-lg font-black text-slate-900 tracking-tight">{s.schemaType}</h4>
             <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.fileName}</p>
             <div className="mt-8 flex gap-3">
-              <button onClick={() => handlePreview(s.filePath)} className="flex-1 rounded-2xl bg-slate-50/80 border border-slate-200/60 py-4 text-xs font-black uppercase text-slate-600 hover:bg-sky-600 hover:text-white backdrop-blur-sm transition-all active:scale-95 shadow-sm">Ko'rish</button>
+              <button onClick={() => handlePreview(s.filePath)} className="flex-1 rounded-2xl bg-slate-50/80 border border-slate-200/60 py-4 text-xs font-black uppercase text-slate-600 hover:bg-purple-600 hover:text-white backdrop-blur-sm transition-all active:scale-95 shadow-sm">Ko'rish</button>
               <a href={s.filePath} download className="rounded-2xl bg-slate-50/80 border border-slate-200/60 p-4 text-slate-400 hover:bg-slate-900 hover:text-white backdrop-blur-sm transition-all shadow-sm active:scale-95"><Download size={20} /></a>
             </div>
           </div>
@@ -761,7 +761,7 @@ export function WorkerTasksModal({ type, tasks, onClose }: {
               {isBajarilgan ? 'Bugun bajarilgan ishlar ro\'yxati' : 'Bajarilmagan ishlar (Qolib ketganlar)'}
             </h3>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-              Bugungi sana: {todayFormatted} · Jami: {tasks.length} ta
+              Bugungi sana: {todayFormatted} В· Jami: {tasks.length} ta
             </p>
           </div>
           <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
@@ -931,7 +931,7 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
             <div>
               <h3 className="text-lg font-black text-slate-900 tracking-tight">Ishni Bajarish</h3>
               <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                Sana: {`${String(new Date().getDate()).padStart(2, '0')}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}`} · {selectedTaskType ? 'Jurnallarga yozuv kiriting' : 'Ishni tanlang'}
+                Sana: {`${String(new Date().getDate()).padStart(2, '0')}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}`} В· {selectedTaskType ? 'Jurnallarga yozuv kiriting' : 'Ishni tanlang'}
               </p>
             </div>
             <button onClick={onClose} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 hover:text-slate-900 transition shadow-sm">
@@ -948,9 +948,9 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
               <button
                 key={t.type}
                 onClick={() => setSelectedTaskType(t.type)}
-                className="w-full text-left rounded-2xl border border-slate-200 p-5 hover:border-sky-500 hover:bg-sky-50 transition-all group"
+                className="w-full text-left rounded-2xl border border-slate-200 p-5 hover:border-purple-500 hover:bg-purple-50 transition-all group"
               >
-                <span className="text-[10px] font-black uppercase tracking-widest text-sky-600 mb-1 block">{t.label}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 mb-1 block">{t.label}</span>
                 <p className="text-xs font-bold text-slate-700 line-clamp-2 group-hover:text-slate-900">{t.text}</p>
                 {t.journals && (
                   <div className="mt-2 flex items-center gap-1.5">
@@ -966,9 +966,9 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
           <>
             <div className="px-8 py-4 border-b border-slate-100 bg-white">
               <div className="flex items-center justify-between mb-2">
-                 <span className="text-[10px] font-black uppercase tracking-widest text-sky-600">{currentTask?.label}</span>
+                 <span className="text-[10px] font-black uppercase tracking-widest text-purple-600">{currentTask?.label}</span>
                  {availableTasks.length > 1 && (
-                   <button onClick={() => { setSelectedTaskType(null); setVisitedJournals(new Set()) }} className="text-[10px] font-black text-slate-400 hover:text-sky-600 underline">Ortga</button>
+                   <button onClick={() => { setSelectedTaskType(null); setVisitedJournals(new Set()) }} className="text-[10px] font-black text-slate-400 hover:text-purple-600 underline">Ortga</button>
                  )}
               </div>
               <p className="text-[11px] text-slate-600 whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">{currentTask?.text}</p>
@@ -988,21 +988,21 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
                     className={`w-full flex items-center justify-between rounded-2xl border p-5 transition-all active:scale-[0.98] ${
                       isDone
                         ? 'border-emerald-200 bg-emerald-50/80'
-                        : 'border-sky-200 bg-sky-50/50 hover:bg-sky-100 hover:border-sky-300'
+                        : 'border-purple-200 bg-purple-50/50 hover:bg-purple-100 hover:border-purple-300'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isDone ? 'bg-emerald-100 text-emerald-600' : 'bg-sky-100 text-sky-600'}`}>
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isDone ? 'bg-emerald-100 text-emerald-600' : 'bg-purple-100 text-purple-600'}`}>
                         {isDone ? <CheckCircle2 size={20} /> : <BookOpen size={20} />}
                       </div>
                       <div className="text-left">
                         <span className="text-sm font-black text-slate-900">{name}</span>
                         <p className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: isDone ? '#059669' : '#0284c7' }}>
-                          {isDone ? 'Yozuv kiritildi ✓' : 'Yozuv kiritish →'}
+                          {isDone ? 'Yozuv kiritildi вњ“' : 'Yozuv kiritish в†’'}
                         </p>
                       </div>
                     </div>
-                    {isDone && <span className="text-lg">✅</span>}
+                    {isDone && <span className="text-lg">вњ…</span>}
                   </button>
                 )
               })}
@@ -1032,7 +1032,7 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
                 disabled={!allDone}
                 className="flex-1 rounded-xl bg-emerald-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {allDone ? '✅ Bajarildi — Saqlash' : 'Avval jurnallarga yozuv kiriting'}
+                {allDone ? 'вњ… Bajarildi вЂ” Saqlash' : 'Avval jurnallarga yozuv kiriting'}
               </button>
             </div>
           </>

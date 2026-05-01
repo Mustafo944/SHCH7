@@ -249,7 +249,7 @@ export default function WorkerPage() {
         <main className="mx-auto w-full max-w-7xl p-4 sm:p-6 pb-24">
           {/* Back button - shown above page content */}
           {view !== 'home' && view !== 'selectStation' && (
-            <button onClick={() => setView('home')} className="mb-4 flex items-center gap-2 rounded-xl bg-white/80 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm ring-1 ring-slate-200/60 transition-all hover:bg-white hover:text-slate-900 active:scale-[0.98]">
+            <button onClick={() => setView('home')} className="mb-4 flex items-center gap-2 rounded-xl bg-white/80 px-4 py-2.5 text-sm font-medium text-purple-600 shadow-sm ring-1 ring-purple-100 transition-all hover:bg-purple-50 hover:text-purple-800 active:scale-[0.98]">
               <ChevronLeft size={18} />
               <span>Orqaga</span>
             </button>
@@ -324,7 +324,7 @@ export default function WorkerPage() {
                   title="Ish Jurnallari"
                   desc="DU-46 va SHU-2 jurnallarini to'ldirish."
                   icon={<BookOpen size={32} />}
-                  color="cyan"
+                  color="emerald"
                   onClick={() => setView('journalSelect')}
                   badge={pendingCounts.du46 + pendingCounts.shu2}
                 />
@@ -337,9 +337,9 @@ export default function WorkerPage() {
               {MONTHS.map((m, i) => {
                 const isCurrent = i === new Date().getMonth()
                 return (
-                  <button key={m} onClick={() => { setSelectedMonth(i); setView('selectPlanType') }} className={`group flex flex-col p-6 rounded-2xl border shadow-sm backdrop-blur-sm transition-all ${isCurrent ? 'border-sky-300 bg-sky-50/80 shadow-sky-500/5' : 'border-slate-200/60 bg-white/80 hover:bg-slate-50 hover:border-slate-300'}`}>
+                  <button key={m} onClick={() => { setSelectedMonth(i); setView('selectPlanType') }} className={`group flex flex-col p-6 rounded-2xl border shadow-sm backdrop-blur-sm transition-all ${isCurrent ? 'border-purple-300 bg-purple-50/80 shadow-purple-500/5' : 'border-slate-200/60 bg-white/80 hover:bg-purple-50/40 hover:border-purple-200'}`}>
                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{String(i + 1).padStart(2, '0')}</span>
-                    <span className="mt-4 text-lg font-black text-slate-900 group-hover:text-sky-600 transition-colors uppercase tracking-tight">{m}</span>
+                    <span className="mt-4 text-lg font-black text-slate-900 group-hover:text-purple-600 transition-colors uppercase tracking-tight">{m}</span>
                   </button>
                 )
               })}
@@ -380,12 +380,12 @@ export default function WorkerPage() {
             <div className="animate-fade-up">
               <HeaderCard title="Hisobot Ko'rinishi" subtitle={`${selectedReport.month} В· ${stationName}`} status={selectedReport.confirmedAt || selectedReport.entries.every(e => !e.haftalikJadval && !e.yillikJadval && !e.yangiIshlar && !e.kmoBartaraf && !e.majburiyOzgarish || e.adImzosi) ? 'tasdiqlandi' : 'kutilmoqda'} />
               <div className="mt-6 mb-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm relative shadow-sm">
-                <div className="sm:hidden absolute top-0 right-0 bg-blue-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
+                <div className="sm:hidden absolute top-0 right-0 bg-purple-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
                   O&apos;ngga suring →
                 </div>
                 <div className="overflow-x-auto overflow-y-hidden">
                   <table style={{ minWidth: "1200px" }} className="w-full border-collapse text-left text-[11px] text-slate-700">
-                    <thead className="border-b-2 border-sky-500/30 bg-slate-50 font-bold text-slate-600">
+                    <thead className="border-b-2 border-purple-500/30 bg-slate-50 font-bold text-slate-600">
                       <tr>
                         <th rowSpan={2} className="w-10 border-r border-slate-200 p-2 text-center">№</th>
                         <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-2 text-center">4-haftalik jadval</th>
@@ -397,20 +397,20 @@ export default function WorkerPage() {
                         <th rowSpan={2} className="w-[8%] bg-amber-50 p-2 text-center text-amber-700">AD imzosi</th>
                       </tr>
                       <tr className="bg-slate-100/50">
-                        <th className="border-r border-t border-slate-200 p-2 text-center font-bold text-sky-600">Shn</th>
-                        <th className="border-r border-t border-slate-200 p-2 text-center font-bold text-sky-600">Imzo</th>
+                        <th className="border-r border-t border-slate-200 p-2 text-center font-bold text-purple-600">Shn</th>
+                        <th className="border-r border-t border-slate-200 p-2 text-center font-bold text-purple-600">Imzo</th>
                       </tr>
                     </thead>
                     <tbody>
                       {selectedReport.entries.map((e, idx) => (
                         <tr key={idx} className="group border-b border-slate-100 hover:bg-slate-50/80">
-                          <td className="border-r border-slate-100 p-2 text-center font-bold text-sky-600/50">{e.ragat}</td>
+                          <td className="border-r border-slate-100 p-2 text-center font-bold text-purple-600/50">{e.ragat}</td>
                           <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.haftalikJadval || '—'}</td>
                           <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.yillikJadval || '—'}</td>
                           <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.yangiIshlar || '—'}</td>
                           <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.kmoBartaraf || '—'}</td>
                           <td className="border-r border-slate-100 p-3 align-top whitespace-pre-wrap">{e.majburiyOzgarish || '—'}</td>
-                          <td className="border-r border-slate-100 p-2 text-center align-middle font-medium text-sky-600">{e.bajarildiShn}</td>
+                          <td className="border-r border-slate-100 p-2 text-center align-middle font-medium text-purple-600">{e.bajarildiShn}</td>
                           <td className="border-r border-slate-100 p-2 text-center align-middle italic text-slate-400">{e.bajarildiImzo}</td>
                           <td className="p-2 text-center align-middle">
                             {e.adImzosi ? (

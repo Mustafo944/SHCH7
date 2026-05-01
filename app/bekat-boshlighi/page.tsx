@@ -130,10 +130,10 @@ export default function BekatBoshlighiPage() {
                     <button
                       key={st.id}
                       onClick={() => setSelectedStation(st.id)}
-                      className="group relative flex flex-col items-center overflow-hidden rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm backdrop-blur-md transition-all hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] animate-scale-in"
+                      className="group relative flex flex-col items-center overflow-hidden rounded-[28px] border border-purple-100 bg-white p-8 shadow-sm backdrop-blur-md transition-all hover:border-purple-300 hover:bg-purple-50/50 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] animate-scale-in"
                     >
-                      <div className="mb-4 rounded-2xl bg-blue-50 p-4 group-hover:bg-blue-100 transition-colors">
-                        <MapPin size={32} className="text-blue-400 group-hover:text-blue-600 transition-colors" />
+                      <div className="mb-4 rounded-2xl bg-purple-50 p-4 group-hover:bg-purple-100 transition-colors">
+                        <MapPin size={32} className="text-purple-400 group-hover:text-purple-600 transition-colors" />
                       </div>
                       <span className="text-lg font-black text-slate-900">{st.name}</span>
                     </button>
@@ -170,7 +170,7 @@ export default function BekatBoshlighiPage() {
                     if (showSchemas) setShowSchemas(false)
                     else setSelectedStation(null)
                   }}
-                  className="rounded-xl bg-white p-3 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition shadow-sm ring-1 ring-slate-200"
+                  className="rounded-xl bg-white p-3 text-purple-400 hover:text-purple-600 hover:bg-purple-50 transition shadow-sm ring-1 ring-purple-100"
                 >
                   <MapPin size={24} />
                 </button>
@@ -186,31 +186,31 @@ export default function BekatBoshlighiPage() {
                 <div className="flex flex-col sm:flex-row justify-center gap-6 py-12">
                   <button
                     onClick={() => setShowMonthSelect(true)}
-                    className="group relative flex flex-col items-center rounded-[32px] border border-slate-200 bg-white p-12 shadow-sm backdrop-blur-md transition-all hover:border-blue-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] w-full sm:w-80"
+                    className="group relative flex flex-col items-center rounded-[32px] border border-purple-100 bg-white p-12 shadow-sm backdrop-blur-md transition-all hover:border-purple-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] w-full sm:w-80"
                   >
                     {pendingCounts.du46 > 0 && (
                       <div className="absolute -top-4 -right-4 flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-lg font-black text-white shadow-xl shadow-red-500/40 animate-bounce">
                         +{pendingCounts.du46}
                       </div>
                     )}
-                    <div className="mb-6 rounded-2xl bg-gradient-to-br from-blue-500 to-sky-500 p-6 group-hover:from-blue-600 group-hover:to-sky-600 transition-colors shadow-lg">
+                    <div className="mb-6 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-500 p-6 group-hover:from-purple-600 group-hover:to-violet-600 transition-colors shadow-lg">
                       <BookOpen size={48} className="text-white" />
                     </div>
                     <h3 className="text-2xl font-black text-slate-900">DU-46 Jurnali</h3>
                     <p className="mt-2 text-sm text-slate-500 text-center">Ko&apos;rik, tekshiruvlar tahlili va nosozliklar jurnali</p>
-                    <p className="mt-1 text-xs text-blue-500">Tasdiqlash uchun oching</p>
+                    <p className="mt-1 text-xs text-purple-500">Tasdiqlash uchun oching</p>
                   </button>
 
                   <button
                     onClick={() => setShowSchemas(true)}
-                    className="group relative flex flex-col items-center rounded-[32px] border border-slate-200 bg-white p-12 shadow-sm backdrop-blur-md transition-all hover:border-blue-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] w-full sm:w-80"
+                    className="group relative flex flex-col items-center rounded-[32px] border border-purple-100 bg-white p-12 shadow-sm backdrop-blur-md transition-all hover:border-purple-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] w-full sm:w-80"
                   >
-                    <div className="mb-6 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-500 p-6 group-hover:from-indigo-600 group-hover:to-blue-600 transition-colors shadow-lg">
+                    <div className="mb-6 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 p-6 group-hover:from-violet-600 group-hover:to-fuchsia-600 transition-colors shadow-lg">
                       <MapIcon size={48} className="text-white" />
                     </div>
                     <h3 className="text-2xl font-black text-slate-900">Bekat Sxemalari</h3>
                     <p className="mt-2 text-sm text-slate-500 text-center">Bir ipli va ikki ipli sxemalar</p>
-                    <p className="mt-1 text-xs text-blue-500">Ko&apos;rish uchun oching</p>
+                    <p className="mt-1 text-xs text-purple-500">Ko&apos;rish uchun oching</p>
                   </button>
                 </div>
               )}

@@ -12,7 +12,7 @@ const iconMap = {
 const colorMap = {
   success: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   error: 'border-red-200 bg-red-50 text-red-700',
-  info: 'border-sky-200 bg-sky-50 text-sky-700',
+  info: 'border-purple-200 bg-purple-50 text-purple-700',
 }
 
 export function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: string) => void }) {

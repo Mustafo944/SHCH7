@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
+﻿/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
@@ -24,13 +24,13 @@ export function getJournalMonthKey(monthIndex: number, year = new Date().getFull
   return `${year}-${String(monthIndex + 1).padStart(2, '0')}`
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 // HELPERS: Sana va vaqtni avto-formatlash
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
 /**
  * Sana formatlash: faqat raqamlar kiritiladi, `-` avtomatik qo'yiladi.
- * Masalan: 17042026 → 17-04-2026
+ * Masalan: 17042026 в†’ 17-04-2026
  */
 function formatDateInput(raw: string): string {
   const digits = raw.replace(/\D/g, '').slice(0, 8)
@@ -41,7 +41,7 @@ function formatDateInput(raw: string): string {
 
 /**
  * Vaqt formatlash: faqat raqamlar kiritiladi, `:` avtomatik qo'yiladi.
- * Masalan: 1405 → 14:05
+ * Masalan: 1405 в†’ 14:05
  */
 function formatTimeInput(raw: string): string {
   const digits = raw.replace(/\D/g, '').slice(0, 4)
@@ -49,9 +49,9 @@ function formatTimeInput(raw: string): string {
   return `${digits.slice(0, 2)}:${digits.slice(2)}`
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 // EMPTY ENTRY FACTORIES
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
 const EMPTY_DU46 = (): DU46Entry => ({
   nomber: '',
@@ -78,9 +78,9 @@ const EMPTY_SHU2 = (): SHU2Entry => ({
   dispetcherQabulQildi: false,
 })
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 // JURNAL TANLASH MODAL
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
 export function JournalSelectModal({
   onSelect,
@@ -108,14 +108,14 @@ export function JournalSelectModal({
         <div className="grid gap-4 p-8">
           <button
             onClick={() => onSelect('du46')}
-            className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-sky-300 hover:shadow-xl hover:shadow-sky-500/5 active:scale-95"
+            className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-purple-300 hover:shadow-xl hover:shadow-purple-500/5 active:scale-95"
           >
             {du46Count > 0 && (
               <div className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-[11px] font-black text-white shadow-lg shadow-red-500/30">
                 {du46Count > 9 ? '9+' : du46Count}
               </div>
             )}
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 transition-all group-hover:bg-white border border-transparent group-hover:border-sky-100 shadow-sm">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 transition-all group-hover:bg-white border border-transparent group-hover:border-purple-100 shadow-sm">
               <BookOpen size={28} />
             </div>
             <div>
@@ -156,9 +156,9 @@ export function JournalSelectModal({
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 // DU-46 VAZIFA TANLASH MODAL
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
 export function JournalMonthSelectModal({
   journalType,
@@ -200,18 +200,18 @@ export function JournalMonthSelectModal({
                 className={`group flex flex-col rounded-2xl border p-5 text-left shadow-sm transition-all ${isFuture
                     ? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed opacity-50'
                     : isCurrent
-                      ? 'border-sky-300 bg-sky-50 text-slate-900 shadow-sky-500/10 active:scale-[0.98]'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-sky-200 hover:bg-sky-50/50 active:scale-[0.98]'
+                      ? 'border-purple-300 bg-purple-50 text-slate-900 shadow-purple-500/10 active:scale-[0.98]'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-purple-200 hover:bg-purple-50/50 active:scale-[0.98]'
                   }`}
               >
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
                   {String(index + 1).padStart(2, '0')}
                 </span>
-                <span className={`mt-3 text-sm font-black uppercase tracking-tight ${isFuture ? 'text-slate-300' : 'group-hover:text-sky-600'}`}>
+                <span className={`mt-3 text-sm font-black uppercase tracking-tight ${isFuture ? 'text-slate-300' : 'group-hover:text-purple-600'}`}>
                   {monthName}
                 </span>
                 {isFuture && (
-                  <span className="mt-1 text-[9px] font-bold text-red-300">🔒 Hali kelmagan</span>
+                  <span className="mt-1 text-[9px] font-bold text-red-300">рџ”’ Hali kelmagan</span>
                 )}
               </button>
             )
@@ -255,8 +255,8 @@ function TaskSelectModal({
             <div className="grid gap-3">
               {rejaData.map((b, idx) => (
                 <button key={idx} onClick={() => setSelectedBolim(idx)}
-                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:border-sky-300 hover:shadow-md hover:bg-sky-50/30 group">
-                  <span className="font-bold text-slate-700 group-hover:text-sky-600 transition-colors uppercase tracking-tight text-sm">{b.bolim}</span>
+                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:border-purple-300 hover:shadow-md hover:bg-purple-50/30 group">
+                  <span className="font-bold text-slate-700 group-hover:text-purple-600 transition-colors uppercase tracking-tight text-sm">{b.bolim}</span>
                   <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-[10px] font-black uppercase text-slate-400 border border-slate-200">{b.ishlar.length} ta ish</span>
                 </button>
               ))}
@@ -269,7 +269,7 @@ function TaskSelectModal({
                     className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-all shadow-sm">
                     <ChevronLeft size={14} /> Ortga
                   </button>
-                  <span className="text-xs font-black text-sky-600 uppercase tracking-tight truncate max-w-[200px] text-right">
+                  <span className="text-xs font-black text-purple-600 uppercase tracking-tight truncate max-w-[200px] text-right">
                     {rejaData[selectedBolim].bolim}
                   </span>
                 </div>
@@ -285,10 +285,10 @@ function TaskSelectModal({
                   const text = `[${task.manba}${task.raqam ? ` ${task.raqam}` : ''}] ${task.ish}\nDavriyligi: ${task.davriylik}\nBajaruvchi: ${task.bajaruvchi}`
                   onSelect(text)
                 }}
-                  className="w-full rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:border-sky-300 hover:shadow-md hover:bg-sky-50 group">
+                  className="w-full rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:border-purple-300 hover:shadow-md hover:bg-purple-50 group">
                   <p className="text-sm font-bold text-slate-700 group-hover:text-slate-900 leading-snug">{task.ish}</p>
                   <div className="mt-3 flex gap-4">
-                    <span className="text-[10px] font-black uppercase text-sky-600 tracking-widest flex items-center gap-1"><div className="w-1 h-1 rounded-full bg-sky-400" /> {task.bolim}</span>
+                    <span className="text-[10px] font-black uppercase text-purple-600 tracking-widest flex items-center gap-1"><div className="w-1 h-1 rounded-full bg-purple-400" /> {task.bolim}</span>
                     <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1"><div className="w-1 h-1 rounded-full bg-slate-300" /> {task.davriylik}</span>
                   </div>
                 </button>
@@ -301,9 +301,9 @@ function TaskSelectModal({
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 // DU-46 INPUT KOMPONENTLARI
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
 /** Sana inputi: faqat raqam kiritadi, dd-mm-yyyy formatda ko'rsatadi */
 function DateInput({ value, onChange, readOnly, placeholder = 'kk-oo-yyyy' }: {
@@ -352,9 +352,9 @@ function TimeInput({ value, onChange, readOnly, className: extraClass = '', plac
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 // DU-46 JURNAL KO'RINISHI
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
 export function DU46JournalView({
   stationId,
@@ -387,24 +387,24 @@ export function DU46JournalView({
   const selectedMonth = jMonth || String(today.getMonth() + 1).padStart(2, '0')
   const journalMonthLabel = getJournalMonthLabel(journalMonth)
 
-  // ─── Rollar ────────────────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђ Rollar в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   const isWorker = ['worker', 'elektromexanik', 'elektromontyor'].includes(userRole)
   const isBB = ['bekat_boshlighi', 'bekat_navbatchisi'].includes(userRole)
   const isDispatcher = userRole === 'dispatcher'
   const isEditor = isWorker || isBB // Yozish mumkin bo'lgan rollar
 
-  // ─── Joriy oy tekshiruvi ───────────────────────────────────────────
+  // в”Ђв”Ђв”Ђ Joriy oy tekshiruvi в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   // Eski oyga yangi yozuv kiritish mumkin emas (faqat tasdiqlanmagan
   // mavjud yozuvlarni tasdiqlash / bajarish mumkin)
   const isCurrentMonth = journalMonth === getCurrentJournalMonth()
 
-  // ─── Xabar ko'rsatish ─────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђ Xabar ko'rsatish в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   const showMsg = (text: string, duration = 2000) => {
     setMsg(text)
     setTimeout(() => setMsg(null), duration)
   }
 
-  // ─── Ma'lumotlarni yuklash ─────────────────────────────────────────
+  // в”Ђв”Ђв”Ђ Ma'lumotlarni yuklash в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   const loadJournalData = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true)
     try {
@@ -431,7 +431,7 @@ export function DU46JournalView({
         setEntries([EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46()])
       }
     } catch (err) {
-      console.error('❌ Journal yuklash xatosi:', err)
+      console.error('вќЊ Journal yuklash xatosi:', err)
     } finally {
       if (!isSilent) setLoading(false)
     }
@@ -452,7 +452,7 @@ export function DU46JournalView({
     return () => { supabase.removeChannel(channel) }
   }, [stationId, userRole, journalMonth, loadJournalData])
 
-  // ─── Yordamchi: qaysi rol yaratgan ────────────────────────────────
+  // в”Ђв”Ђв”Ђ Yordamchi: qaysi rol yaratgan в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   /** Qator kim tomonidan yaratilgan bo'lsa, shu rolni qaytaradi. Agar belgilanmagan bo'lsa default `worker` */
   const getCreator = (e: DU46Entry): 'worker' | 'bekat_boshlighi' => e.createdByRole || 'worker'
 
@@ -468,7 +468,7 @@ export function DU46JournalView({
     return (creator === 'worker' && isBB) || (creator === 'bekat_boshlighi' && isWorker)
   }
 
-  // ─── Input yangilash ──────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђ Input yangilash в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   const update = (i: number, field: keyof DU46Entry, val: string) => {
     const n = [...entries]
     n[i] = { ...n[i], [field]: val }
@@ -482,7 +482,7 @@ export function DU46JournalView({
     setEntries(n)
   }
 
-  // ─── Qator boshqaruvi ─────────────────────────────────────────────
+  // в”Ђв”Ђв”Ђ Qator boshqaruvi в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   // Eski oyda yangi qator qo'shish mumkin emas
   const addRow = () => { if (isCurrentMonth) setEntries([...entries, EMPTY_DU46()]) }
 
@@ -493,7 +493,7 @@ export function DU46JournalView({
     setEntries(entries.slice(0, -1))
   }
 
-  // ─── Saqlash (optimistik) ──────────────────────────────────────────
+  // в”Ђв”Ђв”Ђ Saqlash (optimistik) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   const saveEntries = async (updated: DU46Entry[], prev: DU46Entry[]) => {
     setEntries(updated)
     
@@ -506,7 +506,7 @@ export function DU46JournalView({
     try {
       await upsertJournal(stationId, 'du46', newAllEntries, userName)
     } catch (err) {
-      console.error('❌ Saqlash xatosi:', err)
+      console.error('вќЊ Saqlash xatosi:', err)
       setEntries(prev)
       setAllEntries(allEntries) // roll back
       showMsg(err instanceof Error ? err.message : 'Xatolik', 3000)
@@ -514,9 +514,9 @@ export function DU46JournalView({
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════════
+  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
   // USTUN 3: BOSHLANDI + TASDIQLASH
-  // ═══════════════════════════════════════════════════════════════════
+  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
   /** Yozuvchi "Boshlandi" tugmasini bosadi */
   const handleKamchilikBoshlandi = async (i: number) => {
@@ -530,12 +530,12 @@ export function DU46JournalView({
     }
     try {
       await saveEntries(updated, prev)
-      showMsg('Boshlandi belgilandi ✓')
+      showMsg('Boshlandi belgilandi вњ“')
       onAccepted?.() // worker action completed
     } catch { /* saveEntries ichida xato ko'rsatiladi */ }
   }
 
-  /** Tasdiqlash rolni bosadi — vaqt avtomatik qo'yiladi */
+  /** Tasdiqlash rolni bosadi вЂ” vaqt avtomatik qo'yiladi */
   const handleKamchilikTasdiqlash = async (i: number) => {
     const now = new Date()
     const autoVaqt = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
@@ -550,13 +550,13 @@ export function DU46JournalView({
     }
     try {
       await saveEntries(updated, prev)
-      showMsg('Tasdiqlandi ✓')
+      showMsg('Tasdiqlandi вњ“')
     } catch { /* */ }
   }
 
-  // ═══════════════════════════════════════════════════════════════════
+  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
   // USTUN 12: BAJARILDI + TASDIQLASH
-  // ═══════════════════════════════════════════════════════════════════
+  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
   /** Yozuvchi "Bajarildi" bosadi */
   const handleBartarafBajarildi = async (i: number) => {
@@ -570,12 +570,12 @@ export function DU46JournalView({
     }
     try {
       await saveEntries(updated, prev)
-      showMsg('Bajarildi belgilandi ✓')
+      showMsg('Bajarildi belgilandi вњ“')
       onAccepted?.() // worker action completed
     } catch { /* */ }
   }
 
-  /** Tasdiqlash rolni bosadi — vaqt avtomatik qo'yiladi */
+  /** Tasdiqlash rolni bosadi вЂ” vaqt avtomatik qo'yiladi */
   const handleBartarafTasdiqlash = async (i: number) => {
     const now = new Date()
     const autoVaqt = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
@@ -590,13 +590,13 @@ export function DU46JournalView({
     }
     try {
       await saveEntries(updated, prev)
-      showMsg('Tasdiqlandi ✓')
+      showMsg('Tasdiqlandi вњ“')
     } catch { /* */ }
   }
 
-  // ═══════════════════════════════════════════════════════════════════
+  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
   // DISPETCHERGA YUBORISH / QABUL QILISH
-  // ═══════════════════════════════════════════════════════════════════
+  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
   const handleDispetchergaYuborish = async () => {
     const prev = [...entries]
@@ -608,7 +608,7 @@ export function DU46JournalView({
     })
     try {
       await saveEntries(updated, prev)
-      showMsg('Yuborildi ✓')
+      showMsg('Yuborildi вњ“')
     } catch { /* */ }
   }
 
@@ -621,14 +621,14 @@ export function DU46JournalView({
     )
     try {
       await saveEntries(updated, prev)
-      showMsg('Qabul qilindi ✓')
+      showMsg('Qabul qilindi вњ“')
       onAccepted?.()  // parent ni xabar ber
     } catch { /* */ }
   }
 
-  // ═══════════════════════════════════════════════════════════════════
+  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
   // PDF YUKLAB OLISH
-  // ═══════════════════════════════════════════════════════════════════
+  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
   const handleDownload = async () => {
     const { jsPDF } = await import('jspdf')
@@ -643,7 +643,7 @@ export function DU46JournalView({
     doc.setFont('helvetica', 'normal')
     doc.text(`Sana: ${dateStr}`, 14, 22)
 
-    const tableColumn = ['№', 'Oy va kun', 'Soat va daqiqa', 'Kamchilik bayoni', 'Oy/kun (xabar)', 'Soat (xabar)', 'Xabar usuli', 'Oy/kun (kelish)', 'Soat (kelish)', 'Kelgan imzo', 'Oy/kun (bartaraf)', 'Soat (bartaraf)', 'Bartaraf tafsiloti', 'Bajardi', 'Tasdiqladi']
+    const tableColumn = ['в„–', 'Oy va kun', 'Soat va daqiqa', 'Kamchilik bayoni', 'Oy/kun (xabar)', 'Soat (xabar)', 'Xabar usuli', 'Oy/kun (kelish)', 'Soat (kelish)', 'Kelgan imzo', 'Oy/kun (bartaraf)', 'Soat (bartaraf)', 'Bartaraf tafsiloti', 'Bajardi', 'Tasdiqladi']
     const tableRows = entries
       .filter(e => e.kamchilik || e.bartarafInfo || e.oyKun1 || e.soatMinut1)
       .map((e, i) => [
@@ -667,39 +667,39 @@ export function DU46JournalView({
     doc.save(`DU-46_${stationName}_${dateStr.replace(/\./g, '-')}.pdf`)
   }
 
-  // ═══════════════════════════════════════════════════════════════════
+  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
   // COMPUTED VALUES
-  // ═══════════════════════════════════════════════════════════════════
+  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
   const hasAnyEntry = entries.some(e => e.kamchilik || e.bartarafInfo)
   const tasdiqlanganCount = entries.filter(e => !e.yuborildi && (e.kamchilik || e.bartarafInfo) && e.kamchilikBBTasdiqladi && e.bartarafBBTasdiqladi).length
   const kutilayotganCount = entries.filter(e => e.yuborildi && !e.dispetcherQabulQildi).length
 
-  // ═══════════════════════════════════════════════════════════════════
+  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
   // RENDER
-  // ═══════════════════════════════════════════════════════════════════
+  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
   if (loading) return <div className="flex h-64 items-center justify-center text-slate-300 font-bold uppercase tracking-widest">Yuklanmoqda...</div>
 
   return (
     <div className="fixed inset-0 z-[200] flex flex-col bg-slate-50">
-      {/* ── Header ────────────────────────────────────────────── */}
+      {/* в”Ђв”Ђ Header в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
       <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur-xl sm:px-8 shadow-sm">
         <div>
           <h2 className="text-lg font-black text-slate-900 tracking-tight">DU-46 Jurnali</h2>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stationName} · {journalMonthLabel}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stationName} В· {journalMonthLabel}</p>
         </div>
         <div className="flex items-center gap-3">
           {!isCurrentMonth && !isDispatcher && (
             <span className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-amber-600">
-              🔒 Faqat ko&apos;rish (o&apos;tgan oy)
+              рџ”’ Faqat ko&apos;rish (o&apos;tgan oy)
             </span>
           )}
           {msg && <span className={`text-xs font-bold px-3 py-1 rounded-full border ${msg.includes('!') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>{msg}</span>}
         </div>
       </div>
 
-      {/* ── Content ───────────────────────────────────────────── */}
+      {/* в”Ђв”Ђ Content в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
       <div className="flex-1 overflow-auto p-4 sm:p-6">
         {/* Orqaga */}
         <button onClick={onClose} className="mb-4 flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm ring-1 ring-slate-200/60 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98]">
@@ -721,26 +721,26 @@ export function DU46JournalView({
           </button>
         </div>
 
-        {/* ── Jadval ──────────────────────────────────────── */}
+        {/* в”Ђв”Ђ Jadval в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
         <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
           <table style={{ minWidth: '1400px' }} className="w-full border-collapse text-[11px] text-slate-700">
             <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-tight text-slate-500 border-b-2 border-slate-200">
               <tr>
-                <th rowSpan={2} className="w-[3%] border-r border-b border-slate-200 p-3 text-center">№</th>
+                <th rowSpan={2} className="w-[3%] border-r border-b border-slate-200 p-3 text-center">в„–</th>
                 <th rowSpan={2} className="w-[5%] border-r border-b border-slate-200 p-3 text-center">Oy va<br />kun</th>
                 <th rowSpan={2} className="w-[5%] border-r border-b border-slate-200 p-3 text-center">Soat va<br />daqiqa</th>
                 <th rowSpan={2} className="w-[18%] border-r border-b border-slate-200 p-3 text-center">Ko&apos;rik, tekshiruvlar tahlili,<br />topilgan kamchiliklar bayoni</th>
-                <th colSpan={3} className="border-r border-b border-slate-200 p-3 text-center bg-sky-50/30">Tegishli xodimga<br />xabar berilgan vaqt</th>
-                <th colSpan={3} className="border-r border-b border-slate-200 p-3 text-center bg-sky-50/30">Tegishli xodimning nosozlik va buzilishlarni<br />bartaraf etishga kelgan vaqti</th>
+                <th colSpan={3} className="border-r border-b border-slate-200 p-3 text-center bg-purple-50/30">Tegishli xodimga<br />xabar berilgan vaqt</th>
+                <th colSpan={3} className="border-r border-b border-slate-200 p-3 text-center bg-purple-50/30">Tegishli xodimning nosozlik va buzilishlarni<br />bartaraf etishga kelgan vaqti</th>
                 <th colSpan={3} className="border-b border-slate-200 p-3 text-center bg-amber-50/20">Aniqlangan nosozliklar va buzilishlarni bartaraf qilganligi vaqti<br />va xodimning imzosi</th>
               </tr>
               <tr className="bg-slate-100/50">
-                <th className="w-[5%] border-r border-b border-slate-200 p-3 text-center text-sky-600 font-black">Oy/kun</th>
-                <th className="w-[5%] border-r border-b border-slate-200 p-3 text-center text-sky-600 font-black">Soat va daqiqa</th>
-                <th className="w-[7%] border-r border-b border-slate-200 p-3 text-center text-sky-600 font-black">Xabar berish<br />usuli</th>
-                <th className="w-[5%] border-r border-b border-slate-200 p-3 text-center text-sky-600 font-black">Oy/kun</th>
-                <th className="w-[5%] border-r border-b border-slate-200 p-3 text-center text-sky-600 font-black">Soat va daqiqa</th>
-                <th className="w-[7%] border-r border-b border-slate-200 p-3 text-center text-sky-600 font-black">Bartaraf etishga kelgan<br />xodimning imzosi</th>
+                <th className="w-[5%] border-r border-b border-slate-200 p-3 text-center text-purple-600 font-black">Oy/kun</th>
+                <th className="w-[5%] border-r border-b border-slate-200 p-3 text-center text-purple-600 font-black">Soat va daqiqa</th>
+                <th className="w-[7%] border-r border-b border-slate-200 p-3 text-center text-purple-600 font-black">Xabar berish<br />usuli</th>
+                <th className="w-[5%] border-r border-b border-slate-200 p-3 text-center text-purple-600 font-black">Oy/kun</th>
+                <th className="w-[5%] border-r border-b border-slate-200 p-3 text-center text-purple-600 font-black">Soat va daqiqa</th>
+                <th className="w-[7%] border-r border-b border-slate-200 p-3 text-center text-purple-600 font-black">Bartaraf etishga kelgan<br />xodimning imzosi</th>
                 <th className="w-[5%] border-r border-b border-slate-200 p-3 text-center text-amber-600 font-black">Oy/kun</th>
                 <th className="w-[5%] border-r border-b border-slate-200 p-3 text-center text-amber-600 font-black">Soat va daqiqa</th>
                 <th className="w-[15%] border-b border-slate-200 p-3 text-center text-amber-600 font-black">Nosozliklar va buzilishlarning tafsiloti</th>
@@ -770,7 +770,7 @@ export function DU46JournalView({
 
                 return (
                   <tr key={i} className="border-b border-slate-200 hover:bg-blue-50/50 transition-colors animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
-                    {/* ── № ──────────────────────────────────────── */}
+                    {/* в”Ђв”Ђ в„– в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
                     <td className="border-r border-slate-200 p-1 text-center bg-slate-50/30">
                       <input
                         value={e.nomber}
@@ -781,11 +781,11 @@ export function DU46JournalView({
                         }}
                         readOnly={isDispatcher || !!e.yuborildi}
                         placeholder={String(i + 1)}
-                        className="w-full rounded bg-transparent text-center font-black text-slate-400 outline-none focus:bg-white transition-all focus:text-sky-600"
+                        className="w-full rounded bg-transparent text-center font-black text-slate-400 outline-none focus:bg-white transition-all focus:text-purple-600"
                       />
                     </td>
 
-                    {/* ── Ustun 1: Oy va kun ─────────────────────── */}
+                    {/* в”Ђв”Ђ Ustun 1: Oy va kun в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
                     <td className="border-r border-slate-200 p-0.5">
                       <DateInput
                         value={e.oyKun1 || ''}
@@ -794,8 +794,8 @@ export function DU46JournalView({
                       />
                     </td>
 
-                    {/* ── Ustun 2: Soat va daqiqa ────────────────── */}
-                    <td className="border-r border-slate-200 p-0.5 align-top relative bg-sky-50/10">
+                    {/* в”Ђв”Ђ Ustun 2: Soat va daqiqa в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
+                    <td className="border-r border-slate-200 p-0.5 align-top relative bg-purple-50/10">
                       <div className="pb-[85px]">
                         <TimeInput
                           value={e.soatMinut1 || ''}
@@ -805,7 +805,7 @@ export function DU46JournalView({
                         />
                       </div>
 
-                      {/* Tasdiqlash vaqti (pastda) — avtomatik qo'yiladi */}
+                      {/* Tasdiqlash vaqti (pastda) вЂ” avtomatik qo'yiladi */}
                       {e.kamchilik && e.kamchilikBajarildi && (
                         <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center justify-end">
                           {e.kamchilikBBTasdiqladi && e.kamchilikBBVaqt ? (
@@ -817,12 +817,12 @@ export function DU46JournalView({
                       )}
                     </td>
 
-                    {/* ── Ustun 3: Kamchilik bayoni ─────────────── */}
+                    {/* в”Ђв”Ђ Ustun 3: Kamchilik bayoni в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
                     <td className="border-r border-slate-200 p-0.5 align-top relative min-w-[200px]">
                       <div className="pb-[85px]">
                         {isDispatcher ? (
                           <div className="w-full rounded px-3 py-2 text-[11px] font-medium text-slate-700 bg-white min-h-[60px]">
-                            {e.kamchilik || <span className="text-slate-300">—</span>}
+                            {e.kamchilik || <span className="text-slate-300">вЂ”</span>}
                           </div>
                         ) : (
                           <div className="relative group/text">
@@ -836,7 +836,7 @@ export function DU46JournalView({
                               className="w-full resize-y rounded bg-transparent px-3 py-2 text-[11px] font-medium text-slate-700 outline-none transition-all focus:bg-white focus:shadow-inner"
                             />
                             {canWriteCol3 && (
-                              <button onClick={() => setTaskModalIdx(i)} className="absolute top-1 right-1 p-1.5 rounded-lg bg-sky-50 text-sky-600 opacity-0 group-hover/text:opacity-100 transition-all hover:bg-sky-600 hover:text-white shadow-sm border border-sky-100">
+                              <button onClick={() => setTaskModalIdx(i)} className="absolute top-1 right-1 p-1.5 rounded-lg bg-purple-50 text-purple-600 opacity-0 group-hover/text:opacity-100 transition-all hover:bg-purple-600 hover:text-white shadow-sm border border-purple-100">
                                 <Plus size={10} strokeWidth={3} />
                               </button>
                             )}
@@ -844,7 +844,7 @@ export function DU46JournalView({
                         )}
                       </div>
 
-                      {/* ── Boshlandi / Tasdiqlash tugmalari ──── */}
+                      {/* в”Ђв”Ђ Boshlandi / Tasdiqlash tugmalari в”Ђв”Ђв”Ђв”Ђ */}
                       <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
                         {/* Yozuvchi: Boshlandi tugmasi */}
                         {e.kamchilik && iAmCreator && !e.kamchilikBajarildi && !e.yuborildi && (
@@ -853,7 +853,7 @@ export function DU46JournalView({
                             disabled={!e.oyKun1 || !e.soatMinut1}
                             className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${(!e.oyKun1 || !e.soatMinut1) ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'btn-gradient'}`}
                           >
-                            ▶ Boshlandi
+                            в–¶ Boshlandi
                           </button>
                         )}
 
@@ -874,7 +874,7 @@ export function DU46JournalView({
                             disabled={!e.kamchilikBajarildi}
                             className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${!e.kamchilikBajarildi ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-amber-500 text-white hover:bg-amber-600 border-transparent'}`}
                           >
-                            ✓ Tasdiqlash
+                            вњ“ Tasdiqlash
                           </button>
                         )}
 
@@ -890,9 +890,9 @@ export function DU46JournalView({
                       </div>
                     </td>
 
-                    {/* ── Ustunlar 4-9 (oraliq) ──────────────── */}
+                    {/* в”Ђв”Ђ Ustunlar 4-9 (oraliq) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
                     {(['oyKun2', 'soatMinut2', 'xabarUsuli', 'oyKun3', 'soatMinut3', 'dspImzo'] as (keyof DU46Entry)[]).map((field, fi) => (
-                      <td key={fi} className="border-r border-slate-200 p-0.5 bg-sky-50/5">
+                      <td key={fi} className="border-r border-slate-200 p-0.5 bg-purple-50/5">
                         {(field === 'oyKun2' || field === 'oyKun3') ? (
                           <DateInput
                             value={(e[field] as string) || ''}
@@ -917,7 +917,7 @@ export function DU46JournalView({
                       </td>
                     ))}
 
-                    {/* ── Ustun 10: Oy/kun ───────────────────── */}
+                    {/* в”Ђв”Ђ Ustun 10: Oy/kun в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
                     <td className="border-r border-slate-200 p-0.5">
                       <DateInput
                         value={e.oyKun4 || ''}
@@ -926,7 +926,7 @@ export function DU46JournalView({
                       />
                     </td>
 
-                    {/* ── Ustun 11: Soat va daqiqa ────────────── */}
+                    {/* в”Ђв”Ђ Ustun 11: Soat va daqiqa в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
                     <td className="border-r border-slate-200 p-0.5 align-top relative bg-amber-50/5">
                       <div className="pb-[85px]">
                         <TimeInput
@@ -937,7 +937,7 @@ export function DU46JournalView({
                         />
                       </div>
 
-                      {/* Tasdiqlash vaqti (pastda) — avtomatik qo'yiladi */}
+                      {/* Tasdiqlash vaqti (pastda) вЂ” avtomatik qo'yiladi */}
                       {e.bartarafInfo && e.bartarafBajarildi && e.kamchilikBBTasdiqladi && (
                         <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center justify-end">
                           {e.bartarafBBTasdiqladi && e.bartarafBBVaqt ? (
@@ -949,12 +949,12 @@ export function DU46JournalView({
                       )}
                     </td>
 
-                    {/* ── Ustun 12: Bartaraf tafsiloti ────────── */}
+                    {/* в”Ђв”Ђ Ustun 12: Bartaraf tafsiloti в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
                     <td className="p-0.5 align-top relative bg-amber-50/5 min-w-[200px]">
                       <div className="pb-[85px]">
                         {isDispatcher ? (
                           <div className="w-full rounded px-3 py-2 text-[11px] font-medium text-slate-700 bg-white min-h-[60px]">
-                            {e.bartarafInfo || <span className="text-slate-300">—</span>}
+                            {e.bartarafInfo || <span className="text-slate-300">вЂ”</span>}
                           </div>
                         ) : (
                           <textarea
@@ -976,7 +976,7 @@ export function DU46JournalView({
                         )}
                       </div>
 
-                      {/* ── Bajarildi / Tasdiqlash tugmalari ── */}
+                      {/* в”Ђв”Ђ Bajarildi / Tasdiqlash tugmalari в”Ђв”Ђ */}
                       <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
                         {/* Elektromexanik: Bajarildi tugmasi */}
                         {e.bartarafInfo && isWorker && !e.bartarafBajarildi && !e.yuborildi && (
@@ -985,7 +985,7 @@ export function DU46JournalView({
                             disabled={!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi}
                             className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${(!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi) ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'btn-gradient'}`}
                           >
-                            ✓ Bajarildi
+                            вњ“ Bajarildi
                           </button>
                         )}
 
@@ -1007,7 +1007,7 @@ export function DU46JournalView({
                               disabled={!e.bartarafBajarildi || !e.kamchilikBBTasdiqladi}
                               className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${(!e.bartarafBajarildi || !e.kamchilikBBTasdiqladi) ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-amber-500 text-white hover:bg-amber-600 border-transparent'}`}
                             >
-                              ✓ Tasdiqlash
+                              вњ“ Tasdiqlash
                             </button>
                             {!e.kamchilikBBTasdiqladi && (
                               <span className="text-[8px] font-black text-red-400 text-center leading-tight px-1 mt-1 uppercase tracking-tighter">
@@ -1035,7 +1035,7 @@ export function DU46JournalView({
           </table>
         </div>
 
-        {/* ── Qator qo'shish / o'chirish ───────────────────── */}
+        {/* в”Ђв”Ђ Qator qo'shish / o'chirish в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
         {isEditor && (() => {
           const last = entries[entries.length - 1]
           const lastHasData = last.kamchilik || last.bartarafInfo
@@ -1056,12 +1056,12 @@ export function DU46JournalView({
           )
         })()}
 
-        {/* ── Yuborish (ishchi yoki BB) ─────────────────────── */}
+        {/* в”Ђв”Ђ Yuborish (ishchi yoki BB) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
         {isEditor && hasAnyEntry && (
           <>
             {/* Kutilayotgan status */}
             {kutilayotganCount > 0 && (
-              <div className="mt-6 flex items-center justify-center gap-2 rounded-2xl bg-sky-50 py-4 text-sm font-black text-sky-600 border border-sky-100 uppercase tracking-widest shadow-sm">
+              <div className="mt-6 flex items-center justify-center gap-2 rounded-2xl bg-purple-50 py-4 text-sm font-black text-purple-600 border border-purple-100 uppercase tracking-widest shadow-sm">
                 <Send size={18} strokeWidth={2.5} /> {kutilayotganCount} ta tasdiq kutilmoqda
               </div>
             )}
@@ -1079,7 +1079,7 @@ export function DU46JournalView({
                 </span>
                 <button
                   onClick={handleDispetchergaYuborish}
-                  className="flex items-center gap-3 rounded-xl bg-sky-600 px-8 py-4 font-semibold text-white shadow-lg shadow-sky-500/20 transition-all hover:bg-sky-700 hover:scale-[1.02] active:scale-95"
+                  className="flex items-center gap-3 rounded-xl bg-purple-600 px-8 py-4 font-semibold text-white shadow-lg shadow-purple-500/20 transition-all hover:bg-purple-700 hover:scale-[1.02] active:scale-95"
                 >
                   <Send size={20} strokeWidth={2.5} />
                   <span>Dispetcherga yuborish</span>
@@ -1089,7 +1089,7 @@ export function DU46JournalView({
           </>
         )}
 
-        {/* ── Dispetcher: Qabul qilish ─────────────────────── */}
+        {/* в”Ђв”Ђ Dispetcher: Qabul qilish в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
         {isDispatcher && hasAnyEntry && entries.some(e => e.yuborildi && !e.dispetcherQabulQildi) && (
           <div className="mt-8 flex justify-end">
             <button
@@ -1117,9 +1117,9 @@ export function DU46JournalView({
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 // SHU-2 JURNAL KO'RINISHI (O'ZGARISHSIZ)
-// ═══════════════════════════════════════════════════════════════════════════════
+// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
 
 export function SHU2JournalView({
   stationId,
@@ -1167,7 +1167,7 @@ export function SHU2JournalView({
         setEntries(Array.from({ length: 7 }, (_, i) => ({ ...EMPTY_SHU2(), nomber: String(i + 1) })))
       }
     } catch (err) {
-      console.error('❌ SHU-2 journal yuklash xatosi:', err)
+      console.error('вќЊ SHU-2 journal yuklash xatosi:', err)
     } finally {
       if (!isSilent) setLoading(false)
     }
@@ -1216,11 +1216,11 @@ export function SHU2JournalView({
       }
       setEntries(updated)
       await upsertJournal(stationId, 'shu2', updated, userName)
-      setMsg('Tasdiqlandi ✓')
+      setMsg('Tasdiqlandi вњ“')
       onAccepted?.() // worker action completed
       setTimeout(() => setMsg(null), 2000)
     } catch (err) {
-      console.error('❌ SHU-2 Tasdiqlash xatosi:', err)
+      console.error('вќЊ SHU-2 Tasdiqlash xatosi:', err)
       setEntries(prev)
       setMsg(err instanceof Error ? err.message : 'Xatolik')
       setTimeout(() => setMsg(null), 3000)
@@ -1252,7 +1252,7 @@ export function SHU2JournalView({
     doc.text('SMB va aloqa obyektlarida bajarilgan ishlarni hisobga olish jurnali', 14, 25)
     doc.text(`Sana: ${dateStr}`, 14, 32)
 
-    const tableColumn = ['№', 'Sana', 'Navbatchilikdagi yozuv va bajarilgan ishlar nomi', 'Imzo']
+    const tableColumn = ['в„–', 'Sana', 'Navbatchilikdagi yozuv va bajarilgan ishlar nomi', 'Imzo']
     const tableRows = entries
       .filter(e => e.sana || e.yozuv)
       .map((e, i) => [
@@ -1322,7 +1322,7 @@ export function SHU2JournalView({
           <table className="w-full border-collapse text-[12px] text-slate-700">
             <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-tight text-slate-500 border-b-2 border-slate-200">
               <tr>
-                <th className="w-[6%] border-r border-b border-slate-200 p-4 text-center">№</th>
+                <th className="w-[6%] border-r border-b border-slate-200 p-4 text-center">в„–</th>
                 <th className="w-[14%] border-r border-b border-slate-200 p-4 text-center">Sana</th>
                 <th className="w-[60%] border-r border-b border-slate-200 p-4 text-center text-left">Navbatchilikdagi yozuv va bajarilgan ishlar nomi</th>
                 <th className="w-[20%] border-b border-slate-200 p-4 text-center">Imzo</th>
@@ -1343,7 +1343,7 @@ export function SHU2JournalView({
                         onChange={ev => update(i, 'nomber', ev.target.value)}
                         readOnly={!isWorker || isLocked}
                         placeholder={String(i + 1)}
-                        className="w-full rounded bg-transparent text-center font-black text-slate-400 outline-none transition-all focus:bg-white focus:text-sky-600"
+                        className="w-full rounded bg-transparent text-center font-black text-slate-400 outline-none transition-all focus:bg-white focus:text-purple-600"
                       />
                     </td>
                     <td className="border-r border-slate-200 p-0.5">
@@ -1366,7 +1366,7 @@ export function SHU2JournalView({
                         {isLocked ? (
                           <div className="flex flex-col items-center gap-1 w-full">
                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bajardi:</span>
-                            <div className="flex items-center gap-2 rounded-xl bg-sky-50 px-3 py-1.5 text-[10px] font-bold text-sky-600 border border-sky-100 w-full justify-center shadow-sm">
+                            <div className="flex items-center gap-2 rounded-xl bg-purple-50 px-3 py-1.5 text-[10px] font-bold text-purple-600 border border-purple-100 w-full justify-center shadow-sm">
                               <CheckCircle2 size={10} strokeWidth={3} /> <span className="truncate">{e.tasdiqlaganImzo || e.imzo}</span>
                             </div>
                           </div>
@@ -1374,10 +1374,10 @@ export function SHU2JournalView({
                           <button onClick={() => handleTasdiqlash(i)}
                             disabled={!(e.sana?.trim() && e.yozuv?.trim())}
                             className={`w-full rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${e.sana?.trim() && e.yozuv?.trim() ? 'btn-gradient' : 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed'}`}>
-                            ✓ Bajarildi
+                            вњ“ Bajarildi
                           </button>
                         ) : (
-                          <span className="text-[10px] font-black text-slate-200">—</span>
+                          <span className="text-[10px] font-black text-slate-200">вЂ”</span>
                         )}
                       </div>
                     </td>
@@ -1404,3 +1404,4 @@ export function SHU2JournalView({
     </div>
   )
 }
+
