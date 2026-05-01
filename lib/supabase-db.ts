@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { User, WorkReport, PremiyaReport, StationSchema, ReportEntry, GrafikTuri } from '@/types';
+import type { User, WorkReport, PremiyaReport, StationSchema, ReportEntry, GrafikTuri, StationJournal, JournalType, DU46Entry, SHU2Entry } from '@/types';
 
 // Stations
 import { getStations, getStation } from './store';
@@ -663,7 +663,6 @@ export async function deleteGlobalGraphicFile(schemaId: string): Promise<void> {
 }
 
 // ========== ISH JURNALLARI (DU-46, SHU-2) ==========
-import type { StationJournal, JournalType, DU46Entry, SHU2Entry } from '@/types'
 
 interface DbJournalRow {
   id: string

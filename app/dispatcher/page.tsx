@@ -1,14 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
+/* eslint-disable @next/next/no-img-element */
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 import {
   getStations,
 } from '@/lib/store'
 import {
-  getCurrentSession,
   getWorkers,
   addWorker,
   updateWorker,
@@ -25,9 +23,10 @@ import {
   uploadGlobalGraphicFile,
   deleteGlobalGraphicFile,
   getAllJournals,
-  signOut
 } from '@/lib/supabase-db'
-import type { User, WorkReport, PremiyaReport, StationSchema, JournalType, ReportEntry, StationJournal, DU46Entry, SHU2Entry } from '@/types'
+import { useSessionGuard, useToast } from '@/lib/hooks'
+import { ToastContainer } from '@/components/ToastContainer'
+import type { User, WorkReport, PremiyaReport, StationSchema, JournalType, ReportEntry, StationJournal, DU46Entry, SHU2Entry, Station, PremiyaEntry } from '@/types'
 import { MONTHS } from '@/lib/constants'
 import { JournalSelectModal, JournalMonthSelectModal, DU46JournalView, SHU2JournalView } from '@/components/JournalView'
 import {
@@ -39,7 +38,6 @@ import {
   Award,
   ChevronRight,
   ChevronLeft,
-  ChevronDown,
   CheckCircle2,
   Clock,
   X,
@@ -55,7 +53,7 @@ import {
 
 type Tab = 'bekatlar' | 'arxiv' | 'grafiklar'
 
-interface WorkerEditData {
+type _WorkerEditData = {
   fullName: string
   login: string
   password?: string
@@ -65,8 +63,8 @@ interface WorkerEditData {
 }
 
 export default function DispatcherPage() {
-  const router = useRouter()
-  const [session, setSessionState] = useState<User | null>(null)
+  const { session, loading: sessionLoading, handleSignOut } = useSessionGuard('dispatcher')
+  const toast = useToast()
   const [tab, setTab] = useState<Tab>('bekatlar')
 
   // Real data from Supabase
@@ -76,7 +74,7 @@ export default function DispatcherPage() {
   const [globalGraphics, setGlobalGraphics] = useState<StationSchema[]>([])
   const [allJournals, setAllJournals] = useState<StationJournal[]>([])
 
-  const [loading, setLoading] = useState(true)
+  const [_loading, setLoading] = useState(true)
   const [selectedStation, setSelectedStation] = useState<string | null>(null)
   const [selectedReportType, setSelectedReportType] = useState<'oylik' | 'premiya' | 'sxemalar' | 'jurnallar' | null>(null)
   const [showMobileStations, setShowMobileStations] = useState(false)
@@ -104,36 +102,46 @@ export default function DispatcherPage() {
     try {
       const w = await getWorkers()
       setWorkers(w.filter(user => user.role !== 'dispatcher'))
-    } catch (e) { console.error('Error fetching workers', e) }
-  }, [])
+    } catch {
+      toast.error('Ishchilarni yuklashda xatolik')
+    }
+  }, [toast])
 
   const loadWorkReports = useCallback(async () => {
     try {
       const r = await getAllReports()
       setAllReports(r)
-    } catch (e) { console.error('Error fetching work reports', e) }
-  }, [])
+    } catch {
+      toast.error('Hisobotlarni yuklashda xatolik')
+    }
+  }, [toast])
 
   const loadPremiyaReports = useCallback(async () => {
     try {
       const p = await getPremiyaReports()
       setAllPremiyaReports(p)
-    } catch (e) { console.error('Error fetching premiya reports', e) }
-  }, [])
+    } catch {
+      toast.error('Premiya hisobotlarini yuklashda xatolik')
+    }
+  }, [toast])
 
   const loadGraphics = useCallback(async () => {
     try {
       const g = await getGlobalGraphics()
       setGlobalGraphics(g)
-    } catch (e) { console.error('Error fetching graphics', e) }
-  }, [])
+    } catch {
+      toast.error('Grafiklarni yuklashda xatolik')
+    }
+  }, [toast])
 
   const loadJournals = useCallback(async () => {
     try {
       const j = await getAllJournals()
       setAllJournals(j)
-    } catch (e) { console.error('Error fetching journals', e) }
-  }, [])
+    } catch {
+      toast.error('Jurnallarni yuklashda xatolik')
+    }
+  }, [toast])
 
   const refreshData = useCallback(async () => {
     setLoading(true)
@@ -147,55 +155,34 @@ export default function DispatcherPage() {
     setLoading(false)
   }, [loadWorkers, loadWorkReports, loadPremiyaReports, loadGraphics, loadJournals])
 
+  // Sessiya tayyor bo'lganda ma'lumotlarni yuklash
   useEffect(() => {
-    async function init() {
-      const u = await getCurrentSession()   // Supabase bilan tekshiradi
-      if (!u) {
-        await signOut()
-        router.replace('/')
-        return
-      }
-      if (u.role !== 'dispatcher') {
-        router.replace('/')
-        return
-      }
-      setSessionState(u)
-      refreshData() // background process, removes TTI block
-    }
-    init()
-  }, [router, refreshData])
+    if (!session) return
+    refreshData()
+  }, [session, refreshData])
 
   useEffect(() => {
-    // ─── Realtime Subscriptions ───────────────
+    // Realtime Subscriptions — faqat o'zgargan jadval uchun qayta yuklash
     const workReportsChannel = supabase
       .channel('dispatcher_work_reports')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'work_reports' }, () => {
-        console.log('🚀 Realtime: Yangi hisobot!')
         loadWorkReports()
       })
-      .subscribe((status) => {
-        console.log('📡 work_reports kanal:', status)
-      })
+      .subscribe()
 
     const premiyaReportsChannel = supabase
       .channel('dispatcher_premiya_reports')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'premiya_reports' }, () => {
-        console.log('🚀 Realtime: Yangi premiya!')
         loadPremiyaReports()
       })
-      .subscribe((status) => {
-        console.log('📡 premiya_reports kanal:', status)
-      })
+      .subscribe()
 
     const journalsChannel = supabase
       .channel('dispatcher_journals')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals' }, (payload) => {
-        console.log('🚀 Realtime: Jurnal yangilandi!', payload.eventType)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals' }, () => {
         loadJournals()
       })
-      .subscribe((status) => {
-        console.log('📡 station_journals kanal:', status)
-      })
+      .subscribe()
 
     return () => {
       supabase.removeChannel(workReportsChannel)
@@ -264,7 +251,7 @@ export default function DispatcherPage() {
     return counts
   }, [du46PendingCounts, shu2PendingCounts])
 
-  const totalPending = useMemo(() => {
+  const _totalPending = useMemo(() => {
     return Object.values(pendingCounts).reduce((a, b) => a + b, 0) +
       Object.values(premiyaPendingCounts).reduce((a, b) => a + b, 0) +
       Object.values(journalPendingCounts).reduce((a, b) => a + b, 0)
@@ -424,7 +411,7 @@ export default function DispatcherPage() {
     }
   }
 
-  if (!session) return (
+  if (!session || sessionLoading) return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50">
       <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-sky-500" />
     </div>
@@ -459,7 +446,7 @@ export default function DispatcherPage() {
               </div>
 
               <button
-                onClick={async () => { await signOut(); router.push('/') }}
+                onClick={handleSignOut}
                 className="group flex h-12 w-12 items-center justify-center rounded-2xl border border-red-100/60 bg-red-50/50 backdrop-blur-sm transition-all duration-200 hover:bg-red-100 hover:shadow-md active:scale-95"
               >
                 <LogOut className="h-5 w-5 text-red-500 transition-transform group-hover:translate-x-0.5" />
@@ -784,7 +771,7 @@ export default function DispatcherPage() {
         </div>
       )}
 
-
+      <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
@@ -856,7 +843,7 @@ function TabButton({ active, onClick, label, icon }: { active: boolean, onClick:
   )
 }
 
-function ReportTypeBtn({ active, icon, label, onClick, count, color = 'cyan' }: { active: boolean, icon: React.ReactNode, label: string, onClick: () => void, count?: number, color?: 'cyan' | 'amber' | 'blue' }) {
+function _ReportTypeBtn({ active, icon, label, onClick, count, color = 'cyan' }: { active: boolean, icon: React.ReactNode, label: string, onClick: () => void, count?: number, color?: 'cyan' | 'amber' | 'blue' }) {
   const colorMap: Record<string, string> = {
     cyan: 'border-sky-200 text-sky-600 bg-sky-50 hover:bg-sky-100',
     amber: 'border-amber-200 text-amber-600 bg-amber-50 hover:bg-amber-100',
@@ -945,7 +932,7 @@ function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, messa
         <div className="rounded-2xl bg-slate-50/80 p-6 border border-slate-100">
           <label className="mb-4 block text-[10px] font-black uppercase tracking-widest text-slate-400">Bekatlarni biriktirish ({form.stationIds.length})</label>
           <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
-            {stations.map((s: any) => (
+            {stations.map((s: Station) => (
               <button
                 key={s.id}
                 type="button"
@@ -994,23 +981,24 @@ function FormGroup({ label, value, onChange, placeholder, type = 'text' }: { lab
   )
 }
 
-function ReportList({ reports, onConfirm, onConfirmRow }: {
+function ReportList({ reports, onConfirm, onConfirmRow: _onConfirmRow }: {
   reports: WorkReport[]
   onConfirm: (reportId: string) => void
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onConfirmRow: (reportId: string, idx: number) => void
 }) {
   if (reports.length === 0) return <EmptyState label="Hisobotlar yo'q" />
   return (
     <div className="space-y-4">
       {reports.slice().sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()).map((r) => (
-        <ReportCard key={r.id} report={r} onConfirm={() => onConfirm(r.id)} onConfirmRow={(idx: number) => onConfirmRow(r.id, idx)} />
+        <ReportCard key={r.id} report={r} onConfirm={() => onConfirm(r.id)} onConfirmRow={(idx: number) => _onConfirmRow(r.id, idx)} />
       ))}
     </div>
   )
 }
 
 /** NSH ma'lumotini entry matnidan parse qiladi */
-function parseNshFromEntry(entry: ReportEntry): string {
+function _parseNshFromEntry(entry: ReportEntry): string {
   // haftalikJadval va yillikJAdval ichidan [NSH-01 7.1] formatidagi textni ajratish
   const text = entry.haftalikJadval || entry.yillikJadval || ''
   const match = text.match(/^\[([^\]]+)\]/)
@@ -1087,8 +1075,8 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
                   const printWindow = window.open('', '_blank');
                   if (!printWindow) return;
                   const entriesHtml = (report.entries || [])
-                    .filter((e: any) => e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish)
-                    .map((e: any) => `
+                    .filter((e: ReportEntry) => e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish)
+                    .map((e: ReportEntry) => `
                       <tr>
                         <td style="text-align:center">${e.ragat || ''}</td>
                         <td>${e.haftalikJadval || ''}</td>
@@ -1174,7 +1162,7 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
                 </thead>
                 <tbody>
                   {(report.entries || []).filter(e => e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish).map((e, idx) => {
-                    const originalIndex = report.entries.findIndex(item => item === e);
+                    const _originalIndex = report.entries.findIndex(item => item === e);
                     return (
                       <tr key={idx} className="border-b border-slate-100 hover:bg-white transition-colors">
                         <td className="border-r border-slate-200 p-2 text-center font-bold text-slate-400">{e.ragat}</td>
@@ -1263,7 +1251,7 @@ function PremiyaCard({ report, onConfirm }: {
                   doc.setFontSize(10)
                   doc.text(`Sana: ${report.month}`, 14, 22)
                   const tableColumn = ['№', 'I.SH.', 'Lavozimi', 'Tabel №', "Rag'bat. %", 'Eslatma']
-                  const tableRows = report.entries.filter((en: any) => en.ish || en.lavozim || en.foiz).map((en: any, idx: number) => [String(idx + 1), en.ish, en.lavozim, en.tabelNomeri, en.foiz ? en.foiz + '%' : '', en.eslatma])
+                  const tableRows = report.entries.filter((en: PremiyaEntry) => en.ish || en.lavozim || en.foiz).map((en: PremiyaEntry, idx: number) => [String(idx + 1), en.ish, en.lavozim, en.tabelNomeri, en.foiz ? en.foiz + '%' : '', en.eslatma])
                   autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30, styles: { font: 'helvetica', fontSize: 8 }, headStyles: { fillColor: [245, 158, 11] } })
                   doc.save(`Premiya_${report.stationName}_${report.month}.pdf`)
                 }}
@@ -1469,7 +1457,7 @@ function ArchiveView({ stations, allReports, allJournals, onConfirm, onConfirmEn
     ? allJournals.filter(j => j.stationId === selStation && j.journalType === 'shu2' && j.updatedAt.startsWith(`${selYear}-${String(selMonth + 1).padStart(2, '0')}`))
     : []
 
-  const selStationName = stations.find((s: any) => s.id === selStation)?.name || ''
+  const selStationName = stations.find((s: Station) => s.id === selStation)?.name || ''
 
   return (
     <>
@@ -1624,7 +1612,7 @@ function ArchiveView({ stations, allReports, allJournals, onConfirm, onConfirmEn
   )
 }
 
-// Journal Archive Card komponenti - to'liq ko'rinish + PDF yuklab olish
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function JournalArchiveCard({ journal, type, stationName }: {
   journal: StationJournal
   type: 'du46' | 'shu2'
@@ -1639,8 +1627,12 @@ function JournalArchiveCard({ journal, type, stationName }: {
   const du46Entries = entries as DU46Entry[]
   const shu2Entries = entries as SHU2Entry[]
 
-  const qabulCount = entries.filter(e => (e as any).dispetcherQabulQildi).length
-  const yuborildiCount = entries.filter(e => (e as any).yuborildi).length
+  const qabulCount = type === 'du46'
+    ? du46Entries.filter(e => e.dispetcherQabulQildi).length
+    : shu2Entries.filter(e => e.dispetcherQabulQildi).length
+  const yuborildiCount = type === 'du46'
+    ? du46Entries.filter(e => e.yuborildi).length
+    : shu2Entries.filter(e => e.yuborildi).length
   const filteredEntries = entries.filter(e => type === 'du46' ? (e as DU46Entry).kamchilik || (e as DU46Entry).bartarafInfo : (e as SHU2Entry).yozuv)
 
   // PDF yuklab olish

@@ -1,62 +1,49 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
+/* eslint-disable @next/next/no-img-element */
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 import {
   getStation,
 } from '@/lib/store'
 import {
-  getCurrentSession,
   getReportsByWorker,
   getPremiyasByWorker,
-  upsertReport,
-  updateReportEntries,
-  upsertPremiyaReport,
-  getSchemasByStation,
-  getGlobalGraphics,
   signOut,
   getPendingJournalCounts
 } from '@/lib/supabase-db'
-import type { User, WorkReport, ReportEntry, PremiyaReport, PremiyaEntry, StationSchema, JournalType } from '@/types'
+import { useSessionGuard, useToast } from '@/lib/hooks'
+import { ToastContainer } from '@/components/ToastContainer'
+import type { WorkReport, ReportEntry, PremiyaReport, JournalType } from '@/types'
 import { MONTHS } from '@/lib/constants'
 import { JournalSelectModal, JournalMonthSelectModal, DU46JournalView, SHU2JournalView } from '@/components/JournalView'
 import { BigActionCard, HeaderCard, JournalForm, WorkerGraphicsView, WorkerSchemasView, PremiyaForm, WorkerTasksModal } from '@/components/worker/WorkerComponents'
-import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, type ParsedTaskItem } from '@/lib/reja-data'
 import {
-  LayoutDashboard,
   FileText,
   Award,
   Map as MapIcon,
   ChevronLeft,
   LogOut,
-  Plus,
-  Trash2,
   Download,
-  Eye,
-  Clock,
-  CheckCircle2,
-  ChevronRight,
-  Menu,
-  X,
   BookOpen
 } from 'lucide-react'
 
-const TOTAL_ROWS = 14
-const PREMIYA_ROWS = 12
+const _TOTAL_ROWS = 14
+const _PREMIYA_ROWS = 12
 
 export default function WorkerPage() {
-  const router = useRouter()
-  const [session, setSessionState] = useState<User | null>(null)
+  const { session, loading: sessionLoading } = useSessionGuard('worker')
+  const toast = useToast()
   const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'selectPlanType' | 'journal' | 'viewReport' | 'premiyaForm' | 'viewPremiya' | 'sxemalar' | 'grafiklar' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'kunlikIshlar'>('home')
 
   const [reports, setReports] = useState<WorkReport[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [premiyaReports, setPremiyaReports] = useState<PremiyaReport[]>([])
   const [activeStationId, setActiveStationId] = useState<string>('')
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
   const [selectedReport, setSelectedReport] = useState<WorkReport | null>(null)
   const [selectedPremiya, setSelectedPremiya] = useState<PremiyaReport | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(true)
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
   const [selectedJournalType, setSelectedJournalType] = useState<JournalType | null>(null)
@@ -67,24 +54,28 @@ export default function WorkerPage() {
     try {
       const counts = await getPendingJournalCounts(sid, role)
       setPendingCounts(counts)
-    } catch (err) {
-      console.error('Error pending counts', err)
+    } catch {
+      toast.error('Pending counts yuklashda xatolik')
     }
-  }, [])
+  }, [toast])
 
   const loadWorkReports = useCallback(async (userId: string) => {
     try {
       const r = await getReportsByWorker(userId)
       setReports(r)
-    } catch (e) { console.error('Error fetching work reports', e) }
-  }, [])
+    } catch {
+      toast.error('Hisobotlarni yuklashda xatolik')
+    }
+  }, [toast])
 
   const loadPremiyaReports = useCallback(async (userId: string) => {
     try {
       const p = await getPremiyasByWorker(userId)
       setPremiyaReports(p)
-    } catch (e) { console.error('Error fetching premiya reports', e) }
-  }, [])
+    } catch {
+      toast.error('Premiyalarni yuklashda xatolik')
+    }
+  }, [toast])
 
   const refreshData = useCallback(async (userId: string) => {
     setLoading(true)
@@ -95,31 +86,14 @@ export default function WorkerPage() {
     setLoading(false)
   }, [loadWorkReports, loadPremiyaReports])
 
+  // Sessiya tayyor bo'lganda ma'lumotlarni yuklash
   useEffect(() => {
-    async function init() {
-      const u = await getCurrentSession()   // Supabase bilan tekshiradi
-      if (!u) {
-        await signOut()
-        router.replace('/')
-        return
-      }
-      if (u.role === 'dispatcher') {
-        router.replace('/')
-        return
-      }
-      if (u.role === 'bekat_boshlighi') {
-        router.replace('/bekat-boshlighi')
-        return
-      }
-      setSessionState(u)
-      refreshData(u.id) // background loading
-
-      const stationsList = u.stationIds || []
-      if (stationsList.length > 1) setView('selectStation')
-      else if (stationsList.length === 1) setActiveStationId(stationsList[0])
-    }
-    init()
-  }, [router, refreshData])
+    if (!session) return
+    refreshData(session.id)
+    const stationsList = session.stationIds || []
+    if (stationsList.length > 1) setView('selectStation')
+    else if (stationsList.length === 1) setActiveStationId(stationsList[0])
+  }, [session, refreshData])
 
   useEffect(() => {
     if (!activeStationId || !session?.role) return
@@ -216,7 +190,7 @@ export default function WorkerPage() {
 
   const missedTasksCount = qolibKetgan.length
 
-  if (!session) return <div className="flex min-h-screen items-center justify-center bg-slate-50"><div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-sky-500" /></div>
+  if (!session || sessionLoading) return <div className="flex min-h-screen items-center justify-center bg-slate-50"><div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-sky-500" /></div>
 
   const station = activeStationId ? getStation(activeStationId) : null
   const stationName = station?.name || '...'
@@ -240,7 +214,7 @@ export default function WorkerPage() {
               {(session?.stationIds?.length || 0) > 1 && view !== 'selectStation' && (
                 <button onClick={() => setView('selectStation')} className="rounded-xl border border-sky-200/60 bg-sky-50/80 px-3 py-1.5 text-[10px] font-black text-sky-600 uppercase tracking-widest shadow-sm hover:bg-sky-100 transition-all">Bekatlar</button>
               )}
-              <button onClick={async () => { await signOut(); router.push('/') }} className="rounded-xl border border-red-200/60 bg-red-50/80 p-2 text-red-500 hover:bg-red-100 transition-all shadow-sm"><LogOut size={20} /></button>
+              <button onClick={async () => { await signOut(); window.location.href = '/' }} className="rounded-xl border border-red-200/60 bg-red-50/80 p-2 text-red-500 hover:bg-red-100 transition-all shadow-sm"><LogOut size={20} /></button>
             </div>
           </div>
         </header>
@@ -538,11 +512,7 @@ export default function WorkerPage() {
           )}
         </main>
       </div>
-      <style jsx global>{`
-        @media print {
-          .print\\:hidden { display: none !important; }
-        }
-      `}</style>
+      <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
     </div>
   )
 

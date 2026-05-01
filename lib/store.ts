@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
-import { Station, User } from '@/types';
+import { Station } from '@/types';
 
 export const STATIONS: Station[] = [
   { id: "st_1", name: "Malikobod" },

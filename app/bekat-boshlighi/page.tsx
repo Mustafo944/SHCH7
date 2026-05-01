@@ -1,21 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
-import {
-  getStations,
-  getStation,
-} from '@/lib/store'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useSessionGuard, useRealtimeSubscription, useToast } from '@/lib/hooks'
+import { ToastContainer } from '@/components/ToastContainer'
+import { getStations, getStation } from '@/lib/store'
 import { DU46JournalView, JournalMonthSelectModal } from '@/components/JournalView'
 import { WorkerSchemasView } from '@/components/worker/WorkerComponents'
-import {
-  getCurrentSession,
-  signOut,
-  getPendingJournalCounts
-} from '@/lib/supabase-db'
-import type { User } from '@/types'
+import { getPendingJournalCounts } from '@/lib/supabase-db'
 import {
   LogOut,
   MapPin,
@@ -25,9 +16,9 @@ import {
 } from 'lucide-react'
 
 export default function BekatBoshlighiPage() {
-  const router = useRouter()
-  const [session, setSessionState] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { session, loading, handleSignOut } = useSessionGuard('bekat_boshlighi')
+  const toast = useToast()
+
   const [selectedStation, setSelectedStation] = useState<string | null>(null)
   const [showJournal, setShowJournal] = useState(false)
   const [showMonthSelect, setShowMonthSelect] = useState(false)
@@ -35,54 +26,39 @@ export default function BekatBoshlighiPage() {
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
 
+  const allStations = getStations()
+
+  const myStations = useMemo(() => {
+    if (!session?.stationIds?.length) return []
+    return allStations.filter(s => session.stationIds.includes(s.id))
+  }, [session, allStations])
+
   const loadPendingCounts = useCallback(async (sid: string, role: string) => {
     try {
       const counts = await getPendingJournalCounts(sid, role)
       setPendingCounts(counts)
-    } catch (err) {
-      console.error('Error fetching pending counts', err)
+    } catch {
+      toast.error('Pending counts yuklashda xatolik')
     }
-  }, [])
-
-  const allStations = getStations()
-
-  // Bekat boshlig'i faqat o'ziga biriktirilgan bekatlarni ko'radi
-  const myStations = useMemo(() => {
-    if (!session || !session.stationIds || session.stationIds.length === 0) return []
-    return allStations.filter(s => session.stationIds.includes(s.id))
-  }, [session, allStations])
-
-  useEffect(() => {
-    async function init() {
-      const u = await getCurrentSession()
-      if (!u) {
-        await signOut()
-        router.replace('/')
-        return
-      }
-      if (u.role !== 'bekat_boshlighi') {
-        router.replace('/')
-        return
-      }
-      setSessionState(u)
-      setLoading(false)
-    }
-    init()
-  }, [router])
+  }, [toast])
 
   useEffect(() => {
     if (!selectedStation || !session?.role) return
     loadPendingCounts(selectedStation, session.role)
+  }, [selectedStation, session?.role, loadPendingCounts])
 
-    const journalChannel = supabase
-      .channel(`bb_journals_${selectedStation}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals', filter: `station_id=eq.${selectedStation}` }, () => {
-        loadPendingCounts(selectedStation, session!.role)
-      })
-      .subscribe()
-
-    return () => { supabase.removeChannel(journalChannel) }
-  }, [selectedStation, session, loadPendingCounts])
+  // Realtime: jurnal yangilanganda pending countni qayta olish
+  useRealtimeSubscription(
+    selectedStation && session?.role
+      ? [{
+          channelName: `bb_journals_${selectedStation}`,
+          table: 'station_journals',
+          filter: `station_id=eq.${selectedStation}`,
+          onEvent: () => loadPendingCounts(selectedStation, session!.role),
+        }]
+      : [],
+    !!selectedStation && !!session?.role
+  )
 
   if (loading) return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-sky-50">
@@ -121,7 +97,7 @@ export default function BekatBoshlighiPage() {
               </div>
 
               <button
-                onClick={async () => { await signOut(); router.push('/') }}
+                onClick={handleSignOut}
                 className="group flex h-12 w-12 items-center justify-center rounded-2xl border border-red-200 bg-red-50 transition-all hover:bg-red-100 hover:shadow-sm active:scale-95"
               >
                 <LogOut className="h-5 w-5 text-red-500 transition-transform group-hover:translate-x-0.5" />
@@ -241,6 +217,8 @@ export default function BekatBoshlighiPage() {
           )}
         </main>
       </div>
+
+      <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
     </div>
   )
 }
