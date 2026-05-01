@@ -830,8 +830,8 @@ function StatCard({ icon, label, value, active, clickable, onClick, color = 'pur
         <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${s.iconBg} ${s.iconText} transition-transform duration-300 group-hover:scale-110`}>
           {icon}
         </div>
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-tight">{label}</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest text-slate-400 leading-tight line-clamp-2" title={label}>{label}</p>
           <p className="text-3xl font-black text-slate-900 mt-0.5">{value}</p>
         </div>
       </div>
