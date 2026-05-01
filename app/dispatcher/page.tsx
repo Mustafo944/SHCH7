@@ -487,7 +487,7 @@ export default function DispatcherPage() {
             />
             <StatCard
               icon={<AlertTriangle />}
-              label="Bugun bajarilmagan"
+              label="Bajarilmagan ishlar"
               value={todayBajarilmagan.length}
               active={todayBajarilmagan.length > 0}
               onClick={() => setTodayModal('bajarilmagan')}
