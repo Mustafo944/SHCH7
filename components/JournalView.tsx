@@ -368,7 +368,7 @@ export function DU46JournalView({
   stationId: string
   stationName: string
   userName: string
-  userRole: 'worker' | 'bekat_boshlighi' | 'dispatcher'
+  userRole: string
   journalMonth?: string
   onClose: () => void
   onAccepted?: () => void
@@ -388,8 +388,8 @@ export function DU46JournalView({
   const journalMonthLabel = getJournalMonthLabel(journalMonth)
 
   // ─── Rollar ────────────────────────────────────────────────────────
-  const isWorker = userRole === 'worker'
-  const isBB = userRole === 'bekat_boshlighi'
+  const isWorker = ['worker', 'elektromexanik', 'elektromontyor'].includes(userRole)
+  const isBB = ['bekat_boshlighi', 'bekat_navbatchisi'].includes(userRole)
   const isDispatcher = userRole === 'dispatcher'
   const isEditor = isWorker || isBB // Yozish mumkin bo'lgan rollar
 
@@ -1133,7 +1133,7 @@ export function SHU2JournalView({
   stationId: string
   stationName: string
   userName: string
-  userRole: 'worker' | 'bekat_boshlighi' | 'dispatcher'
+  userRole: string
   journalMonth?: string
   onClose: () => void
   onAccepted?: () => void
@@ -1144,7 +1144,7 @@ export function SHU2JournalView({
   const [msg, setMsg] = useState<string | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
 
-  const isWorker = userRole === 'worker'
+  const isWorker = ['worker', 'elektromexanik', 'elektromontyor'].includes(userRole)
   const isDispatcher = userRole === 'dispatcher'
 
   const loadJournalData = useCallback(async (isSilent = false) => {

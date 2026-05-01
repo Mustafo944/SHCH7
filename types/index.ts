@@ -1,8 +1,8 @@
 // Rollar
-export type Role = "dispatcher" | "worker" | "bekat_boshlighi";
+export type Role = "dispatcher" | "worker" | "bekat_boshlighi" | "elektromexanik" | "elektromontyor" | "bekat_navbatchisi";
 
 // Lavozimlar
-export type Position = "katta_elektromexanik" | "bekat_boshlighi" | "dispatcher";
+export type Position = "katta_elektromexanik" | "bekat_boshlighi" | "dispatcher" | "elektromexanik" | "elektromontyor" | "bekat_navbatchisi";
 
 // Foydalanuvchi
 export interface User {
@@ -11,7 +11,7 @@ export interface User {
   fullName: string;
   role: Role;
   position: Position;
-  stationIds: string[]; // Bir nechta bekat (worker: max 5, bekat_boshlighi: max 3)
+  stationIds: string[]; // worker: max 5, bekat_boshlighi: max 3, others: max 1
   phone: string;
   createdAt: string;
 }

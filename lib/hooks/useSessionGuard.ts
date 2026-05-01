@@ -9,7 +9,7 @@ import type { User, Role } from '@/types'
  * Sessiyani tekshiradi va foydalanuvchini to'g'ri sahifaga yo'naltiradi.
  * Agar role mos kelmasa yoki sessiya yo'q bo'lsa, login sahifasiga qaytaradi.
  */
-export function useSessionGuard(expectedRole: Role) {
+export function useSessionGuard(expectedRole: Role | Role[]) {
   const router = useRouter()
   const [session, setSession] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -29,10 +29,12 @@ export function useSessionGuard(expectedRole: Role) {
           return
         }
 
-        if (user.role !== expectedRole) {
+        const allowedRoles = Array.isArray(expectedRole) ? expectedRole : [expectedRole]
+
+        if (!allowedRoles.includes(user.role)) {
           // Rolga mos sahifaga yo'naltirish
           if (user.role === 'dispatcher') router.replace('/dispatcher')
-          else if (user.role === 'bekat_boshlighi') router.replace('/bekat-boshlighi')
+          else if (user.role === 'bekat_boshlighi' || user.role === 'bekat_navbatchisi') router.replace('/bekat-boshlighi')
           else router.replace('/worker')
           return
         }

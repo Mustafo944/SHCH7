@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 
 export default function BekatBoshlighiPage() {
-  const { session, loading, handleSignOut } = useSessionGuard('bekat_boshlighi')
+  const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['bekat_boshlighi', 'bekat_navbatchisi'])
   const toast = useToast()
 
   const [selectedStation, setSelectedStation] = useState<string | null>(null)
@@ -61,7 +61,7 @@ export default function BekatBoshlighiPage() {
     !!selectedStation && !!session?.role
   )
 
-  if (loading) return (
+  if (sessionLoading) return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-sky-50">
       <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-primary" />
     </div>

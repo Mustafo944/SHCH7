@@ -31,7 +31,7 @@ const _TOTAL_ROWS = 14
 const _PREMIYA_ROWS = 12
 
 export default function WorkerPage() {
-  const { session, loading: sessionLoading, handleSignOut } = useSessionGuard('worker')
+  const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['worker', 'elektromexanik', 'elektromontyor'])
   const toast = useToast()
   const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'selectPlanType' | 'journal' | 'viewReport' | 'premiyaForm' | 'viewPremiya' | 'sxemalar' | 'grafiklar' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'kunlikIshlar'>('home')
 

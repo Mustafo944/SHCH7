@@ -177,7 +177,7 @@ export async function getWorkers(): Promise<User[]> {
   const { data, error } = await supabase
     .from('users')
     .select(USER_COLUMNS)
-    .in('role', ['worker', 'bekat_boshlighi'])
+    .neq('role', 'dispatcher')
     .order('created_at', { ascending: true });
 
   if (error || !data) return [];
@@ -723,12 +723,12 @@ export async function getPendingJournalCounts(
 
             const creator = e.createdByRole || 'worker'
 
-            if (role === 'worker') {
+            if (['worker', 'elektromexanik', 'elektromontyor'].includes(role)) {
               // Worker faqat BB tomonidan "Boshlandi" qilinganlarni tasdiqlashi kutilyapti
               if (creator === 'bekat_boshlighi' && e.kamchilikBajarildi && !e.kamchilikBBTasdiqladi) {
                 count++
               }
-            } else if (role === 'bekat_boshlighi') {
+            } else if (['bekat_boshlighi', 'bekat_navbatchisi'].includes(role)) {
               // 3-ustun: Worker boshlaganini BB tasdiqlashi kutilyapti
               if (creator === 'worker' && e.kamchilikBajarildi && !e.kamchilikBBTasdiqladi) {
                 count++
@@ -743,7 +743,7 @@ export async function getPendingJournalCounts(
         } else if (row.journal_type === 'shu2') {
           // SHU-2: worker dispetcher qabul qilganini kutadi
           const ents = (row.entries || []) as SHU2Entry[]
-          if (role === 'worker') {
+          if (['worker', 'elektromexanik', 'elektromontyor'].includes(role)) {
             // Worker uchun: yuborilgan lekin dispetcher qabul qilmagan qatorlar
             const pending = ents.filter(e => e.yuborildi && !e.dispetcherQabulQildi).length
             shu2 += pending

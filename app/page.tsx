@@ -8,8 +8,8 @@ import { User, Eye, EyeOff, Lock } from 'lucide-react'
 
 function getRoleHome(role: string) {
   if (role === 'dispatcher') return '/dispatcher'
-  if (role === 'bekat_boshlighi') return '/bekat-boshlighi'
-  return '/worker'
+  if (role === 'bekat_boshlighi' || role === 'bekat_navbatchisi') return '/bekat-boshlighi'
+  return '/worker' // worker, elektromexanik, elektromontyor
 }
 
 export default function LoginPage() {

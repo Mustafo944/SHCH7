@@ -26,7 +26,7 @@ import {
 } from '@/lib/supabase-db'
 import { useSessionGuard, useToast } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
-import type { User, WorkReport, PremiyaReport, StationSchema, JournalType, ReportEntry, StationJournal, DU46Entry, SHU2Entry, Station, PremiyaEntry } from '@/types'
+import type { User, Role, WorkReport, PremiyaReport, StationSchema, JournalType, ReportEntry, StationJournal, DU46Entry, SHU2Entry, Station, PremiyaEntry } from '@/types'
 import { MONTHS } from '@/lib/constants'
 import { JournalSelectModal, JournalMonthSelectModal, DU46JournalView, SHU2JournalView } from '@/components/JournalView'
 import {
@@ -58,7 +58,7 @@ type _WorkerEditData = {
   login: string
   password?: string
   phone: string
-  role: 'worker' | 'bekat_boshlighi'
+  role: Role
   stationIds: string[]
 }
 
@@ -90,7 +90,7 @@ export default function DispatcherPage() {
     login: '',
     password: '',
     phone: '',
-    role: 'worker' as 'worker' | 'bekat_boshlighi',
+    role: 'worker' as 'worker' | 'bekat_boshlighi' | 'elektromexanik' | 'elektromontyor' | 'bekat_navbatchisi',
     stationIds: [] as string[],
   })
   const [editingWorkerId, setEditingWorkerId] = useState<string | null>(null)
@@ -331,7 +331,7 @@ export default function DispatcherPage() {
           phone: form.phone,
           ...(form.password ? { password: form.password } : {}),
           role: form.role,
-          position: form.role === 'worker' ? 'katta_elektromexanik' : 'bekat_boshlighi',
+          position: form.role === 'worker' ? 'katta_elektromexanik' : form.role,
           stationIds: form.stationIds
         })
         setFormMsg({ type: 'ok', text: "Muvaffaqiyatli yangilandi" })
@@ -342,7 +342,7 @@ export default function DispatcherPage() {
           password: form.password,
           phone: form.phone,
           role: form.role,
-          position: form.role === 'worker' ? 'katta_elektromexanik' : 'bekat_boshlighi',
+          position: form.role === 'worker' ? 'katta_elektromexanik' : form.role,
           stationIds: form.stationIds
         })
         setFormMsg({ type: 'ok', text: "Yangi ishchi qo'shildi" })
@@ -522,6 +522,7 @@ export default function DispatcherPage() {
                 isEdit={!!editingWorkerId}
                 stations={stations}
                 message={formMsg}
+                setFormMsg={setFormMsg}
               />
             </div>
           )}
@@ -900,14 +901,15 @@ function BigActionCard({ title, desc, icon, onClick, count, color = 'cyan' }: { 
 
 // ===== HISOBOT KARTASI =====
 
-function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, message }: {
+function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, message, setFormMsg }: {
   onSubmit: (e: React.FormEvent) => void
   onCancel: () => void
-  form: { fullName: string; login: string; password: string; phone: string; role: 'worker' | 'bekat_boshlighi'; stationIds: string[] }
-  setForm: (form: { fullName: string; login: string; password: string; phone: string; role: 'worker' | 'bekat_boshlighi'; stationIds: string[] }) => void
+  form: { fullName: string; login: string; password: string; phone: string; role: Exclude<Role, 'dispatcher'>; stationIds: string[] }
+  setForm: (form: { fullName: string; login: string; password: string; phone: string; role: Exclude<Role, 'dispatcher'>; stationIds: string[] }) => void
   isEdit: boolean
   stations: { id: string; name: string }[]
   message: { type: 'ok' | 'err'; text: string } | null
+  setFormMsg: (msg: { type: 'ok' | 'err'; text: string } | null) => void
 }) {
   return (
     <form onSubmit={onSubmit} className="premium-card p-8">
@@ -932,9 +934,12 @@ function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, messa
 
           <div>
             <label className="mb-3 block text-[10px] font-black uppercase tracking-widest text-slate-400">Lavozimi</label>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setForm({ ...form, role: 'worker' })} className={`flex-1 rounded-xl py-4 text-xs font-bold border transition-all duration-200 ${form.role === 'worker' ? 'bg-sky-50 border-sky-400 text-sky-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Katta Elektromexanik</button>
-              <button type="button" onClick={() => setForm({ ...form, role: 'bekat_boshlighi' })} className={`flex-1 rounded-xl py-4 text-xs font-bold border transition-all duration-200 ${form.role === 'bekat_boshlighi' ? 'bg-amber-50 border-amber-400 text-amber-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Bekat Boshlig'i</button>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <button type="button" onClick={() => setForm({ ...form, role: 'worker', stationIds: [] })} className={`rounded-xl py-3 px-2 text-xs font-bold border transition-all duration-200 ${form.role === 'worker' ? 'bg-sky-50 border-sky-400 text-sky-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Katta Elektromexanik</button>
+              <button type="button" onClick={() => setForm({ ...form, role: 'elektromexanik', stationIds: [] })} className={`rounded-xl py-3 px-2 text-xs font-bold border transition-all duration-200 ${form.role === 'elektromexanik' ? 'bg-sky-50 border-sky-400 text-sky-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Elektromexanik</button>
+              <button type="button" onClick={() => setForm({ ...form, role: 'elektromontyor', stationIds: [] })} className={`rounded-xl py-3 px-2 text-xs font-bold border transition-all duration-200 ${form.role === 'elektromontyor' ? 'bg-sky-50 border-sky-400 text-sky-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Elektromontyor</button>
+              <button type="button" onClick={() => setForm({ ...form, role: 'bekat_boshlighi', stationIds: [] })} className={`rounded-xl py-3 px-2 text-xs font-bold border transition-all duration-200 ${form.role === 'bekat_boshlighi' ? 'bg-amber-50 border-amber-400 text-amber-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Bekat Boshlig'i</button>
+              <button type="button" onClick={() => setForm({ ...form, role: 'bekat_navbatchisi', stationIds: [] })} className={`rounded-xl py-3 px-2 text-xs font-bold border transition-all duration-200 ${form.role === 'bekat_navbatchisi' ? 'bg-amber-50 border-amber-400 text-amber-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Bekat Navbatchisi</button>
             </div>
           </div>
         </div>
@@ -948,8 +953,17 @@ function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, messa
                 type="button"
                 onClick={() => {
                   const exists = form.stationIds.includes(s.id)
-                  if (exists) setForm({ ...form, stationIds: form.stationIds.filter((id: string) => id !== s.id) })
-                  else setForm({ ...form, stationIds: [...form.stationIds, s.id] })
+                  if (exists) {
+                    setForm({ ...form, stationIds: form.stationIds.filter((id: string) => id !== s.id) })
+                  } else {
+                    const max = form.role === 'worker' ? 5 : form.role === 'bekat_boshlighi' ? 3 : 1
+                    if (form.stationIds.length >= max) {
+                      setFormMsg({ type: 'err', text: `Bu lavozim uchun ko'pi bilan ${max} ta bekat tanlash mumkin` })
+                      setTimeout(() => setFormMsg(null), 3000)
+                    } else {
+                      setForm({ ...form, stationIds: [...form.stationIds, s.id] })
+                    }
+                  }
                 }}
                 className={`flex items-center gap-2 rounded-xl p-3 text-xs font-bold border transition-all duration-200 ${form.stationIds.includes(s.id) ? 'bg-white border-slate-200 text-slate-900 shadow-sm' : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-200/50'}`}
               >
@@ -1037,10 +1051,10 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
       >
         <div className="flex items-center gap-4">
           <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 ${isPlanPending
-              ? 'bg-amber-50 text-amber-600'
-              : pendingDailyCount > 0
-                ? 'bg-sky-50 text-sky-600'
-                : 'bg-emerald-50 text-emerald-600'
+            ? 'bg-amber-50 text-amber-600'
+            : pendingDailyCount > 0
+              ? 'bg-sky-50 text-sky-600'
+              : 'bg-emerald-50 text-emerald-600'
             }`}>
             {isPlanPending ? <Clock size={24} /> : pendingDailyCount > 0 ? <FileText size={24} /> : <CheckCircle2 size={24} />}
           </div>
@@ -1956,7 +1970,7 @@ function WorkersModal({ workers, onClose, onEdit, onDelete }: {
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-lg font-black text-white shadow-lg shadow-sky-500/20 transition-transform duration-200 group-hover:scale-110">{w.fullName.charAt(0)}</div>
                   <div>
                     <h4 className="font-black text-slate-900">{w.fullName}</h4>
-                    <p className="text-xs font-bold text-slate-500 tracking-tight">{w.login} В· {w.phone || 'Tel kiritilmagan'} В· {w.role === 'worker' ? 'Mexanik' : 'Boshliq'}</p>
+                    <p className="text-xs font-bold text-slate-500 tracking-tight">{w.login} · {w.phone || 'Tel kiritilmagan'} · {w.role === 'worker' ? 'Katta Elektromexanik' : w.role === 'elektromexanik' ? 'Elektromexanik' : w.role === 'elektromontyor' ? 'Elektromontyor' : w.role === 'bekat_navbatchisi' ? 'Bekat Navbatchisi' : "Bekat Boshlig'i"}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -2010,8 +2024,8 @@ function TodayTasksModal({ type, tasks, onClose }: {
       <div className="flex h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
         {/* Header */}
         <div className={`flex items-center justify-between border-b px-6 sm:px-8 py-5 sm:py-6 ${isBajarilgan
-            ? 'border-emerald-100 bg-emerald-50/50'
-            : 'border-red-100 bg-red-50/50'
+          ? 'border-emerald-100 bg-emerald-50/50'
+          : 'border-red-100 bg-red-50/50'
           }`}>
           <div>
             <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
@@ -2047,18 +2061,16 @@ function TodayTasksModal({ type, tasks, onClose }: {
                 <button
                   key={stationId}
                   onClick={() => setExpandedStation(stationId)}
-                  className={`w-full flex items-center justify-between rounded-2xl border p-4 sm:p-5 transition-all hover:shadow-md active:scale-[0.98] group ${
-                    isBajarilgan
+                  className={`w-full flex items-center justify-between rounded-2xl border p-4 sm:p-5 transition-all hover:shadow-md active:scale-[0.98] group ${isBajarilgan
                       ? 'border-emerald-100 bg-white hover:border-emerald-300 hover:bg-emerald-50/30'
                       : 'border-red-100 bg-white hover:border-red-300 hover:bg-red-50/30'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                    <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl text-sm sm:text-base font-black shadow-sm ${
-                      isBajarilgan
+                    <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl text-sm sm:text-base font-black shadow-sm ${isBajarilgan
                         ? 'bg-emerald-100 text-emerald-600 border border-emerald-200'
                         : 'bg-red-100 text-red-600 border border-red-200'
-                    }`}>
+                      }`}>
                       +{items.length}
                     </div>
                     <div className="text-left min-w-0">
@@ -2074,9 +2086,8 @@ function TodayTasksModal({ type, tasks, onClose }: {
             /* ─── 2-BOSQICH: TANLANGAN BEKATNING ISHLARI ─── */
             <div>
               {/* Orqaga tugma */}
-              <div className={`sticky top-0 z-10 flex items-center gap-3 border-b px-4 sm:px-6 py-3 ${
-                isBajarilgan ? 'border-emerald-100 bg-emerald-50/80' : 'border-red-100 bg-red-50/80'
-              } backdrop-blur-sm`}>
+              <div className={`sticky top-0 z-10 flex items-center gap-3 border-b px-4 sm:px-6 py-3 ${isBajarilgan ? 'border-emerald-100 bg-emerald-50/80' : 'border-red-100 bg-red-50/80'
+                } backdrop-blur-sm`}>
                 <button
                   onClick={() => setExpandedStation(null)}
                   className="flex items-center gap-1.5 rounded-xl bg-white/80 border border-slate-200/60 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-white hover:text-slate-900 transition-all shadow-sm"
@@ -2085,9 +2096,8 @@ function TodayTasksModal({ type, tasks, onClose }: {
                   <span className="hidden sm:inline">Bekatlar</span>
                 </button>
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-black ${
-                    isBajarilgan ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
-                  }`}>
+                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-black ${isBajarilgan ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
+                    }`}>
                     {grouped[expandedStation]?.items.length}
                   </div>
                   <div className="min-w-0">
@@ -2108,16 +2118,14 @@ function TodayTasksModal({ type, tasks, onClose }: {
                   }
 
                   return (
-                    <div key={ti} className={`rounded-xl border p-3 sm:p-4 transition-colors ${
-                      isBajarilgan ? 'border-emerald-100 bg-white hover:bg-emerald-50/20' : 'border-red-100 bg-white hover:bg-red-50/20'
-                    }`}>
+                    <div key={ti} className={`rounded-xl border p-3 sm:p-4 transition-colors ${isBajarilgan ? 'border-emerald-100 bg-white hover:bg-emerald-50/20' : 'border-red-100 bg-white hover:bg-red-50/20'
+                      }`}>
                       {/* Mobilda: sana tepada kichik, mazmun pastda katta */}
                       <div className="flex items-center gap-2 mb-2">
-                        <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-wide border ${
-                          isBajarilgan
+                        <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-wide border ${isBajarilgan
                             ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
                             : 'bg-red-50 text-red-600 border-red-100'
-                        }`}>
+                          }`}>
                           {isBajarilgan ? <CheckCircle2 size={10} /> : <Clock size={10} />}
                           {isBajarilgan ? dateFormatted : `${dateFormatted} gacha`}
                         </span>
