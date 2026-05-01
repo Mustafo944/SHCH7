@@ -40,7 +40,8 @@ export default function BekatBoshlighiPage() {
     } catch {
       toast.error('Pending counts yuklashda xatolik')
     }
-  }, [toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!selectedStation || !session?.role) return

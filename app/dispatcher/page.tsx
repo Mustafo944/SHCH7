@@ -105,7 +105,8 @@ export default function DispatcherPage() {
     } catch {
       toast.error('Ishchilarni yuklashda xatolik')
     }
-  }, [toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const loadWorkReports = useCallback(async () => {
     try {
@@ -114,7 +115,8 @@ export default function DispatcherPage() {
     } catch {
       toast.error('Hisobotlarni yuklashda xatolik')
     }
-  }, [toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const loadPremiyaReports = useCallback(async () => {
     try {
@@ -123,7 +125,8 @@ export default function DispatcherPage() {
     } catch {
       toast.error('Premiya hisobotlarini yuklashda xatolik')
     }
-  }, [toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const loadGraphics = useCallback(async () => {
     try {
@@ -132,7 +135,8 @@ export default function DispatcherPage() {
     } catch {
       toast.error('Grafiklarni yuklashda xatolik')
     }
-  }, [toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const loadJournals = useCallback(async () => {
     try {
@@ -141,7 +145,8 @@ export default function DispatcherPage() {
     } catch {
       toast.error('Jurnallarni yuklashda xatolik')
     }
-  }, [toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const refreshData = useCallback(async () => {
     setLoading(true)
@@ -258,8 +263,12 @@ export default function DispatcherPage() {
   }, [pendingCounts, premiyaPendingCounts, journalPendingCounts])
 
   // ─── BUGUNGI KUNLIK BAJARILGAN / BAJARILMAGAN ISHLAR ───────────────
-  const todayStr = String(new Date().getDate())
-  const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+  const today = new Date()
+  const todayDay = today.getDate()
+  const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
+  const prevMonthIdx = today.getMonth() === 0 ? 11 : today.getMonth() - 1
+  const prevMonthYear = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear()
+  const prevMonthStr = `${prevMonthYear}-${String(prevMonthIdx + 1).padStart(2, '0')}`
 
   const todayTasks = useMemo(() => {
     const result: {
@@ -272,32 +281,33 @@ export default function DispatcherPage() {
     }[] = []
 
     allReports
-      .filter(r => r.month === currentMonthStr)
+      .filter(r => r.month === currentMonthStr || r.month === prevMonthStr)
       .forEach(r => {
+        const isCurrentMonth = r.month === currentMonthStr
         r.entries.forEach(e => {
           const hasContent = e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish
-          const taskDay = parseInt(e.ragat.trim(), 10)
-          const todayDay = parseInt(todayStr, 10)
-          const isPastOrToday = !isNaN(taskDay) && taskDay <= todayDay
+          const taskDay = parseInt((e.ragat || '').trim(), 10)
           const bajarilgan = !!(e.bajarildiShn && e.bajarildiImzo)
 
-          if (hasContent && isPastOrToday) {
-            if (taskDay === todayDay || !bajarilgan) {
-              result.push({
-                stationId: r.stationId,
-                stationName: r.stationName,
-                workerName: r.workerName,
-                entry: e,
-                bajarilgan,
-                month: r.month,
-              })
+          if (!hasContent || isNaN(taskDay)) return
+
+          if (isCurrentMonth) {
+            // Joriy oyda: bugun yoki o'tgan sanalar (bajarilgan yoki bajarilmagan)
+            const isPastOrToday = taskDay <= todayDay
+            if (isPastOrToday && (taskDay === todayDay || !bajarilgan)) {
+              result.push({ stationId: r.stationId, stationName: r.stationName, workerName: r.workerName, entry: e, bajarilgan, month: r.month })
+            }
+          } else {
+            // O'tgan oyda: bajarilmagan barcha ishlar
+            if (!bajarilgan) {
+              result.push({ stationId: r.stationId, stationName: r.stationName, workerName: r.workerName, entry: e, bajarilgan: false, month: r.month })
             }
           }
         })
       })
 
     return result
-  }, [allReports, todayStr, currentMonthStr])
+  }, [allReports, currentMonthStr, prevMonthStr, todayDay])
 
   const todayBajarilgan = todayTasks.filter(t => t.bajarilgan)
   const todayBajarilmagan = todayTasks.filter(t => !t.bajarilgan)

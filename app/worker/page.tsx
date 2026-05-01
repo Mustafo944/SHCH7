@@ -9,7 +9,6 @@ import {
 import {
   getReportsByWorker,
   getPremiyasByWorker,
-  signOut,
   getPendingJournalCounts
 } from '@/lib/supabase-db'
 import { useSessionGuard, useToast } from '@/lib/hooks'
@@ -32,7 +31,7 @@ const _TOTAL_ROWS = 14
 const _PREMIYA_ROWS = 12
 
 export default function WorkerPage() {
-  const { session, loading: sessionLoading } = useSessionGuard('worker')
+  const { session, loading: sessionLoading, handleSignOut } = useSessionGuard('worker')
   const toast = useToast()
   const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'selectPlanType' | 'journal' | 'viewReport' | 'premiyaForm' | 'viewPremiya' | 'sxemalar' | 'grafiklar' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'kunlikIshlar'>('home')
 
@@ -57,7 +56,8 @@ export default function WorkerPage() {
     } catch {
       toast.error('Pending counts yuklashda xatolik')
     }
-  }, [toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const loadWorkReports = useCallback(async (userId: string) => {
     try {
@@ -66,7 +66,8 @@ export default function WorkerPage() {
     } catch {
       toast.error('Hisobotlarni yuklashda xatolik')
     }
-  }, [toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const loadPremiyaReports = useCallback(async (userId: string) => {
     try {
@@ -75,7 +76,8 @@ export default function WorkerPage() {
     } catch {
       toast.error('Premiyalarni yuklashda xatolik')
     }
-  }, [toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const refreshData = useCallback(async (userId: string) => {
     setLoading(true)
@@ -86,14 +88,20 @@ export default function WorkerPage() {
     setLoading(false)
   }, [loadWorkReports, loadPremiyaReports])
 
+  const [viewInitialized, setViewInitialized] = useState(false)
+
   // Sessiya tayyor bo'lganda ma'lumotlarni yuklash
   useEffect(() => {
     if (!session) return
     refreshData(session.id)
-    const stationsList = session.stationIds || []
-    if (stationsList.length > 1) setView('selectStation')
-    else if (stationsList.length === 1) setActiveStationId(stationsList[0])
-  }, [session, refreshData])
+    
+    if (!viewInitialized) {
+      const stationsList = session.stationIds || []
+      if (stationsList.length > 1) setView('selectStation')
+      else if (stationsList.length === 1) setActiveStationId(stationsList[0])
+      setViewInitialized(true)
+    }
+  }, [session, refreshData, viewInitialized])
 
   useEffect(() => {
     if (!activeStationId || !session?.role) return
@@ -158,32 +166,51 @@ export default function WorkerPage() {
     const bugun: { entry: ReportEntry, month: string }[] = []
     const qolib: { entry: ReportEntry, month: string }[] = []
 
-    const todayStr = String(new Date().getDate())
-    const todayDay = parseInt(todayStr, 10)
-    const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+    const today = new Date()
+    const todayDay = today.getDate()
+    const currentYear = today.getFullYear()
+    const currentMonthIdx = today.getMonth() // 0-based
+
+    // Joriy oy va o'tgan oy string ko'rinishida
+    const currentMonthStr = `${currentYear}-${String(currentMonthIdx + 1).padStart(2, '0')}`
+    const prevMonthIdx = currentMonthIdx === 0 ? 11 : currentMonthIdx - 1
+    const prevMonthYear = currentMonthIdx === 0 ? currentYear - 1 : currentYear
+    const prevMonthStr = `${prevMonthYear}-${String(prevMonthIdx + 1).padStart(2, '0')}`
 
     reports.forEach(r => {
-      // Worker uchun, hisobot tasdiqlangan (accepted) bo'lsa
-      if (r.month === currentMonthStr && r.confirmedAt && (!activeStationId || r.stationId === activeStationId)) {
-        r.entries.forEach(e => {
-          const hasContent = e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish
-          if (hasContent) {
-            const taskDay = parseInt(e.ragat.trim(), 10)
-            if (!isNaN(taskDay)) {
-              const bajarilgan = !!(e.bajarildiShn)
+      if (!activeStationId || r.stationId !== activeStationId) return
+      if (!r.confirmedAt) return // tasdiqlangan hisobotlar
 
-              // Qolib ketgan: Sanasi O'TIB KETGAN va bajarilmagan
-              if (taskDay < todayDay && !bajarilgan) {
-                qolib.push({ entry: e, month: r.month })
-              }
-              // Bugun bajarilgan: Sanasi yoki bugunga teng va bajarilgan
-              if (taskDay === todayDay && bajarilgan) {
-                bugun.push({ entry: e, month: r.month })
-              }
-            }
+      const isCurrentMonth = r.month === currentMonthStr
+      const isPrevMonth = r.month === prevMonthStr
+
+      if (!isCurrentMonth && !isPrevMonth) return
+
+      r.entries.forEach(e => {
+        const hasContent = e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish
+        if (!hasContent) return
+
+        const taskDay = parseInt((e.ragat || '').trim(), 10)
+        if (isNaN(taskDay)) return
+
+        const bajarilgan = !!(e.bajarildiShn)
+
+        if (isCurrentMonth) {
+          // Joriy oyda: muddati o'tgan va bajarilmagan
+          if (taskDay < todayDay && !bajarilgan) {
+            qolib.push({ entry: e, month: r.month })
           }
-        })
-      }
+          // Bugun bajarilgan
+          if (taskDay === todayDay && bajarilgan) {
+            bugun.push({ entry: e, month: r.month })
+          }
+        } else if (isPrevMonth) {
+          // O'tgan oyda: bajarilmagan barcha ishlar (muddat o'tib ketgan)
+          if (!bajarilgan) {
+            qolib.push({ entry: e, month: r.month })
+          }
+        }
+      })
     })
     return { bugunBajarilgan: bugun, qolibKetgan: qolib }
   }, [reports, activeStationId])
@@ -214,7 +241,7 @@ export default function WorkerPage() {
               {(session?.stationIds?.length || 0) > 1 && view !== 'selectStation' && (
                 <button onClick={() => setView('selectStation')} className="rounded-xl border border-sky-200/60 bg-sky-50/80 px-3 py-1.5 text-[10px] font-black text-sky-600 uppercase tracking-widest shadow-sm hover:bg-sky-100 transition-all">Bekatlar</button>
               )}
-              <button onClick={async () => { await signOut(); window.location.href = '/' }} className="rounded-xl border border-red-200/60 bg-red-50/80 p-2 text-red-500 hover:bg-red-100 transition-all shadow-sm"><LogOut size={20} /></button>
+              <button onClick={handleSignOut} className="rounded-xl border border-red-200/60 bg-red-50/80 p-2 text-red-500 hover:bg-red-100 transition-all shadow-sm"><LogOut size={20} /></button>
             </div>
           </div>
         </header>

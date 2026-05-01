@@ -393,6 +393,11 @@ export function DU46JournalView({
   const isDispatcher = userRole === 'dispatcher'
   const isEditor = isWorker || isBB // Yozish mumkin bo'lgan rollar
 
+  // ─── Joriy oy tekshiruvi ───────────────────────────────────────────
+  // Eski oyga yangi yozuv kiritish mumkin emas (faqat tasdiqlanmagan
+  // mavjud yozuvlarni tasdiqlash / bajarish mumkin)
+  const isCurrentMonth = journalMonth === getCurrentJournalMonth()
+
   // ─── Xabar ko'rsatish ─────────────────────────────────────────────
   const showMsg = (text: string, duration = 2000) => {
     setMsg(text)
@@ -478,7 +483,8 @@ export function DU46JournalView({
   }
 
   // ─── Qator boshqaruvi ─────────────────────────────────────────────
-  const addRow = () => setEntries([...entries, EMPTY_DU46()])
+  // Eski oyda yangi qator qo'shish mumkin emas
+  const addRow = () => { if (isCurrentMonth) setEntries([...entries, EMPTY_DU46()]) }
 
   const removeRow = () => {
     if (entries.length <= 1) return
@@ -681,9 +687,14 @@ export function DU46JournalView({
       <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur-xl sm:px-8 shadow-sm">
         <div>
           <h2 className="text-lg font-black text-slate-900 tracking-tight">DU-46 Jurnali</h2>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stationName}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stationName} · {journalMonthLabel}</p>
         </div>
         <div className="flex items-center gap-3">
+          {!isCurrentMonth && !isDispatcher && (
+            <span className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-amber-600">
+              🔒 Faqat ko&apos;rish (o&apos;tgan oy)
+            </span>
+          )}
           {msg && <span className={`text-xs font-bold px-3 py-1 rounded-full border ${msg.includes('!') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>{msg}</span>}
         </div>
       </div>
@@ -746,14 +757,16 @@ export function DU46JournalView({
                 const iAmConfirmer = isConfirmer(e)
 
                 // Yozish ruxsati: yaratuvchi yoki hali hech kim yozmagan
+                // + FAQAT joriy oy uchun yangi yozuv kiritish mumkin
                 const hasNoCreator = !e.createdByRole && !e.kamchilik && !e.oyKun1 && !e.soatMinut1
-                const canWriteCol3 = !e.yuborildi && !e.kamchilikBBTasdiqladi && (iAmCreator || hasNoCreator) && !isDispatcher
+                const canWriteCol3 = isCurrentMonth && !e.yuborildi && !e.kamchilikBBTasdiqladi && (iAmCreator || hasNoCreator) && !isDispatcher
 
-                // Ustun 12 (Bartaraf): faqat elektromexanik (worker) yoza oladi, yaratuvchidan qat'i nazar
+                // Ustun 12 (Bartaraf): faqat elektromexanik (worker) yoza oladi
+                // O'tgan oyda ham tasdiqlash va bajarish mumkin (bajarilmagan ishlar uchun)
                 const canWriteCol12 = !e.yuborildi && !e.bartarafBBTasdiqladi && e.kamchilikBBTasdiqladi && !isDispatcher && isWorker
 
-                // 4-9 ustunlar (oraliq): yaratuvchi yoza oladi
-                const canWriteMiddle = !e.yuborildi && !isDispatcher && (iAmCreator || hasNoCreator)
+                // 4-9 ustunlar (oraliq): yaratuvchi yoza oladi (faqat joriy oy)
+                const canWriteMiddle = isCurrentMonth && !e.yuborildi && !isDispatcher && (iAmCreator || hasNoCreator)
 
                 return (
                   <tr key={i} className="border-b border-slate-200 hover:bg-blue-50/50 transition-colors animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
