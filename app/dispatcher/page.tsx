@@ -500,13 +500,13 @@ export default function DispatcherPage() {
           <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between animate-fade-up">
             <button
               onClick={() => setShowAddWorker(!showAddWorker)}
-              className="btn-gradient flex items-center justify-center gap-2 rounded-2xl px-6 py-4 font-bold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl active:scale-95"
+              className="sm:order-2 btn-gradient flex items-center justify-center gap-2 rounded-2xl px-6 py-4 font-bold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl active:scale-95"
             >
               <Plus size={20} />
               <span>Xodim qo&apos;shish</span>
             </button>
 
-            <div className="flex gap-1 rounded-2xl bg-white/70 backdrop-blur-sm p-1.5 shadow-sm border border-purple-100/50">
+            <div className="sm:order-1 flex gap-1 rounded-2xl bg-white/70 backdrop-blur-sm p-1.5 shadow-sm border border-purple-100/50">
               <TabButton active={tab === 'bekatlar'} onClick={() => setTab('bekatlar')} label="Bekatlar" icon={<MapPin size={18} />} />
               <TabButton active={tab === 'arxiv'} onClick={() => setTab('arxiv')} label="Arxiv" icon={<FileText size={18} />} />
               <TabButton active={tab === 'grafiklar'} onClick={() => setTab('grafiklar')} label="Grafiklar" icon={<Download size={18} />} />
