@@ -62,8 +62,8 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl
   const PROTECTED_ROUTES: Record<string, string[]> = {
     '/dispatcher': ['dispatcher'],
-    '/worker': ['worker', 'katta_elektromexanik', 'elektromexanik'],
-    '/bekat-boshlighi': ['bekat_boshlighi'],
+    '/worker': ['worker', 'elektromexanik', 'elektromontyor'],
+    '/bekat-boshlighi': ['bekat_boshlighi', 'bekat_navbatchisi'],
   }
 
   const matchedRoute = Object.keys(PROTECTED_ROUTES).find(route =>
@@ -111,9 +111,10 @@ export async function updateSession(request: NextRequest) {
     const ROLE_HOME: Record<string, string> = {
       dispatcher: '/dispatcher',
       worker: '/worker',
-      katta_elektromexanik: '/worker',
       elektromexanik: '/worker',
+      elektromontyor: '/worker',
       bekat_boshlighi: '/bekat-boshlighi',
+      bekat_navbatchisi: '/bekat-boshlighi',
     }
     const correctPath = ROLE_HOME[userRole] || '/'
     const url = request.nextUrl.clone()

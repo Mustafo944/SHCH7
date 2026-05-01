@@ -217,31 +217,31 @@ export default function WorkerPage() {
 
   const missedTasksCount = qolibKetgan.length
 
-  if (!session || sessionLoading) return <div className="flex min-h-screen items-center justify-center bg-slate-50"><div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-sky-500" /></div>
+  if (!session || sessionLoading) return <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50"><div className="h-10 w-10 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600" /></div>
 
   const station = activeStationId ? getStation(activeStationId) : null
   const stationName = station?.name || '...'
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-sky-50 text-slate-900 selection:bg-sky-500/10">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_rgba(224,242,254,0.5),_transparent_50%),radial-gradient(ellipse_at_bottom_right,_rgba(186,230,253,0.3),_transparent_50%)]" />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-violet-50 via-purple-50/40 to-fuchsia-50/30 text-slate-900 selection:bg-purple-500/10">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_rgba(237,233,254,0.5),_transparent_50%),radial-gradient(ellipse_at_bottom_right,_rgba(243,232,255,0.3),_transparent_50%)]" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* Mobile Header */}
-        <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-xl print:hidden">
+        <header className="sticky top-0 z-50 border-b border-purple-100/40 bg-white/80 backdrop-blur-xl print:hidden">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/60 p-1.5 shadow-sm ring-1 ring-slate-200/60"><img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" /></div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-purple-100"><img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" /></div>
               <div className="min-w-0">
-                <h1 className="text-sm font-black uppercase truncate text-slate-900 tracking-tight">SMART SHCH</h1>
+                <h1 className="text-sm font-black uppercase truncate bg-gradient-to-r from-purple-700 to-violet-500 bg-clip-text text-transparent tracking-tight">SMART SHCH</h1>
                 <p className="text-[10px] font-bold text-slate-400 truncate uppercase tracking-widest">{session?.fullName}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {(session?.stationIds?.length || 0) > 1 && view !== 'selectStation' && (
-                <button onClick={() => setView('selectStation')} className="rounded-xl border border-sky-200/60 bg-sky-50/80 px-3 py-1.5 text-[10px] font-black text-sky-600 uppercase tracking-widest shadow-sm hover:bg-sky-100 transition-all">Bekatlar</button>
+                <button onClick={() => setView('selectStation')} className="rounded-xl border border-purple-200/60 bg-purple-50/80 px-3 py-1.5 text-[10px] font-black text-purple-600 uppercase tracking-widest shadow-sm hover:bg-purple-100 transition-all">Bekatlar</button>
               )}
-              <button onClick={handleSignOut} className="rounded-xl border border-red-200/60 bg-red-50/80 p-2 text-red-500 hover:bg-red-100 transition-all shadow-sm"><LogOut size={20} /></button>
+              <button onClick={handleSignOut} className="rounded-xl border border-purple-200/60 bg-purple-50/80 p-2 text-purple-500 hover:bg-purple-100 transition-all shadow-sm"><LogOut size={20} /></button>
             </div>
           </div>
         </header>
@@ -257,7 +257,7 @@ export default function WorkerPage() {
           {view === 'selectStation' && (
             <div className="grid gap-6 sm:grid-cols-2 pt-10">
               {session?.stationIds?.map(sid => (
-                <button key={sid} onClick={() => { setActiveStationId(sid); setView('home') }} className="group flex flex-col items-center p-12 rounded-3xl border border-slate-200/60 bg-white/80 shadow-lg backdrop-blur-sm transition-all hover:border-sky-300 hover:scale-[1.02] hover:shadow-xl active:scale-95 animate-fade-up">
+                <button key={sid} onClick={() => { setActiveStationId(sid); setView('home') }} className="group flex flex-col items-center p-12 rounded-3xl border border-purple-100 bg-white/80 shadow-lg backdrop-blur-sm transition-all hover:border-purple-300 hover:scale-[1.02] hover:shadow-xl active:scale-95 animate-fade-up">
                   <div className="mb-6 text-5xl group-hover:scale-110 transition-transform">📍</div>
                   <span className="text-xl font-black text-slate-900 tracking-tight">{getStation(sid)?.name}</span>
                   <p className="mt-2 text-xs font-bold text-slate-400 uppercase tracking-widest">Bekatni tanlash</p>
@@ -269,12 +269,12 @@ export default function WorkerPage() {
           {view === 'home' && (
             <div className="space-y-8 animate-fade-up">
               {/* Profile Card */}
-              <div className="relative overflow-hidden rounded-3xl border border-sky-100/60 bg-white/80 p-8 shadow-xl backdrop-blur-sm">
-                <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-sky-200/20 blur-3xl opacity-50" />
+              <div className="relative overflow-hidden rounded-3xl border border-purple-100/60 bg-white/80 p-8 shadow-xl backdrop-blur-sm">
+                <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-purple-200/20 blur-3xl opacity-50" />
                 <h2 className="text-3xl font-black text-slate-900">{session?.fullName}</h2>
                 <div className="mt-2 flex items-center gap-3">
-                  <p className="text-sm font-bold text-sky-600 uppercase tracking-widest">
-                    {session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : "Katta Elektromexanik"}
+                  <p className="text-sm font-bold text-purple-600 uppercase tracking-widest">
+                    {session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : session?.role === 'elektromexanik' ? 'Elektromexanik' : session?.role === 'elektromontyor' ? 'Elektromontyor' : "Katta Elektromexanik"}
                   </p>
                   {stationName && stationName !== '...' && (
                     <>

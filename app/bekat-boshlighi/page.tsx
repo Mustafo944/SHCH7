@@ -62,46 +62,46 @@ export default function BekatBoshlighiPage() {
   )
 
   if (sessionLoading) return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-sky-50">
-      <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-primary" />
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50">
+      <div className="h-12 w-12 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600" />
     </div>
   )
 
   const stationName = selectedStation ? getStation(selectedStation)?.name : null
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-sky-50 text-slate-900 selection:bg-blue-200">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.08),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(14,165,233,0.06),_transparent_40%)]" />
-      <div className="absolute -left-32 top-0 h-[600px] w-[600px] rounded-full bg-blue-200/10 blur-[120px]" />
-      <div className="absolute -right-32 bottom-0 h-[600px] w-[600px] rounded-full bg-sky-200/10 blur-[120px]" />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-violet-50 via-purple-50/40 to-fuchsia-50/30 text-slate-900 selection:bg-purple-200">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.06),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(168,85,247,0.04),_transparent_40%)]" />
+      <div className="absolute -left-32 top-0 h-[600px] w-[600px] rounded-full bg-purple-200/10 blur-[120px]" />
+      <div className="absolute -right-32 bottom-0 h-[600px] w-[600px] rounded-full bg-fuchsia-200/10 blur-[120px]" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* Header */}
-        <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/70 backdrop-blur-xl print:hidden">
+        <header className="sticky top-0 z-50 border-b border-purple-100/40 bg-white/70 backdrop-blur-xl print:hidden">
           <div className="mx-auto flex max-w-[1600px] items-center justify-between px-4 py-4 sm:px-8">
             <div className="flex items-center gap-4">
               <div className="relative">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-200/60">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white p-2 shadow-sm ring-1 ring-purple-100">
                   <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
                 </div>
               </div>
               <div>
-                <h1 className="text-xl font-black uppercase tracking-tighter text-slate-900">SHCH BUXORO</h1>
-                <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Bekat Boshlig&apos;i Paneli</p>
+                <h1 className="text-xl font-black uppercase tracking-tighter bg-gradient-to-r from-purple-700 to-violet-500 bg-clip-text text-transparent">SHCH BUXORO</h1>
+                <p className="text-[10px] font-bold text-purple-500 uppercase tracking-widest">Bekat Boshlig&apos;i Paneli</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="hidden items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm sm:flex">
+              <div className="hidden items-center gap-3 rounded-2xl border border-purple-100 bg-white/60 px-4 py-2 shadow-sm sm:flex">
                 <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]"></div>
                 <span className="text-sm font-medium text-slate-600">{session?.fullName}</span>
               </div>
 
               <button
                 onClick={handleSignOut}
-                className="group flex h-12 w-12 items-center justify-center rounded-2xl border border-red-200 bg-red-50 transition-all hover:bg-red-100 hover:shadow-sm active:scale-95"
+                className="group flex h-12 w-12 items-center justify-center rounded-2xl border border-purple-100 bg-purple-50/50 transition-all hover:bg-purple-100 hover:shadow-sm active:scale-95"
               >
-                <LogOut className="h-5 w-5 text-red-500 transition-transform group-hover:translate-x-0.5" />
+                <LogOut className="h-5 w-5 text-purple-500 transition-transform group-hover:translate-x-0.5" />
               </button>
             </div>
           </div>

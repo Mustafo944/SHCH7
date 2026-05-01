@@ -82,12 +82,12 @@ export async function signIn(login: string, password: string): Promise<User | nu
   if (authError || !authData.user) return null;
 
   const user = await getUserProfileById(authData.user.id);
-  
+
   if (user && typeof document !== 'undefined') {
     document.cookie = `user-role=${user.role}; path=/; max-age=86400;`;
     localStorage.setItem('user-profile', JSON.stringify(user));
   }
-  
+
   return user;
 }
 
@@ -136,7 +136,7 @@ export async function getCachedSession(): Promise<User | null> {
   if (profile && typeof window !== 'undefined') {
     localStorage.setItem('user-profile', JSON.stringify(profile));
   }
-  
+
   return profile;
 }
 

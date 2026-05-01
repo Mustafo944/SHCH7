@@ -25,8 +25,6 @@ export default function LoginPage() {
     let active = true
 
     async function checkSession() {
-
-
       const session = await getCachedSession()
       if (active) {
         if (session) {
@@ -64,36 +62,36 @@ export default function LoginPage() {
 
   if (checkingSession) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-sky-50">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50">
         <div className="flex flex-col items-center gap-4 animate-fade-up">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500/20 border-t-blue-600" />
-          <p className="text-sm font-semibold uppercase tracking-widest text-blue-600 animate-pulse">Tizimga kirilmoqda...</p>
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600" />
+          <p className="text-sm font-semibold uppercase tracking-widest text-purple-600 animate-pulse">Tizimga kirilmoqda...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-sky-50 p-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 p-4">
       {/* Animated background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-blue-200/30 blur-3xl animate-pulse" />
-        <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-sky-200/30 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-200/20 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-purple-200/30 blur-3xl animate-pulse" />
+        <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-fuchsia-200/25 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-200/20 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
       </div>
 
-      {/* Full screen loading overlay when submitting */}
+      {/* Full screen loading overlay — FIXED: overflow-hidden on wrapper */}
       {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-md transition-all duration-300">
+        <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center bg-white/80 backdrop-blur-md">
           <div className="flex flex-col items-center gap-6 animate-fade-up">
             <div className="relative flex h-24 w-24 items-center justify-center">
-              <div className="absolute inset-0 animate-ping rounded-full bg-blue-400/20" />
-              <div className="absolute inset-2 animate-spin rounded-full border-4 border-blue-500/20 border-t-blue-600" />
+              <div className="absolute inset-0 animate-ping rounded-full bg-purple-400/20" />
+              <div className="absolute inset-2 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600" />
               <img src="/uty-logo.png" alt="UTY" className="h-10 w-10 object-contain animate-pulse" />
             </div>
             <div className="flex flex-col items-center gap-2">
-              <h2 className="text-xl font-black uppercase tracking-widest text-slate-800">Ma'lumotlar tekshirilmoqda</h2>
-              <p className="text-xs font-bold text-blue-600 uppercase tracking-widest animate-pulse">Iltimos kuting...</p>
+              <h2 className="text-xl font-black uppercase tracking-widest text-slate-800">Ma&apos;lumotlar tekshirilmoqda</h2>
+              <p className="text-xs font-bold text-purple-600 uppercase tracking-widest animate-pulse">Iltimos kuting...</p>
             </div>
           </div>
         </div>
@@ -110,7 +108,7 @@ export default function LoginPage() {
             <h1 className="text-2xl font-bold uppercase tracking-tight text-slate-900 sm:text-3xl">
               SHCH BUXORO
             </h1>
-            <p className="mt-2 text-xs font-semibold tracking-widest text-blue-600 uppercase">
+            <p className="mt-2 text-xs font-semibold tracking-widest text-purple-600 uppercase">
               SMART CONTROL TIZIMI
             </p>
           </div>
@@ -131,7 +129,7 @@ export default function LoginPage() {
                   required
                   value={login}
                   onChange={(e) => setLogin(e.target.value)}
-                  className="block w-full rounded-xl border border-slate-300 bg-white py-3.5 pl-12 pr-4 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="block w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-12 pr-4 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                   placeholder="Loginni kiriting"
                 />
               </div>
@@ -151,7 +149,7 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full rounded-xl border border-slate-300 bg-white py-3.5 pl-12 pr-12 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="block w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-12 pr-12 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                   placeholder="Parolni kiriting"
                 />
                 <button
@@ -178,7 +176,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="relative flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-3.5 text-sm font-semibold uppercase tracking-wide text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-700 hover:to-sky-600 hover:shadow-xl hover:shadow-blue-500/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              className="relative flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 via-violet-500 to-purple-500 px-6 py-3.5 text-sm font-semibold uppercase tracking-wide text-white shadow-lg shadow-purple-500/25 transition-all hover:from-purple-700 hover:via-violet-600 hover:to-purple-600 hover:shadow-xl hover:shadow-purple-500/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? (
                 <>

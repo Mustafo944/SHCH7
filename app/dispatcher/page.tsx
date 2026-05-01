@@ -422,44 +422,44 @@ export default function DispatcherPage() {
   }
 
   if (!session || sessionLoading) return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50">
-      <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-sky-500" />
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50">
+      <div className="h-12 w-12 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600" />
     </div>
   )
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-sky-50 text-slate-900 selection:bg-sky-500/10">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-violet-50 via-purple-50/40 to-fuchsia-50/30 text-slate-900 selection:bg-purple-500/10">
       {/* Subtle Decorative Elements */}
-      <div className="absolute -left-32 top-0 h-[600px] w-[600px] rounded-full bg-sky-200/15 blur-[120px]" />
-      <div className="absolute -right-32 bottom-0 h-[600px] w-[600px] rounded-full bg-blue-200/15 blur-[120px]" />
-      <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-100/10 blur-[100px]" />
+      <div className="absolute -left-32 top-0 h-[600px] w-[600px] rounded-full bg-purple-200/15 blur-[120px]" />
+      <div className="absolute -right-32 bottom-0 h-[600px] w-[600px] rounded-full bg-fuchsia-200/10 blur-[120px]" />
+      <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-100/10 blur-[100px]" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* Header - Glass Card Effect */}
-        <header className="sticky top-0 z-50 border-b border-white/20 bg-white/70 backdrop-blur-xl print:hidden">
+        <header className="sticky top-0 z-50 border-b border-purple-100/40 bg-white/70 backdrop-blur-xl print:hidden">
           <div className="mx-auto flex max-w-[1600px] items-center justify-between px-4 py-4 sm:px-8">
             <div className="flex items-center gap-4">
               <div className="relative">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/80 p-2 shadow-sm ring-1 ring-slate-200/60">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white p-2 shadow-sm ring-1 ring-purple-100">
                   <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
                 </div>
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-xl font-black uppercase tracking-tighter bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">SMART SHCH</h1>
+                <h1 className="text-xl font-black uppercase tracking-tighter bg-gradient-to-r from-purple-700 to-violet-500 bg-clip-text text-transparent">SMART SHCH</h1>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="hidden items-center gap-3 rounded-2xl border border-white/40 bg-white/50 backdrop-blur-sm px-4 py-2 sm:flex shadow-sm">
+              <div className="hidden items-center gap-3 rounded-2xl border border-purple-100 bg-white/60 backdrop-blur-sm px-4 py-2 sm:flex shadow-sm">
                 <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]"></div>
                 <span className="text-sm font-medium text-slate-600">Aloqa dispetcheri</span>
               </div>
 
               <button
                 onClick={handleSignOut}
-                className="group flex h-12 w-12 items-center justify-center rounded-2xl border border-red-100/60 bg-red-50/50 backdrop-blur-sm transition-all duration-200 hover:bg-red-100 hover:shadow-md active:scale-95"
+                className="group flex h-12 w-12 items-center justify-center rounded-2xl border border-purple-100 bg-purple-50/50 backdrop-blur-sm transition-all duration-200 hover:bg-purple-100 hover:shadow-md active:scale-95"
               >
-                <LogOut className="h-5 w-5 text-red-500 transition-transform group-hover:translate-x-0.5" />
+                <LogOut className="h-5 w-5 text-purple-500 transition-transform group-hover:translate-x-0.5" />
               </button>
             </div>
           </div>
@@ -467,17 +467,18 @@ export default function DispatcherPage() {
 
         <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 sm:p-8">
           {/* Dashboard Stats */}
-          <div className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-4 animate-fade-up">
-            <StatCard icon={<MapPin className="text-cyan-400" />} label="Bekatlar" value={stations.length} />
+          <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4 animate-fade-up">
+            <StatCard icon={<MapPin />} label="Bekatlar" value={stations.length} color="purple" />
             <StatCard
-              icon={<Users className="text-blue-400" />}
+              icon={<Users />}
               label="Ishchilar"
               value={workers.length}
               onClick={() => setShowWorkersModal(true)}
               clickable
+              color="blue"
             />
             <StatCard
-              icon={<CheckCircle2 className="text-emerald-400" />}
+              icon={<CheckCircle2 />}
               label="Bugun bajarilgan"
               value={todayBajarilgan.length}
               onClick={() => setTodayModal('bajarilgan')}
@@ -485,7 +486,7 @@ export default function DispatcherPage() {
               color="emerald"
             />
             <StatCard
-              icon={<AlertTriangle className="text-red-400" />}
+              icon={<AlertTriangle />}
               label="Bugun bajarilmagan"
               value={todayBajarilmagan.length}
               active={todayBajarilmagan.length > 0}
@@ -497,7 +498,7 @@ export default function DispatcherPage() {
 
           {/* Navigation Tabs */}
           <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between animate-fade-up">
-            <div className="flex gap-1 rounded-full bg-white/60 backdrop-blur-sm p-1.5 shadow-sm border border-white/40">
+            <div className="flex gap-1 rounded-2xl bg-white/70 backdrop-blur-sm p-1.5 shadow-sm border border-purple-100/50">
               <TabButton active={tab === 'bekatlar'} onClick={() => setTab('bekatlar')} label="Bekatlar" icon={<MapPin size={18} />} />
               <TabButton active={tab === 'arxiv'} onClick={() => setTab('arxiv')} label="Arxiv" icon={<FileText size={18} />} />
               <TabButton active={tab === 'grafiklar'} onClick={() => setTab('grafiklar')} label="Grafiklar" icon={<Download size={18} />} />
@@ -505,10 +506,10 @@ export default function DispatcherPage() {
 
             <button
               onClick={() => setShowAddWorker(!showAddWorker)}
-              className="btn-gradient flex items-center justify-center gap-2 rounded-full px-6 py-4 font-bold text-white shadow-lg shadow-sky-500/20 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl active:scale-95"
+              className="btn-gradient flex items-center justify-center gap-2 rounded-2xl px-6 py-4 font-bold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl active:scale-95"
             >
               <Plus size={20} />
-              <span>Xodim qo'shish</span>
+              <span>Xodim qo&apos;shish</span>
             </button>
           </div>
 
@@ -559,12 +560,12 @@ export default function DispatcherPage() {
                           key={st.id}
                           onClick={() => { setSelectedStation(st.id); setSelectedReportType(null); setShowMobileStations(false) }}
                           className={`relative flex w-full items-center justify-between rounded-2xl border p-4 text-left transition-all duration-200 ${isSelected
-                            ? 'border-sky-400/50 bg-white shadow-lg shadow-sky-500/10 text-slate-900 ring-1 ring-sky-400/20'
-                            : 'border-white/40 bg-white/60 backdrop-blur-sm text-slate-400 hover:border-slate-200 hover:bg-white hover:text-slate-600 hover:shadow-sm'
+                            ? 'border-purple-300 bg-white shadow-lg shadow-purple-500/10 text-slate-900 ring-1 ring-purple-300/40'
+                            : 'border-white/40 bg-white/60 backdrop-blur-sm text-slate-400 hover:border-purple-200 hover:bg-white hover:text-slate-600 hover:shadow-sm'
                             }`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className={`h-2 w-2 shrink-0 rounded-full transition-all ${isSelected ? 'bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.4)]' : 'bg-slate-200'}`} />
+                            <div className={`h-2 w-2 shrink-0 rounded-full transition-all ${isSelected ? 'bg-purple-500 shadow-[0_0_8px_rgba(124,58,237,0.4)]' : 'bg-slate-200'}`} />
                             <span className="font-bold">{st.name}</span>
                           </div>
                           {count > 0 && (
@@ -591,7 +592,7 @@ export default function DispatcherPage() {
                       <div className="premium-card flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-6">
                         <div>
                           <h2 className="text-2xl font-black text-slate-900">{stations.find(s => s.id === selectedStation)?.name}</h2>
-                          <div className="mt-1 flex items-center gap-2 text-xs font-bold text-sky-600/70">
+                          <div className="mt-1 flex items-center gap-2 text-xs font-bold text-purple-500/70">
                             <Users size={12} />
                             <span>{workers.filter(w => w.stationIds.includes(selectedStation)).length} ta xodim biriktirilgan</span>
                           </div>
@@ -802,39 +803,51 @@ export default function DispatcherPage() {
   )
 }
 
-function StatCard({ icon, label, value, active, clickable, onClick, color }: {
+function StatCard({ icon, label, value, active, clickable, onClick, color = 'purple' }: {
   icon: React.ReactNode,
   label: string,
   value: string | number,
   active?: boolean,
   clickable?: boolean,
   onClick?: () => void,
-  color?: 'emerald' | 'red' | 'amber'
+  color?: 'purple' | 'blue' | 'emerald' | 'red' | 'amber'
 }) {
-  const dotColor = color === 'emerald' ? 'bg-emerald-500' : color === 'red' ? 'bg-red-500' : 'bg-amber-500'
-  const hoverBg = color === 'emerald' ? 'group-hover:bg-emerald-50' : color === 'red' ? 'group-hover:bg-red-50' : 'group-hover:bg-sky-50'
-  const numColor = active && color === 'emerald' ? 'text-emerald-600' : active && color === 'red' ? 'text-red-600' : 'text-slate-900'
+  const styles: Record<string, { iconBg: string, iconText: string, wave: string }> = {
+    purple: { iconBg: 'bg-purple-100', iconText: 'text-purple-600', wave: '#e9d5ff' },
+    blue: { iconBg: 'bg-blue-100', iconText: 'text-blue-600', wave: '#bfdbfe' },
+    emerald: { iconBg: 'bg-emerald-100', iconText: 'text-emerald-600', wave: '#bbf7d0' },
+    red: { iconBg: 'bg-red-100', iconText: 'text-red-500', wave: '#fecaca' },
+    amber: { iconBg: 'bg-amber-100', iconText: 'text-amber-600', wave: '#fde68a' },
+  }
+  const s = styles[color]
 
   return (
     <div
       onClick={onClick}
-      className={`premium-card group relative overflow-hidden p-6 transition-all duration-300 ${clickable ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02]' : ''}`}
+      className={`premium-card group relative overflow-hidden p-5 pb-10 transition-all duration-300 ${clickable ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02]' : ''}`}
     >
-      <div className="flex items-center justify-between">
-        <div className={`rounded-2xl bg-slate-50/80 p-3 transition-all duration-300 group-hover:scale-110 ${hoverBg}`}>
+      <div className="flex items-start gap-3">
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${s.iconBg} ${s.iconText} transition-transform duration-300 group-hover:scale-110`}>
           {icon}
         </div>
-        {active && <div className={`h-2.5 w-2.5 rounded-full ${dotColor} shadow-[0_0_8px_2px_rgba(16,185,129,0.25)] animate-ping`} />}
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-tight">{label}</p>
+          <p className="text-3xl font-black text-slate-900 mt-0.5">{value}</p>
+        </div>
       </div>
-      <div className="mt-4">
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
-        <p className={`text-3xl font-black transition-colors ${numColor}`}>{value}</p>
-      </div>
+      {active && <div className="absolute top-4 right-4 h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_8px_2px_rgba(239,68,68,0.3)] animate-ping" />}
       {clickable && (
-        <div className="absolute bottom-3 right-4 text-[9px] font-black uppercase tracking-widest text-slate-300 group-hover:text-slate-500 transition-colors">
+        <div className={`absolute bottom-3 right-4 text-[10px] font-bold ${s.iconText} opacity-60 group-hover:opacity-100 transition-opacity`}>
           Tafsilot →
         </div>
       )}
+      {/* Wave decoration */}
+      <div className="stat-card-wave">
+        <svg viewBox="0 0 400 40" preserveAspectRatio="none" fill="none">
+          <path d="M0 20C60 8 120 32 200 20C280 8 340 32 400 20V40H0Z" fill={s.wave} fillOpacity="0.4" />
+          <path d="M0 28C80 16 160 36 240 24C320 12 360 32 400 28V40H0Z" fill={s.wave} fillOpacity="0.2" />
+        </svg>
+      </div>
     </div>
   )
 }
@@ -843,9 +856,9 @@ function TabButton({ active, onClick, label, icon }: { active: boolean, onClick:
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold transition-all duration-200 ${active
-        ? 'bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-lg shadow-slate-900/20'
-        : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
+      className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-all duration-200 ${active
+        ? 'bg-gradient-to-r from-purple-600 to-violet-500 text-white shadow-lg shadow-purple-500/25'
+        : 'text-slate-500 hover:text-purple-700 hover:bg-purple-50/60'
         }`}
     >
       {icon}
@@ -873,12 +886,12 @@ function _ReportTypeBtn({ active, icon, label, onClick, count, color = 'cyan' }:
   )
 }
 
-function BigActionCard({ title, desc, icon, onClick, count, color = 'cyan' }: { title: string, desc: string, icon: React.ReactNode, onClick: () => void, count?: number, color?: 'cyan' | 'amber' | 'blue' | 'emerald' }) {
+function BigActionCard({ title, desc, icon, onClick, count, color = 'purple' }: { title: string, desc: string, icon: React.ReactNode, onClick: () => void, count?: number, color?: 'purple' | 'amber' | 'blue' | 'emerald' }) {
   const colorMap: Record<string, string> = {
-    cyan: 'from-sky-50 shadow-sky-500/5 hover:border-sky-300 text-sky-600 bg-white',
-    amber: 'from-amber-50 shadow-amber-500/5 hover:border-amber-300 text-amber-600 bg-white',
-    blue: 'from-blue-50 shadow-blue-500/5 hover:border-blue-300 text-blue-600 bg-white',
-    emerald: 'from-emerald-50 shadow-emerald-500/5 hover:border-emerald-300 text-emerald-600 bg-white',
+    purple: 'from-purple-50 hover:border-purple-300 text-purple-600',
+    amber: 'from-amber-50 hover:border-amber-300 text-amber-600',
+    blue: 'from-blue-50 hover:border-blue-300 text-blue-600',
+    emerald: 'from-emerald-50 hover:border-emerald-300 text-emerald-600',
   }
   return (
     <button
@@ -890,7 +903,7 @@ function BigActionCard({ title, desc, icon, onClick, count, color = 'cyan' }: { 
           +{count}
         </div>
       )}
-      <div className="rounded-2xl bg-slate-50/80 p-5 mb-4 transition-all duration-300 group-hover:scale-110 group-hover:bg-white inline-flex shadow-sm">
+      <div className="rounded-2xl bg-purple-50/80 p-5 mb-4 transition-all duration-300 group-hover:scale-110 group-hover:bg-white inline-flex shadow-sm">
         {icon}
       </div>
       <h3 className="text-xl font-black text-slate-900 tracking-tight">{title}</h3>
