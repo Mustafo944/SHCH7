@@ -81,7 +81,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   let userRole = request.cookies.get('user-role')?.value
-
+  
   if (!userRole) {
     // Foydalanuvchining ma'lumotlarini (role) bazadan tortamiz
     const { data: profile } = await supabase
