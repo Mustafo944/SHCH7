@@ -77,20 +77,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 p-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-violet-100/50 via-purple-50/50 to-fuchsia-100/50 p-4">
       {/* Animated background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-purple-200/30 blur-3xl animate-pulse" />
-        <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-fuchsia-200/25 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-200/20 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-purple-300/40 blur-3xl animate-pulse" />
+        <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-fuchsia-300/40 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-300/30 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
       </div>
 
-      {/* Full screen loading overlay — FIXED: overflow-hidden on wrapper */}
+      {/* Full screen loading overlay */}
       {(loading || navigating) && (
-        <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center bg-white/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center bg-white/60 backdrop-blur-md">
           <div className="flex flex-col items-center gap-6 animate-fade-up px-6">
             <div className="relative flex h-24 w-24 items-center justify-center">
-              <div className="absolute inset-0 animate-ping rounded-full bg-purple-400/20" />
+              <div className="absolute inset-0 animate-ping rounded-full bg-purple-400/30" />
               <div className="absolute inset-2 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600" />
               <img src="/uty-logo.png" alt="UTY" className="h-10 w-10 object-contain animate-pulse" />
             </div>
@@ -104,16 +104,16 @@ export default function LoginPage() {
 
       {/* Login card */}
       <div className="relative z-10 w-full max-w-md animate-fade-up">
-        <div className="rounded-3xl border border-white/60 bg-white/80 p-8 shadow-xl backdrop-blur-xl sm:p-10">
+        <div className="rounded-[32px] border border-white/60 bg-white/40 p-8 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] backdrop-blur-2xl sm:p-10">
           {/* Logo and title */}
           <div className="mb-8 text-center sm:mb-10">
-            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center sm:h-24 sm:w-24">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center sm:h-24 sm:w-24 drop-shadow-md">
               <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
             </div>
-            <h1 className="text-2xl font-bold uppercase tracking-tight text-slate-900 sm:text-3xl">
-              SHCH BUXORO
+            <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900 sm:text-3xl">
+              SMART SHCH
             </h1>
-            <p className="mt-2 text-xs font-semibold tracking-widest text-purple-600 uppercase">
+            <p className="mt-2 text-[10px] font-black tracking-widest text-purple-600 uppercase">
               SMART CONTROL TIZIMI
             </p>
           </div>
@@ -122,7 +122,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Login input */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                 Login
               </label>
               <div className="relative">
@@ -134,7 +134,7 @@ export default function LoginPage() {
                   required
                   value={login}
                   onChange={(e) => setLogin(e.target.value)}
-                  className="block w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-12 pr-4 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                  className="block w-full rounded-2xl border border-white/50 bg-white/50 backdrop-blur-md py-4 pl-12 pr-4 text-sm font-medium text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-purple-400 focus:bg-white/80 focus:outline-none focus:ring-4 focus:ring-purple-500/10"
                   placeholder="Loginni kiriting"
                 />
               </div>
@@ -142,7 +142,7 @@ export default function LoginPage() {
 
             {/* Password input */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                 Parol
               </label>
               <div className="relative">
@@ -154,7 +154,7 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-12 pr-12 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                  className="block w-full rounded-2xl border border-white/50 bg-white/50 backdrop-blur-md py-4 pl-12 pr-12 text-sm font-medium text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-purple-400 focus:bg-white/80 focus:outline-none focus:ring-4 focus:ring-purple-500/10"
                   placeholder="Parolni kiriting"
                 />
                 <button

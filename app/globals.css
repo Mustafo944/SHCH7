@@ -108,16 +108,19 @@ body {
 
 /* ===== Premium Card ===== */
 .premium-card {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.04);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .premium-card:hover {
-  box-shadow: var(--shadow-lg);
-  border-color: var(--border-medium);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  border-color: rgba(168, 85, 247, 0.5);
 }
 
 /* ===== Gradient Button ===== */

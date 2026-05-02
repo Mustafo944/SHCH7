@@ -431,38 +431,39 @@ export default function DispatcherPage() {
   )
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-violet-50 via-purple-50/40 to-fuchsia-50/30 text-slate-900 selection:bg-purple-500/10">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-purple-50/30 to-fuchsia-50/20 text-slate-900 selection:bg-purple-500/10">
       {/* Subtle Decorative Elements */}
-      <div className="absolute -left-32 top-0 h-[600px] w-[600px] rounded-full bg-purple-200/15 blur-[120px]" />
-      <div className="absolute -right-32 bottom-0 h-[600px] w-[600px] rounded-full bg-fuchsia-200/10 blur-[120px]" />
-      <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-100/10 blur-[100px]" />
+      <div className="absolute top-[-10%] left-[-10%] h-[500px] w-[500px] rounded-full bg-purple-300/20 blur-[100px]" />
+      <div className="absolute bottom-[-10%] right-[-10%] h-[500px] w-[500px] rounded-full bg-indigo-300/20 blur-[100px]" />
+      <div className="absolute top-[40%] right-[20%] h-[300px] w-[300px] rounded-full bg-fuchsia-300/20 blur-[100px]" />
+
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_rgba(255,255,255,0.4),_transparent_80%),radial-gradient(ellipse_at_bottom_right,_rgba(255,255,255,0.3),_transparent_80%)]" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
-        {/* Header - Glass Card Effect */}
-        <header className="sticky top-0 z-50 border-b border-purple-100/40 bg-white/70 backdrop-blur-xl print:hidden">
-          <div className="mx-auto flex max-w-[1600px] items-center justify-between px-4 py-4 sm:px-8">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white p-2 shadow-sm ring-1 ring-purple-100">
-                  <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
-                </div>
+        {/* App Header */}
+        <header className="sticky top-0 z-50 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-[1600px] print:hidden">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-white/50 backdrop-blur-xl p-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60">
+                <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
               </div>
-              <div className="hidden sm:block">
-                <h1 className="text-xl font-black uppercase tracking-tighter bg-gradient-to-r from-purple-700 to-violet-500 bg-clip-text text-transparent">SMART SHCH</h1>
+              <div className="min-w-0 flex flex-col justify-center bg-white/50 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                <h1 className="text-[14px] sm:text-[16px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
+                <p className="text-[7.5px] sm:text-[8.5px] font-black text-purple-600 truncate uppercase tracking-wide mt-0.5">SMART CONTROL TIZIMI</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="hidden items-center gap-3 rounded-2xl border border-purple-100 bg-white/60 backdrop-blur-sm px-4 py-2 sm:flex shadow-sm">
-                <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]"></div>
-                <span className="text-sm font-medium text-slate-600">Aloqa dispetcheri</span>
+              <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/50 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mr-1">
+                <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400"></div>
+                <span className="text-[10px] font-black text-slate-600 tracking-wider uppercase">Aloqa dispetcheri</span>
               </div>
 
               <button
                 onClick={handleSignOut}
-                className="group flex h-12 w-12 items-center justify-center rounded-2xl border border-purple-100 bg-purple-50/50 backdrop-blur-sm transition-all duration-200 hover:bg-purple-100 hover:shadow-md active:scale-95"
+                className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl border border-white/60 bg-white/50 backdrop-blur-xl text-purple-600 hover:bg-white/70 hover:scale-105 active:scale-95 transition-all shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
               >
-                <LogOut className="h-5 w-5 text-purple-500 transition-transform group-hover:translate-x-0.5" />
+                <LogOut size={18} strokeWidth={2.5} />
               </button>
             </div>
           </div>

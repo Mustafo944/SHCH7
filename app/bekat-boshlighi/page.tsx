@@ -71,30 +71,33 @@ export default function BekatBoshlighiPage() {
   const stationName = selectedStation ? getStation(selectedStation)?.name : null
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-violet-50 via-purple-50/40 to-fuchsia-50/30 text-slate-900 selection:bg-purple-200">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.06),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(168,85,247,0.04),_transparent_40%)]" />
-      <div className="absolute -left-32 top-0 h-[600px] w-[600px] rounded-full bg-purple-200/10 blur-[120px]" />
-      <div className="absolute -right-32 bottom-0 h-[600px] w-[600px] rounded-full bg-fuchsia-200/10 blur-[120px]" />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-purple-50/30 to-fuchsia-50/20 text-slate-900 selection:bg-purple-500/10">
+      {/* Background blur orbs to make glassmorphism pop */}
+      <div className="absolute top-[-10%] left-[-10%] h-[500px] w-[500px] rounded-full bg-purple-300/20 blur-[100px]" />
+      <div className="absolute bottom-[-10%] right-[-10%] h-[500px] w-[500px] rounded-full bg-indigo-300/20 blur-[100px]" />
+      <div className="absolute top-[40%] right-[20%] h-[300px] w-[300px] rounded-full bg-fuchsia-300/20 blur-[100px]" />
+
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_rgba(255,255,255,0.4),_transparent_80%),radial-gradient(ellipse_at_bottom_right,_rgba(255,255,255,0.3),_transparent_80%)]" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* App Header */}
         <header className="sticky top-0 z-50 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-7xl print:hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-white p-2 shadow-sm border border-slate-100">
+              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-white/50 backdrop-blur-xl p-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60">
                 <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
               </div>
-              <div className="min-w-0 flex flex-col justify-center">
+              <div className="min-w-0 flex flex-col justify-center bg-white/50 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <h1 className="text-[14px] sm:text-[16px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
                 <p className="text-[7.5px] sm:text-[8.5px] font-black text-purple-600 truncate uppercase tracking-wide mt-0.5">SMART CONTROL TIZIMI</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-[12px] bg-white border border-slate-100 shadow-sm mr-2">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/50 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mr-1">
                 <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400"></div>
                 <span className="text-[10px] font-black text-slate-600 tracking-wider uppercase">{session?.fullName}</span>
               </div>
-              <button onClick={handleSignOut} className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-[14px] border border-purple-100 bg-purple-50 text-purple-600 hover:bg-purple-100 hover:scale-105 active:scale-95 transition-all shadow-sm">
+              <button onClick={handleSignOut} className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl border border-white/60 bg-white/50 backdrop-blur-xl text-purple-600 hover:bg-white/70 hover:scale-105 active:scale-95 transition-all shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <LogOut size={18} strokeWidth={2.5} />
               </button>
             </div>
@@ -124,7 +127,7 @@ export default function BekatBoshlighiPage() {
                     <button
                       key={st.id}
                       onClick={() => setSelectedStation(st.id)}
-                      className="group relative flex flex-col items-center overflow-hidden rounded-[28px] border border-purple-100 bg-white p-8 shadow-sm backdrop-blur-md transition-all hover:border-purple-300 hover:bg-purple-50/50 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] animate-scale-in"
+                      className="group relative flex flex-col items-center overflow-hidden rounded-[28px] border border-white/60 bg-white/50 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xl transition-all hover:border-purple-200/50 hover:bg-white/70 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 active:scale-[0.98] animate-scale-in"
                     >
                       <div className="mb-4 rounded-2xl bg-purple-50 p-4 group-hover:bg-purple-100 transition-colors">
                         <MapPin size={32} className="text-purple-400 group-hover:text-purple-600 transition-colors" />
