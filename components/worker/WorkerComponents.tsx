@@ -1,4 +1,4 @@
-﻿/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen } from 'lucide-react'
@@ -11,22 +11,39 @@ import { DU46JournalView, SHU2JournalView } from '@/components/JournalView'
 const TOTAL_ROWS = 14
 const PREMIYA_ROWS = 12
 
-export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badge = 0 }: { title: string, desc: string, icon: React.ReactNode, onClick: () => void, color?: 'cyan' | 'amber' | 'blue', badge?: number }) {
-  const colorMap: Record<string, string> = {
-    cyan: 'hover:border-purple-300 hover:shadow-purple-100/50 text-purple-600',
-    amber: 'hover:border-amber-300 hover:shadow-amber-100/50 text-amber-600',
-    blue: 'hover:border-purple-300 hover:shadow-purple-100/50 text-purple-600',
+import { ArrowRight } from 'lucide-react'
+
+export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badge = 0 }: { title: string, desc: string, icon: React.ReactNode, onClick: () => void, color?: 'purple' | 'cyan' | 'amber' | 'blue' | 'sky', badge?: number }) {
+  const colorStyles: Record<string, { bg: string, text: string }> = {
+    purple: { bg: 'bg-purple-50', text: 'text-purple-600' },
+    cyan: { bg: 'bg-cyan-50', text: 'text-cyan-600' },
+    amber: { bg: 'bg-amber-50', text: 'text-amber-600' },
+    blue: { bg: 'bg-blue-50', text: 'text-blue-600' },
+    sky: { bg: 'bg-sky-50', text: 'text-sky-600' },
   }
+  
+  const theme = colorStyles[color] || colorStyles.purple
+
   return (
-    <button onClick={onClick} className={`premium-card group relative flex flex-col items-start p-8 bg-gradient-to-br from-white to-slate-50/50 transition-all hover:scale-[1.02] active:scale-[0.98] text-left animate-fade-up ${colorMap[color]}`}>
+    <button onClick={onClick} className="group relative flex flex-col items-start p-5 bg-white/50 backdrop-blur-xl rounded-[24px] border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:bg-white/60 hover:border-purple-200/50 hover:-translate-y-1 active:scale-[0.98] text-left w-full h-full min-h-[140px]">
       {badge > 0 && (
-        <div className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-xs font-black text-white shadow-lg shadow-red-500/30 animate-bounce">
+        <div className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[11px] font-black text-white shadow-md shadow-red-500/30 z-10">
           {badge > 9 ? '9+' : badge}
         </div>
       )}
-      <div className={`rounded-2xl bg-slate-50 p-4 mb-6 group-hover:scale-110 group-hover:bg-white border border-slate-100 transition-all shadow-sm ${color === 'cyan' ? 'text-purple-600' : color === 'amber' ? 'text-amber-600' : 'text-purple-600'}`}>{icon}</div>
-      <h3 className="text-xl font-black text-slate-900 tracking-tight">{title}</h3>
-      <p className="mt-2 text-sm text-slate-500 leading-relaxed font-medium">{desc}</p>
+      
+      <div className={`rounded-[16px] p-3 mb-4 transition-transform group-hover:scale-110 ${theme.bg} ${theme.text}`}>
+        {icon}
+      </div>
+      
+      <h3 className="text-[15px] sm:text-base font-black text-slate-900 tracking-tight">{title}</h3>
+      <p className="mt-1 text-[11px] sm:text-xs text-slate-500 leading-relaxed font-medium line-clamp-2 pr-6">
+        {desc}
+      </p>
+
+      <div className="absolute bottom-6 right-6 flex h-8 w-8 items-center justify-center rounded-full bg-purple-100/50 text-purple-500 transition-colors group-hover:bg-purple-500 group-hover:text-white">
+        <ArrowRight size={16} strokeWidth={2.5} />
+      </div>
     </button>
   )
 }
@@ -193,29 +210,29 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 
   return (
     <div className="space-y-6 animate-fade-up">
-      <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} В· ${stationName}`} status="yangi" />
+      <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} status="yangi" />
       <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm relative shadow-sm">
         <div className="sm:hidden absolute top-0 right-0 bg-purple-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
-          O&apos;ngga suring в†’
+          O'ngga suring →
         </div>
         <div className="overflow-x-auto overflow-y-hidden">
           <table style={{ minWidth: "1200px" }} className="w-full border-collapse text-left text-[11px] text-slate-700">
             <thead className="border-b-2 border-purple-500/30 bg-slate-50 font-bold text-slate-600">
               <tr>
-                <th rowSpan={2} className="w-10 border-r border-slate-200 p-2 text-center">в„–</th>
+                <th rowSpan={2} className="w-10 border-r border-slate-200 p-2 text-center">№</th>
                 <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-2 text-center">
                   4-haftalik jadval
                   <br />
                   <span className="text-[9px] font-normal text-slate-400">(oynada tanlash)</span>
                 </th>
                 <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-2 text-center">
-                  Yillik jadval bo&apos;yicha
+                  Yillik jadval bo'yicha
                   <br />
                   <span className="text-[9px] font-normal text-slate-400">(oynada tanlash)</span>
                 </th>
-                <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-2">Yangi ishlar ro&apos;yxati</th>
-                <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-2">O&apos;tkazilgan KMO va bartaraf etilgan kamchiliklar</th>
-                <th rowSpan={2} className="w-[13%] border-r border-slate-200 p-2">Rejaga kiritilgan majburiy o&apos;zgartirishlar</th>
+                <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-2">Yangi ishlar ro'yxati</th>
+                <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-2">O'tkazilgan KMO va bartaraf etilgan kamchiliklar</th>
+                <th rowSpan={2} className="w-[13%] border-r border-slate-200 p-2">Rejaga kiritilgan majburiy o'zgartirishlar</th>
                 <th colSpan={2} className="border-r border-slate-200 bg-slate-50 p-2 text-center">Bajarilgan ishlar</th>
                 <th rowSpan={2} className="w-[8%] bg-amber-50 p-2 text-center text-amber-700">AD imzosi</th>
               </tr>
@@ -313,7 +330,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                   </td>
                   <td className="p-2 text-center align-middle">
                     {e.adImzosi ? (
-                      <span className="inline-block whitespace-pre-wrap rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100">вњ… {e.adImzosi}</span>
+                      <span className="inline-flex items-center gap-1 whitespace-pre-wrap rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100"><CheckCircle2 size={12} /> {e.adImzosi}</span>
                     ) : isConfirmed ? (
                       (() => {
                         const hasHaftalik = !!e.haftalikJadval && !e.doneHaftalik
@@ -353,14 +370,14 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
               className="flex items-center gap-2 rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-700 shadow-sm backdrop-blur-sm transition hover:bg-slate-100"
             >
               <Plus size={14} />
-              Qator qo&apos;shish
+              Qator qo'shish
             </button>
             <button
               onClick={removeRow}
               className="flex items-center gap-2 rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-400 backdrop-blur-sm transition hover:border-red-200 hover:text-red-500"
             >
               <X size={14} />
-              Qator o&apos;chirish
+              Qator o'chirish
             </button>
           </div>
         )}
@@ -386,7 +403,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           <div className="relative flex h-[70vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-200/60 px-8 py-5 bg-slate-50/80">
               <h3 className="text-lg font-black text-slate-900 tracking-tight">
-                {modalType === '4-haftalik' ? '4-haftalik jadval' : 'Yillik jadval'} вЂ” vazifa tanlash
+                {modalType === '4-haftalik' ? '4-haftalik jadval' : 'Yillik jadval'} — vazifa tanlash
               </h3>
               <button onClick={() => setModalOpen(false)} className="rounded-xl border border-slate-200/60 bg-white p-2 text-slate-400 hover:text-slate-900 transition-all shadow-sm"><X size={20} /></button>
             </div>
@@ -418,7 +435,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                   {selectedBolim !== null && (
                     <div className="mb-4 flex items-center justify-between border-b border-slate-200/60 pb-3">
                       <button onClick={() => { setSelectedBolim(null); setModalSearch(''); }} className="flex items-center gap-1.5 rounded-lg bg-slate-100/80 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-200 hover:text-slate-700">
-                        <ChevronLeft size={14} /> Ortga ro&apos;yxatga
+                        <ChevronLeft size={14} /> Ortga ro'yxatga
                       </button>
                       <span className="text-xs font-bold text-purple-600 truncate max-w-[200px] text-right">
                         {(modalType === 'yillik' ? YILLIK_REJA : TORT_HAFTALIK_REJA)[selectedBolim].bolim}
@@ -439,7 +456,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                     .map((task: ParsedTaskItem, ti: number) => (
                       <button
                         key={ti}
-                        onClick={() => {
+                        onClick={async () => {
                           const n = [...entries]
 
                           const text =
@@ -459,21 +476,30 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                           setEntries(n)
                           setModalOpen(false)
                           setSelectedBolim(null)
+
+                          // Avtomatik saqlash
+                          try {
+                            await upsertReport({
+                              workerId: session.id, workerName: session.fullName, workerPhone: session.phone || '', stationId, stationName, entries: n, month: monthStr, year: String(new Date().getFullYear()), weekLabel: 'Oylik Reja'
+                            })
+                          } catch (e) {
+                            console.error('Auto-save failed:', e)
+                          }
                         }}
                         className="w-full rounded-xl border border-slate-200/60 bg-white/80 p-3 text-left backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-md hover:bg-purple-50/30 group"
                       >
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
                           <p className="text-[10px] text-purple-600">
-                            рџ“Њ {task.bolim}
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-purple-400 mr-0.5" /> {task.bolim}
                           </p>
                           <p className="text-[10px] text-amber-600/70">
-                            рџ“„ {task.manba} {task.raqam}
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 mr-0.5" /> {task.manba} {task.raqam}
                           </p>
                           <p className="text-[10px] text-slate-400">
-                            рџ•ђ {task.davriylik}
+                            <Clock size={10} className="inline mr-0.5" /> {task.davriylik}
                           </p>
                           <p className="text-[10px] text-slate-400">
-                            рџ‘¤ {task.bajaruvchi}
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-300 mr-0.5" /> {task.bajaruvchi}
                           </p>
                         </div>
                         <p className="mt-2 whitespace-pre-wrap text-xs font-bold text-slate-700 group-hover:text-slate-900">
@@ -544,7 +570,7 @@ export function PremiyaForm({ session, stationId, stationName, month, onSubmit, 
 
   return (
     <div className="space-y-6 animate-fade-up">
-      <HeaderCard title="Premiya To'ldirish" subtitle={`${MONTHS[month]} В· ${stationName}`} status="yangi" color="amber" />
+      <HeaderCard title="Premiya To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} status="yangi" color="amber" />
       <div className="flex gap-2">
         <button onClick={addRow} className="rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 backdrop-blur-sm transition-all shadow-sm">+ Qator qo'shish</button>
         <button onClick={removeRow} className="rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-400 hover:text-red-500 hover:border-red-100 backdrop-blur-sm transition-all shadow-sm">- Qator o'chirish</button>
@@ -552,7 +578,7 @@ export function PremiyaForm({ session, stationId, stationName, month, onSubmit, 
       <div className="overflow-x-auto rounded-2xl border border-slate-200/60 bg-white/80 p-4 shadow-sm backdrop-blur-sm">
         <table className="w-full text-left text-[11px] min-w-[800px]">
           <thead className="text-[10px] font-black uppercase text-slate-400 bg-slate-50/80">
-            <tr><th className="p-4 text-center w-12">в„–</th><th className="p-4">I.SH.</th><th className="p-4">Lavozimi</th><th className="p-4 text-center">Tabel в„–</th><th className="p-4 text-center">Rag'bat. %</th><th className="p-4">Eslatma</th></tr>
+            <tr><th className="p-4 text-center w-12">№</th><th className="p-4">I.SH.</th><th className="p-4">Lavozimi</th><th className="p-4 text-center">Tabel №</th><th className="p-4 text-center">Rag'bat. %</th><th className="p-4">Eslatma</th></tr>
           </thead>
           <tbody className="bg-white/50">
             {entries.map((e, i) => (
@@ -761,7 +787,7 @@ export function WorkerTasksModal({ type, tasks, onClose }: {
               {isBajarilgan ? 'Bugun bajarilgan ishlar ro\'yxati' : 'Bajarilmagan ishlar (Qolib ketganlar)'}
             </h3>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-              Bugungi sana: {todayFormatted} В· Jami: {tasks.length} ta
+              Bugungi sana: {todayFormatted} · Jami: {tasks.length} ta
             </p>
           </div>
           <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
@@ -790,8 +816,8 @@ export function WorkerTasksModal({ type, tasks, onClose }: {
                 }
 
                 return (
-                  <div key={ti} className="flex items-start gap-4 border-b border-slate-100 last:border-0 px-5 py-4 hover:bg-slate-50/50 transition-colors">
-                    <div className={`flex flex-col items-center justify-center min-w-[110px] rounded-xl p-3 border shadow-sm ${isBajarilgan ? 'bg-emerald-50/80 border-emerald-100' : 'bg-red-50/80 border-red-100'
+                  <div key={ti} className="flex flex-col gap-3 border-b border-slate-100 last:border-0 px-5 py-4 hover:bg-slate-50/50 transition-colors">
+                    <div className={`inline-flex flex-col items-start self-start rounded-xl p-3 border shadow-sm ${isBajarilgan ? 'bg-emerald-50/80 border-emerald-100' : 'bg-red-50/80 border-red-100'
                       }`}>
                       <span className={`text-[9px] font-black uppercase tracking-widest ${isBajarilgan ? 'text-emerald-600' : 'text-red-600'}`}>
                         {isBajarilgan ? 'Bajarilgan sana' : 'Bajarilishi kerak edi:'}
@@ -800,7 +826,7 @@ export function WorkerTasksModal({ type, tasks, onClose }: {
                         {dateFormatted}
                       </span>
                     </div>
-                    <div className="flex-1 min-w-0 border-l border-slate-100 pl-4">
+                    <div className="flex-1 min-w-0 w-full pt-1">
                       <p className="text-[11px] font-medium text-slate-700 leading-relaxed whitespace-pre-wrap">{text}</p>
 
                       <div className="mt-3 flex gap-4">
@@ -931,7 +957,7 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
             <div>
               <h3 className="text-lg font-black text-slate-900 tracking-tight">Ishni Bajarish</h3>
               <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                Sana: {`${String(new Date().getDate()).padStart(2, '0')}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}`} В· {selectedTaskType ? 'Jurnallarga yozuv kiriting' : 'Ishni tanlang'}
+                Sana: {`${String(new Date().getDate()).padStart(2, '0')}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}`} · {selectedTaskType ? 'Jurnallarga yozuv kiriting' : 'Ishni tanlang'}
               </p>
             </div>
             <button onClick={onClose} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 hover:text-slate-900 transition shadow-sm">
@@ -998,11 +1024,11 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
                       <div className="text-left">
                         <span className="text-sm font-black text-slate-900">{name}</span>
                         <p className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: isDone ? '#059669' : '#0284c7' }}>
-                          {isDone ? 'Yozuv kiritildi вњ“' : 'Yozuv kiritish в†’'}
+                          {isDone ? 'Yozuv kiritildi' : 'Yozuv kiritish →'}
                         </p>
                       </div>
                     </div>
-                    {isDone && <span className="text-lg">вњ…</span>}
+                    {isDone && <CheckCircle2 size={20} className="text-emerald-500" />}
                   </button>
                 )
               })}
@@ -1032,7 +1058,7 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
                 disabled={!allDone}
                 className="flex-1 rounded-xl bg-emerald-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {allDone ? 'вњ… Bajarildi вЂ” Saqlash' : 'Avval jurnallarga yozuv kiriting'}
+                {allDone ? 'Bajarildi — Saqlash' : 'Avval jurnallarga yozuv kiriting'}
               </button>
             </div>
           </>

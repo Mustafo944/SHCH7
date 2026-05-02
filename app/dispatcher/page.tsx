@@ -292,10 +292,13 @@ export default function DispatcherPage() {
           if (!hasContent || isNaN(taskDay)) return
 
           if (isCurrentMonth) {
-            // Joriy oyda: bugun yoki o'tgan sanalar (bajarilgan yoki bajarilmagan)
-            const isPastOrToday = taskDay <= todayDay
-            if (isPastOrToday && (taskDay === todayDay || !bajarilgan)) {
-              result.push({ stationId: r.stationId, stationName: r.stationName, workerName: r.workerName, entry: e, bajarilgan, month: r.month })
+            // Bajarilgan bo'lsa, faqat bugungilar (taskDay === todayDay)
+            if (bajarilgan && taskDay === todayDay) {
+              result.push({ stationId: r.stationId, stationName: r.stationName, workerName: r.workerName, entry: e, bajarilgan: true, month: r.month })
+            }
+            // Bajarilmagan bo'lsa, faqat o'tib ketgan muddatlar (taskDay < todayDay)
+            else if (!bajarilgan && taskDay < todayDay) {
+              result.push({ stationId: r.stationId, stationName: r.stationName, workerName: r.workerName, entry: e, bajarilgan: false, month: r.month })
             }
           } else {
             // O'tgan oyda: bajarilmagan barcha ishlar
@@ -824,14 +827,14 @@ function StatCard({ icon, label, value, active, clickable, onClick, color = 'pur
   return (
     <div
       onClick={onClick}
-      className={`premium-card group relative overflow-hidden p-5 pb-10 transition-all duration-300 ${clickable ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02]' : ''}`}
+      className={`premium-card group relative overflow-hidden p-4 sm:p-5 pb-8 sm:pb-10 transition-all duration-300 ${clickable ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02]' : ''}`}
     >
-      <div className="flex items-start gap-3">
-        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${s.iconBg} ${s.iconText} transition-transform duration-300 group-hover:scale-110`}>
+      <div className="flex items-start gap-2 sm:gap-3">
+        <div className={`flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl ${s.iconBg} ${s.iconText} transition-transform duration-300 group-hover:scale-110`}>
           {icon}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest text-slate-400 leading-tight line-clamp-2" title={label}>{label}</p>
+          <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-slate-400 leading-tight line-clamp-2 break-words" title={label}>{label}</p>
           <p className="text-3xl font-black text-slate-900 mt-0.5">{value}</p>
         </div>
       </div>

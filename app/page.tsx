@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [navigating, setNavigating] = useState(false)
   const [checkingSession, setCheckingSession] = useState(true)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -28,6 +29,7 @@ export default function LoginPage() {
       const session = await getCachedSession()
       if (active) {
         if (session) {
+          setNavigating(true)
           router.replace(getRoleHome(session.role))
         } else {
           setCheckingSession(false)
@@ -49,7 +51,10 @@ export default function LoginPage() {
       const user = await signIn(login.trim(), password)
 
       if (user) {
+        setNavigating(true)
         router.push(getRoleHome(user.role))
+        // loading ni olib tashlamaymiz, navigating orqali overlay ko'rsatamiz
+        return
       } else {
         setError("Login yoki parol noto'g'ri")
       }
@@ -81,17 +86,17 @@ export default function LoginPage() {
       </div>
 
       {/* Full screen loading overlay — FIXED: overflow-hidden on wrapper */}
-      {loading && (
+      {(loading || navigating) && (
         <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center bg-white/80 backdrop-blur-md">
-          <div className="flex flex-col items-center gap-6 animate-fade-up">
+          <div className="flex flex-col items-center gap-6 animate-fade-up px-6">
             <div className="relative flex h-24 w-24 items-center justify-center">
               <div className="absolute inset-0 animate-ping rounded-full bg-purple-400/20" />
               <div className="absolute inset-2 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600" />
               <img src="/uty-logo.png" alt="UTY" className="h-10 w-10 object-contain animate-pulse" />
             </div>
-            <div className="flex flex-col items-center gap-2">
-              <h2 className="text-xl font-black uppercase tracking-widest text-slate-800">Ma&apos;lumotlar tekshirilmoqda</h2>
-              <p className="text-xs font-bold text-purple-600 uppercase tracking-widest animate-pulse">Iltimos kuting...</p>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <h2 className="text-base sm:text-xl font-black uppercase tracking-wider sm:tracking-widest text-slate-800">Ma&apos;lumotlar tekshirilmoqda</h2>
+              <p className="text-xs font-bold text-purple-600 uppercase tracking-wider sm:tracking-widest animate-pulse">Iltimos kuting...</p>
             </div>
           </div>
         </div>

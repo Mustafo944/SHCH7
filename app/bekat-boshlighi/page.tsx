@@ -5,14 +5,15 @@ import { useSessionGuard, useRealtimeSubscription, useToast } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { getStations, getStation } from '@/lib/store'
 import { DU46JournalView, JournalMonthSelectModal } from '@/components/JournalView'
-import { WorkerSchemasView } from '@/components/worker/WorkerComponents'
+import { WorkerSchemasView, BigActionCard } from '@/components/worker/WorkerComponents'
 import { getPendingJournalCounts } from '@/lib/supabase-db'
 import {
   LogOut,
   MapPin,
   BookOpen,
   AlertCircle,
-  Map as MapIcon
+  Map as MapIcon,
+  ChevronLeft
 } from 'lucide-react'
 
 export default function BekatBoshlighiPage() {
@@ -52,11 +53,11 @@ export default function BekatBoshlighiPage() {
   useRealtimeSubscription(
     selectedStation && session?.role
       ? [{
-          channelName: `bb_journals_${selectedStation}`,
-          table: 'station_journals',
-          filter: `station_id=eq.${selectedStation}`,
-          onEvent: () => loadPendingCounts(selectedStation, session!.role),
-        }]
+        channelName: `bb_journals_${selectedStation}`,
+        table: 'station_journals',
+        filter: `station_id=eq.${selectedStation}`,
+        onEvent: () => loadPendingCounts(selectedStation, session!.role),
+      }]
       : [],
     !!selectedStation && !!session?.role
   )
@@ -76,32 +77,25 @@ export default function BekatBoshlighiPage() {
       <div className="absolute -right-32 bottom-0 h-[600px] w-[600px] rounded-full bg-fuchsia-200/10 blur-[120px]" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
-        {/* Header */}
-        <header className="sticky top-0 z-50 border-b border-purple-100/40 bg-white/70 backdrop-blur-xl print:hidden">
-          <div className="mx-auto flex max-w-[1600px] items-center justify-between px-4 py-4 sm:px-8">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white p-2 shadow-sm ring-1 ring-purple-100">
-                  <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
-                </div>
+        {/* App Header */}
+        <header className="sticky top-0 z-50 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-7xl print:hidden">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-white p-2 shadow-sm border border-slate-100">
+                <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
               </div>
-              <div>
-                <h1 className="text-xl font-black uppercase tracking-tighter bg-gradient-to-r from-purple-700 to-violet-500 bg-clip-text text-transparent">SHCH BUXORO</h1>
-                <p className="text-[10px] font-bold text-purple-500 uppercase tracking-widest">Bekat Boshlig&apos;i Paneli</p>
+              <div className="min-w-0 flex flex-col justify-center">
+                <h1 className="text-[14px] sm:text-[16px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
+                <p className="text-[7.5px] sm:text-[8.5px] font-black text-purple-600 truncate uppercase tracking-wide mt-0.5">SMART CONTROL TIZIMI</p>
               </div>
             </div>
-
             <div className="flex items-center gap-3">
-              <div className="hidden items-center gap-3 rounded-2xl border border-purple-100 bg-white/60 px-4 py-2 shadow-sm sm:flex">
-                <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]"></div>
-                <span className="text-sm font-medium text-slate-600">{session?.fullName}</span>
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-[12px] bg-white border border-slate-100 shadow-sm mr-2">
+                <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400"></div>
+                <span className="text-[10px] font-black text-slate-600 tracking-wider uppercase">{session?.fullName}</span>
               </div>
-
-              <button
-                onClick={handleSignOut}
-                className="group flex h-12 w-12 items-center justify-center rounded-2xl border border-purple-100 bg-purple-50/50 transition-all hover:bg-purple-100 hover:shadow-sm active:scale-95"
-              >
-                <LogOut className="h-5 w-5 text-purple-500 transition-transform group-hover:translate-x-0.5" />
+              <button onClick={handleSignOut} className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-[14px] border border-purple-100 bg-purple-50 text-purple-600 hover:bg-purple-100 hover:scale-105 active:scale-95 transition-all shadow-sm">
+                <LogOut size={18} strokeWidth={2.5} />
               </button>
             </div>
           </div>
@@ -176,42 +170,41 @@ export default function BekatBoshlighiPage() {
                 </button>
                 <div>
                   <h2 className="text-2xl font-black text-slate-900">{stationName}</h2>
-                  <p className="text-xs text-slate-500 uppercase tracking-widest">Bekat Boshlig&apos;i Boshqaruvi</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-widest">
+                    {session?.role === 'bekat_navbatchisi' ? 'Bekat Navbatchisi Boshqaruvi' : "Bekat Boshlig'i Boshqaruvi"}
+                  </p>
                 </div>
               </div>
 
               {showSchemas ? (
-                <WorkerSchemasView stationId={selectedStation} stationName={stationName || ''} />
+                <div>
+                  <button onClick={() => setShowSchemas(false)} className="mb-4 flex items-center gap-2 rounded-xl bg-white/80 px-4 py-2.5 text-sm font-medium text-purple-600 shadow-sm ring-1 ring-purple-100 transition-all hover:bg-purple-50 hover:text-purple-800 active:scale-[0.98]">
+                    <ChevronLeft size={18} />
+                    <span>Orqaga</span>
+                  </button>
+                  <WorkerSchemasView stationId={selectedStation} stationName={stationName || ''} />
+                </div>
               ) : (
-                <div className="flex flex-col sm:flex-row justify-center gap-6 py-12">
-                  <button
-                    onClick={() => setShowMonthSelect(true)}
-                    className="group relative flex flex-col items-center rounded-[32px] border border-purple-100 bg-white p-12 shadow-sm backdrop-blur-md transition-all hover:border-purple-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] w-full sm:w-80"
-                  >
-                    {pendingCounts.du46 > 0 && (
-                      <div className="absolute -top-4 -right-4 flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-lg font-black text-white shadow-xl shadow-red-500/40 animate-bounce">
-                        +{pendingCounts.du46}
-                      </div>
-                    )}
-                    <div className="mb-6 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-500 p-6 group-hover:from-purple-600 group-hover:to-violet-600 transition-colors shadow-lg">
-                      <BookOpen size={48} className="text-white" />
-                    </div>
-                    <h3 className="text-2xl font-black text-slate-900">DU-46 Jurnali</h3>
-                    <p className="mt-2 text-sm text-slate-500 text-center">Ko&apos;rik, tekshiruvlar tahlili va nosozliklar jurnali</p>
-                    <p className="mt-1 text-xs text-purple-500">Tasdiqlash uchun oching</p>
-                  </button>
-
-                  <button
-                    onClick={() => setShowSchemas(true)}
-                    className="group relative flex flex-col items-center rounded-[32px] border border-purple-100 bg-white p-12 shadow-sm backdrop-blur-md transition-all hover:border-purple-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] w-full sm:w-80"
-                  >
-                    <div className="mb-6 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 p-6 group-hover:from-violet-600 group-hover:to-fuchsia-600 transition-colors shadow-lg">
-                      <MapIcon size={48} className="text-white" />
-                    </div>
-                    <h3 className="text-2xl font-black text-slate-900">Bekat Sxemalari</h3>
-                    <p className="mt-2 text-sm text-slate-500 text-center">Bir ipli va ikki ipli sxemalar</p>
-                    <p className="mt-1 text-xs text-purple-500">Ko&apos;rish uchun oching</p>
-                  </button>
+                <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-1">
+                  <div className="col-span-1 lg:col-span-2">
+                    <BigActionCard
+                      title="DU-46 Jurnali"
+                      desc="Ko'rik, tekshiruvlar tahlili va nosozliklar jurnali. Tasdiqlash uchun oching."
+                      icon={<BookOpen size={24} strokeWidth={2} />}
+                      color="purple"
+                      onClick={() => setShowMonthSelect(true)}
+                      badge={pendingCounts.du46}
+                    />
+                  </div>
+                  <div className="col-span-1 lg:col-span-2">
+                    <BigActionCard
+                      title="Bekat Sxemalari"
+                      desc="Bir ipli va ikki ipli sxemalar. Ko'rish uchun oching."
+                      icon={<MapIcon size={24} strokeWidth={2} />}
+                      color="blue"
+                      onClick={() => setShowSchemas(true)}
+                    />
+                  </div>
                 </div>
               )}
             </div>

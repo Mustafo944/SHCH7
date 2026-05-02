@@ -24,7 +24,11 @@ import {
   ChevronLeft,
   LogOut,
   Download,
-  BookOpen
+  BookOpen,
+  PieChart,
+  BarChart3,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react'
 
 const _TOTAL_ROWS = 14
@@ -93,9 +97,9 @@ export default function WorkerPage() {
   // Sessiya tayyor bo'lganda ma'lumotlarni yuklash
   useEffect(() => {
     if (!session) return
-    refreshData(session.id)
     
     if (!viewInitialized) {
+      refreshData(session.id)
       const stationsList = session.stationIds || []
       if (stationsList.length > 1) setView('selectStation')
       else if (stationsList.length === 1) setActiveStationId(stationsList[0])
@@ -223,30 +227,39 @@ export default function WorkerPage() {
   const stationName = station?.name || '...'
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-violet-50 via-purple-50/40 to-fuchsia-50/30 text-slate-900 selection:bg-purple-500/10">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_rgba(237,233,254,0.5),_transparent_50%),radial-gradient(ellipse_at_bottom_right,_rgba(243,232,255,0.3),_transparent_50%)]" />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-purple-50/30 to-fuchsia-50/20 text-slate-900 selection:bg-purple-500/10">
+      {/* Background blur orbs to make glassmorphism pop */}
+      <div className="absolute top-[-10%] left-[-10%] h-[500px] w-[500px] rounded-full bg-purple-300/20 blur-[100px]" />
+      <div className="absolute bottom-[-10%] right-[-10%] h-[500px] w-[500px] rounded-full bg-indigo-300/20 blur-[100px]" />
+      <div className="absolute top-[40%] right-[20%] h-[300px] w-[300px] rounded-full bg-fuchsia-300/20 blur-[100px]" />
+
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_rgba(255,255,255,0.4),_transparent_80%),radial-gradient(ellipse_at_bottom_right,_rgba(255,255,255,0.3),_transparent_80%)]" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
-        {/* Mobile Header */}
-        <header className="sticky top-0 z-50 border-b border-purple-100/40 bg-white/80 backdrop-blur-xl print:hidden">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+        {/* App Header */}
+        <header className="sticky top-0 z-50 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-7xl print:hidden">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-purple-100"><img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" /></div>
-              <div className="min-w-0">
-                <h1 className="text-sm font-black uppercase truncate bg-gradient-to-r from-purple-700 to-violet-500 bg-clip-text text-transparent tracking-tight">SMART SHCH</h1>
-                <p className="text-[10px] font-bold text-slate-400 truncate uppercase tracking-widest">{session?.fullName}</p>
+              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-white p-2 shadow-sm border border-slate-100">
+                <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
+              </div>
+              <div className="min-w-0 flex flex-col justify-center">
+                <h1 className="text-[14px] sm:text-[16px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
+                <p className="text-[7.5px] sm:text-[8.5px] font-black text-purple-600 truncate uppercase tracking-wide mt-0.5">SMART CONTROL TIZIMI</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {(session?.stationIds?.length || 0) > 1 && view !== 'selectStation' && (
-                <button onClick={() => setView('selectStation')} className="rounded-xl border border-purple-200/60 bg-purple-50/80 px-3 py-1.5 text-[10px] font-black text-purple-600 uppercase tracking-widest shadow-sm hover:bg-purple-100 transition-all">Bekatlar</button>
+                <button onClick={() => setView('selectStation')} className="rounded-[14px] bg-white border border-slate-100 px-4 py-2 text-[10px] font-black text-slate-600 uppercase tracking-widest shadow-sm hover:border-purple-200 hover:text-purple-600 transition-all">Bekatlar</button>
               )}
-              <button onClick={handleSignOut} className="rounded-xl border border-purple-200/60 bg-purple-50/80 p-2 text-purple-500 hover:bg-purple-100 transition-all shadow-sm"><LogOut size={20} /></button>
+              <button onClick={handleSignOut} className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-[14px] border border-purple-100 bg-purple-50 text-purple-600 hover:bg-purple-100 hover:scale-105 active:scale-95 transition-all shadow-sm">
+                <LogOut size={18} strokeWidth={2.5} />
+              </button>
             </div>
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-7xl p-4 sm:p-6 pb-24">
+        <main className="mx-auto w-full max-w-7xl p-4 sm:p-4 pb-10">
           {/* Back button - shown above page content */}
           {view !== 'home' && view !== 'selectStation' && (
             <button onClick={() => setView('home')} className="mb-4 flex items-center gap-2 rounded-xl bg-white/80 px-4 py-2.5 text-sm font-medium text-purple-600 shadow-sm ring-1 ring-purple-100 transition-all hover:bg-purple-50 hover:text-purple-800 active:scale-[0.98]">
@@ -267,64 +280,120 @@ export default function WorkerPage() {
           )}
 
           {view === 'home' && (
-            <div className="space-y-8 animate-fade-up">
-              {/* Profile Card */}
-              <div className="relative overflow-hidden rounded-3xl border border-purple-100/60 bg-white/80 p-8 shadow-xl backdrop-blur-sm">
-                <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-purple-200/20 blur-3xl opacity-50" />
-                <h2 className="text-3xl font-black text-slate-900">{session?.fullName}</h2>
-                <div className="mt-2 flex items-center gap-3">
-                  <p className="text-sm font-bold text-purple-600 uppercase tracking-widest">
-                    {session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : session?.role === 'elektromexanik' ? 'Elektromexanik' : session?.role === 'elektromontyor' ? 'Elektromontyor' : "Katta Elektromexanik"}
+            <div className="space-y-4 sm:space-y-4 animate-fade-up">
+              
+              {/* Welcome Card */}
+              <div className="relative overflow-hidden rounded-[24px] bg-white/50 backdrop-blur-xl p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 flex items-center justify-between">
+                <div className="relative z-10">
+                  <h2 className="text-xl sm:text-xl font-black text-slate-900 flex items-center gap-2">
+                    <span className="text-2xl">👋</span> Xush kelibsiz, {session?.fullName}!
+                  </h2>
+                  <p className="mt-1 text-xs sm:text-sm text-slate-600 font-medium">
+                    Bugungi ishlaringizni samarali boshqaring.
                   </p>
-                  {stationName && stationName !== '...' && (
-                    <>
-                      <div className="h-1.5 w-1.5 rounded-full bg-slate-300" />
-                      <div className="flex items-center gap-1.5 rounded-lg bg-slate-100/80 px-2 py-1 border border-slate-200/60 shadow-sm text-xs font-black uppercase tracking-widest text-slate-500">
-                        <MapIcon size={14} className="text-slate-400" />
-                        {stationName} BEKATI
-                      </div>
-                    </>
-                  )}
                 </div>
-                <div className="mt-8 grid grid-cols-2 gap-4">
-                  <div onClick={() => setWorkerModal('bugunBajarilgan')} className="cursor-pointer flex flex-col items-start justify-center rounded-2xl bg-emerald-50/80 p-5 border border-emerald-100 shadow-sm hover:scale-[1.02] transition-transform">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Bugun bajarilgan ishlar</p>
-                    <p className="text-3xl font-black text-emerald-700">{bugunBajarilgan.length}</p>
-                  </div>
-                  <div onClick={() => setWorkerModal('qolibKetgan')} className="cursor-pointer flex flex-col items-start justify-center rounded-2xl bg-red-50/80 p-5 border border-red-100 shadow-sm hover:scale-[1.02] transition-transform">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Bajarilmagan ishlar</p>
-                    <p className="text-3xl font-black text-red-700">{qolibKetgan.length}</p>
+                {/* Abstract Decorative Elements representing the 3D graphics */}
+                <div className="absolute right-0 top-0 h-full w-1/3 hidden sm:flex items-center justify-end pr-6 opacity-80 pointer-events-none">
+                  <div className="relative w-28 h-28">
+                    <div className="absolute right-10 top-3 w-14 h-14 rounded-2xl bg-purple-100/60 rotate-12 flex items-center justify-center backdrop-blur-md border border-purple-200/50">
+                      <FileText size={24} className="text-purple-500" />
+                    </div>
+                    <div className="absolute right-2 bottom-4 w-10 h-10 rounded-full bg-indigo-100/60 -rotate-12 flex items-center justify-center backdrop-blur-md border border-indigo-200/50">
+                      <PieChart size={18} className="text-indigo-500" />
+                    </div>
+                    <div className="absolute right-20 bottom-1 w-8 h-8 rounded-xl bg-sky-100/60 rotate-45 flex items-center justify-center backdrop-blur-md border border-sky-200/50">
+                      <BarChart3 size={16} className="text-sky-500" />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              {/* Profile & Stats Card */}
+              <div className="rounded-[24px] bg-white/50 backdrop-blur-xl p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80">
+                <div className="mb-4">
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900">{session?.fullName}</h2>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span className="text-[10px] sm:text-xs font-black text-purple-600 uppercase tracking-widest">
+                      {session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : session?.role === 'elektromexanik' ? 'Elektromexanik' : session?.role === 'elektromontyor' ? 'Elektromontyor' : "Katta Elektromexanik"}
+                    </span>
+                    {stationName && stationName !== '...' && (
+                      <>
+                        <div className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                        <div className="flex items-center gap-1.5 rounded-xl bg-slate-50 px-3 py-1.5 border border-slate-100 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500">
+                          <MapIcon size={12} className="text-slate-400" />
+                          {stationName} BEKATI
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {/* Bugun Bajarilgan Ishlar */}
+                  <div 
+                    onClick={() => setWorkerModal('bugunBajarilgan')} 
+                    className="cursor-pointer group relative overflow-hidden rounded-[20px] bg-emerald-50/50 p-4 sm:p-5 border border-emerald-100/60 transition-all hover:bg-emerald-50 hover:border-emerald-200 hover:shadow-md active:scale-[0.98] flex items-center gap-4"
+                  >
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-emerald-100/50 text-emerald-500 group-hover:scale-110 transition-transform">
+                      <CheckCircle2 size={26} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-emerald-600">Bugun bajarilgan ishlar</p>
+                      <p className="text-xl sm:text-2xl font-black text-emerald-600 mt-0.5 mb-0.5">{bugunBajarilgan.length}</p>
+                      <p className="text-[10px] sm:text-[11px] font-medium text-emerald-700/70">
+                        {bugunBajarilgan.length > 0 ? "Bajarilgan ishlar mavjud" : "Sizda hali bajarilgan ishlar yo'q"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Bajarilmagan Ishlar */}
+                  <div 
+                    onClick={() => setWorkerModal('qolibKetgan')} 
+                    className="cursor-pointer group relative overflow-hidden rounded-[20px] bg-red-50/50 p-4 sm:p-5 border border-red-100/60 transition-all hover:bg-red-50 hover:border-red-200 hover:shadow-md active:scale-[0.98] flex items-center gap-4"
+                  >
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-red-100/50 text-red-500 group-hover:scale-110 transition-transform">
+                      <AlertTriangle size={26} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-red-600">Bajarilmagan ishlar</p>
+                      <p className="text-xl sm:text-2xl font-black text-red-600 mt-0.5 mb-0.5">{qolibKetgan.length}</p>
+                      <p className="text-[10px] sm:text-[11px] font-medium text-red-700/70">
+                        {qolibKetgan.length > 0 ? "Bajarilmagan ishlar mavjud" : "Barcha ishlar o'z vaqtida bajarilgan"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Cards */}
+              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-1">
                 <BigActionCard
                   title="Hisobot To'ldirish"
-                  desc={missedTasksCount > 0 ? "Sizda bajarilmagan ishlar bor! Ularni tasdiqlang." : "Oylik ish reja va bajarilgan ishlarni kiriting."}
-                  icon={<FileText size={32} />}
+                  desc="Sizda bajarilmagan ishlar bor! Ularni tasdiqlang."
+                  icon={<FileText size={24} strokeWidth={2} />}
                   onClick={() => setView('selectMonth')}
                   badge={missedTasksCount}
+                  color="purple"
                 />
                 <BigActionCard
                   title="Bekat Sxemalari"
                   desc="Bir ipli va ikki ipli sxemalarni ko'rish."
-                  icon={<MapIcon size={32} />}
+                  icon={<MapIcon size={24} strokeWidth={2} />}
                   color="blue"
                   onClick={() => setView('sxemalar')}
                 />
                 <BigActionCard
                   title="Grafiklar"
                   desc="Umumiy ish reja grafiklarini ko'rish va yuklab olish."
-                  icon={<Download size={32} />}
+                  icon={<Download size={24} strokeWidth={2} />}
                   color="amber"
                   onClick={() => setView('grafiklar')}
                 />
                 <BigActionCard
                   title="Ish Jurnallari"
                   desc="DU-46 va SHU-2 jurnallarini to'ldirish."
-                  icon={<BookOpen size={32} />}
-                  color="emerald"
+                  icon={<BookOpen size={24} strokeWidth={2} />}
+                  color="sky"
                   onClick={() => setView('journalSelect')}
                   badge={pendingCounts.du46 + pendingCounts.shu2}
                 />

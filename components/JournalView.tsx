@@ -1,4 +1,4 @@
-﻿/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
@@ -211,7 +211,7 @@ export function JournalMonthSelectModal({
                   {monthName}
                 </span>
                 {isFuture && (
-                  <span className="mt-1 text-[9px] font-bold text-red-300">рџ”’ Hali kelmagan</span>
+                  <span className="mt-1 text-[9px] font-bold text-red-300">Hali kelmagan</span>
                 )}
               </button>
             )
@@ -301,9 +301,9 @@ function TaskSelectModal({
   )
 }
 
-// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // DU-46 INPUT KOMPONENTLARI
-// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 /** Sana inputi: faqat raqam kiritadi, dd-mm-yyyy formatda ko'rsatadi */
 function DateInput({ value, onChange, readOnly, placeholder = 'kk-oo-yyyy' }: {
@@ -352,9 +352,9 @@ function TimeInput({ value, onChange, readOnly, className: extraClass = '', plac
   )
 }
 
-// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // DU-46 JURNAL KO'RINISHI
-// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 export function DU46JournalView({
   stationId,
@@ -387,24 +387,24 @@ export function DU46JournalView({
   const selectedMonth = jMonth || String(today.getMonth() + 1).padStart(2, '0')
   const journalMonthLabel = getJournalMonthLabel(journalMonth)
 
-  // в”Ђв”Ђв”Ђ Rollar в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // --- Rollar --------------------------------------------------------------------
   const isWorker = ['worker', 'elektromexanik', 'elektromontyor'].includes(userRole)
   const isBB = ['bekat_boshlighi', 'bekat_navbatchisi'].includes(userRole)
   const isDispatcher = userRole === 'dispatcher'
   const isEditor = isWorker || isBB // Yozish mumkin bo'lgan rollar
 
-  // в”Ђв”Ђв”Ђ Joriy oy tekshiruvi в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // --- Joriy oy tekshiruvi --------------------------------------------------------
   // Eski oyga yangi yozuv kiritish mumkin emas (faqat tasdiqlanmagan
   // mavjud yozuvlarni tasdiqlash / bajarish mumkin)
   const isCurrentMonth = journalMonth === getCurrentJournalMonth()
 
-  // в”Ђв”Ђв”Ђ Xabar ko'rsatish в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // --- Xabar ko'rsatish ------------------------------------------------------------
   const showMsg = (text: string, duration = 2000) => {
     setMsg(text)
     setTimeout(() => setMsg(null), duration)
   }
 
-  // в”Ђв”Ђв”Ђ Ma'lumotlarni yuklash в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // --- Ma'lumotlarni yuklash -------------------------------------------------------
   const loadJournalData = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true)
     try {
@@ -431,7 +431,7 @@ export function DU46JournalView({
         setEntries([EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46()])
       }
     } catch (err) {
-      console.error('вќЊ Journal yuklash xatosi:', err)
+      console.error('Journal yuklash xatosi:', err)
     } finally {
       if (!isSilent) setLoading(false)
     }
@@ -452,7 +452,7 @@ export function DU46JournalView({
     return () => { supabase.removeChannel(channel) }
   }, [stationId, userRole, journalMonth, loadJournalData])
 
-  // в”Ђв”Ђв”Ђ Yordamchi: qaysi rol yaratgan в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // --- Yordamchi: qaysi rol yaratgan -----------------------------------------------
   /** Qator kim tomonidan yaratilgan bo'lsa, shu rolni qaytaradi. Agar belgilanmagan bo'lsa default `worker` */
   const getCreator = (e: DU46Entry): 'worker' | 'bekat_boshlighi' => e.createdByRole || 'worker'
 
@@ -468,7 +468,7 @@ export function DU46JournalView({
     return (creator === 'worker' && isBB) || (creator === 'bekat_boshlighi' && isWorker)
   }
 
-  // в”Ђв”Ђв”Ђ Input yangilash в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // --- Input yangilash -------------------------------------------------------------
   const update = (i: number, field: keyof DU46Entry, val: string) => {
     const n = [...entries]
     n[i] = { ...n[i], [field]: val }
@@ -482,7 +482,7 @@ export function DU46JournalView({
     setEntries(n)
   }
 
-  // в”Ђв”Ђв”Ђ Qator boshqaruvi в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // --- Qator boshqaruvi ------------------------------------------------------------
   // Eski oyda yangi qator qo'shish mumkin emas
   const addRow = () => { if (isCurrentMonth) setEntries([...entries, EMPTY_DU46()]) }
 
@@ -493,7 +493,7 @@ export function DU46JournalView({
     setEntries(entries.slice(0, -1))
   }
 
-  // в”Ђв”Ђв”Ђ Saqlash (optimistik) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+  // --- Saqlash (optimistik) --------------------------------------------------------
   const saveEntries = async (updated: DU46Entry[], prev: DU46Entry[]) => {
     setEntries(updated)
     
@@ -506,7 +506,7 @@ export function DU46JournalView({
     try {
       await upsertJournal(stationId, 'du46', newAllEntries, userName)
     } catch (err) {
-      console.error('вќЊ Saqlash xatosi:', err)
+      console.error('Saqlash xatosi:', err)
       setEntries(prev)
       setAllEntries(allEntries) // roll back
       showMsg(err instanceof Error ? err.message : 'Xatolik', 3000)
@@ -514,9 +514,9 @@ export function DU46JournalView({
     }
   }
 
-  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+  // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
   // USTUN 3: BOSHLANDI + TASDIQLASH
-  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+  // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
   /** Yozuvchi "Boshlandi" tugmasini bosadi */
   const handleKamchilikBoshlandi = async (i: number) => {
@@ -530,12 +530,12 @@ export function DU46JournalView({
     }
     try {
       await saveEntries(updated, prev)
-      showMsg('Boshlandi belgilandi вњ“')
+      showMsg('Boshlandi belgilandi!')
       onAccepted?.() // worker action completed
     } catch { /* saveEntries ichida xato ko'rsatiladi */ }
   }
 
-  /** Tasdiqlash rolni bosadi вЂ” vaqt avtomatik qo'yiladi */
+  /** Tasdiqlash rolni bosadi — vaqt avtomatik qo'yiladi */
   const handleKamchilikTasdiqlash = async (i: number) => {
     const now = new Date()
     const autoVaqt = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
@@ -550,13 +550,13 @@ export function DU46JournalView({
     }
     try {
       await saveEntries(updated, prev)
-      showMsg('Tasdiqlandi вњ“')
+      showMsg('Tasdiqlandi!')
     } catch { /* */ }
   }
 
-  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+  // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
   // USTUN 12: BAJARILDI + TASDIQLASH
-  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+  // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
   /** Yozuvchi "Bajarildi" bosadi */
   const handleBartarafBajarildi = async (i: number) => {
@@ -570,12 +570,12 @@ export function DU46JournalView({
     }
     try {
       await saveEntries(updated, prev)
-      showMsg('Bajarildi belgilandi вњ“')
+      showMsg('Bajarildi belgilandi!')
       onAccepted?.() // worker action completed
     } catch { /* */ }
   }
 
-  /** Tasdiqlash rolni bosadi вЂ” vaqt avtomatik qo'yiladi */
+  /** Tasdiqlash rolni bosadi — vaqt avtomatik qo'yiladi */
   const handleBartarafTasdiqlash = async (i: number) => {
     const now = new Date()
     const autoVaqt = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
@@ -590,13 +590,13 @@ export function DU46JournalView({
     }
     try {
       await saveEntries(updated, prev)
-      showMsg('Tasdiqlandi вњ“')
+      showMsg('Tasdiqlandi!')
     } catch { /* */ }
   }
 
-  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+  // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
   // DISPETCHERGA YUBORISH / QABUL QILISH
-  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+  // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
   const handleDispetchergaYuborish = async () => {
     const prev = [...entries]
@@ -608,7 +608,7 @@ export function DU46JournalView({
     })
     try {
       await saveEntries(updated, prev)
-      showMsg('Yuborildi вњ“')
+      showMsg('Yuborildi!')
     } catch { /* */ }
   }
 
@@ -621,14 +621,14 @@ export function DU46JournalView({
     )
     try {
       await saveEntries(updated, prev)
-      showMsg('Qabul qilindi вњ“')
+      showMsg('Qabul qilindi!')
       onAccepted?.()  // parent ni xabar ber
     } catch { /* */ }
   }
 
-  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+  // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
   // PDF YUKLAB OLISH
-  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+  // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
   const handleDownload = async () => {
     const { jsPDF } = await import('jspdf')
@@ -643,7 +643,7 @@ export function DU46JournalView({
     doc.setFont('helvetica', 'normal')
     doc.text(`Sana: ${dateStr}`, 14, 22)
 
-    const tableColumn = ['в„–', 'Oy va kun', 'Soat va daqiqa', 'Kamchilik bayoni', 'Oy/kun (xabar)', 'Soat (xabar)', 'Xabar usuli', 'Oy/kun (kelish)', 'Soat (kelish)', 'Kelgan imzo', 'Oy/kun (bartaraf)', 'Soat (bartaraf)', 'Bartaraf tafsiloti', 'Bajardi', 'Tasdiqladi']
+    const tableColumn = ['№', 'Oy va kun', 'Soat va daqiqa', 'Kamchilik bayoni', 'Oy/kun (xabar)', 'Soat (xabar)', 'Xabar usuli', 'Oy/kun (kelish)', 'Soat (kelish)', 'Kelgan imzo', 'Oy/kun (bartaraf)', 'Soat (bartaraf)', 'Bartaraf tafsiloti', 'Bajardi', 'Tasdiqladi']
     const tableRows = entries
       .filter(e => e.kamchilik || e.bartarafInfo || e.oyKun1 || e.soatMinut1)
       .map((e, i) => [
@@ -667,32 +667,32 @@ export function DU46JournalView({
     doc.save(`DU-46_${stationName}_${dateStr.replace(/\./g, '-')}.pdf`)
   }
 
-  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+  // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
   // COMPUTED VALUES
-  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+  // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
   const hasAnyEntry = entries.some(e => e.kamchilik || e.bartarafInfo)
   const tasdiqlanganCount = entries.filter(e => !e.yuborildi && (e.kamchilik || e.bartarafInfo) && e.kamchilikBBTasdiqladi && e.bartarafBBTasdiqladi).length
   const kutilayotganCount = entries.filter(e => e.yuborildi && !e.dispetcherQabulQildi).length
 
-  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+  // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
   // RENDER
-  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+  // --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
   if (loading) return <div className="flex h-64 items-center justify-center text-slate-300 font-bold uppercase tracking-widest">Yuklanmoqda...</div>
 
   return (
     <div className="fixed inset-0 z-[200] flex flex-col bg-slate-50">
-      {/* в”Ђв”Ђ Header в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
+      {/* — Header ————————————————————————————————————————————————————————————————————— */}
       <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur-xl sm:px-8 shadow-sm">
         <div>
           <h2 className="text-lg font-black text-slate-900 tracking-tight">DU-46 Jurnali</h2>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stationName} В· {journalMonthLabel}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stationName} · {journalMonthLabel}</p>
         </div>
         <div className="flex items-center gap-3">
           {!isCurrentMonth && !isDispatcher && (
             <span className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-amber-600">
-              рџ”’ Faqat ko&apos;rish (o&apos;tgan oy)
+              Faqat ko&apos;rish (o&apos;tgan oy)
             </span>
           )}
           {msg && <span className={`text-xs font-bold px-3 py-1 rounded-full border ${msg.includes('!') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>{msg}</span>}
@@ -874,7 +874,7 @@ export function DU46JournalView({
                             disabled={!e.kamchilikBajarildi}
                             className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${!e.kamchilikBajarildi ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-amber-500 text-white hover:bg-amber-600 border-transparent'}`}
                           >
-                            вњ“ Tasdiqlash
+                            Tasdiqlash
                           </button>
                         )}
 
@@ -985,7 +985,7 @@ export function DU46JournalView({
                             disabled={!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi}
                             className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${(!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi) ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'btn-gradient'}`}
                           >
-                            вњ“ Bajarildi
+                            Bajarildi
                           </button>
                         )}
 
@@ -1007,7 +1007,7 @@ export function DU46JournalView({
                               disabled={!e.bartarafBajarildi || !e.kamchilikBBTasdiqladi}
                               className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${(!e.bartarafBajarildi || !e.kamchilikBBTasdiqladi) ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-amber-500 text-white hover:bg-amber-600 border-transparent'}`}
                             >
-                              вњ“ Tasdiqlash
+                              Tasdiqlash
                             </button>
                             {!e.kamchilikBBTasdiqladi && (
                               <span className="text-[8px] font-black text-red-400 text-center leading-tight px-1 mt-1 uppercase tracking-tighter">
@@ -1035,7 +1035,7 @@ export function DU46JournalView({
           </table>
         </div>
 
-        {/* в”Ђв”Ђ Qator qo'shish / o'chirish в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
+        {/* ——— Qator qo'shish / o'chirish ————————————————— */}
         {isEditor && (() => {
           const last = entries[entries.length - 1]
           const lastHasData = last.kamchilik || last.bartarafInfo
@@ -1056,7 +1056,7 @@ export function DU46JournalView({
           )
         })()}
 
-        {/* в”Ђв”Ђ Yuborish (ishchi yoki BB) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
+        {/* ——— Yuborish (ishchi yoki BB) —————————————————————————— */}
         {isEditor && hasAnyEntry && (
           <>
             {/* Kutilayotgan status */}
@@ -1089,7 +1089,7 @@ export function DU46JournalView({
           </>
         )}
 
-        {/* в”Ђв”Ђ Dispetcher: Qabul qilish в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
+        {/* ——— Dispetcher: Qabul qilish ———————————————————————————— */}
         {isDispatcher && hasAnyEntry && entries.some(e => e.yuborildi && !e.dispetcherQabulQildi) && (
           <div className="mt-8 flex justify-end">
             <button
@@ -1117,9 +1117,9 @@ export function DU46JournalView({
   )
 }
 
-// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+// ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 // SHU-2 JURNAL KO'RINISHI (O'ZGARISHSIZ)
-// в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+// ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 export function SHU2JournalView({
   stationId,
@@ -1167,7 +1167,7 @@ export function SHU2JournalView({
         setEntries(Array.from({ length: 7 }, (_, i) => ({ ...EMPTY_SHU2(), nomber: String(i + 1) })))
       }
     } catch (err) {
-      console.error('вќЊ SHU-2 journal yuklash xatosi:', err)
+      console.error('❌ SHU-2 journal yuklash xatosi:', err)
     } finally {
       if (!isSilent) setLoading(false)
     }
@@ -1216,11 +1216,11 @@ export function SHU2JournalView({
       }
       setEntries(updated)
       await upsertJournal(stationId, 'shu2', updated, userName)
-      setMsg('Tasdiqlandi вњ“')
+      setMsg('Tasdiqlandi!')
       onAccepted?.() // worker action completed
       setTimeout(() => setMsg(null), 2000)
     } catch (err) {
-      console.error('вќЊ SHU-2 Tasdiqlash xatosi:', err)
+      console.error('❌ SHU-2 Tasdiqlash xatosi:', err)
       setEntries(prev)
       setMsg(err instanceof Error ? err.message : 'Xatolik')
       setTimeout(() => setMsg(null), 3000)
@@ -1374,7 +1374,7 @@ export function SHU2JournalView({
                           <button onClick={() => handleTasdiqlash(i)}
                             disabled={!(e.sana?.trim() && e.yozuv?.trim())}
                             className={`w-full rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${e.sana?.trim() && e.yozuv?.trim() ? 'btn-gradient' : 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed'}`}>
-                            вњ“ Bajarildi
+                            Bajarildi
                           </button>
                         ) : (
                           <span className="text-[10px] font-black text-slate-200">вЂ”</span>
@@ -1404,4 +1404,5 @@ export function SHU2JournalView({
     </div>
   )
 }
+
 

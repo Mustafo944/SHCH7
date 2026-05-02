@@ -6,7 +6,7 @@ type CreateWorkerBody = {
   login: string
   password: string
   phone: string
-  role: 'worker' | 'bekat_boshlighi'
+  role: 'worker' | 'bekat_boshlighi' | 'elektromexanik' | 'elektromontyor' | 'bekat_navbatchisi'
   stationIds: string[]
   position: string
 }
@@ -72,13 +72,10 @@ export async function POST(req: Request) {
       .eq('login', body.login)
 
     if (existingUsers && existingUsers.length > 0) {
-      // Eski foydalanuvchini o'chirish (Auth + Database)
-      for (const existing of existingUsers) {
-        // Auth dan o'chirish
-        await supabaseAdmin.auth.admin.deleteUser(existing.id)
-        // Database dan o'chirish (agar qolib ketgan bo'lsa)
-        await supabaseAdmin.from('users').delete().eq('id', existing.id)
-      }
+      return NextResponse.json(
+        { success: false, message: `Bu login (${body.login}) band. Boshqa login kiriting yoki avvalgi foydalanuvchini tizimdan o'chiring.` },
+        { status: 400 }
+      )
     }
 
     // ─── Yangi foydalanuvchi yaratish ─────────────────────────────
