@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { User, WorkReport, PremiyaReport, StationSchema, ReportEntry, GrafikTuri, StationJournal, JournalType, DU46Entry, SHU2Entry } from '@/types';
+import type { User, WorkReport, PremiyaReport, StationSchema, ReportEntry, GrafikTuri, StationJournal, JournalType, DU46Entry, SHU2Entry, ALSNEntry, YerlatgichEntry } from '@/types';
 
 // Stations
 import { getStations, getStation } from './store';
@@ -277,6 +277,7 @@ export async function getAllReports(): Promise<WorkReport[]> {
   const { data, error } = await supabase
     .from('work_reports')
     .select(WORK_REPORT_COLUMNS)
+    .neq('week_label', 'Draft Oylik Reja')
     .order('submitted_at', { ascending: false });
 
   if (error || !data) return [];
@@ -299,6 +300,7 @@ export async function getReportsByStation(stationId: string): Promise<WorkReport
     .from('work_reports')
     .select(WORK_REPORT_COLUMNS)
     .eq('station_id', stationId)
+    .neq('week_label', 'Draft Oylik Reja')
     .order('submitted_at', { ascending: false });
 
   if (error || !data) return [];
@@ -419,7 +421,8 @@ export async function getStationPendingCount(): Promise<Record<string, number>> 
   const { data, error } = await supabase
     .from('work_reports')
     .select('station_id, entries, confirmed_at')
-    .is('confirmed_at', null);
+    .is('confirmed_at', null)
+    .neq('week_label', 'Draft Oylik Reja');
 
   if (error || !data) return {};
 
@@ -668,7 +671,7 @@ interface DbJournalRow {
   id: string
   station_id: string
   journal_type: string
-  entries: DU46Entry[] | SHU2Entry[]
+  entries: DU46Entry[] | SHU2Entry[] | ALSNEntry[] | YerlatgichEntry[]
   updated_at: string
   updated_by: string
 }
@@ -762,7 +765,7 @@ export async function getPendingJournalCounts(
 export async function upsertJournal(
   stationId: string,
   journalType: JournalType,
-  entries: DU46Entry[] | SHU2Entry[],
+  entries: DU46Entry[] | SHU2Entry[] | ALSNEntry[] | YerlatgichEntry[],
   updatedBy: string
 ): Promise<StationJournal> {
   console.log('💾 upsertJournal chaqirildi:', { stationId, journalType, entriesCount: entries.length, updatedBy })

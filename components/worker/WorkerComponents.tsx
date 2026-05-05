@@ -6,7 +6,7 @@ import { getGlobalGraphics, getSchemasByStation, upsertReport, upsertPremiyaRepo
 import type { User, WorkReport, ReportEntry, PremiyaEntry, StationSchema } from '@/types'
 import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, type ParsedTaskItem } from '@/lib/reja-data'
 import { MONTHS } from '@/lib/constants'
-import { DU46JournalView, SHU2JournalView } from '@/components/JournalView'
+import { DU46JournalView, SHU2JournalView, YerlatgichJournalView, AlsnKodJournalView, MpsFriksionJournalView } from '@/components/JournalView'
 
 const TOTAL_ROWS = 14
 const PREMIYA_ROWS = 12
@@ -21,7 +21,7 @@ export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badg
     blue: { bg: 'bg-blue-50', text: 'text-blue-600' },
     sky: { bg: 'bg-sky-50', text: 'text-sky-600' },
   }
-  
+
   const theme = colorStyles[color] || colorStyles.purple
 
   return (
@@ -31,11 +31,11 @@ export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badg
           {badge > 9 ? '9+' : badge}
         </div>
       )}
-      
+
       <div className={`rounded-[16px] p-3 mb-4 transition-transform group-hover:scale-110 ${theme.bg} ${theme.text}`}>
         {icon}
       </div>
-      
+
       <h3 className="text-[15px] sm:text-base font-black text-slate-900 tracking-tight">{title}</h3>
       <p className="mt-1 text-[11px] sm:text-xs text-slate-500 leading-relaxed font-medium line-clamp-2 pr-6">
         {desc}
@@ -83,9 +83,11 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   const [reportId, setReportId] = useState<string | null>(null)
   const [completionIdx, setCompletionIdx] = useState<number | null>(null)
   const monthStr = `${new Date().getFullYear()}-${String(month + 1).padStart(2, '0')}`
+  const draftReport = useMemo(() => reports.find(r => r.month === monthStr && r.stationId === stationId), [reports, monthStr, stationId])
+  const canEditPlan = session.position === 'katta_elektromexanik'
 
   useEffect(() => {
-    const draft = reports.find(r => r.month === monthStr && r.stationId === stationId)
+    const draft = draftReport
     if (draft) {
       setEntries(draft.entries)
       setIsConfirmed(!!draft.confirmedAt)
@@ -208,6 +210,19 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     doc.save(`Oylik-Reja_${stationName}_${MONTHS[month]}.pdf`)
   }
 
+  if (!canEditPlan && !draftReport) {
+    return (
+      <div className="space-y-6 animate-fade-up">
+        <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} status="ko'rish" />
+        <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-12 text-center shadow-sm backdrop-blur-sm">
+          <h3 className="text-xl font-black text-slate-900 tracking-tight mb-2">Oylik ish reja hali tuzilmagan</h3>
+          <p className="text-slate-500 font-medium max-w-md mx-auto mb-8">Ushbu bekat va oy uchun oylik ish reja Katta elektromexanik tomonidan hali tizimga kiritilmagan. Iltimos kuting.</p>
+          <button onClick={onCancel} className="rounded-2xl bg-white border border-slate-200/60 px-10 py-3 font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition shadow-sm backdrop-blur-sm">Orqaga qaytish</button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 animate-fade-up">
       <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} status="yangi" />
@@ -247,18 +262,18 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                   <td className="border-r border-slate-100 p-1 align-top">
                     <input
                       value={e.ragat}
-                      readOnly={!!e.adImzosi || isConfirmed}
+                      readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
                       onChange={(ev) => { const n = [...entries]; n[i].ragat = ev.target.value; setEntries(n) }}
-                      className={`w-full rounded bg-transparent text-center font-bold text-purple-600 outline-none focus:bg-white ${(!!e.adImzosi || isConfirmed) ? 'opacity-40' : ''}`}
+                      className={`w-full rounded bg-transparent text-center font-bold text-purple-600 outline-none focus:bg-white ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-40' : ''}`}
                     />
                   </td>
                   <td className="relative border-r border-slate-100 p-1 align-top">
                     <div className="relative">
                       <textarea
                         value={e.haftalikJadval}
-                        readOnly={!!e.adImzosi || isConfirmed}
+                        readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
                         onChange={(ev) => { const n = [...entries]; n[i].haftalikJadval = ev.target.value; setEntries(n) }}
-                        className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
+                        className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
                       />
                       {e.doneHaftalik && (
                         <div className="absolute top-1 right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-sm" title="Bajarildi">
@@ -266,7 +281,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                         </div>
                       )}
                     </div>
-                    {(!e.adImzosi && !isConfirmed) && (
+                    {(!e.adImzosi && !isConfirmed && canEditPlan) && (
                       <button
                         onClick={() => openSelectModal(i, '4-haftalik')}
                         className="absolute bottom-2 right-2 rounded bg-purple-100 p-1 text-purple-600 shadow-sm transition hover:bg-purple-600 hover:text-white"
@@ -279,9 +294,9 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                     <div className="relative">
                       <textarea
                         value={e.yillikJadval}
-                        readOnly={!!e.adImzosi || isConfirmed}
+                        readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
                         onChange={(ev) => { const n = [...entries]; n[i].yillikJadval = ev.target.value; setEntries(n) }}
-                        className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
+                        className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
                       />
                       {e.doneYillik && (
                         <div className="absolute top-1 right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-sm" title="Bajarildi">
@@ -289,7 +304,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                         </div>
                       )}
                     </div>
-                    {(!e.adImzosi && !isConfirmed) && (
+                    {(!e.adImzosi && !isConfirmed && canEditPlan) && (
                       <button
                         onClick={() => openSelectModal(i, 'yillik')}
                         className="absolute bottom-2 right-2 rounded bg-purple-100 p-1 text-purple-600 shadow-sm transition hover:bg-purple-600 hover:text-white"
@@ -301,25 +316,25 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                   <td className="border-r border-slate-100 p-1 align-top">
                     <textarea
                       value={e.yangiIshlar}
-                      readOnly={!!e.adImzosi || isConfirmed}
+                      readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
                       onChange={(ev) => { const n = [...entries]; n[i].yangiIshlar = ev.target.value; setEntries(n) }}
-                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     />
                   </td>
                   <td className="border-r border-slate-100 p-1 align-top">
                     <textarea
                       value={e.kmoBartaraf}
-                      readOnly={!!e.adImzosi || isConfirmed}
+                      readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
                       onChange={(ev) => { const n = [...entries]; n[i].kmoBartaraf = ev.target.value; setEntries(n) }}
-                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
                     />
                   </td>
                   <td className="border-r border-slate-100 p-1 align-top">
                     <textarea
                       value={e.majburiyOzgarish}
-                      readOnly={!!e.adImzosi || isConfirmed}
+                      readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
                       onChange={(ev) => { const n = [...entries]; n[i].majburiyOzgarish = ev.target.value; setEntries(n) }}
-                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
                     />
                   </td>
                   <td className="border-r border-slate-100 p-2 text-center align-middle font-medium text-purple-600">
@@ -338,7 +353,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                         const hasYangi = !!e.yangiIshlar && !e.doneYangi
                         const hasKmo = !!e.kmoBartaraf && !e.doneKmo
                         const hasMajburiy = !!e.majburiyOzgarish && !e.doneMajburiy
-                        
+
                         const needsAction = hasHaftalik || hasYillik || hasYangi || hasKmo || hasMajburiy
 
                         if (needsAction) {
@@ -363,7 +378,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
             </tbody>
           </table>
         </div>
-        {!isConfirmed && (
+        {(!isConfirmed && canEditPlan) && (
           <div className="flex items-center gap-3 border-t border-slate-200/60 bg-slate-50/50 p-4">
             <button
               onClick={addRow}
@@ -390,7 +405,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           className="rounded-2xl border border-slate-200/60 bg-white/80 px-6 py-5 font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition flex items-center gap-2 shadow-sm backdrop-blur-sm">
           <Download size={18} /> PDF
         </button>
-        {!isConfirmed && (
+        {(!isConfirmed && canEditPlan) && (
           <button onClick={handleSubmit} disabled={submitting} className="btn-gradient flex-1 py-5 font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all">{submitting ? 'Yuborilmoqda...' : 'Yuborish'}</button>
         )}
         <button onClick={onCancel} className="rounded-2xl bg-white/80 border border-slate-200/60 px-10 font-bold text-slate-400 hover:text-slate-900 transition shadow-sm backdrop-blur-sm">
@@ -480,7 +495,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                           // Avtomatik saqlash
                           try {
                             await upsertReport({
-                              workerId: session.id, workerName: session.fullName, workerPhone: session.phone || '', stationId, stationName, entries: n, month: monthStr, year: String(new Date().getFullYear()), weekLabel: 'Oylik Reja'
+                              workerId: session.id, workerName: session.fullName, workerPhone: session.phone || '', stationId, stationName, entries: n, month: monthStr, year: String(new Date().getFullYear()), weekLabel: 'Draft Oylik Reja'
                             })
                           } catch (e) {
                             console.error('Auto-save failed:', e)
@@ -868,9 +883,20 @@ export function WorkerTasksModal({ type, tasks, onClose }: {
 }
 
 // ===== ISHNI BAJARISH MODALI =====
-const SUPPORTED_JOURNALS: Record<string, 'du46' | 'shu2'> = {
+const SUPPORTED_JOURNALS: Record<string, 'du46' | 'shu2' | 'yerlatgich' | 'alsnKod' | 'mpsFriksion'> = {
   'SHU-2': 'shu2',
   'DU-46': 'du46',
+  'yerlatgich': 'yerlatgich',
+  'alsnKod': 'alsnKod',
+  'mpsFriksion': 'mpsFriksion',
+}
+
+const JOURNAL_DISPLAY_NAMES: Record<string, string> = {
+  'SHU-2': 'SHU-2 jurnali',
+  'DU-46': 'DU-46 jurnali',
+  'yerlatgich': 'Yerlatgich xabarlagichi jurnali (NSH-01 17.1.8)',
+  'alsnKod': 'ALSN kodlarini o\'lchash',
+  'mpsFriksion': 'MPS elektrodvigatellarni friksion tokini o\'lchash',
 }
 
 function TaskCompletionModal({ entry, entryIndex, session, stationId, stationName, onComplete, onClose }: {
@@ -882,7 +908,7 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
   onComplete: (taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy') => void
   onClose: () => void
 }) {
-  const [activeJournal, setActiveJournal] = useState<'du46' | 'shu2' | null>(null)
+  const [activeJournal, setActiveJournal] = useState<'du46' | 'shu2' | 'yerlatgich' | 'alsnKod' | 'mpsFriksion' | null>(null)
   const [visitedJournals, setVisitedJournals] = useState<Set<string>>(new Set())
   const [selectedTaskType, setSelectedTaskType] = useState<'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy' | null>(null)
 
@@ -947,6 +973,30 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
       document.body
     )
   }
+  if (activeJournal === 'yerlatgich') {
+    return createPortal(
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
+        <YerlatgichJournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" onClose={() => handleJournalClose('yerlatgich', false)} onAccepted={() => handleJournalClose('yerlatgich', true)} />
+      </div>,
+      document.body
+    )
+  }
+  if (activeJournal === 'alsnKod') {
+    return createPortal(
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
+        <AlsnKodJournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" onClose={() => handleJournalClose('alsnKod', false)} onAccepted={() => handleJournalClose('alsnKod', true)} />
+      </div>,
+      document.body
+    )
+  }
+  if (activeJournal === 'mpsFriksion') {
+    return createPortal(
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
+        <MpsFriksionJournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" onClose={() => handleJournalClose('mpsFriksion', false)} onAccepted={() => handleJournalClose('mpsFriksion', true)} />
+      </div>,
+      document.body
+    )
+  }
 
   return createPortal(
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(12px)', padding: '16px' }}>
@@ -992,10 +1042,10 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
           <>
             <div className="px-8 py-4 border-b border-slate-100 bg-white">
               <div className="flex items-center justify-between mb-2">
-                 <span className="text-[10px] font-black uppercase tracking-widest text-purple-600">{currentTask?.label}</span>
-                 {availableTasks.length > 1 && (
-                   <button onClick={() => { setSelectedTaskType(null); setVisitedJournals(new Set()) }} className="text-[10px] font-black text-slate-400 hover:text-purple-600 underline">Ortga</button>
-                 )}
+                <span className="text-[10px] font-black uppercase tracking-widest text-purple-600">{currentTask?.label}</span>
+                {availableTasks.length > 1 && (
+                  <button onClick={() => { setSelectedTaskType(null); setVisitedJournals(new Set()) }} className="text-[10px] font-black text-slate-400 hover:text-purple-600 underline">Ortga</button>
+                )}
               </div>
               <p className="text-[11px] text-slate-600 whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">{currentTask?.text}</p>
             </div>
@@ -1011,18 +1061,17 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
                   <button
                     key={name}
                     onClick={() => setActiveJournal(SUPPORTED_JOURNALS[name])}
-                    className={`w-full flex items-center justify-between rounded-2xl border p-5 transition-all active:scale-[0.98] ${
-                      isDone
-                        ? 'border-emerald-200 bg-emerald-50/80'
-                        : 'border-purple-200 bg-purple-50/50 hover:bg-purple-100 hover:border-purple-300'
-                    }`}
+                    className={`w-full flex items-center justify-between rounded-2xl border p-5 transition-all active:scale-[0.98] ${isDone
+                      ? 'border-emerald-200 bg-emerald-50/80'
+                      : 'border-purple-200 bg-purple-50/50 hover:bg-purple-100 hover:border-purple-300'
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isDone ? 'bg-emerald-100 text-emerald-600' : 'bg-purple-100 text-purple-600'}`}>
                         {isDone ? <CheckCircle2 size={20} /> : <BookOpen size={20} />}
                       </div>
                       <div className="text-left">
-                        <span className="text-sm font-black text-slate-900">{name}</span>
+                        <span className="text-sm font-black text-slate-900">{JOURNAL_DISPLAY_NAMES[name] || name}</span>
                         <p className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: isDone ? '#059669' : '#0284c7' }}>
                           {isDone ? 'Yozuv kiritildi' : 'Yozuv kiritish →'}
                         </p>
@@ -1040,7 +1089,7 @@ function TaskCompletionModal({ entry, entryIndex, session, stationId, stationNam
                       <BookOpen size={20} />
                     </div>
                     <div className="text-left">
-                      <span className="text-sm font-black text-slate-700">{name}</span>
+                      <span className="text-sm font-black text-slate-700">{JOURNAL_DISPLAY_NAMES[name] || name}</span>
                       <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mt-0.5">Yaqin kunlarda</p>
                     </div>
                   </div>

@@ -313,7 +313,7 @@
         "ish": "MSP tipidagi elektrodvigatellarni   strelkaning normal xolatda o'tganida va  va friksiyaga ishlab qolgandagi tok kuchini o'lchash. Uch fazalik elektrodvigatellarda friksion muftalarda itarish kuchini o'lchash.",
         "davriylik": "Kvartalda bir marta",
         "bajaruvchi": "SHN, SHNM",
-        "jurnal": "SHU-64",
+        "jurnal": "SHU-64, mpsFriksion",
         "nsh": "NSH-01 9.1.4"
       },
       {
@@ -395,7 +395,7 @@
         "ish": "Lokomotiv signalizatsiyasi uchun uzatiladigan relsdagi kodli tok kuchini o'lchash.",
         "davriylik": "Chorakda bir marta",
         "bajaruvchi": "SHN, SHNM",
-        "jurnal": "SHU-64,SHU-79",
+        "jurnal": "SHU-64, SHU-79, alsnKod",
         "nsh": "NSH-01 10.4"
       },
       {

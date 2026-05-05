@@ -156,15 +156,76 @@ export interface SHU2Entry {
   journalMonth?: string
 }
 
+// Poezd radioaloqasi va ALSN ni tekshirish jurnali yozuvi
+export interface ALSNEntry {
+  nomber?: string              // № — tartib raqami
+  sana: string                 // Sana
+  tekshirilganVaqt: string     // Tekshirilgan vaqt
+  poezdRaqami: string          // Poezd Raqami
+  teplovozRaqami: string       // Teplovoz raqami
+  mashinistFamiliyasi: string  // Mashinist Familiyasi
+  rps: string                  // RPS
+  alsn: string                 // ALSN
+  svetoforKorinishi: string    // Svetofor Ko'rinishi
+  poezdOtganYol: string        // Poezd o'tgan yo'l
+  imzo: string                 // Imzo (bajaruvchi ismi)
+  bajarildi?: boolean          // Bajarildi tugmasi bosilganmi
+  bajarildiAt?: string         // Qachon bajarildi
+  journalMonth?: string        // Oy kaliti (2026-05)
+}
+
+// Yerlatgich xabarlagichi yordamida montaj izolyatsiya qarshiligini o'lchash jurnali
+export interface YerlatgichEntry {
+  sana: string              // Sana
+  kuchlanishNomi: string    // Kuchlanish nomi
+  olchanganQiymat: string   // O'lchangan qiymat
+  imzo: string              // Imzo (ShN ShNM) — bajarildi tugmasi
+  sana2: string             // Ikkinchi sana (jadvalning o'ng tomoni)
+  olchanganQiymat2: string  // Ikkinchi o'lchangan qiymat
+  imzo2: string             // Ikkinchi imzo
+  bajarildi?: boolean       // Bajarildi tugmasi bosilganmi
+  bajarildiAt?: string      // Qachon bajarildi
+  journalMonth?: string     // Oy kaliti (2026-05)
+}
+
+// ALSN kodlarini to'g'rilash va tok kuchini o'lchash jurnali (NSH-01 10.4)
+export interface AlsnKodEntry {
+  sana: string              // Sana
+  rzNomi: string            // R/Z nomi
+  rzUzunligi: string        // R/Z uzunligi
+  juftYonalish: string      // Juft yo'nalish (A)
+  toqYonalish: string       // Toq Yo'nalish (A)
+  izox: string              // Izox
+  imzo: string              // Imzo — bajarildi tugmasi
+  bajarildi?: boolean
+  bajarildiAt?: string
+  journalMonth?: string
+}
+
+// MPS turidagi elektrodvigatellarni friksion tokini o'lchash jurnali (NSH-01 9.1.4)
+export interface MpsFriksionEntry {
+  sana: string              // Sana
+  strRaqami: string         // Str. №
+  normalTokPlus: string     // Normal o'tishdagi tok (+)
+  normalTokMinus: string    // Normal o'tishdagi tok (-)
+  friksionTokPlus: string   // Friksiyaga ishlaganda tok (+)
+  friksionTokMinus: string  // Friksiyaga ishlaganda tok (-)
+  izox: string              // Izox
+  imzo: string              // Imzo — bajarildi tugmasi
+  bajarildi?: boolean
+  bajarildiAt?: string
+  journalMonth?: string
+}
+
 // Jurnal turi
-export type JournalType = 'du46' | 'shu2'
+export type JournalType = 'du46' | 'shu2' | 'boshqa' | 'alsn' | 'yerlatgich' | 'alsnKod' | 'mpsFriksion'
 
 // Jurnal hujjati
 export interface StationJournal {
   id: string
   stationId: string
   journalType: JournalType
-  entries: DU46Entry[] | SHU2Entry[]
+  entries: DU46Entry[] | SHU2Entry[] | ALSNEntry[] | YerlatgichEntry[] | AlsnKodEntry[] | MpsFriksionEntry[]
   updatedAt: string
   updatedBy: string
 }

@@ -374,7 +374,7 @@
         "ish": "Signalizator yerlatgich bilan jihozlangan stantsiyalarda montaj izolyatsiya qarshiligini o'lchash:\nElektromexaniklar navbatchilik qilmaydigan joylarda.",
         "davriylik": "Haftada bir marta",
         "bajaruvchi": "SHN",
-        "jurnal": "SHU-2",
+        "jurnal": "SHU-2, yerlatgich",
         "nsh": "NSH-01 17.1.8"
       }
     ]
@@ -392,7 +392,7 @@
     ]
   },
   {
-    "bolim": "18.AKKUMULYATORLAR",
+    "bolim": "18.2.AKKUMULYATORLAR",
     "ishlar": [
       {
         "ish": "Akkumulyatorlar holatini, har bir akkumulyatorda kuchlanishni va elektrolit zichligini 12A yuklama probining yordamida o'zgaruvchan tok o'chirilgan holatda o'lchash; plastinalarning sulfatlanib qolish holati, sinish, plastinalar boshqa moddalar bilan qoplanmasligini tekshirish; stelyajlarni, bankalarni tozalash, ulagichlarni vazelin bilan Moylash, batareya shkafini tozalash:\n\nKuchlanishni avtomatik sozlash qurilmasi bor joylarda:",
@@ -404,7 +404,7 @@
     ]
   },
   {
-    "bolim": "18.UZLUKSIZ QUVVAT QURILMALARI (UBP)",
+    "bolim": "18.2.3 UZLUKSIZ QUVVAT QURILMALARI (UBP)",
     "ishlar": [
       {
         "ish": "UBP ishini o'lchash asboblari va o'rnatilgan diagnostika vositalari bilan tekshirish.",

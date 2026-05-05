@@ -28,7 +28,7 @@ import { useSessionGuard, useToast } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import type { User, Role, WorkReport, PremiyaReport, StationSchema, JournalType, ReportEntry, StationJournal, DU46Entry, SHU2Entry, Station, PremiyaEntry } from '@/types'
 import { MONTHS } from '@/lib/constants'
-import { JournalSelectModal, JournalMonthSelectModal, DU46JournalView, SHU2JournalView } from '@/components/JournalView'
+import { JournalSelectModal, JournalMonthSelectModal, DU46JournalView, SHU2JournalView, ALSNJournalView, YerlatgichJournalView, AlsnKodJournalView, MpsFriksionJournalView } from '@/components/JournalView'
 import {
   LogOut,
   Plus,
@@ -628,7 +628,67 @@ export default function DispatcherPage() {
                             shu2Count={shu2PendingCounts[selectedStation || ''] || 0}
                           />
                         )}
-                        {selectedReportType === 'jurnallar' && activeJournalType && !activeJournalMonth && (
+                        {selectedReportType === 'jurnallar' && activeJournalType === 'boshqa' && !activeJournalMonth && (
+                          <div className="space-y-6 animate-fade-up">
+                            <div className="premium-card p-6">
+                              <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4">Boshqa jurnallar</h3>
+                              <div className="grid gap-4">
+                                <button
+                                  onClick={() => { setActiveJournalType('alsn' as JournalType); }}
+                                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
+                                >
+                                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
+                                    <BookOpen size={28} />
+                                  </div>
+                                  <div>
+                                    <h4 className="text-lg font-black text-slate-900 tracking-tight">Poezd radioaloqasi va ALSN</h4>
+                                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">Poezd radioaloqasi va ALSN ni tekshirish jurnali</p>
+                                  </div>
+                                </button>
+                                <button
+                                  onClick={() => { setActiveJournalType('yerlatgich' as JournalType); }}
+                                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-500/5 active:scale-95"
+                                >
+                                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-all group-hover:bg-white border border-transparent group-hover:border-emerald-100 shadow-sm">
+                                    <BookOpen size={28} />
+                                  </div>
+                                  <div>
+                                    <h4 className="text-lg font-black text-slate-900 tracking-tight">Yerlatgich xabarlagichi</h4>
+                                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">Yerlatgich xabarlagichi yordamida montaj izolyatsiya qarshiligini o&apos;lchash jurnali (NSH-01 17.1.8)</p>
+                                  </div>
+                                </button>
+                                <button
+                                  onClick={() => { setActiveJournalType('alsnKod' as JournalType); }}
+                                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
+                                >
+                                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
+                                    <BookOpen size={28} />
+                                  </div>
+                                  <div>
+                                    <h4 className="text-lg font-black text-slate-900 tracking-tight">ALSN kodlarini o'lchash</h4>
+                                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">ALSN kodlarini to'g'rilash va tok kuchini o'lchash jurnali (NSH-01 10.4)</p>
+                                  </div>
+                                </button>
+                                <button
+                                  onClick={() => { setActiveJournalType('mpsFriksion' as JournalType); }}
+                                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-violet-300 hover:shadow-xl hover:shadow-violet-500/5 active:scale-95"
+                                >
+                                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 transition-all group-hover:bg-white border border-transparent group-hover:border-violet-100 shadow-sm">
+                                    <BookOpen size={28} />
+                                  </div>
+                                  <div>
+                                    <h4 className="text-lg font-black text-slate-900 tracking-tight">MPS elektrodvigatellarni friksion tokini o&apos;lchash</h4>
+                                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">MPS turidagi elektrodvigatellarni friksion tokini o&apos;lchash jurnali (NSH-01 9.1.4)</p>
+                                  </div>
+                                </button>
+                              </div>
+                              <div className="text-center mt-6">
+                                <button onClick={() => setActiveJournalType(null)} className="rounded-2xl bg-white border border-slate-200/60 px-10 py-3 font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition shadow-sm">Orqaga</button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {selectedReportType === 'jurnallar' && activeJournalType && activeJournalType !== 'boshqa' && !activeJournalMonth && (
                           <JournalMonthSelectModal
                             journalType={activeJournalType}
                             onSelect={(monthKey) => setActiveJournalMonth(monthKey)}
@@ -655,6 +715,46 @@ export default function DispatcherPage() {
                             journalMonth={activeJournalMonth}
                             onClose={() => { setActiveJournalMonth(''); setActiveJournalType(null); setSelectedReportType(null) }}
                             onAccepted={loadJournals}
+                          />
+                        )}
+                        {selectedReportType === 'jurnallar' && activeJournalType === 'alsn' && activeJournalMonth && (
+                          <ALSNJournalView
+                            stationId={selectedStation}
+                            stationName={stations.find(s => s.id === selectedStation)?.name || ''}
+                            userName={session?.fullName || ''}
+                            userRole="dispatcher"
+                            journalMonth={activeJournalMonth}
+                            onClose={() => { setActiveJournalMonth(''); setActiveJournalType(null); setSelectedReportType(null) }}
+                          />
+                        )}
+                        {selectedReportType === 'jurnallar' && activeJournalType === 'yerlatgich' && activeJournalMonth && (
+                          <YerlatgichJournalView
+                            stationId={selectedStation}
+                            stationName={stations.find(s => s.id === selectedStation)?.name || ''}
+                            userName={session?.fullName || ''}
+                            userRole="dispatcher"
+                            journalMonth={activeJournalMonth}
+                            onClose={() => { setActiveJournalMonth(''); setActiveJournalType(null); setSelectedReportType(null) }}
+                          />
+                        )}
+                        {selectedReportType === 'jurnallar' && activeJournalType === 'alsnKod' && activeJournalMonth && (
+                          <AlsnKodJournalView
+                            stationId={selectedStation}
+                            stationName={stations.find(s => s.id === selectedStation)?.name || ''}
+                            userName={session?.fullName || ''}
+                            userRole="dispatcher"
+                            journalMonth={activeJournalMonth}
+                            onClose={() => { setActiveJournalMonth(''); setActiveJournalType(null); setSelectedReportType(null) }}
+                          />
+                        )}
+                        {selectedReportType === 'jurnallar' && activeJournalType === 'mpsFriksion' && activeJournalMonth && (
+                          <MpsFriksionJournalView
+                            stationId={selectedStation}
+                            stationName={stations.find(s => s.id === selectedStation)?.name || ''}
+                            userName={session?.fullName || ''}
+                            userRole="dispatcher"
+                            journalMonth={activeJournalMonth}
+                            onClose={() => { setActiveJournalMonth(''); setActiveJournalType(null); setSelectedReportType(null) }}
                           />
                         )}
                         {!selectedReportType && (
@@ -2079,14 +2179,14 @@ function TodayTasksModal({ type, tasks, onClose }: {
                   key={stationId}
                   onClick={() => setExpandedStation(stationId)}
                   className={`w-full flex items-center justify-between rounded-2xl border p-4 sm:p-5 transition-all hover:shadow-md active:scale-[0.98] group ${isBajarilgan
-                      ? 'border-emerald-100 bg-white hover:border-emerald-300 hover:bg-emerald-50/30'
-                      : 'border-red-100 bg-white hover:border-red-300 hover:bg-red-50/30'
+                    ? 'border-emerald-100 bg-white hover:border-emerald-300 hover:bg-emerald-50/30'
+                    : 'border-red-100 bg-white hover:border-red-300 hover:bg-red-50/30'
                     }`}
                 >
                   <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                     <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl text-sm sm:text-base font-black shadow-sm ${isBajarilgan
-                        ? 'bg-emerald-100 text-emerald-600 border border-emerald-200'
-                        : 'bg-red-100 text-red-600 border border-red-200'
+                      ? 'bg-emerald-100 text-emerald-600 border border-emerald-200'
+                      : 'bg-red-100 text-red-600 border border-red-200'
                       }`}>
                       +{items.length}
                     </div>
@@ -2140,8 +2240,8 @@ function TodayTasksModal({ type, tasks, onClose }: {
                       {/* Mobilda: sana tepada kichik, mazmun pastda katta */}
                       <div className="flex items-center gap-2 mb-2">
                         <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-wide border ${isBajarilgan
-                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                            : 'bg-red-50 text-red-600 border-red-100'
+                          ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                          : 'bg-red-50 text-red-600 border-red-100'
                           }`}>
                           {isBajarilgan ? <CheckCircle2 size={10} /> : <Clock size={10} />}
                           {isBajarilgan ? dateFormatted : `${dateFormatted} gacha`}

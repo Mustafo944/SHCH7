@@ -15,7 +15,7 @@ import { useSessionGuard, useToast } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import type { WorkReport, ReportEntry, PremiyaReport, JournalType } from '@/types'
 import { MONTHS } from '@/lib/constants'
-import { JournalSelectModal, JournalMonthSelectModal, DU46JournalView, SHU2JournalView } from '@/components/JournalView'
+import { JournalSelectModal, JournalMonthSelectModal, DU46JournalView, SHU2JournalView, ALSNJournalView, YerlatgichJournalView, AlsnKodJournalView, MpsFriksionJournalView } from '@/components/JournalView'
 import { BigActionCard, HeaderCard, JournalForm, WorkerGraphicsView, WorkerSchemasView, PremiyaForm, WorkerTasksModal } from '@/components/worker/WorkerComponents'
 import {
   FileText,
@@ -37,7 +37,7 @@ const _PREMIYA_ROWS = 12
 export default function WorkerPage() {
   const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['worker', 'elektromexanik', 'elektromontyor'])
   const toast = useToast()
-  const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'selectPlanType' | 'journal' | 'viewReport' | 'premiyaForm' | 'viewPremiya' | 'sxemalar' | 'grafiklar' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'kunlikIshlar'>('home')
+  const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'selectPlanType' | 'journal' | 'viewReport' | 'premiyaForm' | 'viewPremiya' | 'sxemalar' | 'grafiklar' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'kunlikIshlar' | 'boshqaJurnallar' | 'alsn' | 'alsnMonthSelect' | 'yerlatgich' | 'yerlatgichMonthSelect' | 'alsnKod' | 'alsnKodMonthSelect' | 'mpsFriksion' | 'mpsFriksionMonthSelect'>('home')
 
   const [reports, setReports] = useState<WorkReport[]>([])
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -545,8 +545,12 @@ export default function WorkerPage() {
           {view === 'journalSelect' && (
             <JournalSelectModal
               onSelect={(type) => {
-                setSelectedJournalType(type === 'du46' ? 'du46' : 'shu2')
-                setView('journalMonthSelect')
+                setSelectedJournalType(type)
+                if (type === 'boshqa') {
+                  setView('boshqaJurnallar')
+                } else {
+                  setView('journalMonthSelect')
+                }
               }}
               onClose={() => setView('home')}
               du46Count={pendingCounts.du46}
@@ -556,9 +560,12 @@ export default function WorkerPage() {
           {view === 'journalMonthSelect' && selectedJournalType && (
             <JournalMonthSelectModal
               journalType={selectedJournalType}
+              userRole="worker"
               onSelect={(monthKey) => {
                 setSelectedJournalMonth(monthKey)
-                setView(selectedJournalType)
+                if (selectedJournalType === 'du46' || selectedJournalType === 'shu2') {
+                  setView(selectedJournalType)
+                }
               }}
               onClose={() => setView('journalSelect')}
             />
@@ -596,6 +603,157 @@ export default function WorkerPage() {
                   loadPendingCounts(activeStationId, session.role)
                 }
               }}
+            />
+          )}
+
+          {view === 'boshqaJurnallar' && (
+             <div className="space-y-6 animate-fade-up">
+               <HeaderCard title="Boshqa jurnallar" subtitle={stationName!} status="ko'rish" color="purple" />
+               <div className="grid gap-4 max-w-lg mx-auto">
+                 <button
+                   onClick={() => setView('alsnMonthSelect')}
+                   className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
+                 >
+                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
+                     <BookOpen size={28} />
+                   </div>
+                   <div>
+                     <h4 className="text-lg font-black text-slate-900 tracking-tight">Poezd radioaloqasi va ALSN</h4>
+                     <p className="mt-1 text-xs text-slate-500 leading-relaxed">Poezd radioaloqasi va ALSN ni tekshirish jurnali</p>
+                   </div>
+                 </button>
+                 <button
+                   onClick={() => setView('yerlatgichMonthSelect')}
+                   className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-500/5 active:scale-95"
+                 >
+                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-all group-hover:bg-white border border-transparent group-hover:border-emerald-100 shadow-sm">
+                     <BookOpen size={28} />
+                   </div>
+                   <div>
+                      <h4 className="text-lg font-black text-slate-900 tracking-tight">Yerlatgich xabarlagichi</h4>
+                      <p className="mt-1 text-xs text-slate-500 leading-relaxed">Yerlatgich xabarlagichi yordamida montaj izolyatsiya qarshiligini o'lchash jurnali (NSH-01 17.1.8)</p>
+                   </div>
+                 </button>
+                 <button
+                    onClick={() => setView('alsnKodMonthSelect')}
+                    className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
+                  >
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
+                      <BookOpen size={28} />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-black text-slate-900 tracking-tight">ALSN kodlarini o'lchash</h4>
+                      <p className="mt-1 text-xs text-slate-500 leading-relaxed">ALSN kodlarini to'g'rilash va tok kuchini o'lchash jurnali (NSH-01 10.4)</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setView('mpsFriksionMonthSelect')}
+                    className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-violet-300 hover:shadow-xl hover:shadow-violet-500/5 active:scale-95"
+                  >
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 transition-all group-hover:bg-white border border-transparent group-hover:border-violet-100 shadow-sm">
+                      <BookOpen size={28} />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-black text-slate-900 tracking-tight">MPS elektrodvigatellarni friksion tokini o&apos;lchash</h4>
+                      <p className="mt-1 text-xs text-slate-500 leading-relaxed">MPS turidagi elektrodvigatellarni friksion tokini o&apos;lchash jurnali (NSH-01 9.1.4)</p>
+                    </div>
+                  </button>
+               </div>
+               <div className="text-center mt-4">
+                 <button onClick={() => setView('journalSelect')} className="rounded-2xl bg-white border border-slate-200/60 px-10 py-3 font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition shadow-sm backdrop-blur-sm">Orqaga</button>
+               </div>
+             </div>
+          )}
+
+          {view === 'alsnMonthSelect' && (
+            <JournalMonthSelectModal
+              journalType={'alsn'}
+              userRole="worker"
+              onSelect={(monthKey) => {
+                setSelectedJournalMonth(monthKey)
+                setView('alsn')
+              }}
+              onClose={() => setView('boshqaJurnallar')}
+            />
+          )}
+
+          {view === 'yerlatgichMonthSelect' && (
+            <JournalMonthSelectModal
+              journalType={'yerlatgich'}
+              userRole="worker"
+              onSelect={(monthKey) => {
+                setSelectedJournalMonth(monthKey)
+                setView('yerlatgich')
+              }}
+              onClose={() => setView('boshqaJurnallar')}
+            />
+          )}
+
+          {view === 'alsn' && (
+            <ALSNJournalView
+              stationId={activeStationId}
+              stationName={stationName}
+              userName={session?.fullName || ''}
+              userRole="worker"
+              journalMonth={selectedJournalMonth}
+              onClose={() => setView('home')}
+            />
+          )}
+
+          {view === 'yerlatgich' && (
+            <YerlatgichJournalView
+              stationId={activeStationId}
+              stationName={stationName}
+              userName={session?.fullName || ''}
+              userRole="worker"
+              journalMonth={selectedJournalMonth}
+              onClose={() => setView('home')}
+            />
+          )}
+
+          {view === 'alsnKodMonthSelect' && (
+            <JournalMonthSelectModal
+              journalType={'alsnKod'}
+              userRole="worker"
+              onSelect={(monthKey) => {
+                setSelectedJournalMonth(monthKey)
+                setView('alsnKod')
+              }}
+              onClose={() => setView('boshqaJurnallar')}
+            />
+          )}
+
+          {view === 'alsnKod' && (
+            <AlsnKodJournalView
+              stationId={activeStationId}
+              stationName={stationName}
+              userName={session?.fullName || ''}
+              userRole="worker"
+              journalMonth={selectedJournalMonth}
+              onClose={() => setView('home')}
+            />
+          )}
+
+          {view === 'mpsFriksionMonthSelect' && (
+            <JournalMonthSelectModal
+              journalType={'mpsFriksion'}
+              userRole="worker"
+              onSelect={(monthKey) => {
+                setSelectedJournalMonth(monthKey)
+                setView('mpsFriksion')
+              }}
+              onClose={() => setView('boshqaJurnallar')}
+            />
+          )}
+
+          {view === 'mpsFriksion' && (
+            <MpsFriksionJournalView
+              stationId={activeStationId}
+              stationName={stationName}
+              userName={session?.fullName || ''}
+              userRole="worker"
+              journalMonth={selectedJournalMonth}
+              onClose={() => setView('home')}
             />
           )}
 
