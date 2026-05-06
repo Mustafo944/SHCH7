@@ -18,7 +18,7 @@ import type { WorkReport, ReportEntry, Incident, JournalType } from '@/types'
 import { MONTHS } from '@/lib/constants'
 import { JournalSelectModal, JournalMonthSelectModal, DU46JournalView, SHU2JournalView, ALSNJournalView, YerlatgichJournalView, AlsnKodJournalView, MpsFriksionJournalView } from '@/components/JournalView'
 import { BigActionCard, HeaderCard, JournalForm, WorkerGraphicsView, WorkerSchemasView, WorkerTasksModal } from '@/components/worker/WorkerComponents'
-import { IncidentsView } from '@/components/worker/IncidentsView'
+import IncidentsView from '@/components/worker/IncidentsView'
 import {
   FileText,
   Map as MapIcon,
@@ -450,7 +450,7 @@ export default function WorkerPage() {
               <IncidentsView 
                 incidents={incidents}
                 readIds={readIncidentIds}
-                workerId={session.id}
+                workerId={session!.id}
                 onRead={async () => {
                   loadIncidents(session.id)
                 }}

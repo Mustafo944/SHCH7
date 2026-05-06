@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { AlertTriangle, CheckCircle2, Clock } from 'lucide-react'
 import type { Incident } from '@/types'
+import { markIncidentAsRead } from '@/lib/supabase-db'
 
 const UZ_MONTHS_MAP: Record<string, string> = {
   '01': 'Yanvar', '02': 'Fevral', '03': 'Mart', '04': 'Aprel',
@@ -16,7 +17,7 @@ function formatDateUz(ds: string) {
   return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}, ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
 
-export function IncidentsView({
+export default function IncidentsView({
   incidents,
   readIds,
   workerId,
@@ -33,7 +34,6 @@ export function IncidentsView({
     if (marking || readIds.has(id)) return
     setMarking(id)
     try {
-      const { markIncidentAsRead } = await import('@/lib/supabase-db')
       await markIncidentAsRead(id, workerId)
       await onRead()
     } catch (err) {
