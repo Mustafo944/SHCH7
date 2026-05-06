@@ -12,10 +12,11 @@ import {
   updateWorker,
   deleteWorker,
   getAllReports,
-  getPremiyaReports,
+  getIncidents,
   confirmReport,
   confirmReportEntry,
-  confirmPremiyaReport,
+  addIncident,
+  deleteIncident,
   getSchemasByStation,
   uploadSchemaFile,
   deleteSchema,
@@ -26,7 +27,7 @@ import {
 } from '@/lib/supabase-db'
 import { useSessionGuard, useToast } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
-import type { User, Role, WorkReport, PremiyaReport, StationSchema, JournalType, ReportEntry, StationJournal, DU46Entry, SHU2Entry, Station, PremiyaEntry } from '@/types'
+import type { User, Role, WorkReport, Incident, StationSchema, JournalType, ReportEntry, StationJournal, DU46Entry, SHU2Entry, Station } from '@/types'
 import { MONTHS } from '@/lib/constants'
 import { JournalSelectModal, JournalMonthSelectModal, DU46JournalView, SHU2JournalView, ALSNJournalView, YerlatgichJournalView, AlsnKodJournalView, MpsFriksionJournalView } from '@/components/JournalView'
 import {
@@ -35,7 +36,6 @@ import {
   Users,
   MapPin,
   FileText,
-  Award,
   ChevronRight,
   ChevronLeft,
   CheckCircle2,
@@ -52,7 +52,7 @@ import {
   Phone
 } from 'lucide-react'
 
-type Tab = 'bekatlar' | 'arxiv' | 'grafiklar'
+type Tab = 'bekatlar' | 'arxiv' | 'grafiklar' | 'baxtsiz_hodisalar'
 
 type _WorkerEditData = {
   fullName: string
@@ -71,13 +71,13 @@ export default function DispatcherPage() {
   // Real data from Supabase
   const [workers, setWorkers] = useState<User[]>([])
   const [allReports, setAllReports] = useState<WorkReport[]>([])
-  const [allPremiyaReports, setAllPremiyaReports] = useState<PremiyaReport[]>([])
+  const [allIncidents, setAllIncidents] = useState<Incident[]>([])
   const [globalGraphics, setGlobalGraphics] = useState<StationSchema[]>([])
   const [allJournals, setAllJournals] = useState<StationJournal[]>([])
 
   const [_loading, setLoading] = useState(true)
   const [selectedStation, setSelectedStation] = useState<string | null>(null)
-  const [selectedReportType, setSelectedReportType] = useState<'oylik' | 'premiya' | 'sxemalar' | 'jurnallar' | null>(null)
+  const [selectedReportType, setSelectedReportType] = useState<'oylik' | 'baxtsiz_hodisa' | 'sxemalar' | 'jurnallar' | null>(null)
   const [showMobileStations, setShowMobileStations] = useState(false)
   const [showAddWorker, setShowAddWorker] = useState(false)
   const [showWorkersModal, setShowWorkersModal] = useState(false)
@@ -119,12 +119,12 @@ export default function DispatcherPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const loadPremiyaReports = useCallback(async () => {
+  const loadIncidents = useCallback(async () => {
     try {
-      const p = await getPremiyaReports()
-      setAllPremiyaReports(p)
+      const i = await getIncidents()
+      setAllIncidents(i)
     } catch {
-      toast.error('Premiya hisobotlarini yuklashda xatolik')
+      toast.error('Baxtsiz hodisalarni yuklashda xatolik')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -154,12 +154,12 @@ export default function DispatcherPage() {
     await Promise.all([
       loadWorkers(),
       loadWorkReports(),
-      loadPremiyaReports(),
+      loadIncidents(),
       loadGraphics(),
       loadJournals()
     ])
     setLoading(false)
-  }, [loadWorkers, loadWorkReports, loadPremiyaReports, loadGraphics, loadJournals])
+  }, [loadWorkers, loadWorkReports, loadIncidents, loadGraphics, loadJournals])
 
   // Sessiya tayyor bo'lganda ma'lumotlarni yuklash
   useEffect(() => {
@@ -176,10 +176,10 @@ export default function DispatcherPage() {
       })
       .subscribe()
 
-    const premiyaReportsChannel = supabase
-      .channel('dispatcher_premiya_reports')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'premiya_reports' }, () => {
-        loadPremiyaReports()
+    const incidentsChannel = supabase
+      .channel('dispatcher_incidents')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'incidents' }, () => {
+        loadIncidents()
       })
       .subscribe()
 
@@ -192,10 +192,10 @@ export default function DispatcherPage() {
 
     return () => {
       supabase.removeChannel(workReportsChannel)
-      supabase.removeChannel(premiyaReportsChannel)
+      supabase.removeChannel(incidentsChannel)
       supabase.removeChannel(journalsChannel)
     }
-  }, [loadWorkReports, loadPremiyaReports, loadJournals])
+  }, [loadWorkReports, loadIncidents, loadJournals])
 
   // Calculated pending counts
   const pendingCounts = useMemo(() => {
@@ -211,15 +211,7 @@ export default function DispatcherPage() {
     return counts
   }, [allReports])
 
-  const premiyaPendingCounts = useMemo(() => {
-    const counts: Record<string, number> = {}
-    allPremiyaReports.forEach(r => {
-      if (!r.confirmedAt) {
-        counts[r.stationId] = (counts[r.stationId] || 0) + 1
-      }
-    })
-    return counts
-  }, [allPremiyaReports])
+
 
   // Jurnal pending hisobi: yuborilgan lekin qabul qilinmagan qatorlar (DU-46 va SHU-2 alohida)
   const du46PendingCounts = useMemo(() => {
@@ -259,9 +251,8 @@ export default function DispatcherPage() {
 
   const _totalPending = useMemo(() => {
     return Object.values(pendingCounts).reduce((a, b) => a + b, 0) +
-      Object.values(premiyaPendingCounts).reduce((a, b) => a + b, 0) +
       Object.values(journalPendingCounts).reduce((a, b) => a + b, 0)
-  }, [pendingCounts, premiyaPendingCounts, journalPendingCounts])
+  }, [pendingCounts, journalPendingCounts])
 
   // ─── BUGUNGI KUNLIK BAJARILGAN / BAJARILMAGAN ISHLAR ───────────────
   const today = new Date()
@@ -448,16 +439,27 @@ export default function DispatcherPage() {
     }
   }
 
-  async function handleConfirmPremiya(reportId: string) {
+  async function handleAddIncident(month: string, content: string) {
     if (!session) return
     try {
-      await confirmPremiyaReport(reportId, session.fullName)
+      await addIncident(month, content, session.fullName)
       refreshData()
     } catch (err: unknown) {
       setFormMsg({
         type: 'err',
         text: err instanceof Error ? err.message : "Xatolik yuz berdi"
       })
+    }
+  }
+
+  async function handleRemoveIncident(id: string) {
+    if (!session) return
+    if (!confirm('Haqiqatdan ham o\'chirishni xohlaysizmi?')) return
+    try {
+      await deleteIncident(id)
+      refreshData()
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Xatolik yuz berdi")
     }
   }
 
@@ -507,38 +509,42 @@ export default function DispatcherPage() {
         </header>
 
         <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 sm:p-8">
+
+
           {/* Dashboard Stats */}
-          <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4 animate-fade-up">
-            <StatCard icon={<MapPin />} label="Bekatlar" value={stations.length} color="purple" />
-            <StatCard
-              icon={<Users />}
-              label="Ishchilar"
-              value={workers.length}
-              onClick={() => setShowWorkersModal(true)}
-              clickable
-              color="blue"
-            />
-            <StatCard
-              icon={<CheckCircle2 />}
-              label="Bugun bajarilgan"
-              value={todayBajarilgan.length}
-              onClick={() => setTodayModal('bajarilgan')}
-              clickable
-              color="emerald"
-            />
-            <StatCard
-              icon={<AlertTriangle />}
-              label="Bajarilmagan ishlar"
-              value={todayBajarilmagan.length}
-              active={todayBajarilmagan.length > 0}
-              onClick={() => setTodayModal('bajarilmagan')}
-              clickable
-              color="red"
-            />
+          <div className="mb-6 rounded-[24px] bg-white/50 backdrop-blur-xl p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 animate-fade-up">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatCard icon={<MapPin />} label="Bekatlar" value={stations.length} color="purple" />
+              <StatCard
+                icon={<Users />}
+                label="Ishchilar"
+                value={workers.length}
+                onClick={() => setShowWorkersModal(true)}
+                clickable
+                color="blue"
+              />
+              <StatCard
+                icon={<CheckCircle2 />}
+                label="Bugun bajarilgan"
+                value={todayBajarilgan.length}
+                onClick={() => setTodayModal('bajarilgan')}
+                clickable
+                color="emerald"
+              />
+              <StatCard
+                icon={<AlertTriangle />}
+                label="Bajarilmagan ishlar"
+                value={todayBajarilmagan.length}
+                active={todayBajarilmagan.length > 0}
+                onClick={() => setTodayModal('bajarilmagan')}
+                clickable
+                color="red"
+              />
+            </div>
           </div>
 
           {/* Navigation Tabs and Add Worker */}
-          <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between animate-fade-up">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-up">
             <button
               onClick={() => setShowAddWorker(!showAddWorker)}
               className="sm:order-2 btn-gradient flex items-center justify-center gap-2 rounded-2xl px-6 py-4 font-bold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl active:scale-95"
@@ -547,10 +553,11 @@ export default function DispatcherPage() {
               <span>Xodim qo&apos;shish</span>
             </button>
 
-            <div className="sm:order-1 flex gap-1 rounded-2xl bg-white/70 backdrop-blur-sm p-1.5 shadow-sm border border-purple-100/50">
+            <div className="sm:order-1 flex gap-1 rounded-[20px] bg-white/50 backdrop-blur-xl p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60">
               <TabButton active={tab === 'bekatlar'} onClick={() => setTab('bekatlar')} label="Bekatlar" icon={<MapPin size={18} />} />
               <TabButton active={tab === 'arxiv'} onClick={() => setTab('arxiv')} label="Arxiv" icon={<FileText size={18} />} />
               <TabButton active={tab === 'grafiklar'} onClick={() => setTab('grafiklar')} label="Grafiklar" icon={<Download size={18} />} />
+              <TabButton active={tab === 'baxtsiz_hodisalar'} onClick={() => setTab('baxtsiz_hodisalar')} label="Baxtsiz Hodisalar" icon={<AlertTriangle size={18} />} />
             </div>
           </div>
 
@@ -594,7 +601,7 @@ export default function DispatcherPage() {
   `}
                   >
                     {stations.map(st => {
-                      const count = (pendingCounts[st.id] || 0) + (premiyaPendingCounts[st.id] || 0) + (journalPendingCounts[st.id] || 0)
+                      const count = (pendingCounts[st.id] || 0) + (journalPendingCounts[st.id] || 0)
                       const isSelected = selectedStation === st.id
                       return (
                         <button
@@ -648,12 +655,7 @@ export default function DispatcherPage() {
                             onConfirmRow={handleConfirmEntry}
                           />
                         )}
-                        {selectedReportType === 'premiya' && (
-                          <PremiyaList
-                            reports={allPremiyaReports.filter(r => r.stationId === selectedStation)}
-                            onConfirm={handleConfirmPremiya}
-                          />
-                        )}
+
                         {selectedReportType === 'sxemalar' && (
                           <SchemasView key={selectedStation} stationId={selectedStation} userName={session?.fullName || ''} />
                         )}
@@ -803,14 +805,7 @@ export default function DispatcherPage() {
                               onClick={() => setSelectedReportType('oylik')}
                               count={pendingCounts[selectedStation]}
                             />
-                            <BigActionCard
-                              title="Premiya Ro'yxati"
-                              desc="Rag'batlantirish ballarini tasdiqlang va KPI ko'rsatkichlarini ko'ring."
-                              icon={<Award size={32} />}
-                              onClick={() => setSelectedReportType('premiya')}
-                              count={premiyaPendingCounts[selectedStation]}
-                              color="amber"
-                            />
+
                             <BigActionCard
                               title="Ish Jurnallari"
                               desc="DU-46 va ShU-2 jurnallarini ko'rish va tahrirlash."
@@ -874,6 +869,14 @@ export default function DispatcherPage() {
                   }}
                 />
               </div>
+            )}
+
+            {tab === 'baxtsiz_hodisalar' && (
+              <IncidentAdminView
+                incidents={allIncidents}
+                onAdd={handleAddIncident}
+                onDelete={handleRemoveIncident}
+              />
             )}
           </div>
         </main>
@@ -954,42 +957,28 @@ function StatCard({ icon, label, value, active, clickable, onClick, color = 'pur
   onClick?: () => void,
   color?: 'purple' | 'blue' | 'emerald' | 'red' | 'amber'
 }) {
-  const styles: Record<string, { iconBg: string, iconText: string, wave: string }> = {
-    purple: { iconBg: 'bg-purple-100', iconText: 'text-purple-600', wave: '#e9d5ff' },
-    blue: { iconBg: 'bg-blue-100', iconText: 'text-blue-600', wave: '#bfdbfe' },
-    emerald: { iconBg: 'bg-emerald-100', iconText: 'text-emerald-600', wave: '#bbf7d0' },
-    red: { iconBg: 'bg-red-100', iconText: 'text-red-500', wave: '#fecaca' },
-    amber: { iconBg: 'bg-amber-100', iconText: 'text-amber-600', wave: '#fde68a' },
+  const styles: Record<string, { bg: string, border: string, iconBg: string, iconText: string, valueText: string }> = {
+    purple: { bg: 'bg-purple-50/50', border: 'border-purple-100/60', iconBg: 'bg-white', iconText: 'text-purple-500', valueText: 'text-purple-600' },
+    blue: { bg: 'bg-blue-50/50', border: 'border-blue-100/60', iconBg: 'bg-white', iconText: 'text-blue-500', valueText: 'text-blue-600' },
+    emerald: { bg: 'bg-emerald-50/50', border: 'border-emerald-100/60', iconBg: 'bg-white', iconText: 'text-emerald-500', valueText: 'text-emerald-600' },
+    red: { bg: 'bg-red-50/50', border: 'border-red-100/60', iconBg: 'bg-white', iconText: 'text-red-500', valueText: 'text-red-600' },
+    amber: { bg: 'bg-amber-50/50', border: 'border-amber-100/60', iconBg: 'bg-white', iconText: 'text-amber-500', valueText: 'text-amber-600' },
   }
   const s = styles[color]
 
   return (
     <div
       onClick={onClick}
-      className={`premium-card group relative overflow-hidden p-4 sm:p-5 pb-8 sm:pb-10 transition-all duration-300 ${clickable ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02]' : ''}`}
+      className={`group relative overflow-hidden rounded-[20px] ${s.bg} p-4 sm:p-5 border ${s.border} transition-all ${clickable ? 'cursor-pointer hover:shadow-md active:scale-[0.98]' : ''} flex items-center gap-4`}
     >
-      <div className="flex items-start gap-2 sm:gap-3">
-        <div className={`flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl ${s.iconBg} ${s.iconText} transition-transform duration-300 group-hover:scale-110`}>
-          {icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-slate-400 leading-tight line-clamp-2 break-words" title={label}>{label}</p>
-          <p className="text-3xl font-black text-slate-900 mt-0.5">{value}</p>
-        </div>
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${s.iconBg} shadow-sm border ${s.border} ${s.iconText} group-hover:scale-110 transition-transform`}>
+        {icon}
       </div>
-      {active && <div className="absolute top-4 right-4 h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_8px_2px_rgba(239,68,68,0.3)] animate-ping" />}
-      {clickable && (
-        <div className={`absolute bottom-3 right-4 text-[10px] font-bold ${s.iconText} opacity-60 group-hover:opacity-100 transition-opacity`}>
-          Tafsilot →
-        </div>
-      )}
-      {/* Wave decoration */}
-      <div className="stat-card-wave">
-        <svg viewBox="0 0 400 40" preserveAspectRatio="none" fill="none">
-          <path d="M0 20C60 8 120 32 200 20C280 8 340 32 400 20V40H0Z" fill={s.wave} fillOpacity="0.4" />
-          <path d="M0 28C80 16 160 36 240 24C320 12 360 32 400 28V40H0Z" fill={s.wave} fillOpacity="0.2" />
-        </svg>
+      <div>
+        <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</p>
+        <p className={`text-xl sm:text-2xl font-black ${s.valueText} mt-0.5`}>{value}</p>
       </div>
+      {active && <div className="absolute top-3 right-3 h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_8px_2px_rgba(239,68,68,0.3)] animate-ping" />}
     </div>
   )
 }
@@ -998,9 +987,9 @@ function TabButton({ active, onClick, label, icon }: { active: boolean, onClick:
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-all duration-200 ${active
+      className={`flex items-center gap-2 rounded-[16px] px-5 py-3 text-sm font-bold transition-all duration-200 ${active
         ? 'bg-gradient-to-r from-purple-600 to-violet-500 text-white shadow-lg shadow-purple-500/25'
-        : 'text-slate-500 hover:text-purple-700 hover:bg-purple-50/60'
+        : 'text-slate-500 hover:text-purple-700 hover:bg-white/60'
         }`}
     >
       {icon}
@@ -1187,7 +1176,7 @@ function _parseNshFromEntry(entry: ReportEntry): string {
   return text || 'Boshqa'
 }
 
-function ReportCard({ report, onConfirm, onConfirmRow }: {
+function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow }: {
   report: WorkReport
   onConfirm: () => void
   onConfirmRow: (idx: number) => void
@@ -1373,113 +1362,6 @@ function ReportCard({ report, onConfirm, onConfirmRow }: {
       )}
     </div>
   );
-}
-
-function PremiyaList({ reports, onConfirm }: {
-  reports: PremiyaReport[]
-  onConfirm: (reportId: string) => void
-}) {
-  if (reports.length === 0) return <EmptyState label="Premiya ro'yxatlari yo'q" />
-  return (
-    <div className="space-y-4">
-      {reports.map((r) => (
-        <PremiyaCard key={r.id} report={r} onConfirm={() => onConfirm(r.id)} />
-      ))}
-    </div>
-  )
-}
-
-function PremiyaCard({ report, onConfirm }: {
-  report: PremiyaReport
-  onConfirm: () => void
-}) {
-  const [expanded, setExpanded] = useState(false)
-  const isPending = !report.confirmedAt
-
-  return (
-    <div className={`premium-card overflow-hidden transition-all duration-300 ${expanded ? 'shadow-xl ring-1 ring-amber-400/20' : 'hover:bg-white/80 shadow-sm'}`}>
-      <div onClick={() => setExpanded(!expanded)} className="flex cursor-pointer items-center justify-between p-6">
-        <div className="flex items-center gap-4">
-          <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 ${isPending ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
-            <Award size={24} />
-          </div>
-          <div>
-            <h3 className="text-sm font-black text-slate-900">{report.workerName} В· Premiya</h3>
-            <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{report.month}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          {isPending && <span className="badge-warning badge rounded-lg px-3 py-1 text-[10px] font-black">QABUL QILINMAGAN</span>}
-          <ChevronRight className={`text-slate-300 transition-transform duration-200 ${expanded ? 'rotate-90 text-amber-500' : ''}`} />
-        </div>
-      </div>
-
-      {expanded && (
-        <div className="border-t border-slate-100 p-6 pt-2">
-          <div className="mb-4 flex items-center justify-between">
-            <span className="text-xs text-slate-400">{isPending ? 'Ro\'yxatni tekshirib tasdiqlang.' : `Tasdiqlangan: ${report.confirmedAt}`}</span>
-            <div className="flex gap-2">
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  const { jsPDF } = await import('jspdf')
-                  const { default: autoTable } = await import('jspdf-autotable')
-                  const doc = new jsPDF()
-                  doc.setFontSize(14)
-                  doc.text(`Premiya Ro'yxati - ${report.stationName}`, 14, 15)
-                  doc.setFontSize(10)
-                  doc.text(`Sana: ${report.month}`, 14, 22)
-                  const tableColumn = ['№', 'I.SH.', 'Lavozimi', 'Tabel №', "Rag'bat. %", 'Eslatma']
-                  const tableRows = report.entries.filter((en: PremiyaEntry) => en.ish || en.lavozim || en.foiz).map((en: PremiyaEntry, idx: number) => [String(idx + 1), en.ish, en.lavozim, en.tabelNomeri, en.foiz ? en.foiz + '%' : '', en.eslatma])
-                  autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30, styles: { font: 'helvetica', fontSize: 8 }, headStyles: { fillColor: [245, 158, 11] } })
-                  doc.save(`Premiya_${report.stationName}_${report.month}.pdf`)
-                }}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 flex items-center justify-center gap-2 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors shadow-sm"
-              >
-                <Download size={14} />
-                Yuklab olish
-              </button>
-              {isPending && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onConfirm() }}
-                  className="rounded-xl bg-amber-500 px-6 py-2.5 text-xs font-black text-white shadow-lg shadow-amber-500/20 active:scale-95 transition-all hover:bg-amber-600"
-                >
-                  Ro'yxatni Qabul Qilish
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50">
-            <table className="w-full text-left text-[11px]">
-              <thead className="bg-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                <tr>
-                  <th className="p-4 text-center w-12">№</th>
-                  <th className="p-4">I.SH.</th>
-                  <th className="p-4">Lavozimi</th>
-                  <th className="p-4 text-center">Tabel №</th>
-                  <th className="p-4 text-center">Rag&apos;bat. %</th>
-                  <th className="p-4">Eslatma</th>
-                </tr>
-              </thead>
-              <tbody className="text-slate-700">
-                {report.entries.map((e, idx: number) => (
-                  <tr key={idx} className="border-b border-slate-200 last:border-0 hover:bg-white transition-colors">
-                    <td className="p-4 text-center text-slate-400 font-bold">{idx + 1}</td>
-                    <td className="p-4 font-bold">{e.ish}</td>
-                    <td className="p-4 text-slate-500">{e.lavozim}</td>
-                    <td className="p-4 text-center text-slate-500">{e.tabelNomeri}</td>
-                    <td className="p-4 text-center font-black text-amber-600">{e.foiz}%</td>
-                    <td className="p-4 text-slate-500">{e.eslatma}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
-  )
 }
 
 function SchemasView({ stationId, userName }: { stationId: string, userName: string }) {
@@ -2406,6 +2288,237 @@ function TodayTasksModal({ type, tasks, onClose }: {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+
+const UZ_MONTHS_MAP: Record<string, string> = {
+  '01': 'Yanvar', '02': 'Fevral', '03': 'Mart', '04': 'Aprel',
+  '05': 'May', '06': 'Iyun', '07': 'Iyul', '08': 'Avgust',
+  '09': 'Sentabr', '10': 'Oktabr', '11': 'Noyabr', '12': 'Dekabr'
+}
+function formatMonthUz(ms: string) {
+  const [y, m] = ms.split('-')
+  return `${UZ_MONTHS_MAP[m] || m} ${y}`
+}
+function formatDateUz(ds: string) {
+  const d = new Date(ds)
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}, ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function IncidentAdminView({ incidents, onAdd, onDelete }: { incidents: Incident[], onAdd: (month: string, content: string) => Promise<void>, onDelete: (id: string) => void }) {
+  const now = new Date()
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear())
+  const [selectedMonthIdx, setSelectedMonthIdx] = useState<number | null>(null)
+  const [content, setContent] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const UZ_MONTH_NAMES = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek']
+
+  const selectedMonthValue = selectedMonthIdx !== null
+    ? `${selectedYear}-${String(selectedMonthIdx + 1).padStart(2, '0')}`
+    : ''
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedMonthValue || !content.trim()) return
+    setLoading(true)
+    await onAdd(selectedMonthValue, content)
+    setSelectedMonthIdx(null)
+    setContent('')
+    setLoading(false)
+  }
+
+  // Oylarni guruhlash (oyma-oy ko'rish)
+  const grouped = useMemo(() => {
+    const groups: Record<string, Incident[]> = {}
+    incidents.forEach(inc => {
+      if (!groups[inc.month]) groups[inc.month] = []
+      groups[inc.month].push(inc)
+    })
+    return groups
+  }, [incidents])
+
+  return (
+    <div className="space-y-8 animate-fade-up">
+      {/* Add Form */}
+      <div className="premium-card p-6 sm:p-8">
+        <h3 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
+          <AlertTriangle className="text-red-500" /> Yangi Baxtsiz Hodisa Qo&apos;shish
+        </h3>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Oyni tanlang</label>
+            <div className="flex items-center gap-3 mb-3">
+              <button type="button" onClick={() => setSelectedYear(y => y - 1)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-purple-50 hover:text-purple-600 transition-colors shadow-sm">
+                <ChevronLeft size={16} />
+              </button>
+              <span className="text-sm font-black text-slate-900 min-w-[60px] text-center">{selectedYear}</span>
+              <button type="button" onClick={() => setSelectedYear(y => y + 1)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-purple-50 hover:text-purple-600 transition-colors shadow-sm rotate-180">
+                <ChevronLeft size={16} />
+              </button>
+            </div>
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+              {UZ_MONTH_NAMES.map((m, i) => {
+                const isSelected = selectedMonthIdx === i
+                const isCurrent = i === now.getMonth() && selectedYear === now.getFullYear()
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setSelectedMonthIdx(i)}
+                    className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all border ${
+                      isSelected
+                        ? 'bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-500/20 scale-[1.05]'
+                        : isCurrent
+                          ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                          : 'bg-white text-slate-600 border-slate-200/60 hover:bg-slate-50 hover:border-purple-200 hover:text-purple-600'
+                    }`}
+                  >
+                    {m}
+                  </button>
+                )
+              })}
+            </div>
+            {selectedMonthValue && (
+              <p className="mt-2.5 text-xs font-bold text-purple-600">✓ Tanlangan: {formatMonthUz(selectedMonthValue)}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Mazmuni</label>
+            <textarea
+              value={content}
+              onChange={e => setContent(e.target.value)}
+              className="input-premium min-h-[120px] resize-y"
+              placeholder="Baxtsiz hodisa tafsilotlarini kiriting..."
+              required
+            />
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={loading || !selectedMonthValue}
+              className="btn-gradient flex items-center gap-2 disabled:opacity-40"
+            >
+              {loading ? <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" /> : <Plus size={18} />}
+              <span>Saqlash</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* List */}
+      <IncidentMonthList grouped={grouped} onDelete={onDelete} />
+    </div>
+  )
+}
+
+function IncidentMonthList({ grouped, onDelete }: { grouped: Record<string, Incident[]>, onDelete: (id: string) => void }) {
+  const [expandedMonth, setExpandedMonth] = useState<string | null>(null)
+
+  // Yillarni aniqlash
+  const allYears = useMemo(() => {
+    const years = new Set<number>()
+    years.add(new Date().getFullYear())
+    Object.keys(grouped).forEach(m => {
+      const y = parseInt(m.split('-')[0], 10)
+      if (!isNaN(y)) years.add(y)
+    })
+    return Array.from(years).sort((a, b) => b - a)
+  }, [grouped])
+
+  const UZ_FULL_MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr']
+
+  return (
+    <div className="space-y-6">
+      <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+        <FileText className="text-purple-500" /> Barcha Baxtsiz Hodisalar
+      </h3>
+
+      {allYears.map(year => (
+        <div key={year}>
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">📅 {year}-yil</p>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 mb-4">
+            {UZ_FULL_MONTHS.map((mName, i) => {
+              const key = `${year}-${String(i + 1).padStart(2, '0')}`
+              const items = grouped[key] || []
+              const count = items.length
+              const isExpanded = expandedMonth === key
+              const hasItems = count > 0
+              const isCurrent = i === new Date().getMonth() && year === new Date().getFullYear()
+
+              return (
+                <button
+                  key={key}
+                  onClick={() => setExpandedMonth(isExpanded ? null : key)}
+                  className={`relative flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl border transition-all text-center cursor-pointer ${
+                    isExpanded
+                      ? 'bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-500/20 scale-[1.03]'
+                      : hasItems
+                        ? 'bg-white border-slate-200/60 hover:border-purple-300 hover:shadow-md'
+                        : isCurrent
+                          ? 'bg-purple-50/50 border-purple-100 hover:border-purple-200'
+                          : 'bg-slate-50/50 border-slate-100 hover:border-slate-200 hover:bg-white/80'
+                  }`}
+                >
+                  <span className={`text-xs font-black uppercase tracking-wider ${
+                    isExpanded ? 'text-white/70' : hasItems ? 'text-slate-400' : 'text-slate-300'
+                  }`}>
+                    {mName.slice(0, 3)}
+                  </span>
+                  {hasItems ? (
+                    <span className={`mt-1 text-lg font-black ${isExpanded ? 'text-white' : 'text-red-500'}`}>
+                      {count}
+                    </span>
+                  ) : (
+                    <span className={`mt-1 text-lg font-black ${isExpanded ? 'text-white/50' : 'text-slate-200'}`}>—</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {expandedMonth && expandedMonth.startsWith(String(year)) && (
+            <div className="premium-card p-5 sm:p-6 animate-fade-up mb-4">
+              <h4 className="text-base sm:text-lg font-black text-slate-900 mb-4 flex items-center justify-between border-b border-purple-100/50 pb-3">
+                <span>📋 {formatMonthUz(expandedMonth)}</span>
+                {(grouped[expandedMonth]?.length || 0) > 0 && (
+                  <span className="badge-danger">{grouped[expandedMonth].length} ta hodisa</span>
+                )}
+              </h4>
+              {(grouped[expandedMonth]?.length || 0) > 0 ? (
+                <div className="space-y-3">
+                  {grouped[expandedMonth].map(inc => (
+                    <div key={inc.id} className="relative rounded-2xl border border-red-100 bg-red-50/30 p-4 sm:p-5">
+                      <div className="absolute top-4 right-4">
+                        <button
+                          onClick={() => onDelete(inc.id)}
+                          className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-red-400 shadow-sm border border-red-100 hover:bg-red-50 hover:text-red-600 transition-colors"
+                          title="O'chirish"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                      <div className="pr-12">
+                        <p className="text-xs font-bold text-slate-500 mb-2">{formatDateUz(inc.createdAt)}</p>
+                        <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed break-words overflow-hidden">{inc.content}</p>
+                        <p className="text-[10px] font-black text-slate-400 mt-3 flex items-center gap-1"><Edit size={10} /> {inc.createdByName}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <CheckCircle2 size={40} className="mx-auto text-emerald-300 mb-3" />
+                  <p className="text-sm font-bold text-slate-400">Baxtsiz hodisa qayd qilinmagan</p>
+                  <p className="text-xs text-slate-300 mt-1">{formatMonthUz(expandedMonth)} oyida hodisa sodir bo&apos;lmagan</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   )
 }

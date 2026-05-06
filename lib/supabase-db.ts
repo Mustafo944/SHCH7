@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { User, WorkReport, PremiyaReport, StationSchema, ReportEntry, GrafikTuri, StationJournal, JournalType, DU46Entry, SHU2Entry, ALSNEntry, YerlatgichEntry } from '@/types';
+import type { User, WorkReport, StationSchema, ReportEntry, GrafikTuri, StationJournal, JournalType, DU46Entry, SHU2Entry, ALSNEntry, YerlatgichEntry, Incident } from '@/types';
 
 // Stations
 import { getStations, getStation } from './store';
@@ -10,7 +10,7 @@ const USER_COLUMNS = 'id, login, full_name, role, position, station_ids, phone, 
 
 const WORK_REPORT_COLUMNS = 'id, worker_id, worker_name, worker_phone, station_id, station_name, week_label, month, year, entries, submitted_at, confirmed_at, confirmed_by' as const;
 
-const PREMIYA_COLUMNS = 'id, worker_id, worker_name, station_id, station_name, month, year, sex, entries, submitted_at, confirmed_at, confirmed_by' as const;
+const INCIDENT_COLUMNS = 'id, month, content, created_at, created_by_name' as const;
 
 const SCHEMA_COLUMNS = 'id, station_id, file_name, file_path, schema_type, uploaded_at, uploaded_by' as const;
 
@@ -44,19 +44,19 @@ interface DbWorkReportRow {
   confirmed_by: string | null;
 }
 
-interface DbPremiyaRow {
+interface DbIncidentRow {
   id: string;
-  worker_id: string;
-  worker_name: string;
-  station_id: string;
-  station_name: string;
   month: string;
-  year: string;
-  sex: string | null;
-  entries: PremiyaReport['entries'];
-  submitted_at: string;
-  confirmed_at: string | null;
-  confirmed_by: string | null;
+  content: string;
+  created_at: string;
+  created_by_name: string;
+}
+
+interface DbIncidentReadRow {
+  id: string;
+  incident_id: string;
+  worker_id: string;
+  read_at: string;
 }
 
 interface DbSchemaRow {
@@ -443,125 +443,114 @@ export async function getStationPendingCount(): Promise<Record<string, number>> 
   return counts;
 }
 
-// Premiya Reports
+// Incidents
 
-function mapDbPremiya(row: DbPremiyaRow): PremiyaReport {
+export async function getIncidents(): Promise<Incident[]> {
+  const { data, error } = await supabase
+    .from('incidents')
+    .select(INCIDENT_COLUMNS)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+  return (data as DbIncidentRow[]).map(row => ({
+    id: row.id,
+    month: row.month,
+    content: row.content,
+    createdAt: row.created_at,
+    createdByName: row.created_by_name,
+  }));
+}
+
+export async function getIncidentsByMonth(month: string): Promise<Incident[]> {
+  const { data, error } = await supabase
+    .from('incidents')
+    .select(INCIDENT_COLUMNS)
+    .eq('month', month)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+  return (data as DbIncidentRow[]).map(row => ({
+    id: row.id,
+    month: row.month,
+    content: row.content,
+    createdAt: row.created_at,
+    createdByName: row.created_by_name,
+  }));
+}
+
+export async function addIncident(month: string, content: string, createdByName: string): Promise<Incident> {
+  const { data, error } = await supabase
+    .from('incidents')
+    .insert({
+      month,
+      content,
+      created_by_name: createdByName,
+    })
+    .select()
+    .single();
+
+  if (error || !data) throw new Error(error?.message ?? 'Insert failed');
+  const row = data as DbIncidentRow;
   return {
     id: row.id,
-    workerId: row.worker_id,
-    workerName: row.worker_name,
-    stationId: row.station_id,
-    stationName: row.station_name,
     month: row.month,
-    year: row.year,
-    sex: row.sex || '',
-    entries: row.entries || [],
-    submittedAt: row.submitted_at,
-    confirmedAt: row.confirmed_at || null,
-    confirmedBy: row.confirmed_by || null,
+    content: row.content,
+    createdAt: row.created_at,
+    createdByName: row.created_by_name,
   };
 }
 
-export async function getPremiyaReports(): Promise<PremiyaReport[]> {
+export async function deleteIncident(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('incidents')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function getUnreadIncidentsCount(workerId: string): Promise<number> {
+  // First get all incidents
+  const { data: incidents, error: incidentsError } = await supabase
+    .from('incidents')
+    .select('id');
+    
+  if (incidentsError || !incidents) return 0;
+
+  // Get read incidents for this worker
+  const { data: reads, error: readsError } = await supabase
+    .from('incident_reads')
+    .select('incident_id')
+    .eq('worker_id', workerId);
+
+  if (readsError || !reads) return incidents.length;
+
+  const readIds = new Set(reads.map(r => r.incident_id));
+  return incidents.filter(i => !readIds.has(i.id)).length;
+}
+
+export async function getReadIncidentIds(workerId: string): Promise<string[]> {
   const { data, error } = await supabase
-    .from('premiya_reports')
-    .select(PREMIYA_COLUMNS)
-    .order('submitted_at', { ascending: false });
+    .from('incident_reads')
+    .select('incident_id')
+    .eq('worker_id', workerId);
 
   if (error || !data) return [];
-  return (data as DbPremiyaRow[]).map(mapDbPremiya);
+  return data.map(r => r.incident_id);
 }
 
-export async function getPremiyasByWorker(workerId: string): Promise<PremiyaReport[]> {
-  const { data, error } = await supabase
-    .from('premiya_reports')
-    .select(PREMIYA_COLUMNS)
-    .eq('worker_id', workerId)
-    .order('month', { ascending: false });
+export async function markIncidentAsRead(incidentId: string, workerId: string): Promise<void> {
+  const { error } = await supabase
+    .from('incident_reads')
+    .insert({
+      incident_id: incidentId,
+      worker_id: workerId,
+    });
 
-  if (error || !data) return [];
-  return (data as DbPremiyaRow[]).map(mapDbPremiya);
-}
-
-export async function getPremiyasByStation(stationId: string): Promise<PremiyaReport[]> {
-  const { data, error } = await supabase
-    .from('premiya_reports')
-    .select(PREMIYA_COLUMNS)
-    .eq('station_id', stationId)
-    .order('submitted_at', { ascending: false });
-
-  if (error || !data) return [];
-  return (data as DbPremiyaRow[]).map(mapDbPremiya);
-}
-
-export async function getPremiyaByWorkerAndMonth(workerId: string, month: string): Promise<PremiyaReport | null> {
-  const { data, error } = await supabase
-    .from('premiya_reports')
-    .select(PREMIYA_COLUMNS)
-    .eq('worker_id', workerId)
-    .eq('month', month)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return mapDbPremiya(data as DbPremiyaRow);
-}
-
-export async function upsertPremiyaReport(
-  report: Omit<PremiyaReport, 'id' | 'submittedAt' | 'confirmedAt' | 'confirmedBy'>
-): Promise<PremiyaReport> {
-  const { data, error } = await supabase
-    .from('premiya_reports')
-    .upsert(
-      {
-        worker_id: report.workerId,
-        worker_name: report.workerName,
-        station_id: report.stationId,
-        station_name: report.stationName,
-        month: report.month, // Removing suffix hack
-        year: report.year,
-        sex: report.sex,
-        entries: report.entries,
-        submitted_at: new Date().toISOString(),
-      },
-      { onConflict: 'worker_id,month,station_id' }
-    )
-    .select()
-    .single();
-
-  if (error || !data) throw new Error(error?.message ?? 'Upsert failed');
-  return mapDbPremiya(data as DbPremiyaRow);
-}
-
-export async function confirmPremiyaReport(reportId: string, dispatcherName: string): Promise<PremiyaReport | null> {
-  const { data, error } = await supabase
-    .from('premiya_reports')
-    .update({
-      confirmed_at: new Date().toISOString(),
-      confirmed_by: dispatcherName,
-    })
-    .eq('id', reportId)
-    .select()
-    .single();
-
-  if (error || !data) return null;
-  return mapDbPremiya(data as DbPremiyaRow);
-}
-
-export async function getPendingPremiyaCount(): Promise<Record<string, number>> {
-  const { data, error } = await supabase
-    .from('premiya_reports')
-    .select('station_id')
-    .is('confirmed_at', null);
-
-  if (error || !data) return {};
-
-  const counts: Record<string, number> = {};
-
-  for (const r of data as Array<{ station_id: string }>) {
-    counts[r.station_id] = (counts[r.station_id] || 0) + 1;
+  // Ignore unique constraint error if already read
+  if (error && error.code !== '23505') {
+    throw new Error(error.message);
   }
-
-  return counts;
 }
 
 // Station Schemas

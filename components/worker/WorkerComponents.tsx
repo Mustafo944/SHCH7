@@ -2,14 +2,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen } from 'lucide-react'
-import { getGlobalGraphics, getSchemasByStation, upsertReport, upsertPremiyaReport, getPremiyasByWorker } from '@/lib/supabase-db'
-import type { User, WorkReport, ReportEntry, PremiyaEntry, StationSchema } from '@/types'
+import { getGlobalGraphics, getSchemasByStation, upsertReport } from '@/lib/supabase-db'
+import type { User, WorkReport, ReportEntry, StationSchema } from '@/types'
 import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, type ParsedTaskItem } from '@/lib/reja-data'
 import { MONTHS } from '@/lib/constants'
 import { DU46JournalView, SHU2JournalView, YerlatgichJournalView, AlsnKodJournalView, MpsFriksionJournalView } from '@/components/JournalView'
 
 const TOTAL_ROWS = 14
-const PREMIYA_ROWS = 12
 
 import { ArrowRight } from 'lucide-react'
 
@@ -99,7 +98,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       setIsConfirmed(false)
       setReportId(null)
     }
-  }, [reports, monthStr, stationId])
+  }, [draftReport])
 
   const addRow = () => {
     setEntries([...entries, {
@@ -549,76 +548,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   )
 }
 
-export function PremiyaForm({ session, stationId, stationName, month, onSubmit, onCancel }: { session: User, stationId: string, stationName: string, month: number, onSubmit: () => void, onCancel: () => void }) {
-  const [entries, setEntries] = useState<PremiyaEntry[]>(Array.from({ length: PREMIYA_ROWS }, () => ({ ish: '', lavozim: '', tabelNomeri: '', foiz: '', eslatma: '' })))
-  const [submitting, setSubmitting] = useState(false)
-  const [premiyaError, setPremiyaError] = useState<string | null>(null)
-  const monthStr = `${new Date().getFullYear()}-${String(month + 1).padStart(2, '0')}`
 
-  useEffect(() => {
-    getPremiyasByWorker(session.id).then(reps => {
-      const draft = reps.find(r => r.month === monthStr && r.stationId === stationId)
-      if (draft) setEntries(draft.entries)
-      else setEntries(Array.from({ length: PREMIYA_ROWS }, () => ({ ish: '', lavozim: '', tabelNomeri: '', foiz: '', eslatma: '' })))
-    })
-  }, [session.id, monthStr, stationId])
-
-  async function handleSubmit() {
-    setSubmitting(true)
-    try {
-      if (entries.every(e => !e.ish && !e.lavozim)) {
-        throw new Error("Kamida bitta qatorni to'ldiring");
-      }
-      await upsertPremiyaReport({ workerId: session.id, workerName: session.fullName, stationId, stationName, sex: stationName, month: monthStr, year: String(new Date().getFullYear()), entries })
-      onSubmit()
-    } catch (err: unknown) {
-      setPremiyaError(err instanceof Error ? err.message : 'Xatolik')
-      setTimeout(() => setPremiyaError(null), 3000)
-    } finally { setSubmitting(false) }
-  }
-
-  const addRow = () => setEntries([...entries, { ish: '', lavozim: '', tabelNomeri: '', foiz: '', eslatma: '' }])
-  const removeRow = () => {
-    if (entries.length <= 1) return
-    setEntries(entries.slice(0, -1))
-  }
-
-  return (
-    <div className="space-y-6 animate-fade-up">
-      <HeaderCard title="Premiya To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} status="yangi" color="amber" />
-      <div className="flex gap-2">
-        <button onClick={addRow} className="rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 backdrop-blur-sm transition-all shadow-sm">+ Qator qo'shish</button>
-        <button onClick={removeRow} className="rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-400 hover:text-red-500 hover:border-red-100 backdrop-blur-sm transition-all shadow-sm">- Qator o'chirish</button>
-      </div>
-      <div className="overflow-x-auto rounded-2xl border border-slate-200/60 bg-white/80 p-4 shadow-sm backdrop-blur-sm">
-        <table className="w-full text-left text-[11px] min-w-[800px]">
-          <thead className="text-[10px] font-black uppercase text-slate-400 bg-slate-50/80">
-            <tr><th className="p-4 text-center w-12">№</th><th className="p-4">I.SH.</th><th className="p-4">Lavozimi</th><th className="p-4 text-center">Tabel №</th><th className="p-4 text-center">Rag'bat. %</th><th className="p-4">Eslatma</th></tr>
-          </thead>
-          <tbody className="bg-white/50">
-            {entries.map((e, i) => (
-              <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/80 transition-colors">
-                <td className="p-1 text-center text-slate-400 font-bold text-[11px]">{i + 1}</td>
-                <td className="p-1"><input value={e.ish} onChange={val => { const n = [...entries]; n[i].ish = val.target.value; setEntries(n) }} className="input-premium" /></td>
-                <td className="p-1"><input value={e.lavozim} onChange={val => { const n = [...entries]; n[i].lavozim = val.target.value; setEntries(n) }} className="input-premium" /></td>
-                <td className="p-1"><input value={e.tabelNomeri} onChange={val => { const n = [...entries]; n[i].tabelNomeri = val.target.value; setEntries(n) }} className="input-premium text-center" /></td>
-                <td className="p-1"><input value={e.foiz} onChange={val => { const n = [...entries]; n[i].foiz = val.target.value; setEntries(n) }} className="input-premium text-center font-black text-amber-600" /></td>
-                <td className="p-1"><input value={e.eslatma} onChange={val => { const n = [...entries]; n[i].eslatma = val.target.value; setEntries(n) }} className="input-premium" /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {premiyaError && (
-        <div className="rounded-2xl border border-red-200/60 bg-red-50/80 p-4 text-center text-sm font-bold text-red-600 backdrop-blur-sm">{premiyaError}</div>
-      )}
-      <div className="flex gap-4">
-        <button onClick={handleSubmit} disabled={submitting} className="btn-gradient flex-1 py-5 font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>{submitting ? 'Yuborilmoqda...' : 'Ro\'yxatni Saqlash'}</button>
-        <button onClick={onCancel} className="rounded-2xl bg-white/80 border border-slate-200/60 px-10 font-bold text-slate-400 hover:text-slate-900 backdrop-blur-sm transition-all shadow-sm">Bekor qilish</button>
-      </div>
-    </div>
-  )
-}
 export function WorkerGraphicsView() {
   const [items, setItems] = useState<StationSchema[]>([])
   const [loading, setLoading] = useState(true)

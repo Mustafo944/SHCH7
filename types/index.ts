@@ -65,27 +65,19 @@ export interface WorkReport {
   confirmedBy: string | null;
 }
 
-export interface PremiyaEntry {
-  ish: string;
-  lavozim: string;
-  tabelNomeri: string;
-  foiz: string;
-  eslatma: string;
+export interface Incident {
+  id: string;
+  month: string; // "YYYY-MM"
+  content: string;
+  createdAt: string;
+  createdByName: string;
 }
 
-export interface PremiyaReport {
+export interface IncidentRead {
   id: string;
+  incidentId: string;
   workerId: string;
-  workerName: string;
-  stationId: string;
-  stationName: string;
-  month: string;       // "2026-03"
-  year: string;
-  sex: string;         // bekat/sex nomi
-  entries: PremiyaEntry[];
-  submittedAt: string;
-  confirmedAt: string | null;
-  confirmedBy: string | null;
+  readAt: string;
 }
 
 export interface StationSchema {

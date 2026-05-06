@@ -8,18 +8,19 @@ import {
 } from '@/lib/store'
 import {
   getReportsByWorker,
-  getPremiyasByWorker,
+  getIncidents,
+  getReadIncidentIds,
   getPendingJournalCounts
 } from '@/lib/supabase-db'
 import { useSessionGuard, useToast } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
-import type { WorkReport, ReportEntry, PremiyaReport, JournalType } from '@/types'
+import type { WorkReport, ReportEntry, Incident, JournalType } from '@/types'
 import { MONTHS } from '@/lib/constants'
 import { JournalSelectModal, JournalMonthSelectModal, DU46JournalView, SHU2JournalView, ALSNJournalView, YerlatgichJournalView, AlsnKodJournalView, MpsFriksionJournalView } from '@/components/JournalView'
-import { BigActionCard, HeaderCard, JournalForm, WorkerGraphicsView, WorkerSchemasView, PremiyaForm, WorkerTasksModal } from '@/components/worker/WorkerComponents'
+import { BigActionCard, HeaderCard, JournalForm, WorkerGraphicsView, WorkerSchemasView, WorkerTasksModal } from '@/components/worker/WorkerComponents'
+import { IncidentsView } from '@/components/worker/IncidentsView'
 import {
   FileText,
-  Award,
   Map as MapIcon,
   ChevronLeft,
   LogOut,
@@ -32,20 +33,20 @@ import {
 } from 'lucide-react'
 
 const _TOTAL_ROWS = 14
-const _PREMIYA_ROWS = 12
 
 export default function WorkerPage() {
   const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['worker', 'elektromexanik', 'elektromontyor'])
   const toast = useToast()
-  const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'selectPlanType' | 'journal' | 'viewReport' | 'premiyaForm' | 'viewPremiya' | 'sxemalar' | 'grafiklar' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'kunlikIshlar' | 'boshqaJurnallar' | 'alsn' | 'alsnMonthSelect' | 'yerlatgich' | 'yerlatgichMonthSelect' | 'alsnKod' | 'alsnKodMonthSelect' | 'mpsFriksion' | 'mpsFriksionMonthSelect'>('home')
+  const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'selectPlanType' | 'journal' | 'viewReport' | 'incidents' | 'sxemalar' | 'grafiklar' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'kunlikIshlar' | 'boshqaJurnallar' | 'alsn' | 'alsnMonthSelect' | 'yerlatgich' | 'yerlatgichMonthSelect' | 'alsnKod' | 'alsnKodMonthSelect' | 'mpsFriksion' | 'mpsFriksionMonthSelect'>('home')
 
   const [reports, setReports] = useState<WorkReport[]>([])
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [premiyaReports, setPremiyaReports] = useState<PremiyaReport[]>([])
+  const [incidents, setIncidents] = useState<Incident[]>([])
+  const [readIncidentIds, setReadIncidentIds] = useState<Set<string>>(new Set())
   const [activeStationId, setActiveStationId] = useState<string>('')
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedReport, setSelectedReport] = useState<WorkReport | null>(null)
-  const [selectedPremiya, setSelectedPremiya] = useState<PremiyaReport | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(true)
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
@@ -73,24 +74,27 @@ export default function WorkerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const loadPremiyaReports = useCallback(async (userId: string) => {
+  const loadIncidents = useCallback(async (userId: string) => {
     try {
-      const p = await getPremiyasByWorker(userId)
-      setPremiyaReports(p)
+      const [allInc, readIds] = await Promise.all([
+        getIncidents(),
+        getReadIncidentIds(userId)
+      ])
+      setIncidents(allInc)
+      setReadIncidentIds(new Set(readIds))
     } catch {
-      toast.error('Premiyalarni yuklashda xatolik')
+      toast.error('Baxtsiz hodisalarni yuklashda xatolik')
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [toast])
 
   const refreshData = useCallback(async (userId: string) => {
     setLoading(true)
     await Promise.all([
       loadWorkReports(userId),
-      loadPremiyaReports(userId)
+      loadIncidents(userId)
     ])
     setLoading(false)
-  }, [loadWorkReports, loadPremiyaReports])
+  }, [loadWorkReports, loadIncidents])
 
   const [viewInitialized, setViewInitialized] = useState(false)
 
@@ -143,28 +147,34 @@ export default function WorkerPage() {
       )
       .subscribe()
 
-    const premiyaReportsChannel = supabase
-      .channel(`worker_premiya_${session.id}`)
+    const incidentsChannel = supabase
+      .channel(`worker_incidents_${session.id}`)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'premiya_reports',
-          filter: `worker_id=eq.${session.id}`
-        },
+        { event: '*', schema: 'public', table: 'incidents' },
         () => {
-          console.log('🚀 Realtime: Premiya holati o\'zgardi!')
-          loadPremiyaReports(session.id)
+          loadIncidents(session.id)
+        }
+      )
+      .subscribe()
+
+    const incidentReadsChannel = supabase
+      .channel(`worker_incident_reads_${session.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'incident_reads', filter: `worker_id=eq.${session.id}` },
+        () => {
+          loadIncidents(session.id)
         }
       )
       .subscribe()
 
     return () => {
       supabase.removeChannel(workReportsChannel)
-      supabase.removeChannel(premiyaReportsChannel)
+      supabase.removeChannel(incidentsChannel)
+      supabase.removeChannel(incidentReadsChannel)
     }
-  }, [session?.id, loadWorkReports, loadPremiyaReports])
+  }, [session?.id, loadWorkReports, loadIncidents])
 
   const { bugunBajarilgan, qolibKetgan } = useMemo(() => {
     const bugun: { entry: ReportEntry, month: string }[] = []
@@ -397,6 +407,14 @@ export default function WorkerPage() {
                   onClick={() => setView('journalSelect')}
                   badge={pendingCounts.du46 + pendingCounts.shu2}
                 />
+                <BigActionCard
+                  title="Baxtsiz Hodisalar"
+                  desc="Sodir bo'lgan baxtsiz hodisalar bilan tanishing."
+                  icon={<AlertTriangle size={24} strokeWidth={2} />}
+                  color="amber"
+                  onClick={() => setView('incidents')}
+                  badge={incidents.filter(i => !readIncidentIds.has(i.id)).length}
+                />
               </div>
             </div>
           )}
@@ -406,19 +424,12 @@ export default function WorkerPage() {
               {MONTHS.map((m, i) => {
                 const isCurrent = i === new Date().getMonth()
                 return (
-                  <button key={m} onClick={() => { setSelectedMonth(i); setView('selectPlanType') }} className={`group flex flex-col p-6 rounded-2xl border shadow-sm backdrop-blur-sm transition-all ${isCurrent ? 'border-purple-300 bg-purple-50/80 shadow-purple-500/5' : 'border-slate-200/60 bg-white/80 hover:bg-purple-50/40 hover:border-purple-200'}`}>
+                  <button key={m} onClick={() => { setSelectedMonth(i); setView('journal') }} className={`group flex flex-col p-6 rounded-2xl border shadow-sm backdrop-blur-sm transition-all ${isCurrent ? 'border-purple-300 bg-purple-50/80 shadow-purple-500/5' : 'border-slate-200/60 bg-white/80 hover:bg-purple-50/40 hover:border-purple-200'}`}>
                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{String(i + 1).padStart(2, '0')}</span>
                     <span className="mt-4 text-lg font-black text-slate-900 group-hover:text-purple-600 transition-colors uppercase tracking-tight">{m}</span>
                   </button>
                 )
               })}
-            </div>
-          )}
-
-          {view === 'selectPlanType' && (
-            <div className="grid gap-4 sm:grid-cols-2 pt-10">
-              <BigActionCard title="Oylik Reja" desc="Bajarilgan ishlar jurnalini to'ldirish." icon={<FileText size={32} />} onClick={() => setView('journal')} />
-              <BigActionCard title="Premiya ro'yxati" desc="KPI ko'rsatkichlari ro'yxati." icon={<Award size={32} />} color="amber" onClick={() => setView('premiyaForm')} />
             </div>
           )}
 
@@ -434,15 +445,17 @@ export default function WorkerPage() {
             />
           )}
 
-          {view === 'premiyaForm' && selectedMonth !== null && (
-            <PremiyaForm
-              session={session!}
-              stationId={activeStationId}
-              stationName={stationName}
-              month={selectedMonth}
-              onSubmit={() => { refreshData(session!.id); setView('home') }}
-              onCancel={() => setView('home')}
-            />
+          {view === 'incidents' && (
+            <div className="animate-fade-up">
+              <IncidentsView 
+                incidents={incidents}
+                readIds={readIncidentIds}
+                workerId={session.id}
+                onRead={async () => {
+                  loadIncidents(session.id)
+                }}
+              />
+            </div>
           )}
 
           {view === 'viewReport' && selectedReport && (
@@ -497,44 +510,7 @@ export default function WorkerPage() {
             </div>
           )}
 
-          {view === 'viewPremiya' && selectedPremiya && (
-            <div className="animate-fade-up">
-              <HeaderCard title="Premiya Ro'yxati" subtitle={`${selectedPremiya.month} В· ${stationName}`} status={selectedPremiya.confirmedAt ? 'tasdiqlandi' : 'kutilmoqda'} color="amber" />
-              <div className="mt-8 overflow-x-auto rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-sm">
-                <table className="w-full text-left text-[11px]">
-                  <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    <tr><th className="p-4 text-center w-12">№</th><th className="p-4">I.SH.</th><th className="p-4">Lavozimi</th><th className="p-4 text-center">Tabel №</th><th className="p-4 text-center">Rag'bat. %</th><th className="p-4">Eslatma</th></tr>
-                  </thead>
-                  <tbody className="text-slate-700">
-                    {selectedPremiya.entries.map((e, idx) => (
-                      <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/80"><td className="p-4 text-center text-slate-400 font-bold">{idx + 1}</td><td className="p-4 font-bold">{e.ish}</td><td className="p-4 text-slate-500">{e.lavozim}</td><td className="p-4 text-center text-slate-500">{e.tabelNomeri}</td><td className="p-4 text-center font-black text-amber-600">{e.foiz}%</td><td className="p-4 text-slate-500">{e.eslatma}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-6">
-                <button
-                  onClick={async () => {
-                    const { jsPDF } = await import('jspdf')
-                    const { default: autoTable } = await import('jspdf-autotable')
-                    const doc = new jsPDF()
-                    doc.setFontSize(14)
-                    doc.text(`Premiya Ro'yxati - ${stationName}`, 14, 15)
-                    doc.setFontSize(10)
-                    doc.text(`Sana: ${selectedPremiya.month}`, 14, 22)
-                    const tableColumn = ['№', 'I.SH.', 'Lavozimi', 'Tabel №', "Rag'bat. %", 'Eslatma']
-                    const tableRows = selectedPremiya.entries.filter(e => e.ish || e.lavozim || e.foiz).map((e, idx) => [String(idx + 1), e.ish, e.lavozim, e.tabelNomeri, e.foiz ? e.foiz + '%' : '', e.eslatma])
-                    autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30, styles: { font: 'helvetica', fontSize: 8 }, headStyles: { fillColor: [245, 158, 11] } })
-                    doc.save(`Premiya_${stationName}_${selectedPremiya.month}.pdf`)
-                  }}
-                  className="btn-gradient w-full sm:w-auto flex items-center justify-center gap-2"
-                >
-                  <Download size={20} />
-                  Yuklab olish (PDF)
-                </button>
-              </div>
-            </div>
-          )}
+
 
           {view === 'sxemalar' && (
             <WorkerSchemasView stationId={activeStationId} stationName={stationName} />
