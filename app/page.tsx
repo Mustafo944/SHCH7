@@ -218,8 +218,8 @@ export default function LoginPage() {
                   Login
                 </label>
                 <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-purple-400">
-                    <User className="h-5 w-5" />
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-purple-800">
+                    <User className="h-5 w-5" strokeWidth={3} />
                   </div>
                   <input
                     type="text"
@@ -238,8 +238,8 @@ export default function LoginPage() {
                   Parol
                 </label>
                 <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-purple-400">
-                    <Lock className="h-5 w-5" />
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-purple-800">
+                    <Lock className="h-5 w-5" strokeWidth={3} />
                   </div>
                   <input
                     type={showPassword ? 'text' : 'password'}
