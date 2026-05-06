@@ -52,12 +52,7 @@ interface DbIncidentRow {
   created_by_name: string;
 }
 
-interface DbIncidentReadRow {
-  id: string;
-  incident_id: string;
-  worker_id: string;
-  read_at: string;
-}
+
 
 interface DbSchemaRow {
   id: string;

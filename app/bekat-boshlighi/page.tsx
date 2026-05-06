@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useSessionGuard, useRealtimeSubscription, useToast } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
@@ -84,8 +85,8 @@ export default function BekatBoshlighiPage() {
         <header className="sticky top-0 z-50 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-7xl print:hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-white/50 backdrop-blur-xl p-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60">
-                <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
+              <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-white/50 backdrop-blur-xl p-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60">
+                <Image src="/uty-logo.png" alt="UTY" fill className="object-contain p-2" />
               </div>
               <div className="min-w-0 flex flex-col justify-center bg-white/50 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <h1 className="text-[14px] sm:text-[16px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
