@@ -9,6 +9,7 @@ import { User, Eye, EyeOff, Lock, ArrowRight } from 'lucide-react'
 function getRoleHome(role: string) {
   if (role === 'dispatcher') return '/dispatcher'
   if (role === 'bekat_boshlighi' || role === 'bekat_navbatchisi') return '/bekat-boshlighi'
+  if (role === 'yul_ustasi') return '/yul-ustasi'
   return '/worker' // worker, elektromexanik, elektromontyor
 }
 

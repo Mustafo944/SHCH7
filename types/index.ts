@@ -1,8 +1,10 @@
 // Rollar
-export type Role = "dispatcher" | "worker" | "bekat_boshlighi" | "elektromexanik" | "elektromontyor" | "bekat_navbatchisi";
+export type Role = "dispatcher" | "worker" | "bekat_boshlighi" | "elektromexanik" | "elektromontyor" | "bekat_navbatchisi" | "yul_ustasi";
+
+export type IncidentStatus = "open" | "resolved" | "read";
 
 // Lavozimlar
-export type Position = "katta_elektromexanik" | "bekat_boshlighi" | "dispatcher" | "elektromexanik" | "elektromontyor" | "bekat_navbatchisi";
+export type Position = "katta_elektromexanik" | "bekat_boshlighi" | "dispatcher" | "elektromexanik" | "elektromontyor" | "bekat_navbatchisi" | "yul_ustasi";
 
 // Foydalanuvchi
 export interface User {

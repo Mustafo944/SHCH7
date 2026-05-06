@@ -91,7 +91,7 @@ export default function DispatcherPage() {
     login: '',
     password: '',
     phone: '',
-    role: 'worker' as 'worker' | 'bekat_boshlighi' | 'elektromexanik' | 'elektromontyor' | 'bekat_navbatchisi',
+    role: 'worker' as 'worker' | 'bekat_boshlighi' | 'elektromexanik' | 'elektromontyor' | 'bekat_navbatchisi' | 'yul_ustasi',
     stationIds: [] as string[],
   })
   const [editingWorkerId, setEditingWorkerId] = useState<string | null>(null)
@@ -1084,6 +1084,7 @@ function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, messa
               <button type="button" onClick={() => setForm({ ...form, role: 'elektromontyor', stationIds: [] })} className={`rounded-xl py-3 px-2 text-xs font-bold border transition-all duration-200 ${form.role === 'elektromontyor' ? 'bg-sky-50 border-sky-400 text-sky-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Elektromontyor</button>
               <button type="button" onClick={() => setForm({ ...form, role: 'bekat_boshlighi', stationIds: [] })} className={`rounded-xl py-3 px-2 text-xs font-bold border transition-all duration-200 ${form.role === 'bekat_boshlighi' ? 'bg-amber-50 border-amber-400 text-amber-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Bekat Boshlig'i</button>
               <button type="button" onClick={() => setForm({ ...form, role: 'bekat_navbatchisi', stationIds: [] })} className={`rounded-xl py-3 px-2 text-xs font-bold border transition-all duration-200 ${form.role === 'bekat_navbatchisi' ? 'bg-amber-50 border-amber-400 text-amber-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Bekat Navbatchisi</button>
+              <button type="button" onClick={() => setForm({ ...form, role: 'yul_ustasi', stationIds: [] })} className={`rounded-xl py-3 px-2 text-xs font-bold border transition-all duration-200 ${form.role === 'yul_ustasi' ? 'bg-emerald-50 border-emerald-400 text-emerald-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Yo'l Ustasi</button>
             </div>
           </div>
         </div>
@@ -1100,7 +1101,7 @@ function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, messa
                   if (exists) {
                     setForm({ ...form, stationIds: form.stationIds.filter((id: string) => id !== s.id) })
                   } else {
-                    const max = form.role === 'worker' ? 5 : form.role === 'bekat_boshlighi' ? 3 : 1
+                    const max = form.role === 'worker' ? 5 : form.role === 'bekat_boshlighi' ? 3 : form.role === 'yul_ustasi' ? 2 : 1
                     if (form.stationIds.length >= max) {
                       setFormMsg({ type: 'err', text: `Bu lavozim uchun ko'pi bilan ${max} ta bekat tanlash mumkin` })
                       setTimeout(() => setFormMsg(null), 3000)
@@ -2082,7 +2083,7 @@ function WorkersModal({ workers, stations, onClose, onEdit, onDelete }: {
                         <h4 className="text-lg font-black text-slate-900 tracking-tight">{w.fullName}</h4>
                         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                           <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-100">
-                            {w.role === 'worker' ? 'Katta Elektromexanik' : w.role === 'elektromexanik' ? 'Elektromexanik' : w.role === 'elektromontyor' ? 'Elektromontyor' : w.role === 'bekat_navbatchisi' ? 'Bekat Navbatchisi' : "Bekat Boshlig'i"}
+                            {w.role === 'worker' ? 'Katta Elektromexanik' : w.role === 'elektromexanik' ? 'Elektromexanik' : w.role === 'elektromontyor' ? 'Elektromontyor' : w.role === 'bekat_navbatchisi' ? 'Bekat Navbatchisi' : w.role === 'yul_ustasi' ? "Yo'l Ustasi" : "Bekat Boshlig'i"}
                           </span>
                           <span className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
                             <Users size={14} className="text-slate-300" />

@@ -35,6 +35,7 @@ export function useSessionGuard(expectedRole: Role | Role[]) {
           // Rolga mos sahifaga yo'naltirish
           if (user.role === 'dispatcher') router.replace('/dispatcher')
           else if (user.role === 'bekat_boshlighi' || user.role === 'bekat_navbatchisi') router.replace('/bekat-boshlighi')
+          else if (user.role === 'yul_ustasi') router.replace('/yul-ustasi')
           else router.replace('/worker')
           return
         }

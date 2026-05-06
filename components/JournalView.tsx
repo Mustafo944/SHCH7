@@ -414,7 +414,7 @@ export function DU46JournalView({
   const journalMonthLabel = getJournalMonthLabel(journalMonth)
 
   // --- Rollar --------------------------------------------------------------------
-  const isWorker = ['worker', 'elektromexanik', 'elektromontyor'].includes(userRole)
+  const isWorker = ['worker', 'elektromexanik', 'elektromontyor', 'yul_ustasi'].includes(userRole)
   const isBB = ['bekat_boshlighi', 'bekat_navbatchisi'].includes(userRole)
   const isDispatcher = userRole === 'dispatcher'
   const isEditor = isWorker || isBB // Yozish mumkin bo'lgan rollar

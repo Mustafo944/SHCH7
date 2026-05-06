@@ -64,6 +64,7 @@ export async function updateSession(request: NextRequest) {
     '/dispatcher': ['dispatcher'],
     '/worker': ['worker', 'elektromexanik', 'elektromontyor'],
     '/bekat-boshlighi': ['bekat_boshlighi', 'bekat_navbatchisi'],
+    '/yul-ustasi': ['yul_ustasi'],
   }
 
   const matchedRoute = Object.keys(PROTECTED_ROUTES).find(route =>
@@ -115,6 +116,7 @@ export async function updateSession(request: NextRequest) {
       elektromontyor: '/worker',
       bekat_boshlighi: '/bekat-boshlighi',
       bekat_navbatchisi: '/bekat-boshlighi',
+      yul_ustasi: '/yul-ustasi',
     }
     const correctPath = ROLE_HOME[userRole] || '/'
     const url = request.nextUrl.clone()

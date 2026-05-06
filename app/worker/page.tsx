@@ -101,7 +101,7 @@ export default function WorkerPage() {
   // Sessiya tayyor bo'lganda ma'lumotlarni yuklash
   useEffect(() => {
     if (!session) return
-    
+
     if (!viewInitialized) {
       refreshData(session.id)
       const stationsList = session.stationIds || []
@@ -291,7 +291,7 @@ export default function WorkerPage() {
 
           {view === 'home' && (
             <div className="space-y-4 sm:space-y-4 animate-fade-up">
-              
+
               {/* Welcome Card */}
               <div className="relative overflow-hidden rounded-[24px] bg-white/50 backdrop-blur-xl p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 flex items-center justify-between">
                 <div className="relative z-10">
@@ -340,8 +340,8 @@ export default function WorkerPage() {
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   {/* Bugun Bajarilgan Ishlar */}
-                  <div 
-                    onClick={() => setWorkerModal('bugunBajarilgan')} 
+                  <div
+                    onClick={() => setWorkerModal('bugunBajarilgan')}
                     className="cursor-pointer group relative overflow-hidden rounded-[20px] bg-emerald-50/50 p-4 sm:p-5 border border-emerald-100/60 transition-all hover:bg-emerald-50 hover:border-emerald-200 hover:shadow-md active:scale-[0.98] flex items-center gap-4"
                   >
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-emerald-100/50 text-emerald-500 group-hover:scale-110 transition-transform">
@@ -357,8 +357,8 @@ export default function WorkerPage() {
                   </div>
 
                   {/* Bajarilmagan Ishlar */}
-                  <div 
-                    onClick={() => setWorkerModal('qolibKetgan')} 
+                  <div
+                    onClick={() => setWorkerModal('qolibKetgan')}
                     className="cursor-pointer group relative overflow-hidden rounded-[20px] bg-red-50/50 p-4 sm:p-5 border border-red-100/60 transition-all hover:bg-red-50 hover:border-red-200 hover:shadow-md active:scale-[0.98] flex items-center gap-4"
                   >
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-red-100/50 text-red-500 group-hover:scale-110 transition-transform">
@@ -447,7 +447,7 @@ export default function WorkerPage() {
 
           {view === 'incidents' && (
             <div className="animate-fade-up">
-              <IncidentsView 
+              <IncidentsView
                 incidents={incidents}
                 readIds={readIncidentIds}
                 workerId={session!.id}
@@ -583,62 +583,62 @@ export default function WorkerPage() {
           )}
 
           {view === 'boshqaJurnallar' && (
-             <div className="space-y-6 animate-fade-up">
-               <HeaderCard title="Boshqa jurnallar" subtitle={stationName!} status="ko'rish" color="purple" />
-               <div className="grid gap-4 max-w-lg mx-auto">
-                 <button
-                   onClick={() => setView('alsnMonthSelect')}
-                   className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
-                 >
-                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
-                     <BookOpen size={28} />
-                   </div>
-                   <div>
-                     <h4 className="text-lg font-black text-slate-900 tracking-tight">Poezd radioaloqasi va ALSN</h4>
-                     <p className="mt-1 text-xs text-slate-500 leading-relaxed">Poezd radioaloqasi va ALSN ni tekshirish jurnali</p>
-                   </div>
-                 </button>
-                 <button
-                   onClick={() => setView('yerlatgichMonthSelect')}
-                   className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-500/5 active:scale-95"
-                 >
-                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-all group-hover:bg-white border border-transparent group-hover:border-emerald-100 shadow-sm">
-                     <BookOpen size={28} />
-                   </div>
-                   <div>
-                      <h4 className="text-lg font-black text-slate-900 tracking-tight">Yerlatgich xabarlagichi</h4>
-                      <p className="mt-1 text-xs text-slate-500 leading-relaxed">Yerlatgich xabarlagichi yordamida montaj izolyatsiya qarshiligini o'lchash jurnali (NSH-01 17.1.8)</p>
-                   </div>
-                 </button>
-                 <button
-                    onClick={() => setView('alsnKodMonthSelect')}
-                    className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
-                  >
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
-                      <BookOpen size={28} />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-black text-slate-900 tracking-tight">ALSN kodlarini o'lchash</h4>
-                      <p className="mt-1 text-xs text-slate-500 leading-relaxed">ALSN kodlarini to'g'rilash va tok kuchini o'lchash jurnali (NSH-01 10.4)</p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setView('mpsFriksionMonthSelect')}
-                    className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-violet-300 hover:shadow-xl hover:shadow-violet-500/5 active:scale-95"
-                  >
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 transition-all group-hover:bg-white border border-transparent group-hover:border-violet-100 shadow-sm">
-                      <BookOpen size={28} />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-black text-slate-900 tracking-tight">MPS elektrodvigatellarni friksion tokini o&apos;lchash</h4>
-                      <p className="mt-1 text-xs text-slate-500 leading-relaxed">MPS turidagi elektrodvigatellarni friksion tokini o&apos;lchash jurnali (NSH-01 9.1.4)</p>
-                    </div>
-                  </button>
-               </div>
-               <div className="text-center mt-4">
-                 <button onClick={() => setView('journalSelect')} className="rounded-2xl bg-white border border-slate-200/60 px-10 py-3 font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition shadow-sm backdrop-blur-sm">Orqaga</button>
-               </div>
-             </div>
+            <div className="space-y-6 animate-fade-up">
+              <HeaderCard title="Boshqa jurnallar" subtitle={stationName!} status="ko'rish" color="purple" />
+              <div className="grid gap-4 max-w-lg mx-auto">
+                <button
+                  onClick={() => setView('alsnMonthSelect')}
+                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
+                >
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
+                    <BookOpen size={28} />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900 tracking-tight">Poezd radioaloqasi va ALSN</h4>
+                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">Poezd radioaloqasi va ALSN ni tekshirish jurnali</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setView('yerlatgichMonthSelect')}
+                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-500/5 active:scale-95"
+                >
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-all group-hover:bg-white border border-transparent group-hover:border-emerald-100 shadow-sm">
+                    <BookOpen size={28} />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900 tracking-tight">Yerlatgich xabarlagichi</h4>
+                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">Yerlatgich xabarlagichi yordamida montaj izolyatsiya qarshiligini o'lchash jurnali (NSH-01 17.1.8)</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setView('alsnKodMonthSelect')}
+                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
+                >
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
+                    <BookOpen size={28} />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900 tracking-tight">ALSN kodlarini o'lchash</h4>
+                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">ALSN kodlarini to'g'rilash va tok kuchini o'lchash jurnali (NSH-01 10.4)</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setView('mpsFriksionMonthSelect')}
+                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-violet-300 hover:shadow-xl hover:shadow-violet-500/5 active:scale-95"
+                >
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 transition-all group-hover:bg-white border border-transparent group-hover:border-violet-100 shadow-sm">
+                    <BookOpen size={28} />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900 tracking-tight">MPS elektrodvigatellarni friksion tokini o&apos;lchash</h4>
+                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">MPS turidagi elektrodvigatellarni friksion tokini o&apos;lchash jurnali (NSH-01 9.1.4)</p>
+                  </div>
+                </button>
+              </div>
+              <div className="text-center mt-4">
+                <button onClick={() => setView('journalSelect')} className="rounded-2xl bg-white border border-slate-200/60 px-10 py-3 font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition shadow-sm backdrop-blur-sm">Orqaga</button>
+              </div>
+            </div>
           )}
 
           {view === 'alsnMonthSelect' && (
