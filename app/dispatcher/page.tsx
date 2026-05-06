@@ -48,7 +48,8 @@ import {
   Menu,
   BookOpen,
   Map as MapIcon,
-  AlertTriangle
+  AlertTriangle,
+  Phone
 } from 'lucide-react'
 
 type Tab = 'bekatlar' | 'arxiv' | 'grafiklar'
@@ -278,6 +279,7 @@ export default function DispatcherPage() {
       entry: ReportEntry
       bajarilgan: boolean
       month: string
+      taskText: string
     }[] = []
 
     allReports
@@ -285,27 +287,62 @@ export default function DispatcherPage() {
       .forEach(r => {
         const isCurrentMonth = r.month === currentMonthStr
         r.entries.forEach(e => {
-          const hasContent = e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish
           const taskDay = parseInt((e.ragat || '').trim(), 10)
-          const bajarilgan = !!(e.bajarildiShn && e.bajarildiImzo)
+          if (isNaN(taskDay)) return
 
-          if (!hasContent || isNaN(taskDay)) return
+          // Har bir ustunni alohida tekshiramiz
+          const columns = [
+            { text: e.haftalikJadval, done: e.doneHaftalik },
+            { text: e.yillikJadval, done: e.doneYillik },
+            { text: e.yangiIshlar, done: e.doneYangi },
+            { text: e.kmoBartaraf, done: e.doneKmo },
+            { text: e.majburiyOzgarish, done: e.doneMajburiy }
+          ]
 
-          if (isCurrentMonth) {
-            // Bajarilgan bo'lsa, faqat bugungilar (taskDay === todayDay)
-            if (bajarilgan && taskDay === todayDay) {
-              result.push({ stationId: r.stationId, stationName: r.stationName, workerName: r.workerName, entry: e, bajarilgan: true, month: r.month })
+          columns.forEach(col => {
+            if (!col.text) return
+            const isDone = !!col.done
+
+            if (isCurrentMonth) {
+              // Bajarilgan bo'lsa, faqat bugungilar (taskDay === todayDay)
+              if (isDone && taskDay === todayDay) {
+                result.push({
+                  stationId: r.stationId,
+                  stationName: r.stationName,
+                  workerName: r.workerName,
+                  entry: e,
+                  bajarilgan: true,
+                  month: r.month,
+                  taskText: col.text
+                })
+              }
+              // Bajarilmagan bo'lsa, faqat o'tib ketgan muddatlar (taskDay < todayDay)
+              else if (!isDone && taskDay < todayDay) {
+                result.push({
+                  stationId: r.stationId,
+                  stationName: r.stationName,
+                  workerName: r.workerName,
+                  entry: e,
+                  bajarilgan: false,
+                  month: r.month,
+                  taskText: col.text
+                })
+              }
+            } else {
+              // O'tgan oyda: bajarilmagan barcha ishlar
+              if (!isDone) {
+                result.push({
+                  stationId: r.stationId,
+                  stationName: r.stationName,
+                  workerName: r.workerName,
+                  entry: e,
+                  bajarilgan: false,
+                  month: r.month,
+                  taskText: col.text
+                })
+              }
             }
-            // Bajarilmagan bo'lsa, faqat o'tib ketgan muddatlar (taskDay < todayDay)
-            else if (!bajarilgan && taskDay < todayDay) {
-              result.push({ stationId: r.stationId, stationName: r.stationName, workerName: r.workerName, entry: e, bajarilgan: false, month: r.month })
-            }
-          } else {
-            // O'tgan oyda: bajarilmagan barcha ishlar
-            if (!bajarilgan) {
-              result.push({ stationId: r.stationId, stationName: r.stationName, workerName: r.workerName, entry: e, bajarilgan: false, month: r.month })
-            }
-          }
+          })
         })
       })
 
@@ -845,6 +882,7 @@ export default function DispatcherPage() {
       {showWorkersModal && (
         <WorkersModal
           workers={workers}
+          stations={stations}
           onClose={() => setShowWorkersModal(false)}
           onEdit={(w: User) => {
             setEditingWorkerId(w.id)
@@ -2062,41 +2100,142 @@ function DownloadCard({ title, desc, existingFile, onUpload, onDelete }: {
   )
 }
 
-function WorkersModal({ workers, onClose, onEdit, onDelete }: {
+function WorkersModal({ workers, stations, onClose, onEdit, onDelete }: {
   workers: User[]
+  stations: Station[]
   onClose: () => void
   onEdit: (w: User) => void
   onDelete: (id: string) => void
 }) {
+  const [selectedStationId, setSelectedStationId] = useState<string | null>(null)
+
+  // Group workers by station
+  const stationWorkerMap = useMemo(() => {
+    const map: Record<string, User[]> = {}
+    workers.forEach(w => {
+      (w.stationIds || []).forEach(sid => {
+        if (!map[sid]) map[sid] = []
+        map[sid].push(w)
+      })
+    })
+    return map
+  }, [workers])
+
+  const selectedStation = stations.find(s => s.id === selectedStationId)
+  const workersInStation = selectedStationId ? (stationWorkerMap[selectedStationId] || []) : []
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
-      <div className="premium-card h-[80vh] w-full max-w-4xl overflow-hidden p-0 animate-scale-in">
+      <div className="premium-card flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden p-0 animate-scale-in">
+        {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-8 py-6 bg-slate-50/50">
-          <div>
-            <h3 className="text-xl font-black text-slate-900">Ishchilar bazasi</h3>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Jami: {workers.length} ta xodim</p>
+          <div className="flex items-center gap-4">
+            {selectedStationId && (
+              <button
+                onClick={() => setSelectedStationId(null)}
+                className="rounded-xl bg-white border border-slate-200 p-2 text-slate-400 hover:text-slate-900 transition-all shadow-sm"
+              >
+                <ChevronLeft size={20} />
+              </button>
+            )}
+            <div>
+              <h3 className="text-xl font-black text-slate-900">
+                {selectedStationId ? `${selectedStation?.name} xodimlari` : 'Ishchilar bazasi'}
+              </h3>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                {selectedStationId ? `Jami: ${workersInStation.length} ta xodim` : `Jami: ${workers.length} ta xodim · ${stations.length} ta bekat`}
+              </p>
+            </div>
           </div>
-          <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-3 text-slate-400 hover:text-slate-900 transition-all duration-200 shadow-sm"><X size={24} /></button>
+          <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-3 text-slate-400 hover:text-slate-900 transition-all duration-200 shadow-sm">
+            <X size={24} />
+          </button>
         </div>
 
-        <div className="h-[calc(80vh-100px)] overflow-y-auto p-8 custom-scrollbar bg-white">
-          <div className="grid gap-4">
-            {workers.map((w) => (
-              <div key={w.id} className="premium-card flex items-center justify-between p-6 transition-all duration-200 hover:shadow-md group">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-lg font-black text-white shadow-lg shadow-sky-500/20 transition-transform duration-200 group-hover:scale-110">{w.fullName.charAt(0)}</div>
-                  <div>
-                    <h4 className="font-black text-slate-900">{w.fullName}</h4>
-                    <p className="text-xs font-bold text-slate-500 tracking-tight">{w.login} · {w.phone || 'Tel kiritilmagan'} · {w.role === 'worker' ? 'Katta Elektromexanik' : w.role === 'elektromexanik' ? 'Elektromexanik' : w.role === 'elektromontyor' ? 'Elektromontyor' : w.role === 'bekat_navbatchisi' ? 'Bekat Navbatchisi' : "Bekat Boshlig'i"}</p>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 custom-scrollbar bg-white">
+          {selectedStationId === null ? (
+            /* ─── 1-BOSQICH: BEKATLAR RO'YXATI ─── */
+            <div className="grid gap-4 sm:grid-cols-2">
+              {stations.map(st => {
+                const count = stationWorkerMap[st.id]?.length || 0
+                return (
+                  <button
+                    key={st.id}
+                    onClick={() => setSelectedStationId(st.id)}
+                    className="premium-card group flex items-center justify-between p-6 transition-all duration-300 hover:border-purple-300 hover:shadow-xl hover:shadow-purple-500/5 active:scale-[0.98] border-slate-100 bg-slate-50/30"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white border border-slate-100 text-purple-600 shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:bg-purple-50">
+                        <MapPin size={24} />
+                      </div>
+                      <div className="text-left">
+                        <h4 className="font-black text-slate-900">{st.name}</h4>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{count} ta xodim biriktirilgan</p>
+                      </div>
+                    </div>
+                    <ChevronRight size={20} className="text-slate-300 group-hover:text-purple-500 transition-colors" />
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            /* ─── 2-BOSQICH: XODIMLAR RO'YXATI ─── */
+            <div className="space-y-4">
+              {workersInStation.length === 0 ? (
+                <div className="py-20 text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
+                    <Users size={32} />
                   </div>
+                  <p className="text-sm font-black text-slate-300 uppercase tracking-widest">Bu bekatda hali xodimlar yo'q</p>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => onEdit(w)} className="rounded-xl bg-slate-50 p-3 text-slate-400 hover:text-sky-600 hover:bg-sky-50 transition-all duration-200 border border-transparent hover:border-sky-100 shadow-sm"><Edit size={20} /></button>
-                  <button onClick={() => onDelete(w.id)} className="rounded-xl bg-red-50 p-3 text-red-500 hover:text-red-700 hover:bg-red-100 transition-all duration-200 border border-transparent hover:border-red-100 shadow-sm"><Trash2 size={20} /></button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ) : (
+                workersInStation.map((w) => (
+                  <div key={w.id} className="premium-card flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 transition-all duration-200 hover:shadow-md group border-slate-100">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 text-xl font-black text-white shadow-lg shadow-purple-500/20 transition-transform duration-200 group-hover:scale-110">
+                        {w.fullName.charAt(0)}
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-black text-slate-900 tracking-tight">{w.fullName}</h4>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+                          <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-100">
+                            {w.role === 'worker' ? 'Katta Elektromexanik' : w.role === 'elektromexanik' ? 'Elektromexanik' : w.role === 'elektromontyor' ? 'Elektromontyor' : w.role === 'bekat_navbatchisi' ? 'Bekat Navbatchisi' : "Bekat Boshlig'i"}
+                          </span>
+                          <span className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                            <Users size={14} className="text-slate-300" />
+                            {w.login}
+                          </span>
+                          {w.phone && (
+                            <span className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                              <Phone size={14} className="text-slate-300" />
+                              {w.phone}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 self-end sm:self-center">
+                      <button
+                        onClick={() => onEdit(w)}
+                        className="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-all duration-200 border border-transparent hover:border-purple-100 shadow-sm"
+                      >
+                        <Edit size={18} />
+                        <span>Tahrirlash</span>
+                      </button>
+                      <button
+                        onClick={() => onDelete(w.id)}
+                        className="flex items-center gap-2 rounded-xl bg-red-50 px-4 py-2.5 text-xs font-bold text-red-400 hover:text-red-700 hover:bg-red-100 transition-all duration-200 border border-transparent hover:border-red-100 shadow-sm"
+                      >
+                        <Trash2 size={18} />
+                        <span>O'chirish</span>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -2115,7 +2254,7 @@ function EmptyState({ label }: { label: string }) {
 
 function TodayTasksModal({ type, tasks, onClose }: {
   type: 'bajarilgan' | 'bajarilmagan'
-  tasks: { stationId: string; stationName: string; workerName: string; entry: ReportEntry; bajarilgan: boolean; month: string }[]
+  tasks: { stationId: string; stationName: string; workerName: string; entry: ReportEntry; bajarilgan: boolean; month: string; taskText: string }[]
   onClose: () => void
 }) {
   const isBajarilgan = type === 'bajarilgan'
@@ -2227,7 +2366,7 @@ function TodayTasksModal({ type, tasks, onClose }: {
               {/* Ishlar ro'yxati */}
               <div className="p-3 sm:p-5 space-y-2.5">
                 {grouped[expandedStation]?.items.map((task, ti) => {
-                  const text = task.entry.haftalikJadval || task.entry.yillikJadval || task.entry.yangiIshlar || task.entry.kmoBartaraf || task.entry.majburiyOzgarish || ''
+                  const text = task.taskText || ''
                   let dateFormatted = task.entry.ragat
                   if (task.entry.ragat && task.month && task.month.includes('-')) {
                     const [yyyy, mm] = task.month.split('-')

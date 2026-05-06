@@ -285,7 +285,7 @@ export default function WorkerPage() {
               {/* Welcome Card */}
               <div className="relative overflow-hidden rounded-[24px] bg-white/50 backdrop-blur-xl p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 flex items-center justify-between">
                 <div className="relative z-10">
-                  <h2 className="text-xl sm:text-xl font-black text-slate-900 flex items-center gap-2">
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-2">
                     <span className="text-2xl">👋</span> Xush kelibsiz, {session?.fullName}!
                   </h2>
                   <p className="mt-1 text-xs sm:text-sm text-slate-600 font-medium">
