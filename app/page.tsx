@@ -80,9 +80,9 @@ export default function LoginPage() {
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-violet-100/50 via-purple-50/50 to-fuchsia-100/50 p-4">
       {/* Animated background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-purple-300/40 blur-3xl animate-pulse" />
-        <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-fuchsia-300/40 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-300/30 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-purple-300/40 blur-3xl" />
+        <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-fuchsia-300/40 blur-3xl" />
+        <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-300/30 blur-3xl" />
       </div>
 
       {/* Full screen loading overlay */}
@@ -140,14 +140,14 @@ export default function LoginPage() {
                   {/* Chart area */}
                   <div className="relative h-24 flex items-end gap-[6px] px-1">
                     {/* Chart bars */}
-                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-purple-500/60 to-purple-400/80 animate-pulse" style={{ height: '45%', animationDelay: '0s' }} />
-                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-cyan-500/60 to-cyan-400/80 animate-pulse" style={{ height: '70%', animationDelay: '0.2s' }} />
-                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-purple-500/60 to-purple-400/80 animate-pulse" style={{ height: '55%', animationDelay: '0.4s' }} />
-                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-fuchsia-500/60 to-fuchsia-400/80 animate-pulse" style={{ height: '85%', animationDelay: '0.6s' }} />
-                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-cyan-500/60 to-cyan-400/80 animate-pulse" style={{ height: '60%', animationDelay: '0.8s' }} />
-                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-purple-500/60 to-purple-400/80 animate-pulse" style={{ height: '40%', animationDelay: '1s' }} />
-                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-fuchsia-500/60 to-fuchsia-400/80 animate-pulse" style={{ height: '75%', animationDelay: '1.2s' }} />
-                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-cyan-500/60 to-cyan-400/80 animate-pulse" style={{ height: '50%', animationDelay: '1.4s' }} />
+                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-purple-500/60 to-purple-400/80" style={{ height: '45%' }} />
+                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-cyan-500/60 to-cyan-400/80" style={{ height: '70%' }} />
+                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-purple-500/60 to-purple-400/80" style={{ height: '55%' }} />
+                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-fuchsia-500/60 to-fuchsia-400/80" style={{ height: '85%' }} />
+                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-cyan-500/60 to-cyan-400/80" style={{ height: '60%' }} />
+                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-purple-500/60 to-purple-400/80" style={{ height: '40%' }} />
+                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-fuchsia-500/60 to-fuchsia-400/80" style={{ height: '75%' }} />
+                    <div className="flex-1 rounded-t-md bg-gradient-to-t from-cyan-500/60 to-cyan-400/80" style={{ height: '50%' }} />
                     {/* Glowing line overlay */}
                     <svg className="absolute inset-0 w-full h-full" viewBox="0 0 300 96" preserveAspectRatio="none">
                       <path d="M0 70 Q40 30, 75 50 T150 25 T225 45 T300 20" fill="none" stroke="rgba(168,85,247,0.5)" strokeWidth="2" />
@@ -187,12 +187,12 @@ export default function LoginPage() {
             </div>
 
             {/* Particle yulduzchalar */}
-            <div className="absolute top-[12%] right-[18%] h-1.5 w-1.5 rounded-full bg-white/50 animate-pulse" />
-            <div className="absolute top-[35%] left-[8%] h-1 w-1 rounded-full bg-white/30 animate-pulse" style={{ animationDelay: '0.5s' }} />
-            <div className="absolute bottom-[25%] right-[25%] h-1 w-1 rounded-full bg-purple-300/40 animate-pulse" style={{ animationDelay: '1s' }} />
-            <div className="absolute top-[65%] right-[8%] h-1.5 w-1.5 rounded-full bg-cyan-300/30 animate-pulse" style={{ animationDelay: '1.5s' }} />
-            <div className="absolute bottom-[15%] left-[20%] h-1 w-1 rounded-full bg-white/25 animate-pulse" style={{ animationDelay: '2s' }} />
-            <div className="absolute top-[80%] left-[50%] h-1 w-1 rounded-full bg-fuchsia-300/30 animate-pulse" style={{ animationDelay: '2.5s' }} />
+            <div className="absolute top-[12%] right-[18%] h-1.5 w-1.5 rounded-full bg-white/50" />
+            <div className="absolute top-[35%] left-[8%] h-1 w-1 rounded-full bg-white/30" />
+            <div className="absolute bottom-[25%] right-[25%] h-1 w-1 rounded-full bg-purple-300/40" />
+            <div className="absolute top-[65%] right-[8%] h-1.5 w-1.5 rounded-full bg-cyan-300/30" />
+            <div className="absolute bottom-[15%] left-[20%] h-1 w-1 rounded-full bg-white/25" />
+            <div className="absolute top-[80%] left-[50%] h-1 w-1 rounded-full bg-fuchsia-300/30" />
           </div>
 
           {/* ─── O'NG TOMON: Login formasi ─── */}
