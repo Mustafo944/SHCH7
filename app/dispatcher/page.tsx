@@ -553,11 +553,11 @@ export default function DispatcherPage() {
               <span>Xodim qo&apos;shish</span>
             </button>
 
-            <div className="sm:order-1 flex gap-1 rounded-[20px] bg-white/50 backdrop-blur-xl p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60">
-              <TabButton active={tab === 'bekatlar'} onClick={() => setTab('bekatlar')} label="Bekatlar" icon={<MapPin size={18} />} />
-              <TabButton active={tab === 'arxiv'} onClick={() => setTab('arxiv')} label="Arxiv" icon={<FileText size={18} />} />
-              <TabButton active={tab === 'grafiklar'} onClick={() => setTab('grafiklar')} label="Grafiklar" icon={<Download size={18} />} />
-              <TabButton active={tab === 'baxtsiz_hodisalar'} onClick={() => setTab('baxtsiz_hodisalar')} label="Baxtsiz Hodisalar" icon={<AlertTriangle size={18} />} />
+            <div className="sm:order-1 flex gap-1 overflow-x-auto hide-scrollbar rounded-[20px] bg-white/50 backdrop-blur-xl p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 max-w-full">
+              <TabButton active={tab === 'bekatlar'} onClick={() => setTab('bekatlar')} label="Bekatlar" icon={<MapPin size={16} className="sm:w-[18px] sm:h-[18px]" />} />
+              <TabButton active={tab === 'arxiv'} onClick={() => setTab('arxiv')} label="Arxiv" icon={<FileText size={16} className="sm:w-[18px] sm:h-[18px]" />} />
+              <TabButton active={tab === 'grafiklar'} onClick={() => setTab('grafiklar')} label="Grafiklar" icon={<Download size={16} className="sm:w-[18px] sm:h-[18px]" />} />
+              <TabButton active={tab === 'baxtsiz_hodisalar'} onClick={() => setTab('baxtsiz_hodisalar')} label="Baxtsiz Hodisalar" icon={<AlertTriangle size={16} className="sm:w-[18px] sm:h-[18px]" />} />
             </div>
           </div>
 
@@ -969,9 +969,9 @@ function StatCard({ icon, label, value, active, clickable, onClick, color = 'pur
   return (
     <div
       onClick={onClick}
-      className={`group relative overflow-hidden rounded-[20px] ${s.bg} p-4 sm:p-5 border ${s.border} transition-all ${clickable ? 'cursor-pointer hover:shadow-md active:scale-[0.98]' : ''} flex items-center gap-4`}
+      className={`group relative overflow-hidden rounded-[20px] ${s.bg} p-3 sm:p-5 border ${s.border} transition-all ${clickable ? 'cursor-pointer hover:shadow-md active:scale-[0.98]' : ''} flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4`}
     >
-      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${s.iconBg} shadow-sm border ${s.border} ${s.iconText} group-hover:scale-110 transition-transform`}>
+      <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl ${s.iconBg} shadow-sm border ${s.border} ${s.iconText} group-hover:scale-110 transition-transform`}>
         {icon}
       </div>
       <div>
@@ -987,7 +987,7 @@ function TabButton({ active, onClick, label, icon }: { active: boolean, onClick:
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-[16px] px-5 py-3 text-sm font-bold transition-all duration-200 ${active
+      className={`flex items-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-[16px] px-3 py-2 sm:px-5 sm:py-3 text-[11px] sm:text-sm font-bold whitespace-nowrap transition-all duration-200 shrink-0 ${active
         ? 'bg-gradient-to-r from-purple-600 to-violet-500 text-white shadow-lg shadow-purple-500/25'
         : 'text-slate-500 hover:text-purple-700 hover:bg-white/60'
         }`}

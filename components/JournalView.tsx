@@ -98,29 +98,29 @@ export function JournalSelectModal({
   shu2Count?: number
 }) {
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-md">
-      <div className="w-full max-w-lg overflow-hidden rounded-[40px] bg-white shadow-2xl animate-scale-in">
-        <div className="flex items-center justify-between border-b border-slate-200 px-8 py-6 bg-slate-50/50">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/30 p-3 sm:p-4 backdrop-blur-md">
+      <div className="w-full max-w-lg overflow-hidden rounded-[24px] sm:rounded-[40px] bg-white shadow-2xl animate-scale-in flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-8 sm:py-6 bg-slate-50/50 shrink-0">
           <div>
-            <h3 className="text-xl font-black text-slate-900 tracking-tight">Ish Jurnallari</h3>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Jurnalni tanlang</p>
+            <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">Ish Jurnallari</h3>
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">Jurnalni tanlang</p>
           </div>
-          <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
-            <X size={24} />
+          <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-2 sm:p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
+            <X size={20} className="sm:w-6 sm:h-6" />
           </button>
         </div>
-        <div className="grid gap-4 p-8">
+        <div className="grid gap-3 sm:gap-4 p-4 sm:p-8 overflow-y-auto hide-scrollbar">
           <button
             onClick={() => onSelect('du46')}
-            className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-purple-300 hover:shadow-xl hover:shadow-purple-500/5 active:scale-95"
+            className="group relative flex items-center gap-4 sm:gap-5 rounded-[20px] sm:rounded-[28px] border border-slate-200 bg-white p-4 sm:p-6 text-left transition-all hover:border-purple-300 hover:shadow-xl hover:shadow-purple-500/5 active:scale-95"
           >
             {du46Count > 0 && (
               <div className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-[11px] font-black text-white shadow-lg shadow-red-500/30">
                 {du46Count > 9 ? '9+' : du46Count}
               </div>
             )}
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 transition-all group-hover:bg-white border border-transparent group-hover:border-purple-100 shadow-sm">
-              <BookOpen size={28} />
+            <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[16px] sm:rounded-2xl bg-purple-50 text-purple-600 transition-all group-hover:bg-white border border-transparent group-hover:border-purple-100 shadow-sm">
+              <BookOpen size={24} className="sm:w-[28px] sm:h-[28px]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -134,15 +134,15 @@ export function JournalSelectModal({
           </button>
           <button
             onClick={() => onSelect('shu2')}
-            className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-amber-300 hover:shadow-xl hover:shadow-amber-500/5 active:scale-95"
+            className="group relative flex items-center gap-4 sm:gap-5 rounded-[20px] sm:rounded-[28px] border border-slate-200 bg-white p-4 sm:p-6 text-left transition-all hover:border-amber-300 hover:shadow-xl hover:shadow-amber-500/5 active:scale-95"
           >
             {shu2Count > 0 && (
               <div className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-[11px] font-black text-white shadow-lg shadow-red-500/30">
                 {shu2Count > 9 ? '9+' : shu2Count}
               </div>
             )}
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 transition-all group-hover:bg-white border border-transparent group-hover:border-amber-100 shadow-sm">
-              <BookOpen size={28} />
+            <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[16px] sm:rounded-2xl bg-amber-50 text-amber-600 transition-all group-hover:bg-white border border-transparent group-hover:border-amber-100 shadow-sm">
+              <BookOpen size={24} className="sm:w-[28px] sm:h-[28px]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -156,10 +156,10 @@ export function JournalSelectModal({
           </button>
           <button
             onClick={() => onSelect('boshqa')}
-            className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
+            className="group relative flex items-center gap-4 sm:gap-5 rounded-[20px] sm:rounded-[28px] border border-slate-200 bg-white p-4 sm:p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
           >
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
-              <BookOpen size={28} />
+            <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[16px] sm:rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
+              <BookOpen size={24} className="sm:w-[28px] sm:h-[28px]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -194,20 +194,20 @@ export function JournalMonthSelectModal({
   const currentMonth = new Date().getMonth()
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-md">
-      <div className="w-full max-w-2xl overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
-        <div className="flex items-center justify-between border-b border-slate-200 px-8 py-6 bg-slate-50/50">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/30 p-3 sm:p-4 backdrop-blur-md">
+      <div className="w-full max-w-2xl overflow-hidden rounded-[24px] sm:rounded-[32px] bg-white shadow-2xl animate-scale-in flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-8 sm:py-6 bg-slate-50/50 shrink-0">
           <div>
-            <h3 className="text-xl font-black text-slate-900 tracking-tight">
+            <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
               {journalType === 'du46' ? 'DU-46' : journalType === 'shu2' ? 'SHU-2' : 'ALSN'} oyini tanlang
             </h3>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{year} yil</p>
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">{year} yil</p>
           </div>
-          <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
-            <X size={24} />
+          <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-2 sm:p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
+            <X size={20} className="sm:w-6 sm:h-6" />
           </button>
         </div>
-        <div className="grid grid-cols-2 gap-3 p-8 sm:grid-cols-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 p-4 sm:p-8 sm:grid-cols-3 md:grid-cols-4 overflow-y-auto hide-scrollbar">
           {MONTHS.map((monthName, index) => {
             const isCurrent = index === currentMonth
             const currentYear = new Date().getFullYear()
