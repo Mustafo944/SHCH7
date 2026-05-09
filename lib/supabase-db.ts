@@ -688,7 +688,8 @@ export async function getJournal(
 
 export async function getPendingJournalCounts(
   stationId: string,
-  role: string
+  role: string,
+  position?: string
 ): Promise<{ du46: number; shu2: number }> {
   try {
     const { data, error } = await supabase
@@ -709,20 +710,48 @@ export async function getPendingJournalCounts(
             if (e.yuborildi) continue
 
             const creator = e.createdByRole || 'worker'
+            
+            // EM yoki Katta EM ekanligini aniqlaymiz (role yoki position orqali)
+            const isEM = ['elektromexanik', 'katta_elektromexanik'].includes(role) || 
+                         ['elektromexanik', 'katta_elektromexanik'].includes(position || '')
+            
+            // Montyor ekanligini aniqlaymiz
+            const isMontyor = role === 'elektromontyor' || position === 'elektromontyor'
 
-            if (['worker', 'elektromexanik', 'elektromontyor'].includes(role)) {
-              // Worker faqat BB tomonidan "Boshlandi" qilinganlarni tasdiqlashi kutilyapti
+            if (isEM) {
+              // 3-ustun: Yo'l ustasi boshlagan va EM tasdiqi kerak
+              if (creator === 'yul_ustasi' && e.kamchilikBajarildi && e.kamchilikNeedsEM && !e.kamchilikEMTasdiqladi) {
+                count++
+              }
+              // 12-ustun: Yo'l ustasi bajargan va EM tasdiqi kerak
+              else if (creator === 'yul_ustasi' && e.bartarafBajarildi && e.bartarafNeedsEM && !e.bartarafEMTasdiqladi) {
+                count++
+              }
+              // BB yaratgan bo'lsa, uni EM/Katta EM tasdiqlashi (isConfirmer mantiqiga ko'ra)
+              else if (creator === 'bekat_boshlighi' && e.kamchilikBajarildi && !e.kamchilikBBTasdiqladi) {
+                count++
+              }
+              // 12-ustun BB yaratgan
+              else if (creator === 'bekat_boshlighi' && e.bartarafBajarildi && !e.bartarafBBTasdiqladi) {
+                count++
+              }
+            } else if ((role === 'worker' && !isEM) || isMontyor) {
+              // BB yaratgan bo'lsa, worker tasdiqlaydi
               if (creator === 'bekat_boshlighi' && e.kamchilikBajarildi && !e.kamchilikBBTasdiqladi) {
                 count++
               }
-            } else if (['bekat_boshlighi', 'bekat_navbatchisi'].includes(role)) {
-              // 3-ustun: Worker boshlaganini BB tasdiqlashi kutilyapti
-              if (creator === 'worker' && e.kamchilikBajarildi && !e.kamchilikBBTasdiqladi) {
+              else if (creator === 'bekat_boshlighi' && e.bartarafBajarildi && !e.bartarafBBTasdiqladi) {
                 count++
               }
-              // 12-ustun: Worker bajarildi qilganini BB tasdiqlashi kutilyapti
-              else if (e.bartarafBajarildi && !e.bartarafBBTasdiqladi) {
-                count++
+            } else if (['bekat_boshlighi', 'bekat_navbatchisi'].includes(role)) {
+              // Worker yoki yo'l ustasi yaratganini BB tasdiqlaydi
+              if (creator !== 'bekat_boshlighi') {
+                if (e.kamchilikBajarildi && !e.kamchilikBBTasdiqladi) {
+                  count++
+                }
+                else if (e.bartarafBajarildi && !e.bartarafBBTasdiqladi) {
+                  count++
+                }
               }
             }
           }

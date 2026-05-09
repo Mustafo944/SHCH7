@@ -13,7 +13,7 @@ export interface User {
   fullName: string;
   role: Role;
   position: Position;
-  stationIds: string[]; // worker: max 5, bekat_boshlighi: max 3, others: max 1
+  stationIds: string[]; // worker: max 5, bekat_boshlighi: max 3, yul_ustasi/others: max 1
   phone: string;
   createdAt: string;
 }
@@ -99,7 +99,7 @@ export type GrafikTuri =
   | 'haftalik_ish_reja_grafiki'
 
 export interface DU46Entry {
-  nomber: string               // № — qator raqami, ishchi o'zgartira oladi
+  nomber: string               // № — qator raqami
   oyKun1: string
   soatMinut1: string
   kamchilik: string            // Ustun 3: Kamchilik/matn
@@ -112,27 +112,42 @@ export interface DU46Entry {
   oyKun4: string
   soatMinut4: string
   bartarafInfo: string         // Ustun 12: Nosozlik tafsiloti
-  // Ustun 3 (kamchilik) uchun
-  kamchilikBajarildi: boolean  // Ishchi "Bajarildi" bosdi
-  kamchilikBajarildiAt: string // Qachon bosdi
-  kamchilikImzo: string        // Ishchi ismi (bajarildi dan keyin)
-  kamchilikBBTasdiqladi: boolean   // BB tasdiqladi
-  kamchilikBBTasdiqladiAt: string  // Qachon tasdiqladi
-  kamchilikBBImzo: string      // BB ismi (tasdiqladi dan keyin)
-  kamchilikBBVaqt: string      // BB tasdiqlagan vaqti (soat:daqiqa)
-  // Ustun 12 (bartarafInfo) uchun
-  bartarafBajarildi: boolean   // Ishchi "Bajarildi" bosdi
-  bartarafBajarildiAt: string  // Qachon bosdi
-  bartarafImzo: string         // Ishchi ismi (bajarildi dan keyin)
-  bartarafBBTasdiqladi: boolean   // BB tasdiqladi
-  bartarafBBTasdiqladiAt: string  // Qachon tasdiqladi
-  bartarafBBImzo: string       // BB ismi (tasdiqladi dan keyin)
-  bartarafBBVaqt: string       // BB tasdiqlagan vaqti (soat:daqiqa)
-  // Umumiy
-  createdByRole?: 'worker' | 'bekat_boshlighi'  // Qatorni kim yaratgan
-  yuborildi: boolean           // Dispetcherga yuborildi
-  dispetcherQabulQildi?: boolean  // Dispetcher qabul qildi
-  dispetcherImzo?: string      // Dispetcher ismi (qabul qilganda)
+
+  // ── Ustun 3 (kamchilik) uchun ──
+  kamchilikBajarildi: boolean       // Boshlandi belgilandi
+  kamchilikBajarildiAt: string
+  kamchilikImzo: string             // Boshlandi bosgan ism
+  // Elektromexanik tasdiqlash (yo'l ustasi oqimida)
+  kamchilikNeedsEM?: boolean        // Elektromexanik kerakmi? (Ha=true, Yo'q=false)
+  kamchilikEMTasdiqladi?: boolean   // Elektromexanik tasdiqladi
+  kamchilikEMTasdiqladiAt?: string
+  kamchilikEMImzo?: string
+  // BB/Navbatchisi tasdiqlash
+  kamchilikBBTasdiqladi: boolean
+  kamchilikBBTasdiqladiAt: string
+  kamchilikBBImzo: string
+  kamchilikBBVaqt: string           // Avtomatik vaqt (soat:daqiqa)
+
+  // ── Ustun 12 (bartarafInfo) uchun ──
+  bartarafBajarildi: boolean        // Bajarildi belgilandi
+  bartarafBajarildiAt: string
+  bartarafImzo: string              // Bajarildi bosgan ism
+  // Elektromexanik tasdiqlash (yo'l ustasi oqimida)
+  bartarafNeedsEM?: boolean
+  bartarafEMTasdiqladi?: boolean
+  bartarafEMTasdiqladiAt?: string
+  bartarafEMImzo?: string
+  // BB/Navbatchisi tasdiqlash
+  bartarafBBTasdiqladi: boolean
+  bartarafBBTasdiqladiAt: string
+  bartarafBBImzo: string
+  bartarafBBVaqt: string            // Avtomatik vaqt (soat:daqiqa)
+
+  // ── Umumiy ──
+  createdByRole?: 'worker' | 'bekat_boshlighi' | 'yul_ustasi'
+  yuborildi: boolean
+  dispetcherQabulQildi?: boolean
+  dispetcherImzo?: string
   journalMonth?: string
 }
 

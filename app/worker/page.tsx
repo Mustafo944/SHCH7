@@ -54,9 +54,9 @@ export default function WorkerPage() {
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
   const [workerModal, setWorkerModal] = useState<'bugunBajarilgan' | 'qolibKetgan' | null>(null)
 
-  const loadPendingCounts = useCallback(async (sid: string, role: string) => {
+  const loadPendingCounts = useCallback(async (sid: string, role: string, position?: string) => {
     try {
-      const counts = await getPendingJournalCounts(sid, role)
+      const counts = await getPendingJournalCounts(sid, role, position)
       setPendingCounts(counts)
     } catch {
       toast.error('Pending counts yuklashda xatolik')
@@ -114,12 +114,12 @@ export default function WorkerPage() {
   useEffect(() => {
     if (!activeStationId || !session?.role) return
 
-    loadPendingCounts(activeStationId, session.role)
+    loadPendingCounts(activeStationId, session.role, session.position)
 
     const journalChannel = supabase
       .channel(`worker_journals_${activeStationId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals', filter: `station_id=eq.${activeStationId}` }, () => {
-        loadPendingCounts(activeStationId, session!.role)
+        loadPendingCounts(activeStationId, session!.role, session!.position)
       })
       .subscribe()
 

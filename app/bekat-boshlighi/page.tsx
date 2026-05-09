@@ -35,9 +35,9 @@ export default function BekatBoshlighiPage() {
     return allStations.filter(s => session.stationIds.includes(s.id))
   }, [session, allStations])
 
-  const loadPendingCounts = useCallback(async (sid: string, role: string) => {
+  const loadPendingCounts = useCallback(async (sid: string, role: string, position?: string) => {
     try {
-      const counts = await getPendingJournalCounts(sid, role)
+      const counts = await getPendingJournalCounts(sid, role, position)
       setPendingCounts(counts)
     } catch {
       toast.error('Pending counts yuklashda xatolik')
@@ -47,8 +47,8 @@ export default function BekatBoshlighiPage() {
 
   useEffect(() => {
     if (!selectedStation || !session?.role) return
-    loadPendingCounts(selectedStation, session.role)
-  }, [selectedStation, session?.role, loadPendingCounts])
+    loadPendingCounts(selectedStation, session.role, session.position)
+  }, [selectedStation, session, loadPendingCounts])
 
   // Realtime: jurnal yangilanganda pending countni qayta olish
   useRealtimeSubscription(
@@ -57,7 +57,7 @@ export default function BekatBoshlighiPage() {
         channelName: `bb_journals_${selectedStation}`,
         table: 'station_journals',
         filter: `station_id=eq.${selectedStation}`,
-        onEvent: () => loadPendingCounts(selectedStation, session!.role),
+        onEvent: () => loadPendingCounts(selectedStation, session!.role, session!.position),
       }]
       : [],
     !!selectedStation && !!session?.role

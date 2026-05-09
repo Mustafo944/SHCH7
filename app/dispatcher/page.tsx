@@ -1101,7 +1101,7 @@ function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, messa
                   if (exists) {
                     setForm({ ...form, stationIds: form.stationIds.filter((id: string) => id !== s.id) })
                   } else {
-                    const max = form.role === 'worker' ? 5 : form.role === 'bekat_boshlighi' ? 3 : form.role === 'yul_ustasi' ? 2 : 1
+                    const max = form.role === 'worker' ? 5 : form.role === 'bekat_boshlighi' ? 3 : 1
                     if (form.stationIds.length >= max) {
                       setFormMsg({ type: 'err', text: `Bu lavozim uchun ko'pi bilan ${max} ta bekat tanlash mumkin` })
                       setTimeout(() => setFormMsg(null), 3000)
