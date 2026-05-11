@@ -23,7 +23,8 @@ import {
   getGlobalGraphics,
   uploadGlobalGraphicFile,
   deleteGlobalGraphicFile,
-  getAllJournals,
+  getDispatcherJournalSummary,
+  getJournalsByStationId,
 } from '@/lib/supabase-db'
 import { useSessionGuard, useToast } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
@@ -73,7 +74,7 @@ export default function DispatcherPage() {
   const [allReports, setAllReports] = useState<WorkReport[]>([])
   const [allIncidents, setAllIncidents] = useState<Incident[]>([])
   const [globalGraphics, setGlobalGraphics] = useState<StationSchema[]>([])
-  const [allJournals, setAllJournals] = useState<StationJournal[]>([])
+  const [journalSummary, setJournalSummary] = useState<Record<string, { du46: number; shu2: number }>>({})
 
   const [_loading, setLoading] = useState(true)
   const [selectedStation, setSelectedStation] = useState<string | null>(null)
@@ -139,12 +140,12 @@ export default function DispatcherPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const loadJournals = useCallback(async () => {
+  const loadJournalSummary = useCallback(async () => {
     try {
-      const j = await getAllJournals()
-      setAllJournals(j)
+      const s = await getDispatcherJournalSummary()
+      setJournalSummary(s)
     } catch {
-      toast.error('Jurnallarni yuklashda xatolik')
+      toast.error('Jurnal ma\'lumotlarini yuklashda xatolik')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -156,10 +157,10 @@ export default function DispatcherPage() {
       loadWorkReports(),
       loadIncidents(),
       loadGraphics(),
-      loadJournals()
+      loadJournalSummary()
     ])
     setLoading(false)
-  }, [loadWorkers, loadWorkReports, loadIncidents, loadGraphics, loadJournals])
+  }, [loadWorkers, loadWorkReports, loadIncidents, loadGraphics, loadJournalSummary])
 
   // Sessiya tayyor bo'lganda ma'lumotlarni yuklash
   useEffect(() => {
@@ -186,7 +187,7 @@ export default function DispatcherPage() {
     const journalsChannel = supabase
       .channel('dispatcher_journals')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals' }, () => {
-        loadJournals()
+        loadJournalSummary()
       })
       .subscribe()
 
@@ -195,7 +196,7 @@ export default function DispatcherPage() {
       supabase.removeChannel(incidentsChannel)
       supabase.removeChannel(journalsChannel)
     }
-  }, [loadWorkReports, loadIncidents, loadJournals])
+  }, [loadWorkReports, loadIncidents, loadJournalSummary])
 
   // Calculated pending counts
   const pendingCounts = useMemo(() => {
@@ -213,41 +214,31 @@ export default function DispatcherPage() {
 
 
 
-  // Jurnal pending hisobi: yuborilgan lekin qabul qilinmagan qatorlar (DU-46 va SHU-2 alohida)
+  // Jurnal pending hisobi (yengil summary'dan)
   const du46PendingCounts = useMemo(() => {
     const counts: Record<string, number> = {}
-    allJournals.filter(j => j.journalType === 'du46').forEach(j => {
-      const entries = j.entries as DU46Entry[]
-      const pendingCount = entries.filter(e => e.yuborildi && !e.dispetcherQabulQildi).length
-      if (pendingCount > 0) {
-        counts[j.stationId] = (counts[j.stationId] || 0) + pendingCount
-      }
+    Object.entries(journalSummary).forEach(([sid, s]) => {
+      if (s.du46 > 0) counts[sid] = s.du46
     })
     return counts
-  }, [allJournals])
+  }, [journalSummary])
 
   const shu2PendingCounts = useMemo(() => {
     const counts: Record<string, number> = {}
-    allJournals.filter(j => j.journalType === 'shu2').forEach(j => {
-      const entries = j.entries as SHU2Entry[]
-      const pendingCount = entries.filter(e => e.yuborildi && !e.dispetcherQabulQildi).length
-      if (pendingCount > 0) {
-        counts[j.stationId] = (counts[j.stationId] || 0) + pendingCount
-      }
+    Object.entries(journalSummary).forEach(([sid, s]) => {
+      if (s.shu2 > 0) counts[sid] = s.shu2
     })
     return counts
-  }, [allJournals])
+  }, [journalSummary])
 
   const journalPendingCounts = useMemo(() => {
     const counts: Record<string, number> = {}
-    Object.keys(du46PendingCounts).forEach(sid => {
-      counts[sid] = (counts[sid] || 0) + (du46PendingCounts[sid] || 0)
-    })
-    Object.keys(shu2PendingCounts).forEach(sid => {
-      counts[sid] = (counts[sid] || 0) + (shu2PendingCounts[sid] || 0)
+    Object.entries(journalSummary).forEach(([sid, s]) => {
+      const total = s.du46 + s.shu2
+      if (total > 0) counts[sid] = total
     })
     return counts
-  }, [du46PendingCounts, shu2PendingCounts])
+  }, [journalSummary])
 
   const _totalPending = useMemo(() => {
     return Object.values(pendingCounts).reduce((a, b) => a + b, 0) +
@@ -742,7 +733,7 @@ export default function DispatcherPage() {
                             userRole="dispatcher"
                             journalMonth={activeJournalMonth}
                             onClose={() => { setActiveJournalMonth(''); setActiveJournalType(null); setSelectedReportType(null) }}
-                            onAccepted={loadJournals}
+                            onAccepted={loadJournalSummary}
                           />
                         )}
                         {selectedReportType === 'jurnallar' && activeJournalType === 'shu2' && activeJournalMonth && (
@@ -753,7 +744,7 @@ export default function DispatcherPage() {
                             userRole="dispatcher"
                             journalMonth={activeJournalMonth}
                             onClose={() => { setActiveJournalMonth(''); setActiveJournalType(null); setSelectedReportType(null) }}
-                            onAccepted={loadJournals}
+                            onAccepted={loadJournalSummary}
                           />
                         )}
                         {selectedReportType === 'jurnallar' && activeJournalType === 'alsn' && activeJournalMonth && (
@@ -834,7 +825,7 @@ export default function DispatcherPage() {
               <ArchiveView
                 stations={stations}
                 allReports={allReports}
-                allJournals={allJournals}
+
                 onConfirm={handleConfirmReport}
                 onConfirmEntry={handleConfirmEntry}
               />
@@ -1153,7 +1144,6 @@ function FormGroup({ label, value, onChange, placeholder, type = 'text' }: { lab
 function ReportList({ reports, onConfirm, onConfirmRow: _onConfirmRow }: {
   reports: WorkReport[]
   onConfirm: (reportId: string) => void
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onConfirmRow: (reportId: string, idx: number) => void
 }) {
   if (reports.length === 0) return <EmptyState label="Hisobotlar yo'q" />
@@ -1494,10 +1484,9 @@ function SchemasView({ stationId, userName }: { stationId: string, userName: str
   )
 }
 
-function ArchiveView({ stations, allReports, allJournals, onConfirm, onConfirmEntry }: {
+function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry }: {
   stations: { id: string; name: string }[]
   allReports: WorkReport[]
-  allJournals: StationJournal[]
   onConfirm: (reportId: string) => void
   onConfirmEntry: (reportId: string, idx: number) => void
 }) {
@@ -1507,16 +1496,28 @@ function ArchiveView({ stations, allReports, allJournals, onConfirm, onConfirmEn
   const [archiveTab, setArchiveTab] = useState<'hisobot' | 'du46' | 'shu2'>('hisobot')
   const [viewJournal, setViewJournal] = useState<StationJournal | null>(null)
 
+  // Lazy load: faqat tanlangan bekat jurnallarini yuklash
+  const [stationJournals, setStationJournals] = useState<StationJournal[]>([])
+  const [journalsLoading, setJournalsLoading] = useState(false)
+
+  useEffect(() => {
+    if (!selStation) { setStationJournals([]); return }
+    setJournalsLoading(true)
+    getJournalsByStationId(selStation)
+      .then(setStationJournals)
+      .finally(() => setJournalsLoading(false))
+  }, [selStation])
+
   const archiveReports = selStation && selMonth !== null
     ? allReports.filter((r) => r.stationId === selStation && r.month === `${selYear}-${String(selMonth + 1).padStart(2, '0')}`)
     : []
 
   const du46Archive = selStation && selMonth !== null
-    ? allJournals.filter(j => j.stationId === selStation && j.journalType === 'du46' && j.updatedAt.startsWith(`${selYear}-${String(selMonth + 1).padStart(2, '0')}`))
+    ? stationJournals.filter(j => j.journalType === 'du46' && j.updatedAt.startsWith(`${selYear}-${String(selMonth + 1).padStart(2, '0')}`))
     : []
 
   const shu2Archive = selStation && selMonth !== null
-    ? allJournals.filter(j => j.stationId === selStation && j.journalType === 'shu2' && j.updatedAt.startsWith(`${selYear}-${String(selMonth + 1).padStart(2, '0')}`))
+    ? stationJournals.filter(j => j.journalType === 'shu2' && j.updatedAt.startsWith(`${selYear}-${String(selMonth + 1).padStart(2, '0')}`))
     : []
 
   const selStationName = stations.find((s: Station) => s.id === selStation)?.name || ''
@@ -1551,8 +1552,8 @@ function ArchiveView({ stations, allReports, allJournals, onConfirm, onConfirmEn
                 <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-6">
                   {MONTHS.map((m, i) => {
                     const hasReport = allReports.some((r) => r.stationId === selStation && r.month === `${selYear}-${String(i + 1).padStart(2, '0')}`)
-                    const hasDU46 = allJournals.some(j => j.stationId === selStation && j.journalType === 'du46' && j.updatedAt.startsWith(`${selYear}-${String(i + 1).padStart(2, '0')}`))
-                    const hasSHU2 = allJournals.some(j => j.stationId === selStation && j.journalType === 'shu2' && j.updatedAt.startsWith(`${selYear}-${String(i + 1).padStart(2, '0')}`))
+                    const hasDU46 = stationJournals.some(j => j.journalType === 'du46' && j.updatedAt.startsWith(`${selYear}-${String(i + 1).padStart(2, '0')}`))
+                    const hasSHU2 = stationJournals.some(j => j.journalType === 'shu2' && j.updatedAt.startsWith(`${selYear}-${String(i + 1).padStart(2, '0')}`))
                     const hasAny = hasReport || hasDU46 || hasSHU2
                     return (
                       <button key={i} onClick={() => setSelMonth(i)} className={`rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${selMonth === i ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xl' : hasAny ? 'bg-amber-50 border border-amber-100 text-amber-600 hover:bg-amber-100' : 'bg-slate-50 border border-slate-100 text-slate-300 hover:bg-slate-100'}`}>{m}</button>

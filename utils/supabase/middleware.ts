@@ -95,7 +95,7 @@ export async function updateSession(request: NextRequest) {
 
     if (userRole) {
       // Role ni cookie ga saqlaymiz, keyingi so'rovlar tez bo'lishi uchun
-      supabaseResponse.cookies.set('user-role', userRole, { maxAge: 86400, path: '/' })
+      supabaseResponse.cookies.set('user-role', userRole, { maxAge: 86400, path: '/', sameSite: 'lax', secure: true, httpOnly: true })
     }
   }
 

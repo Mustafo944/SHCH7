@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { User, WorkReport, StationSchema, ReportEntry, GrafikTuri, StationJournal, JournalType, DU46Entry, SHU2Entry, ALSNEntry, YerlatgichEntry, Incident } from '@/types';
+import type { User, WorkReport, StationSchema, ReportEntry, GrafikTuri, StationJournal, JournalType, DU46Entry, SHU2Entry, ALSNEntry, YerlatgichEntry, AlsnKodEntry, MpsFriksionEntry, Incident } from '@/types';
 
 // Stations
 import { getStations, getStation } from './store';
@@ -79,7 +79,7 @@ export async function signIn(login: string, password: string): Promise<User | nu
   const user = await getUserProfileById(authData.user.id);
 
   if (user && typeof document !== 'undefined') {
-    document.cookie = `user-role=${user.role}; path=/; max-age=86400;`;
+    document.cookie = `user-role=${user.role}; path=/; max-age=86400; SameSite=Lax; Secure`;
     localStorage.setItem('user-profile', JSON.stringify(user));
   }
 
@@ -100,7 +100,7 @@ async function getUserProfileById(userId: string): Promise<User | null> {
 
 export async function signOut(): Promise<void> {
   if (typeof document !== 'undefined') {
-    document.cookie = 'user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = 'user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
     localStorage.removeItem('user-profile');
   }
   await supabase.auth.signOut();
@@ -655,7 +655,7 @@ interface DbJournalRow {
   id: string
   station_id: string
   journal_type: string
-  entries: DU46Entry[] | SHU2Entry[] | ALSNEntry[] | YerlatgichEntry[]
+  entries: DU46Entry[] | SHU2Entry[] | ALSNEntry[] | YerlatgichEntry[] | AlsnKodEntry[] | MpsFriksionEntry[]
   updated_at: string
   updated_by: string
 }
@@ -778,7 +778,7 @@ export async function getPendingJournalCounts(
 export async function upsertJournal(
   stationId: string,
   journalType: JournalType,
-  entries: DU46Entry[] | SHU2Entry[] | ALSNEntry[] | YerlatgichEntry[],
+  entries: DU46Entry[] | SHU2Entry[] | ALSNEntry[] | YerlatgichEntry[] | AlsnKodEntry[] | MpsFriksionEntry[],
   updatedBy: string
 ): Promise<StationJournal> {
   console.log('💾 upsertJournal chaqirildi:', { stationId, journalType, entriesCount: entries.length, updatedBy })
@@ -821,6 +821,55 @@ export async function getAllJournals(): Promise<StationJournal[]> {
 
   if (error) {
     console.error('❌ getAllJournals xatosi:', error)
+    return []
+  }
+
+  return (data || []).map((row: DbJournalRow) => mapDbJournal(row))
+}
+
+// ── DISPETCHER UCHUN YENGIL FUNKSIYALAR ──────────────────────────────
+
+/** Faqat DU-46 va SHU-2 pending countlarini qaytaradi (entries matnisiz) */
+export async function getDispatcherJournalSummary(): Promise<Record<string, { du46: number; shu2: number }>> {
+  const { data, error } = await supabase
+    .from('station_journals')
+    .select('station_id, journal_type, entries')
+    .in('journal_type', ['du46', 'shu2'])
+
+  if (error) {
+    console.error('❌ getDispatcherJournalSummary xatosi:', error)
+    return {}
+  }
+
+  const summary: Record<string, { du46: number; shu2: number }> = {}
+
+  for (const row of data || []) {
+    const sid = row.station_id as string
+    if (!summary[sid]) summary[sid] = { du46: 0, shu2: 0 }
+
+    const entries = (row.entries || []) as Array<{ yuborildi?: boolean; dispetcherQabulQildi?: boolean }>
+    const pendingCount = entries.filter(e => e.yuborildi && !e.dispetcherQabulQildi).length
+
+    if (row.journal_type === 'du46') {
+      summary[sid].du46 += pendingCount
+    } else {
+      summary[sid].shu2 += pendingCount
+    }
+  }
+
+  return summary
+}
+
+/** Bekat bo'yicha jurnallarni olish (arxiv lazy load uchun) */
+export async function getJournalsByStationId(stationId: string): Promise<StationJournal[]> {
+  const { data, error } = await supabase
+    .from('station_journals')
+    .select(JOURNAL_COLUMNS)
+    .eq('station_id', stationId)
+    .order('updated_at', { ascending: false })
+
+  if (error) {
+    console.error('❌ getJournalsByStationId xatosi:', error)
     return []
   }
 

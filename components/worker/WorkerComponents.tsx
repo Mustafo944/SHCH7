@@ -716,7 +716,7 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
 
 export function WorkerTasksModal({ type, tasks, onClose }: {
   type: 'bugunBajarilgan' | 'qolibKetgan'
-  tasks: { entry: ReportEntry, month: string }[]
+  tasks: { entry: ReportEntry, month: string, taskText?: string }[]
   onClose: () => void
 }) {
   const isBajarilgan = type === 'bugunBajarilgan'
@@ -752,7 +752,7 @@ export function WorkerTasksModal({ type, tasks, onClose }: {
           ) : (
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               {tasks.map((task, ti) => {
-                const text = task.entry.haftalikJadval || task.entry.yillikJadval || task.entry.yangiIshlar || task.entry.kmoBartaraf || task.entry.majburiyOzgarish || ''
+                const text = task.taskText || task.entry.haftalikJadval || task.entry.yillikJadval || task.entry.yangiIshlar || task.entry.kmoBartaraf || task.entry.majburiyOzgarish || ''
                 // Sana hisoblash: month "2026-04", ragat "4" -> "04.04.2026"
                 let dateFormatted = task.entry.ragat
                 if (task.entry.ragat && task.month && task.month.includes('-')) {
@@ -775,28 +775,15 @@ export function WorkerTasksModal({ type, tasks, onClose }: {
                       <p className="text-[11px] font-medium text-slate-700 leading-relaxed whitespace-pre-wrap">{text}</p>
 
                       <div className="mt-3 flex gap-4">
-                        {task.entry.bajarildiShn && (
+                        {task.entry.bajarildiShn ? (
                           <div className="flex items-center gap-1">
                             <CheckCircle2 size={12} className="text-emerald-500" />
                             <span className="text-[10px] font-bold text-emerald-600">Elektromexanik: {task.entry.bajarildiShn}</span>
                           </div>
-                        )}
-                        {!task.entry.bajarildiShn && (
+                        ) : (
                           <div className="flex items-center gap-1">
                             <X size={12} className="text-red-500" />
                             <span className="text-[10px] font-bold text-red-600">Elektromexanik: Bajarilmagan</span>
-                          </div>
-                        )}
-
-                        {task.entry.adImzosi ? (
-                          <div className="flex items-center gap-1 border-l pl-4 border-emerald-100">
-                            <CheckCircle2 size={12} className="text-emerald-500" />
-                            <span className="text-[10px] font-bold text-emerald-600">Dispetcher: {task.entry.adImzosi}</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1 border-l pl-4 border-slate-200">
-                            <Clock size={12} className="text-amber-500" />
-                            <span className="text-[10px] font-bold text-amber-500">Dispetcher kutilyapti</span>
                           </div>
                         )}
                       </div>

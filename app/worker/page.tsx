@@ -40,15 +40,12 @@ export default function WorkerPage() {
   const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'selectPlanType' | 'journal' | 'viewReport' | 'incidents' | 'sxemalar' | 'grafiklar' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'kunlikIshlar' | 'boshqaJurnallar' | 'alsn' | 'alsnMonthSelect' | 'yerlatgich' | 'yerlatgichMonthSelect' | 'alsnKod' | 'alsnKodMonthSelect' | 'mpsFriksion' | 'mpsFriksionMonthSelect'>('home')
 
   const [reports, setReports] = useState<WorkReport[]>([])
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [readIncidentIds, setReadIncidentIds] = useState<Set<string>>(new Set())
   const [activeStationId, setActiveStationId] = useState<string>('')
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedReport, setSelectedReport] = useState<WorkReport | null>(null)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [loading, setLoading] = useState(true)
+  const [_loading, setLoading] = useState(true)
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
   const [selectedJournalType, setSelectedJournalType] = useState<JournalType | null>(null)
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
@@ -177,8 +174,8 @@ export default function WorkerPage() {
   }, [session?.id, loadWorkReports, loadIncidents])
 
   const { bugunBajarilgan, qolibKetgan } = useMemo(() => {
-    const bugun: { entry: ReportEntry, month: string }[] = []
-    const qolib: { entry: ReportEntry, month: string }[] = []
+    const bugun: { entry: ReportEntry, month: string, taskText: string }[] = []
+    const qolib: { entry: ReportEntry, month: string, taskText: string }[] = []
 
     const today = new Date()
     const todayDay = today.getDate()
@@ -201,29 +198,36 @@ export default function WorkerPage() {
       if (!isCurrentMonth && !isPrevMonth) return
 
       r.entries.forEach(e => {
-        const hasContent = e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish
-        if (!hasContent) return
-
         const taskDay = parseInt((e.ragat || '').trim(), 10)
         if (isNaN(taskDay)) return
 
-        const bajarilgan = !!(e.bajarildiShn)
+        // Har bir ustunni alohida ish sifatida hisoblash
+        const columns: { content: string, done: boolean }[] = []
+        if (e.haftalikJadval) columns.push({ content: e.haftalikJadval, done: !!e.doneHaftalik })
+        if (e.yillikJadval) columns.push({ content: e.yillikJadval, done: !!e.doneYillik })
+        if (e.yangiIshlar) columns.push({ content: e.yangiIshlar, done: !!e.doneYangi })
+        if (e.kmoBartaraf) columns.push({ content: e.kmoBartaraf, done: !!e.doneKmo })
+        if (e.majburiyOzgarish) columns.push({ content: e.majburiyOzgarish, done: !!e.doneMajburiy })
 
-        if (isCurrentMonth) {
-          // Joriy oyda: muddati o'tgan va bajarilmagan
-          if (taskDay < todayDay && !bajarilgan) {
-            qolib.push({ entry: e, month: r.month })
+        if (columns.length === 0) return
+
+        columns.forEach(col => {
+          if (isCurrentMonth) {
+            // Joriy oyda: muddati o'tgan va bajarilmagan
+            if (taskDay < todayDay && !col.done) {
+              qolib.push({ entry: e, month: r.month, taskText: col.content })
+            }
+            // Bugun bajarilgan
+            if (taskDay === todayDay && col.done) {
+              bugun.push({ entry: e, month: r.month, taskText: col.content })
+            }
+          } else if (isPrevMonth) {
+            // O'tgan oyda: bajarilmagan barcha ishlar (muddat o'tib ketgan)
+            if (!col.done) {
+              qolib.push({ entry: e, month: r.month, taskText: col.content })
+            }
           }
-          // Bugun bajarilgan
-          if (taskDay === todayDay && bajarilgan) {
-            bugun.push({ entry: e, month: r.month })
-          }
-        } else if (isPrevMonth) {
-          // O'tgan oyda: bajarilmagan barcha ishlar (muddat o'tib ketgan)
-          if (!bajarilgan) {
-            qolib.push({ entry: e, month: r.month })
-          }
-        }
+        })
       })
     })
     return { bugunBajarilgan: bugun, qolibKetgan: qolib }
