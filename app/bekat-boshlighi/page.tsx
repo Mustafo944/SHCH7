@@ -5,7 +5,15 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useSessionGuard, useRealtimeSubscription, useToast } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { getStations, getStation } from '@/lib/store'
-import { DU46JournalView, JournalMonthSelectModal } from '@/components/JournalView'
+import dynamic from 'next/dynamic'
+import { JournalMonthSelectModal } from '@/components/JournalView'
+
+const DU46JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DU46JournalView), { ssr: false })
+const SHU2JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.SHU2JournalView), { ssr: false })
+const ALSNJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.ALSNJournalView), { ssr: false })
+const YerlatgichJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.YerlatgichJournalView), { ssr: false })
+const AlsnKodJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
+const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
 import { WorkerSchemasView, BigActionCard } from '@/components/worker/WorkerComponents'
 import { getPendingJournalCounts } from '@/lib/supabase-db'
 import {
@@ -82,24 +90,26 @@ export default function BekatBoshlighiPage() {
 
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* App Header */}
-        <header className="sticky top-0 z-50 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-7xl print:hidden">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-white/50 backdrop-blur-xl p-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60">
-                <Image src="/uty-logo.png" alt="UTY" fill className="object-contain p-2" />
+        <header className="sticky top-0 z-50 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-[1600px] print:hidden">
+          <div className="flex items-center justify-between bg-white/60 backdrop-blur-2xl px-3 sm:px-5 py-2 sm:py-3 rounded-[24px] sm:rounded-[32px] border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-[16px] bg-white/80 p-2 shadow-sm border border-white/80">
+                <Image src="/uty-logo.png" alt="UTY" fill className="object-contain p-2 drop-shadow-sm" />
               </div>
-              <div className="min-w-0 flex flex-col justify-center bg-white/50 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                <h1 className="text-[14px] sm:text-[16px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
-                <p className="text-[7.5px] sm:text-[8.5px] font-black text-purple-600 truncate uppercase tracking-wide mt-0.5">SMART CONTROL TIZIMI</p>
+              <div className="min-w-0 flex flex-col justify-center">
+                <h1 className="text-[15px] sm:text-[18px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
+                <p className="text-[8px] sm:text-[9.5px] font-black text-purple-600 truncate uppercase tracking-widest mt-1 drop-shadow-sm">SMART CONTROL TIZIMI</p>
+                <p className="text-[10px] font-black text-slate-400 truncate uppercase tracking-tight mt-0.5 sm:hidden">{session?.fullName}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/50 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mr-1">
-                <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400"></div>
-                <span className="text-[10px] font-black text-slate-600 tracking-wider uppercase">{session?.fullName}</span>
+
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="hidden sm:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/60 border border-white/60 shadow-sm">
+                <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
+                <span className="text-[11px] font-black text-slate-700 tracking-widest uppercase">{session?.fullName || 'Bekat Boshlig\'i'}</span>
               </div>
-              <button onClick={handleSignOut} className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl border border-white/60 bg-white/50 backdrop-blur-xl text-purple-600 hover:bg-white/70 hover:scale-105 active:scale-95 transition-all shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                <LogOut size={18} strokeWidth={2.5} />
+              <button onClick={handleSignOut} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-purple-100/50 bg-purple-50/50 text-purple-600 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 hover:scale-105 active:scale-95 transition-all shadow-sm group">
+                <LogOut size={20} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
           </div>

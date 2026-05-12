@@ -7,7 +7,7 @@ type UpdateWorkerBody = {
   login?: string
   password?: string
   phone?: string
-  role?: 'worker' | 'bekat_boshlighi'
+  role?: 'worker' | 'bekat_boshlighi' | 'elektromexanik' | 'elektromontyor' | 'bekat_navbatchisi' | 'yul_ustasi'
   stationIds?: string[]
   position?: string
 }

@@ -2,6 +2,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import useSWR from 'swr'
 import { supabase } from '@/lib/supabase'
 import {
   getStations,
@@ -30,7 +31,16 @@ import { useSessionGuard, useToast } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import type { User, Role, WorkReport, Incident, StationSchema, JournalType, ReportEntry, StationJournal, DU46Entry, SHU2Entry, Station } from '@/types'
 import { MONTHS } from '@/lib/constants'
-import { JournalSelectModal, JournalMonthSelectModal, DU46JournalView, SHU2JournalView, ALSNJournalView, YerlatgichJournalView, AlsnKodJournalView, MpsFriksionJournalView } from '@/components/JournalView'
+import dynamic from 'next/dynamic'
+import { JournalSelectModal, JournalMonthSelectModal } from '@/components/JournalView'
+
+// Heavy components are lazy loaded to improve initial load speed
+const DU46JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DU46JournalView), { ssr: false })
+const SHU2JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.SHU2JournalView), { ssr: false })
+const ALSNJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.ALSNJournalView), { ssr: false })
+const YerlatgichJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.YerlatgichJournalView), { ssr: false })
+const AlsnKodJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
+const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
 import {
   LogOut,
   Plus,
@@ -69,14 +79,7 @@ export default function DispatcherPage() {
   const toast = useToast()
   const [tab, setTab] = useState<Tab>('bekatlar')
 
-  // Real data from Supabase
-  const [workers, setWorkers] = useState<User[]>([])
-  const [allReports, setAllReports] = useState<WorkReport[]>([])
-  const [allIncidents, setAllIncidents] = useState<Incident[]>([])
-  const [globalGraphics, setGlobalGraphics] = useState<StationSchema[]>([])
-  const [journalSummary, setJournalSummary] = useState<Record<string, { du46: number; shu2: number }>>({})
-
-  const [_loading, setLoading] = useState(true)
+  const [_loading, setLoading] = useState(false)
   const [selectedStation, setSelectedStation] = useState<string | null>(null)
   const [selectedReportType, setSelectedReportType] = useState<'oylik' | 'baxtsiz_hodisa' | 'sxemalar' | 'jurnallar' | null>(null)
   const [showMobileStations, setShowMobileStations] = useState(false)
@@ -100,94 +103,45 @@ export default function DispatcherPage() {
 
   const stations = getStations()
 
-  const loadWorkers = useCallback(async () => {
-    try {
-      const w = await getWorkers()
-      setWorkers(w.filter(user => user.role !== 'dispatcher'))
-    } catch {
-      toast.error('Ishchilarni yuklashda xatolik')
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const { data: workers = [], mutate: mutateWorkers } = useSWR(session ? 'dispatcher_workers' : null, async () => {
+    const w = await getWorkers()
+    return w.filter(user => user.role !== 'dispatcher')
+  })
+  const { data: allReports = [], mutate: mutateReports } = useSWR(session ? 'dispatcher_reports' : null, getAllReports)
+  const { data: allIncidents = [], mutate: mutateIncidents } = useSWR(session ? 'dispatcher_incidents' : null, getIncidents)
+  const { data: globalGraphics = [], mutate: mutateGraphics } = useSWR(session ? 'dispatcher_graphics' : null, getGlobalGraphics)
+  const { data: journalSummary = {}, mutate: mutateJournalSummary } = useSWR(session ? 'dispatcher_journals' : null, getDispatcherJournalSummary)
 
-  const loadWorkReports = useCallback(async () => {
-    try {
-      const r = await getAllReports()
-      setAllReports(r)
-    } catch {
-      toast.error('Hisobotlarni yuklashda xatolik')
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const refreshData = useCallback(() => {
+    mutateWorkers()
+    mutateReports()
+    mutateIncidents()
+    mutateGraphics()
+    mutateJournalSummary()
+  }, [mutateWorkers, mutateReports, mutateIncidents, mutateGraphics, mutateJournalSummary])
 
-  const loadIncidents = useCallback(async () => {
-    try {
-      const i = await getIncidents()
-      setAllIncidents(i)
-    } catch {
-      toast.error('Baxtsiz hodisalarni yuklashda xatolik')
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const loadGraphics = useCallback(async () => {
-    try {
-      const g = await getGlobalGraphics()
-      setGlobalGraphics(g)
-    } catch {
-      toast.error('Grafiklarni yuklashda xatolik')
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const loadJournalSummary = useCallback(async () => {
-    try {
-      const s = await getDispatcherJournalSummary()
-      setJournalSummary(s)
-    } catch {
-      toast.error('Jurnal ma\'lumotlarini yuklashda xatolik')
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const refreshData = useCallback(async () => {
-    setLoading(true)
-    await Promise.all([
-      loadWorkers(),
-      loadWorkReports(),
-      loadIncidents(),
-      loadGraphics(),
-      loadJournalSummary()
-    ])
-    setLoading(false)
-  }, [loadWorkers, loadWorkReports, loadIncidents, loadGraphics, loadJournalSummary])
-
-  // Sessiya tayyor bo'lganda ma'lumotlarni yuklash
   useEffect(() => {
     if (!session) return
-    refreshData()
-  }, [session, refreshData])
 
-  useEffect(() => {
-    // Realtime Subscriptions — faqat o'zgargan jadval uchun qayta yuklash
+    // Realtime Subscriptions — faqat o'zgargan jadval uchun SWR ni yangilash
     const workReportsChannel = supabase
       .channel('dispatcher_work_reports')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'work_reports' }, () => {
-        loadWorkReports()
+        mutateReports()
       })
       .subscribe()
 
     const incidentsChannel = supabase
       .channel('dispatcher_incidents')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'incidents' }, () => {
-        loadIncidents()
+        mutateIncidents()
       })
       .subscribe()
 
     const journalsChannel = supabase
       .channel('dispatcher_journals')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals' }, () => {
-        loadJournalSummary()
+        mutateJournalSummary()
       })
       .subscribe()
 
@@ -196,7 +150,7 @@ export default function DispatcherPage() {
       supabase.removeChannel(incidentsChannel)
       supabase.removeChannel(journalsChannel)
     }
-  }, [loadWorkReports, loadIncidents, loadJournalSummary])
+  }, [session, mutateReports, mutateIncidents, mutateJournalSummary])
 
   // Calculated pending counts
   const pendingCounts = useMemo(() => {
@@ -472,28 +426,29 @@ export default function DispatcherPage() {
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* App Header */}
         <header className="sticky top-0 z-50 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-[1600px] print:hidden">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-white/50 backdrop-blur-xl p-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60">
-                <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
+          <div className="flex items-center justify-between bg-white/60 backdrop-blur-2xl px-3 sm:px-5 py-2 sm:py-3 rounded-[24px] sm:rounded-[32px] border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-[16px] bg-white/80 p-2 shadow-sm border border-white/80">
+                <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain drop-shadow-sm" />
               </div>
-              <div className="min-w-0 flex flex-col justify-center bg-white/50 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                <h1 className="text-[14px] sm:text-[16px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
-                <p className="text-[7.5px] sm:text-[8.5px] font-black text-purple-600 truncate uppercase tracking-wide mt-0.5">SMART CONTROL TIZIMI</p>
+              <div className="min-w-0 flex flex-col justify-center">
+                <h1 className="text-[15px] sm:text-[18px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
+                <p className="text-[8px] sm:text-[9.5px] font-black text-purple-600 truncate uppercase tracking-widest mt-1 drop-shadow-sm">SMART CONTROL TIZIMI</p>
+                <p className="text-[10px] font-black text-slate-400 truncate uppercase tracking-tight mt-0.5 sm:hidden">Aloqa dispetcheri</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/50 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mr-1">
-                <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400"></div>
-                <span className="text-[10px] font-black text-slate-600 tracking-wider uppercase">Aloqa dispetcheri</span>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="hidden sm:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/60 border border-white/60 shadow-sm">
+                <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
+                <span className="text-[11px] font-black text-slate-700 tracking-widest uppercase">Aloqa dispetcheri</span>
               </div>
 
               <button
                 onClick={handleSignOut}
-                className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl border border-white/60 bg-white/50 backdrop-blur-xl text-purple-600 hover:bg-white/70 hover:scale-105 active:scale-95 transition-all shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-purple-100/50 bg-purple-50/50 text-purple-600 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 hover:scale-105 active:scale-95 transition-all shadow-sm group"
               >
-                <LogOut size={18} strokeWidth={2.5} />
+                <LogOut size={20} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
           </div>
@@ -733,7 +688,7 @@ export default function DispatcherPage() {
                             userRole="dispatcher"
                             journalMonth={activeJournalMonth}
                             onClose={() => { setActiveJournalMonth(''); setActiveJournalType(null); setSelectedReportType(null) }}
-                            onAccepted={loadJournalSummary}
+                            onAccepted={mutateJournalSummary}
                           />
                         )}
                         {selectedReportType === 'jurnallar' && activeJournalType === 'shu2' && activeJournalMonth && (
@@ -744,7 +699,7 @@ export default function DispatcherPage() {
                             userRole="dispatcher"
                             journalMonth={activeJournalMonth}
                             onClose={() => { setActiveJournalMonth(''); setActiveJournalType(null); setSelectedReportType(null) }}
-                            onAccepted={loadJournalSummary}
+                            onAccepted={mutateJournalSummary}
                           />
                         )}
                         {selectedReportType === 'jurnallar' && activeJournalType === 'alsn' && activeJournalMonth && (
@@ -885,7 +840,7 @@ export default function DispatcherPage() {
               login: w.login,
               password: '',
               phone: w.phone || '',
-              role: w.role === 'bekat_boshlighi' ? 'bekat_boshlighi' : 'worker',
+              role: (['worker', 'bekat_boshlighi', 'elektromexanik', 'elektromontyor', 'bekat_navbatchisi', 'yul_ustasi'].includes(w.role) ? w.role : 'worker') as typeof form.role,
               stationIds: w.stationIds || []
             })
             setShowAddWorker(true)

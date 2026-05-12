@@ -81,22 +81,18 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  let userRole = request.cookies.get('user-role')?.value
-  
-  if (!userRole) {
-    // Foydalanuvchining ma'lumotlarini (role) bazadan tortamiz
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+  // Foydalanuvchining ma'lumotlarini (role) bazadan tortamiz (aniqlik uchun har doim bazadan tekshiriladi)
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
 
-    userRole = profile?.role
+  const userRole = profile?.role
 
-    if (userRole) {
-      // Role ni cookie ga saqlaymiz, keyingi so'rovlar tez bo'lishi uchun
-      supabaseResponse.cookies.set('user-role', userRole, { maxAge: 86400, path: '/', sameSite: 'lax', secure: true, httpOnly: true })
-    }
+  if (userRole) {
+    // Role ni cookie ga saqlaymiz, keyingi so'rovlar tez bo'lishi uchun
+    supabaseResponse.cookies.set('user-role', userRole, { maxAge: 86400, path: '/', sameSite: 'lax', secure: true, httpOnly: false })
   }
 
   if (!userRole) {

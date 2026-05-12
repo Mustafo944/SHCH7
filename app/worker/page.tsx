@@ -16,7 +16,15 @@ import { useSessionGuard, useToast } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import type { WorkReport, ReportEntry, Incident, JournalType } from '@/types'
 import { MONTHS } from '@/lib/constants'
-import { JournalSelectModal, JournalMonthSelectModal, DU46JournalView, SHU2JournalView, ALSNJournalView, YerlatgichJournalView, AlsnKodJournalView, MpsFriksionJournalView } from '@/components/JournalView'
+import dynamic from 'next/dynamic'
+import { JournalSelectModal, JournalMonthSelectModal } from '@/components/JournalView'
+
+const DU46JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DU46JournalView), { ssr: false })
+const SHU2JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.SHU2JournalView), { ssr: false })
+const ALSNJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.ALSNJournalView), { ssr: false })
+const YerlatgichJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.YerlatgichJournalView), { ssr: false })
+const AlsnKodJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
+const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
 import { BigActionCard, HeaderCard, JournalForm, WorkerGraphicsView, WorkerSchemasView, WorkerTasksModal } from '@/components/worker/WorkerComponents'
 import IncidentsView from '@/components/worker/IncidentsView'
 import {
@@ -26,8 +34,6 @@ import {
   LogOut,
   Download,
   BookOpen,
-  PieChart,
-  BarChart3,
   CheckCircle2,
   AlertTriangle
 } from 'lucide-react'
@@ -251,29 +257,37 @@ export default function WorkerPage() {
 
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* App Header */}
-        <header className="sticky top-0 z-50 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-7xl print:hidden">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-white p-2 shadow-sm border border-slate-100">
-                <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
+        <header className="sticky top-0 z-50 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-[1600px] print:hidden">
+          <div className="flex items-center justify-between bg-white/60 backdrop-blur-2xl px-3 sm:px-5 py-2 sm:py-3 rounded-[24px] sm:rounded-[32px] border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-[16px] bg-white/80 p-2 shadow-sm border border-white/80">
+                <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain drop-shadow-sm" />
               </div>
               <div className="min-w-0 flex flex-col justify-center">
-                <h1 className="text-[14px] sm:text-[16px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
-                <p className="text-[7.5px] sm:text-[8.5px] font-black text-purple-600 truncate uppercase tracking-wide mt-0.5">SMART CONTROL TIZIMI</p>
+                <h1 className="text-[15px] sm:text-[18px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
+                <p className="text-[8px] sm:text-[9.5px] font-black text-purple-600 truncate uppercase tracking-widest mt-1 drop-shadow-sm">SMART CONTROL TIZIMI</p>
+                <p className="text-[10px] font-black text-slate-400 truncate uppercase tracking-tight mt-0.5 sm:hidden">{session?.fullName}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+
+            <div className="flex items-center gap-2 sm:gap-4">
               {(session?.stationIds?.length || 0) > 1 && view !== 'selectStation' && (
-                <button onClick={() => setView('selectStation')} className="rounded-[14px] bg-white border border-slate-100 px-4 py-2 text-[10px] font-black text-slate-600 uppercase tracking-widest shadow-sm hover:border-purple-200 hover:text-purple-600 transition-all">Bekatlar</button>
+                <button onClick={() => setView('selectStation')} className="rounded-2xl bg-white/60 border border-white/60 px-4 py-2.5 text-[11px] font-black text-slate-700 uppercase tracking-widest shadow-sm hover:border-purple-200 hover:text-purple-600 transition-all hidden sm:block">Bekatlar</button>
               )}
-              <button onClick={handleSignOut} className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-[14px] border border-purple-100 bg-purple-50 text-purple-600 hover:bg-purple-100 hover:scale-105 active:scale-95 transition-all shadow-sm">
-                <LogOut size={18} strokeWidth={2.5} />
+              <div className="hidden sm:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/60 border border-white/60 shadow-sm">
+                <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
+                <span className="text-[11px] font-black text-slate-700 tracking-widest uppercase">
+                  {session?.position === 'elektromexanik' ? 'Elektromexanik' : session?.position === 'katta_elektromexanik' ? 'Katta elektromexanik' : session?.position === 'elektromontyor' ? 'Elektromontyor' : 'Ishchi'}
+                </span>
+              </div>
+              <button onClick={handleSignOut} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-purple-100/50 bg-purple-50/50 text-purple-600 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 hover:scale-105 active:scale-95 transition-all shadow-sm group">
+                <LogOut size={20} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-7xl p-4 sm:p-4 pb-10">
+        <main className="mx-auto w-full max-w-[1600px] p-4 sm:p-4 pb-10">
           {/* Back button - shown above page content */}
           {view !== 'home' && view !== 'selectStation' && (
             <button onClick={() => setView('home')} className="mb-4 flex items-center gap-2 rounded-xl bg-white/80 px-4 py-2.5 text-sm font-medium text-purple-600 shadow-sm ring-1 ring-purple-100 transition-all hover:bg-purple-50 hover:text-purple-800 active:scale-[0.98]">
@@ -296,31 +310,6 @@ export default function WorkerPage() {
           {view === 'home' && (
             <div className="space-y-4 sm:space-y-4 animate-fade-up">
 
-              {/* Welcome Card */}
-              <div className="relative overflow-hidden rounded-[24px] bg-white/50 backdrop-blur-xl p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 flex items-center justify-between">
-                <div className="relative z-10">
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-2">
-                    <span className="text-2xl">👋</span> Xush kelibsiz, {session?.fullName}!
-                  </h2>
-                  <p className="mt-1 text-xs sm:text-sm text-slate-600 font-medium">
-                    Bugungi ishlaringizni samarali boshqaring.
-                  </p>
-                </div>
-                {/* Abstract Decorative Elements representing the 3D graphics */}
-                <div className="absolute right-0 top-0 h-full w-1/3 hidden sm:flex items-center justify-end pr-6 opacity-80 pointer-events-none">
-                  <div className="relative w-28 h-28">
-                    <div className="absolute right-10 top-3 w-14 h-14 rounded-2xl bg-purple-100/60 rotate-12 flex items-center justify-center backdrop-blur-md border border-purple-200/50">
-                      <FileText size={24} className="text-purple-500" />
-                    </div>
-                    <div className="absolute right-2 bottom-4 w-10 h-10 rounded-full bg-indigo-100/60 -rotate-12 flex items-center justify-center backdrop-blur-md border border-indigo-200/50">
-                      <PieChart size={18} className="text-indigo-500" />
-                    </div>
-                    <div className="absolute right-20 bottom-1 w-8 h-8 rounded-xl bg-sky-100/60 rotate-45 flex items-center justify-center backdrop-blur-md border border-sky-200/50">
-                      <BarChart3 size={16} className="text-sky-500" />
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               {/* Profile & Stats Card */}
               <div className="rounded-[24px] bg-white/50 backdrop-blur-xl p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80">
