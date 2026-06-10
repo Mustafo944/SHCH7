@@ -314,9 +314,9 @@ export default function WorkerPage() {
 
               {/* Profile & Stats Card */}
               <div className="rounded-[24px] bg-white/50 backdrop-blur-xl p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80">
-                <div className="mb-4">
+                <div className="mb-4 text-center sm:text-left">
                   <h2 className="text-xl sm:text-2xl font-black text-slate-900">{session?.fullName}</h2>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-3">
+                  <div className="mt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3">
                     <span className="text-[10px] sm:text-xs font-black text-purple-600 uppercase tracking-widest">
                       {session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : session?.role === 'elektromexanik' ? 'Elektromexanik' : session?.role === 'elektromontyor' ? 'Elektromontyor' : "Katta Elektromexanik"}
                     </span>

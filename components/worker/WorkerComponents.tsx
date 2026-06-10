@@ -121,15 +121,24 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 
   async function handleSubmit() {
     setSubmitting(true)
-    try {
-      await upsertReport({
-        workerId: session.id, workerName: session.fullName, workerPhone: session.phone || '', stationId, stationName, entries, month: monthStr, year: String(new Date().getFullYear()), weekLabel: 'Oylik Reja'
-      })
-      onSubmit()
-    } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : 'Xatolik')
-      setTimeout(() => setFormError(null), 3000)
-    } finally { setSubmitting(false) }
+    setFormError(null)
+    let lastErr: unknown
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await upsertReport({
+          workerId: session.id, workerName: session.fullName, workerPhone: session.phone || '', stationId, stationName, entries, month: monthStr, year: String(new Date().getFullYear()), weekLabel: 'Oylik Reja'
+        })
+        onSubmit()
+        return
+      } catch (err: unknown) {
+        lastErr = err
+        if (attempt < 3) await new Promise(r => setTimeout(r, 1000 * attempt))
+      }
+    }
+    const msg = lastErr instanceof Error ? lastErr.message : 'Xatolik'
+    setFormError(msg.includes('fetch') ? 'Internet bilan muammo. Qayta urinildi, ammo muvaffaqiyatsiz. Iltimos sahifani yangilang.' : msg)
+    setTimeout(() => setFormError(null), 5000)
+    setSubmitting(false)
   }
 
   const handleBajarishClick = (idx: number) => {
@@ -171,8 +180,11 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       await upsertReport({
         workerId: session.id, workerName: session.fullName, workerPhone: session.phone || '', stationId, stationName, entries: newEntries, month: monthStr, year: String(new Date().getFullYear()), weekLabel: 'Oylik Reja'
       })
+      setFormError('Muvaffaqiyatli saqlandi! ✅')
+      setTimeout(() => setFormError(null), 3000)
     } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : 'Xatolik')
+      const msg = err instanceof Error ? err.message : 'Xatolik'
+      setFormError(msg.includes('Failed to fetch') ? 'Internet bilan aloqa yo\'q. Iltimos tekshirib qayta yuboring.' : msg)
       setTimeout(() => setFormError(null), 3000)
     } finally {
       setSubmitting(false)
@@ -397,17 +409,17 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
         )}
       </div>
       {formError && (
-        <div className="rounded-2xl border border-red-200/60 bg-red-50/80 p-4 text-center text-sm font-bold text-red-600 backdrop-blur-sm">{formError}</div>
+        <div className={`rounded-2xl border p-4 text-center text-sm font-bold backdrop-blur-sm ${formError.includes('✅') ? 'border-emerald-200/60 bg-emerald-50/80 text-emerald-600' : 'border-red-200/60 bg-red-50/80 text-red-600'}`}>{formError}</div>
       )}
-      <div className="flex gap-4">
+      <div className="flex gap-2 sm:gap-4 items-stretch">
         <button onClick={handleDownloadPDF}
-          className="rounded-2xl border border-slate-200/60 bg-white/80 px-6 py-5 font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition flex items-center gap-2 shadow-sm backdrop-blur-sm">
-          <Download size={18} /> PDF
+          className="rounded-xl sm:rounded-2xl border border-slate-200/60 bg-white/80 px-2 sm:px-6 py-2.5 sm:py-5 text-[10px] sm:text-base font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition flex items-center justify-center gap-1 sm:gap-2 shadow-sm backdrop-blur-sm whitespace-nowrap min-w-[70px]">
+          <Download className="w-3.5 h-3.5 sm:w-6 sm:h-6" /> <span className="hidden sm:inline">Yuklab olish</span><span className="sm:hidden">Yuklash</span>
         </button>
         {(!isConfirmed && canEditPlan) && (
-          <button onClick={handleSubmit} disabled={submitting} className="btn-gradient flex-1 py-5 font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all">{submitting ? 'Yuborilmoqda...' : 'Yuborish'}</button>
+          <button onClick={handleSubmit} disabled={submitting} className="btn-gradient flex-1 py-2.5 sm:py-5 text-[13px] sm:text-lg font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all">{submitting ? 'Kut...' : 'YUBORISH'}</button>
         )}
-        <button onClick={onCancel} className="rounded-2xl bg-white/80 border border-slate-200/60 px-10 font-bold text-slate-400 hover:text-slate-900 transition shadow-sm backdrop-blur-sm">
+        <button onClick={onCancel} className="rounded-xl sm:rounded-2xl bg-white/80 border border-slate-200/60 px-2 sm:px-10 py-2.5 sm:py-5 text-[10px] sm:text-base font-bold text-slate-400 hover:text-slate-900 transition flex items-center justify-center shadow-sm backdrop-blur-sm whitespace-nowrap min-w-[70px]">
           {isConfirmed ? 'Orqaga' : 'Bekor qilish'}
         </button>
       </div>
@@ -729,7 +741,7 @@ export function WorkerTasksModal({ type, tasks, onClose }: {
         <div className={`flex items-center justify-between border-b px-8 py-6 ${isBajarilgan ? 'border-emerald-100 bg-emerald-50/50' : 'border-red-100 bg-red-50/50'}`}>
           <div>
             <h3 className="text-xl font-black text-slate-900 tracking-tight">
-              {isBajarilgan ? 'Bugun bajarilgan ishlar ro\'yxati' : 'Bajarilmagan ishlar (Qolib ketganlar)'}
+              {isBajarilgan ? 'Bugun bajarilgan ishlar ro\'yxati' : 'Bajarilmagan ishlar'}
             </h3>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
               Bugungi sana: {todayFormatted} · Jami: {tasks.length} ta

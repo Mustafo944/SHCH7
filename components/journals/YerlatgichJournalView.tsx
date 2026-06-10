@@ -64,9 +64,9 @@ export function YerlatgichJournalView({
     load()
   }, [stationId, journalMonth])
 
-  async function handleSave(newEntries: YerlatgichEntry[]) {
+  async function handleSave(newEntries: YerlatgichEntry[], isSilent = false) {
     if (!isWorker) return
-    setSaving(true)
+    if (!isSilent) setSaving(true)
     try {
       const merged = allEntries.filter(e => e.journalMonth !== journalMonth)
       const toSave = newEntries.map(e => ({ ...e, journalMonth }))
@@ -74,12 +74,14 @@ export function YerlatgichJournalView({
       setAllEntries(finalEntries)
 
       await upsertJournal(stationId, 'yerlatgich', finalEntries as any, userName)
-      setMsg('Saqlandi!')
-      setTimeout(() => setMsg(null), 2000)
+      if (!isSilent) {
+        setMsg('Saqlandi! ✅')
+        setTimeout(() => setMsg(null), 2000)
+      }
     } catch (e: any) {
-      setMsg(`Xato: ${e.message}`)
+      console.warn('Yerlatgich save error:', e?.message)
     } finally {
-      setSaving(false)
+      if (!isSilent) setSaving(false)
     }
   }
 
@@ -94,7 +96,8 @@ export function YerlatgichJournalView({
     ;(row as any)[field] = val
     n[idx] = row
     setEntries(n)
-    handleSave(n)
+    if ((window as any).yerlatgichTimeout) clearTimeout((window as any).yerlatgichTimeout)
+    ;(window as any).yerlatgichTimeout = setTimeout(() => handleSave(n, true), 1500)
   }
 
   const handleBajarildi = (idx: number, isRightSide: boolean) => {
@@ -110,7 +113,7 @@ export function YerlatgichJournalView({
     row.bajarildiAt = new Date().toISOString()
     n[idx] = row
     setEntries(n)
-    handleSave(n).then(() => {
+    handleSave(n, true).then(() => {
       if (onAccepted) onAccepted()
     })
   }
@@ -119,7 +122,6 @@ export function YerlatgichJournalView({
     if (!isWorker) return
     const n = [...entries, EMPTY_YERLATGICH()]
     setEntries(n)
-    handleSave(n)
   }
 
   const removeRow = () => {
@@ -127,7 +129,6 @@ export function YerlatgichJournalView({
     if (entries.length <= 1) return
     const n = entries.slice(0, -1)
     setEntries(n)
-    handleSave(n)
   }
 
   const exportPDF = async () => {

@@ -49,17 +49,22 @@ export function MpsFriksionJournalView({
     }).finally(() => setLoading(false))
   }, [stationId, journalMonth])
 
-  const handleSave = async (data: MpsFriksionEntry[]) => {
-    setSaving(true)
+  const handleSave = async (data: MpsFriksionEntry[], isSilent = false): Promise<boolean> => {
+    if (!isSilent) setSaving(true)
     try {
       const toSave = data.map(e => ({ ...e, journalMonth }))
       await upsertJournal(stationId, 'mpsFriksion', toSave as any, userName)
-      setMsg('Saqlandi!')
-      setTimeout(() => setMsg(null), 2000)
+      if (!isSilent) {
+        setMsg('Saqlandi! ✅')
+        setTimeout(() => setMsg(null), 2000)
+      }
+      return true
     } catch (e: any) {
-      setMsg(`Xato: ${e.message}`)
+      // Barcha xatolarni jimgina o'tkazib yuboramiz - foydalanuvchini bezovta qilmaymiz
+      console.warn('Journal save error:', e?.message)
+      return false
     } finally {
-      setSaving(false)
+      if (!isSilent) setSaving(false)
     }
   }
 
@@ -71,7 +76,9 @@ export function MpsFriksionJournalView({
     ;(row as any)[field] = val
     n[idx] = row
     setEntries(n)
-    handleSave(n)
+    
+    if ((window as any).saveTimeout) clearTimeout((window as any).saveTimeout)
+    ;(window as any).saveTimeout = setTimeout(() => handleSave(n, true), 1500)
   }
 
   const handleBajarildi = (idx: number) => {
@@ -83,11 +90,12 @@ export function MpsFriksionJournalView({
     row.bajarildiAt = new Date().toISOString()
     n[idx] = row
     setEntries(n)
-    handleSave(n).then(() => { if (onAccepted) onAccepted() })
+    // Optimistic UI - avval ko'rsatamiz, keyin saqlaymiz (silent)
+    handleSave(n, true).then((success) => { if (success && onAccepted) onAccepted() })
   }
 
-  const addRow = () => { if (!isWorker) return; const n = [...entries, EMPTY_MPS_FRIKSION()]; setEntries(n); handleSave(n) }
-  const removeRow = () => { if (!isWorker || entries.length <= 1) return; const n = entries.slice(0, -1); setEntries(n); handleSave(n) }
+  const addRow = () => { if (!isWorker) return; const n = [...entries, EMPTY_MPS_FRIKSION()]; setEntries(n); }
+  const removeRow = () => { if (!isWorker || entries.length <= 1) return; const n = entries.slice(0, -1); setEntries(n); }
 
   const exportPDF = async () => {
     const { jsPDF } = await import('jspdf')
@@ -128,16 +136,16 @@ export function MpsFriksionJournalView({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
       <div className="flex h-[95vh] w-full max-w-[1300px] flex-col overflow-hidden rounded-[24px] bg-slate-50 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200/60 bg-white/80 backdrop-blur px-6 py-4">
-          <div>
-            <h2 className="text-xl font-black text-slate-800">MPS elektrodvigatellarni friksion tokini o&apos;lchash</h2>
-            <p className="text-sm text-slate-500 mt-0.5">{stationName} • {journalMonth} • NSH-01 9.1.4</p>
+        <div className="flex items-center justify-between border-b border-slate-200/60 bg-white/80 backdrop-blur px-4 sm:px-6 py-4">
+          <div className="min-w-0 pr-4">
+            <h2 className="text-lg sm:text-xl font-black text-slate-800 truncate">MPS elektrodvigatellarni friksion tokini o&apos;lchash</h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 truncate">{stationName} • {journalMonth} • NSH-01 9.1.4</p>
           </div>
-          <div className="flex items-center gap-3">
-            {msg && <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg">{msg}</span>}
-            {saving && <span className="text-xs font-bold text-slate-400 flex items-center gap-2"><div className="w-3 h-3 rounded-full border-2 border-slate-300 border-t-slate-600 animate-spin" /> Saqlanmoqda...</span>}
-            <button onClick={exportPDF} className="flex items-center gap-2 rounded-xl bg-purple-50 text-purple-600 px-4 py-2 text-sm font-bold hover:bg-purple-100 transition-colors"><Download size={16} /> PDF</button>
-            <button onClick={onClose} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 transition-colors"><X size={24} /></button>
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {msg && <span className={`text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg shadow-sm ${msg.startsWith('Xato') ? 'text-red-600 bg-red-50 border border-red-100' : 'text-emerald-600 bg-emerald-50 border border-emerald-100'}`}>{msg}</span>}
+            {saving && <span className="text-xs font-bold text-slate-400 flex items-center gap-2"><div className="w-3 h-3 rounded-full border-2 border-slate-300 border-t-slate-600 animate-spin" /> <span className="hidden sm:inline">Saqlanmoqda...</span></span>}
+            <button onClick={exportPDF} className="flex items-center gap-2 rounded-xl bg-purple-50 text-purple-600 px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold hover:bg-purple-100 transition-colors"><Download size={16} /> <span className="hidden sm:inline">PDF</span></button>
+            <button onClick={onClose} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 transition-colors"><X size={20} className="sm:w-6 sm:h-6" /></button>
           </div>
         </div>
 
@@ -147,7 +155,8 @@ export function MpsFriksionJournalView({
             <h4 className="font-bold">MSP turidagi elektrodvigatellarni friksion tokini o&apos;lchash</h4>
             <p className="text-sm text-slate-500">Bajarilish muddati: 3 oyda bir marotaba yoki el. o&apos;tkazgich, friksion baraban va dvigatellar almashtirilganda.</p>
           </div>
-          <table className="w-full border-collapse bg-white shadow-sm ring-1 ring-slate-200 rounded-xl">
+          <div className="overflow-x-auto pb-4">
+            <table className="w-full min-w-[800px] border-collapse bg-white shadow-sm ring-1 ring-slate-200 rounded-xl">
             <thead>
               <tr className="bg-purple-50 text-[10px] font-black uppercase text-purple-700 border-b border-slate-200">
                 <th rowSpan={2} className="border-r border-slate-200 p-2 text-center align-middle">Sana</th>
@@ -196,6 +205,7 @@ export function MpsFriksionJournalView({
               })}
             </tbody>
           </table>
+          </div>
         </div>
 
         {isWorker && !isMonthInPast(journalMonth) && (

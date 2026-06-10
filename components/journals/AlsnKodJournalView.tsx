@@ -49,17 +49,19 @@ export function AlsnKodJournalView({
     }).finally(() => setLoading(false))
   }, [stationId, journalMonth])
 
-  const handleSave = async (data: AlsnKodEntry[]) => {
-    setSaving(true)
+  const handleSave = async (data: AlsnKodEntry[], isSilent = false) => {
+    if (!isSilent) setSaving(true)
     try {
       const toSave = data.map(e => ({ ...e, journalMonth }))
       await upsertJournal(stationId, 'alsnKod', toSave as any, userName)
-      setMsg('Saqlandi!')
-      setTimeout(() => setMsg(null), 2000)
+      if (!isSilent) {
+        setMsg('Saqlandi! ✅')
+        setTimeout(() => setMsg(null), 2000)
+      }
     } catch (e: any) {
-      setMsg(`Xato: ${e.message}`)
+      console.warn('AlsnKod save error:', e?.message)
     } finally {
-      setSaving(false)
+      if (!isSilent) setSaving(false)
     }
   }
 
@@ -71,7 +73,8 @@ export function AlsnKodJournalView({
     ;(row as any)[field] = val
     n[idx] = row
     setEntries(n)
-    handleSave(n)
+    if ((window as any).alsnSaveTimeout) clearTimeout((window as any).alsnSaveTimeout)
+    ;(window as any).alsnSaveTimeout = setTimeout(() => handleSave(n, true), 1500)
   }
 
   const handleBajarildi = (idx: number) => {
@@ -83,11 +86,11 @@ export function AlsnKodJournalView({
     row.bajarildiAt = new Date().toISOString()
     n[idx] = row
     setEntries(n)
-    handleSave(n).then(() => { if (onAccepted) onAccepted() })
+    handleSave(n, true).then(() => { if (onAccepted) onAccepted() })
   }
 
-  const addRow = () => { if (!isWorker) return; const n = [...entries, EMPTY_ALSN_KOD()]; setEntries(n); handleSave(n) }
-  const removeRow = () => { if (!isWorker || entries.length <= 1) return; const n = entries.slice(0, -1); setEntries(n); handleSave(n) }
+  const addRow = () => { if (!isWorker) return; const n = [...entries, EMPTY_ALSN_KOD()]; setEntries(n); }
+  const removeRow = () => { if (!isWorker || entries.length <= 1) return; const n = entries.slice(0, -1); setEntries(n); }
 
   const exportPDF = async () => {
     const { jsPDF } = await import('jspdf')
