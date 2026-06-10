@@ -55,9 +55,17 @@ export function useSessionGuard(expectedRole: Role | Role[]) {
   }, [router, expectedRole])
 
   const handleSignOut = useCallback(async () => {
+    // 1. Server tomonida Supabase session cookielarini tozalash
+    try {
+      await fetch('/api/auth/signout', { method: 'POST' })
+    } catch {
+      // Agar server so'rovi ishlamasa, davom etamiz
+    }
+    // 2. Client tomonida ham tozalash
     await signOut()
-    router.push('/')
-  }, [router])
+    // 3. Sahifani to'liq qayta yuklash (brauzer kesh va React state tozalanadi)
+    window.location.href = '/'
+  }, [])
 
   return { session, loading, handleSignOut }
 }

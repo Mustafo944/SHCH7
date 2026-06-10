@@ -22,7 +22,16 @@ import {
 
 export default function BekatBoshlighiPage() {
   const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['bekat_boshlighi', 'bekat_navbatchisi'])
+
+  const roleLabel = session?.role === 'bekat_navbatchisi' ? 'Bekat Navbatchisi' : 'Bekat Boshlig\'i'
   const toast = useToast()
+
+  // Brauzer tab sarlavhasini rolga mos qilish
+  useEffect(() => {
+    if (session) {
+      document.title = `${roleLabel} — SMART SHCH`
+    }
+  }, [session, roleLabel])
 
   const [selectedStation, setSelectedStation] = useState<string | null>(null)
   const [showJournal, setShowJournal] = useState(false)
@@ -101,7 +110,7 @@ export default function BekatBoshlighiPage() {
             <div className="flex items-center gap-2 sm:gap-4">
               <div className="hidden sm:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/60 border border-white/60 shadow-sm">
                 <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
-                <span className="text-[11px] font-black text-slate-700 tracking-widest uppercase">{session?.fullName || 'Bekat Boshlig\'i'}</span>
+                <span className="text-[11px] font-black text-slate-700 tracking-widest uppercase">{session?.fullName || roleLabel}</span>
               </div>
               <button onClick={handleSignOut} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-purple-100/50 bg-purple-50/50 text-purple-600 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 hover:scale-105 active:scale-95 transition-all shadow-sm group">
                 <LogOut size={20} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />

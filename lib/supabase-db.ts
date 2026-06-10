@@ -100,8 +100,25 @@ async function getUserProfileById(userId: string): Promise<User | null> {
 
 export async function signOut(): Promise<void> {
   if (typeof document !== 'undefined') {
+    // Custom cookie va localStorage ni tozalash
     document.cookie = 'user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
     localStorage.removeItem('user-profile');
+
+    // Supabase SSR ning BARCHA auth cookielarini majburan tozalash
+    document.cookie.split(';').forEach(c => {
+      const name = c.split('=')[0].trim();
+      if (name.startsWith('sb-')) {
+        document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+        document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure`;
+      }
+    });
+
+    // Supabase localStorage kalitlarini ham tozalash
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-')) {
+        localStorage.removeItem(key);
+      }
+    });
   }
   await supabase.auth.signOut();
 }

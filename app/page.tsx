@@ -17,11 +17,25 @@ export default function LoginPage() {
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [navigating, setNavigating] = useState(false)
   const [checkingSession, setCheckingSession] = useState(true)
   const [error, setError] = useState('')
   const router = useRouter()
+
+  useEffect(() => {
+    // Saqlangan login/parolni yuklash
+    try {
+      const saved = localStorage.getItem('remembered-creds')
+      if (saved) {
+        const { l, p } = JSON.parse(atob(saved))
+        setLogin(l || '')
+        setPassword(p || '')
+        setRememberMe(true)
+      }
+    } catch { /* ignore */ }
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -52,9 +66,14 @@ export default function LoginPage() {
       const user = await signIn(login.trim(), password)
 
       if (user) {
+        // Esda saqlash
+        if (rememberMe) {
+          localStorage.setItem('remembered-creds', btoa(JSON.stringify({ l: login.trim(), p: password })))
+        } else {
+          localStorage.removeItem('remembered-creds')
+        }
         setNavigating(true)
         router.push(getRoleHome(user.role))
-        // loading ni olib tashlamaymiz, navigating orqali overlay ko'rsatamiz
         return
       } else {
         setError("Login yoki parol noto'g'ri")
@@ -269,6 +288,21 @@ export default function LoginPage() {
                   {error}
                 </div>
               )}
+
+              {/* Eslab qolish */}
+              <label className="flex items-center justify-end gap-3 cursor-pointer select-none group">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-slate-700 transition-colors">Eslab qolish</span>
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="h-6 w-11 rounded-full bg-slate-200 transition-colors peer-checked:bg-purple-500 peer-focus:ring-4 peer-focus:ring-purple-500/20" />
+                  <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-5" />
+                </div>
+              </label>
 
               {/* Submit button */}
               <button
