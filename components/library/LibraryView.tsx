@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { createPortal } from 'react-dom'
 import useSWR from 'swr'
 import { BookOpen, Plus, Eye, Trash2, Download, FileText, X, Edit2, Check } from 'lucide-react'
 import { StationSchema } from '@/types'
@@ -197,9 +198,9 @@ export function LibraryView({ userName, userRole }: LibraryViewProps) {
       )}
 
       {/* Preview Modal */}
-      {preview && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-slate-900/80 p-4 sm:p-6 backdrop-blur-md animate-fade-up">
-          <div className="premium-card h-full w-full max-w-6xl overflow-hidden p-0 shadow-2xl flex flex-col">
+      {preview && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/90 sm:p-6 backdrop-blur-md animate-fade-up">
+          <div className="premium-card h-[100dvh] w-full rounded-none sm:rounded-3xl sm:h-[85vh] sm:max-w-6xl overflow-hidden p-0 shadow-2xl flex flex-col">
             {/* Modal Header */}
             <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
               <div className="flex items-center gap-3 min-w-0">
@@ -235,7 +236,8 @@ export function LibraryView({ userName, userRole }: LibraryViewProps) {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
