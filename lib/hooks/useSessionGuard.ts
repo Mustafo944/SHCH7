@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { getCurrentSession, signOut } from '@/lib/supabase-db'
+import { getCachedSession, signOut } from '@/lib/supabase-db'
 import type { User, Role } from '@/types'
 
 /**
@@ -19,7 +19,7 @@ export function useSessionGuard(expectedRole: Role | Role[]) {
 
     async function init() {
       try {
-        const user = await getCurrentSession()
+        const user = await getCachedSession()
 
         if (cancelled) return
 
