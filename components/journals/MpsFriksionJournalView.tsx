@@ -31,6 +31,7 @@ export function MpsFriksionJournalView({
   onAccepted?: () => void
 }) {
   const [entries, setEntries] = useState<MpsFriksionEntry[]>(Array.from({ length: 5 }, EMPTY_MPS_FRIKSION))
+  const [allEntries, setAllEntries] = useState<MpsFriksionEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
@@ -40,11 +41,14 @@ export function MpsFriksionJournalView({
     setLoading(true)
     getJournal(stationId, 'mpsFriksion').then(doc => {
       if (doc?.entries?.length) {
-        const filtered = (doc.entries as MpsFriksionEntry[]).filter(
-          e => !e.journalMonth || e.journalMonth === journalMonth
-        )
+        const parsed = doc.entries as MpsFriksionEntry[]
+        setAllEntries(parsed)
+        const filtered = parsed.filter(e => e.journalMonth === journalMonth)
         if (filtered.length > 0) setEntries(filtered)
         else setEntries(Array.from({ length: 5 }, EMPTY_MPS_FRIKSION))
+      } else {
+        setAllEntries([])
+        setEntries(Array.from({ length: 5 }, EMPTY_MPS_FRIKSION))
       }
     }).finally(() => setLoading(false))
   }, [stationId, journalMonth])
@@ -52,8 +56,12 @@ export function MpsFriksionJournalView({
   const handleSave = async (data: MpsFriksionEntry[], isSilent = false): Promise<boolean> => {
     if (!isSilent) setSaving(true)
     try {
+      const merged = allEntries.filter(e => e.journalMonth !== journalMonth)
       const toSave = data.map(e => ({ ...e, journalMonth }))
-      await upsertJournal(stationId, 'mpsFriksion', toSave as any, userName)
+      const finalEntries = [...merged, ...toSave]
+      setAllEntries(finalEntries)
+
+      await upsertJournal(stationId, 'mpsFriksion', finalEntries as any, userName)
       if (!isSilent) {
         setMsg('Saqlandi! ✅')
         setTimeout(() => setMsg(null), 2000)

@@ -62,7 +62,7 @@ export function SHU2JournalView({
         const loadedAllEntries = j.entries as SHU2Entry[]
         setAllEntries(loadedAllEntries)
         
-        const monthEntries = loadedAllEntries.filter(e => e.journalMonth === journalMonth || (!e.journalMonth && journalMonth === getCurrentJournalMonth()))
+        const monthEntries = loadedAllEntries.filter(e => e.journalMonth === journalMonth)
         
         if (monthEntries.length > 0) {
           setEntries(prev => {
@@ -171,7 +171,13 @@ export function SHU2JournalView({
         dispetcherQabulQildi: true,
       }
       setEntries(updated)
-      await upsertJournal(stationId, 'shu2', updated, userName)
+
+      const updatedWithMonth = updated.map(e => ({ ...e, journalMonth }))
+      const otherMonths = allEntries.filter(e => e.journalMonth !== journalMonth)
+      const newAllEntries = [...otherMonths, ...updatedWithMonth]
+      setAllEntries(newAllEntries)
+
+      await upsertJournal(stationId, 'shu2', newAllEntries, userName)
       setMsg('Tasdiqlandi!')
       onAccepted?.()
       setTimeout(() => setMsg(null), 2000)
@@ -273,13 +279,13 @@ export function SHU2JournalView({
         </div>
 
         <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
-          <table className="w-full border-collapse text-[12px] text-slate-700">
+          <table className="w-full min-w-[700px] border-collapse text-[12px] text-slate-700">
             <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-tight text-slate-500 border-b-2 border-slate-200">
               <tr>
-                <th className="w-[6%] border-r border-b border-slate-200 p-4 text-center">№</th>
-                <th className="w-[14%] border-r border-b border-slate-200 p-4 text-center">Sana</th>
-                <th className="w-[60%] border-r border-b border-slate-200 p-4 text-center text-left">Navbatchilikdagi yozuv va bajarilgan ishlar nomi</th>
-                <th className="w-[20%] border-b border-slate-200 p-4 text-center">Imzo</th>
+                <th className="w-[4%] border-r border-b border-slate-200 p-4 text-center">№</th>
+                <th className="w-[12%] border-r border-b border-slate-200 p-4 text-center">Sana</th>
+                <th className="w-[72%] border-r border-b border-slate-200 p-4 text-left">Navbatchilikdagi yozuv va bajarilgan ishlar nomi</th>
+                <th className="w-[12%] border-b border-slate-200 p-4 text-center">Imzo</th>
               </tr>
             </thead>
             <tbody>

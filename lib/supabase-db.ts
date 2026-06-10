@@ -137,9 +137,12 @@ export async function getCachedSession(): Promise<User | null> {
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        if (parsed.id === session.user.id) return parsed;
-      } catch (e) {
-        console.warn('Local storage parsing error:', e);
+        // Validatsiya: zarur maydonlar mavjudligini tekshirish
+        if (parsed.id === session.user.id && parsed.role && parsed.fullName && parsed.position) {
+          return parsed;
+        }
+      } catch {
+        localStorage.removeItem('user-profile');
       }
     }
   }
@@ -841,8 +844,6 @@ export async function upsertJournal(
   entries: DU46Entry[] | SHU2Entry[] | ALSNEntry[] | YerlatgichEntry[] | AlsnKodEntry[] | MpsFriksionEntry[],
   updatedBy: string
 ): Promise<StationJournal> {
-  console.log('💾 upsertJournal chaqirildi:', { stationId, journalType, entriesCount: entries.length, updatedBy })
-
   const { data, error } = await supabase
     .from('station_journals')
     .upsert(
@@ -859,16 +860,13 @@ export async function upsertJournal(
     .single()
 
   if (error) {
-    console.error('❌ upsertJournal xatosi:', error)
     throw new Error(error?.message ?? 'Upsert failed')
   }
 
   if (!data) {
-    console.error('❌ upsertJournal: data qaytmadi')
     throw new Error('Upsert failed - no data returned')
   }
 
-  console.log('✅ upsertJournal muvaffaqiyatli:', data.id)
   return mapDbJournal(data as DbJournalRow)
 }
 
@@ -880,7 +878,6 @@ export async function getAllJournals(): Promise<StationJournal[]> {
     .order('updated_at', { ascending: false })
 
   if (error) {
-    console.error('❌ getAllJournals xatosi:', error)
     return []
   }
 
@@ -897,7 +894,6 @@ export async function getDispatcherJournalSummary(): Promise<Record<string, { du
     .in('journal_type', ['du46', 'shu2'])
 
   if (error) {
-    console.error('❌ getDispatcherJournalSummary xatosi:', error)
     return {}
   }
 
@@ -929,7 +925,6 @@ export async function getJournalsByStationId(stationId: string): Promise<Station
     .order('updated_at', { ascending: false })
 
   if (error) {
-    console.error('❌ getJournalsByStationId xatosi:', error)
     return []
   }
 

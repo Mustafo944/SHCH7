@@ -39,20 +39,19 @@ import {
   AlertTriangle
 } from 'lucide-react'
 
-const _TOTAL_ROWS = 14
+
 
 export default function WorkerPage() {
   const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['worker', 'elektromexanik', 'elektromontyor'])
   const toast = useToast()
-  const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'selectPlanType' | 'journal' | 'viewReport' | 'incidents' | 'sxemalar' | 'grafiklar' | 'kutubxona' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'kunlikIshlar' | 'boshqaJurnallar' | 'alsn' | 'alsnMonthSelect' | 'yerlatgich' | 'yerlatgichMonthSelect' | 'alsnKod' | 'alsnKodMonthSelect' | 'mpsFriksion' | 'mpsFriksionMonthSelect'>('home')
+  const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'journal' | 'viewReport' | 'incidents' | 'sxemalar' | 'grafiklar' | 'kutubxona' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'boshqaJurnallar' | 'alsn' | 'alsnMonthSelect' | 'yerlatgich' | 'yerlatgichMonthSelect' | 'alsnKod' | 'alsnKodMonthSelect' | 'mpsFriksion' | 'mpsFriksionMonthSelect'>('home')
 
   const [reports, setReports] = useState<WorkReport[]>([])
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [readIncidentIds, setReadIncidentIds] = useState<Set<string>>(new Set())
   const [activeStationId, setActiveStationId] = useState<string>('')
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
-  const [selectedReport, setSelectedReport] = useState<WorkReport | null>(null)
-  const [_loading, setLoading] = useState(true)
+  const [selectedReport, _setSelectedReport] = useState<WorkReport | null>(null)
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
   const [selectedJournalType, setSelectedJournalType] = useState<JournalType | null>(null)
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
@@ -87,17 +86,16 @@ export default function WorkerPage() {
       setIncidents(allInc)
       setReadIncidentIds(new Set(readIds))
     } catch {
-      toast.error('Baxtsiz hodisalarni yuklashda xatolik')
+      // Xatolik bo'lsa, console.warn bilan log
+      console.warn('Baxtsiz hodisalarni yuklashda xatolik')
     }
-  }, [toast])
+  }, [])
 
   const refreshData = useCallback(async (userId: string) => {
-    setLoading(true)
     await Promise.all([
       loadWorkReports(userId),
       loadIncidents(userId)
     ])
-    setLoading(false)
   }, [loadWorkReports, loadIncidents])
 
   const [viewInitialized, setViewInitialized] = useState(false)
@@ -591,7 +589,7 @@ export default function WorkerPage() {
 
           {view === 'boshqaJurnallar' && (
             <div className="space-y-6 animate-fade-up">
-              <HeaderCard title="Boshqa jurnallar" subtitle={stationName!} status="ko'rish" color="purple" />
+              <HeaderCard title="Boshqa jurnallar" subtitle={stationName} status="ko'rish" />
               <div className="grid gap-4 max-w-lg mx-auto">
                 <button
                   onClick={() => setView('alsnMonthSelect')}
@@ -745,6 +743,12 @@ export default function WorkerPage() {
               type={workerModal}
               tasks={workerModal === 'bugunBajarilgan' ? bugunBajarilgan : qolibKetgan}
               onClose={() => setWorkerModal(null)}
+              onTaskClick={(task) => {
+                const monthIdx = parseInt(task.month.split('-')[1], 10) - 1
+                setSelectedMonth(monthIdx)
+                setView('journal')
+                setWorkerModal(null)
+              }}
             />
           )}
         </main>

@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
-import { useState, useEffect, useMemo } from 'react'
+/* eslint-disable @next/next/no-img-element */
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen } from 'lucide-react'
+import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight } from 'lucide-react'
 import { getGlobalGraphics, getSchemasByStation, upsertReport } from '@/lib/supabase-db'
 import type { User, WorkReport, ReportEntry, StationSchema } from '@/types'
 import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, type ParsedTaskItem } from '@/lib/reja-data'
@@ -9,8 +9,6 @@ import { MONTHS } from '@/lib/constants'
 import { DU46JournalView, SHU2JournalView, YerlatgichJournalView, AlsnKodJournalView, MpsFriksionJournalView } from '@/components/JournalView'
 
 const TOTAL_ROWS = 14
-
-import { ArrowRight } from 'lucide-react'
 
 export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badge = 0 }: { title: string, desc: string, icon: React.ReactNode, onClick: () => void, color?: 'purple' | 'cyan' | 'amber' | 'blue' | 'sky', badge?: number }) {
   const colorStyles: Record<string, { bg: string, text: string }> = {
@@ -47,7 +45,7 @@ export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badg
   )
 }
 
-export function HeaderCard({ title, subtitle, status }: { title: string, subtitle: string, status: string, color?: string }) {
+export function HeaderCard({ title, subtitle, status }: { title: string, subtitle: string, status: string }) {
   const statusColors: Record<string, string> = {
     tasdiqlandi: 'badge-success',
     kutilmoqda: 'badge-warning',
@@ -72,7 +70,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     ragat: String(i + 1), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: ''
   })))
   const [submitting, setSubmitting] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [formMessage, setFormMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalType, setModalType] = useState<'4-haftalik' | 'yillik'>('4-haftalik')
   const [modalIdx, setModalIdx] = useState(0)
@@ -121,7 +119,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 
   async function handleSubmit() {
     setSubmitting(true)
-    setFormError(null)
+    setFormMessage(null)
     let lastErr: unknown
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
@@ -136,17 +134,27 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       }
     }
     const msg = lastErr instanceof Error ? lastErr.message : 'Xatolik'
-    setFormError(msg.includes('fetch') ? 'Internet bilan muammo. Qayta urinildi, ammo muvaffaqiyatsiz. Iltimos sahifani yangilang.' : msg)
-    setTimeout(() => setFormError(null), 5000)
+    setFormMessage({ type: 'error', text: msg.includes('fetch') ? 'Internet bilan muammo. Qayta urinildi, ammo muvaffaqiyatsiz. Iltimos sahifani yangilang.' : msg })
+    setTimeout(() => setFormMessage(null), 5000)
     setSubmitting(false)
   }
 
   const handleBajarishClick = (idx: number) => {
+    const currentDate = new Date()
+    const currentActualMonth = currentDate.getMonth()
+
+    if (month > currentActualMonth) {
+      setFormMessage({ type: 'error', text: `Hali ${MONTHS[month]} oyi boshlanmadi` })
+      setTimeout(() => setFormMessage(null), 3000)
+      return
+    }
+
     setCompletionIdx(idx)
   }
 
   const confirmBajarildi = async (idx: number, taskType?: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy') => {
     if (!reportId) return
+    const oldEntries = entries.map(e => ({ ...e }))
     const newEntries = [...entries]
     const entry = newEntries[idx]
 
@@ -180,12 +188,14 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       await upsertReport({
         workerId: session.id, workerName: session.fullName, workerPhone: session.phone || '', stationId, stationName, entries: newEntries, month: monthStr, year: String(new Date().getFullYear()), weekLabel: 'Oylik Reja'
       })
-      setFormError('Muvaffaqiyatli saqlandi! ✅')
-      setTimeout(() => setFormError(null), 3000)
+      setFormMessage({ type: 'success', text: 'Muvaffaqiyatli saqlandi!' })
+      setTimeout(() => setFormMessage(null), 3000)
     } catch (err: unknown) {
+      // Rollback: eski holatga qaytarish
+      setEntries(oldEntries)
       const msg = err instanceof Error ? err.message : 'Xatolik'
-      setFormError(msg.includes('Failed to fetch') ? 'Internet bilan aloqa yo\'q. Iltimos tekshirib qayta yuboring.' : msg)
-      setTimeout(() => setFormError(null), 3000)
+      setFormMessage({ type: 'error', text: msg.includes('Failed to fetch') ? 'Internet bilan aloqa yo\'q. Iltimos tekshirib qayta yuboring.' : msg })
+      setTimeout(() => setFormMessage(null), 3000)
     } finally {
       setSubmitting(false)
     }
@@ -408,8 +418,8 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           </div>
         )}
       </div>
-      {formError && (
-        <div className={`rounded-2xl border p-4 text-center text-sm font-bold backdrop-blur-sm ${formError.includes('✅') ? 'border-emerald-200/60 bg-emerald-50/80 text-emerald-600' : 'border-red-200/60 bg-red-50/80 text-red-600'}`}>{formError}</div>
+      {formMessage && (
+        <div className={`rounded-2xl border p-4 text-center text-sm font-bold backdrop-blur-sm ${formMessage.type === 'success' ? 'border-emerald-200/60 bg-emerald-50/80 text-emerald-600' : 'border-red-200/60 bg-red-50/80 text-red-600'}`}>{formMessage.text}</div>
       )}
       <div className="flex gap-2 sm:gap-4 items-stretch">
         <button onClick={handleDownloadPDF}
@@ -561,6 +571,49 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 }
 
 
+function GrafikCard({
+  title,
+  file,
+  onPreview,
+}: {
+  title: string
+  file?: StationSchema
+  onPreview: (filePath: string) => void
+}) {
+  return (
+    <div className="premium-card group relative overflow-hidden rounded-2xl bg-white/80 p-6 backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-xl">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 transition-all group-hover:scale-110 group-hover:bg-white border border-slate-100 shadow-sm">
+        <Download size={24} />
+      </div>
+
+      <h4 className="font-black text-slate-900 tracking-tight">{title}</h4>
+      <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        {file ? file.fileName : 'Fayl joylanmagan'}
+      </p>
+
+      <div className="mt-8 grid grid-cols-2 gap-2">
+        <button
+          onClick={() => file && onPreview(file.filePath)}
+          disabled={!file}
+          className="rounded-xl bg-slate-50/80 border border-slate-100 py-3 text-[10px] font-black uppercase text-slate-500 hover:bg-purple-600 hover:text-white backdrop-blur-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-95"
+        >
+          Ko'rish
+        </button>
+        <a
+          href={file?.filePath || '#'}
+          download
+          target="_blank"
+          rel="noreferrer"
+          className={`flex items-center justify-center rounded-xl border border-slate-100 py-3 text-[10px] font-black uppercase backdrop-blur-sm transition-all shadow-sm active:scale-95 ${file ? 'bg-slate-50/80 text-slate-500 hover:bg-slate-900 hover:text-white' : 'pointer-events-none opacity-40 text-slate-300 bg-slate-50/80'
+            }`}
+        >
+          Yuklash
+        </a>
+      </div>
+    </div>
+  )
+}
+
 export function WorkerGraphicsView() {
   const [items, setItems] = useState<StationSchema[]>([])
   const [loading, setLoading] = useState(true)
@@ -575,47 +628,6 @@ export function WorkerGraphicsView() {
   const yillik = items.find(item => item.schemaType === 'yillik_ish_reja_grafiki')
   const haftalik = items.find(item => item.schemaType === 'haftalik_ish_reja_grafiki')
 
-  function GrafikCard({
-    title,
-    file,
-  }: {
-    title: string
-    file?: StationSchema
-  }) {
-    return (
-      <div className="premium-card group relative overflow-hidden rounded-2xl bg-white/80 p-6 backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-xl">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 transition-all group-hover:scale-110 group-hover:bg-white border border-slate-100 shadow-sm">
-          <Download size={24} />
-        </div>
-
-        <h4 className="font-black text-slate-900 tracking-tight">{title}</h4>
-        <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          {file ? file.fileName : 'Fayl joylanmagan'}
-        </p>
-
-        <div className="mt-8 grid grid-cols-2 gap-2">
-          <button
-            onClick={() => file && setPreview(file.filePath)}
-            disabled={!file}
-            className="rounded-xl bg-slate-50/80 border border-slate-100 py-3 text-[10px] font-black uppercase text-slate-500 hover:bg-purple-600 hover:text-white backdrop-blur-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-95"
-          >
-            Ko'rish
-          </button>
-          <a
-            href={file?.filePath || '#'}
-            download
-            target="_blank"
-            rel="noreferrer"
-            className={`flex items-center justify-center rounded-xl border border-slate-100 py-3 text-[10px] font-black uppercase backdrop-blur-sm transition-all shadow-sm active:scale-95 ${file ? 'bg-slate-50/80 text-slate-500 hover:bg-slate-900 hover:text-white' : 'pointer-events-none opacity-40 text-slate-300 bg-slate-50/80'
-              }`}
-          >
-            Yuklash
-          </a>
-        </div>
-      </div>
-    )
-  }
-
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-slate-200/60 bg-white/80 backdrop-blur-sm text-slate-300 font-bold uppercase tracking-widest">
@@ -626,11 +638,11 @@ export function WorkerGraphicsView() {
 
   return (
     <div className="space-y-6 animate-fade-up">
-      <HeaderCard title="Grafiklar" subtitle="Umumiy ish reja grafiklari" status="ko'rish" color="blue" />
+      <HeaderCard title="Grafiklar" subtitle="Umumiy ish reja grafiklari" status="ko'rish" />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <GrafikCard title="Yillik ish reja grafigi" file={yillik} />
-        <GrafikCard title="4-haftalik ish reja grafigi" file={haftalik} />
+        <GrafikCard title="Yillik ish reja grafigi" file={yillik} onPreview={setPreview} />
+        <GrafikCard title="4-haftalik ish reja grafigi" file={haftalik} onPreview={setPreview} />
       </div>
 
       {preview && (
@@ -665,29 +677,27 @@ export function WorkerGraphicsView() {
 export function WorkerSchemasView({ stationId, stationName }: { stationId: string, stationName: string }) {
   const [schemas, setSchemasState] = useState<StationSchema[]>([])
   const [preview, setPreview] = useState<string | null>(null)
-  const [blobUrl, setBlobUrl] = useState<string | null>(null)
+  const blobUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (stationId) getSchemasByStation(stationId).then(setSchemasState)
-    // Cleanup blob URL on unmount
     return () => {
-      if (blobUrl) URL.revokeObjectURL(blobUrl)
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
     }
-  }, [stationId, blobUrl])
+  }, [stationId])
 
   // Firefox uchun blob URL orqali ko'rsatish
   const handlePreview = async (filePath: string) => {
     try {
       // Agar oldin blob URL bo'lsa, tozalash
-      if (blobUrl) URL.revokeObjectURL(blobUrl)
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
 
       const response = await fetch(filePath)
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
-      setBlobUrl(url)
+      blobUrlRef.current = url
       setPreview(url)
-    } catch (err) {
-      console.error('PDF yuklash xatosi:', err)
+    } catch {
       // Fallback: to'g'ridan-to'g'ri URL
       setPreview(filePath)
     }
@@ -695,7 +705,7 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
 
   return (
     <div className="space-y-6 animate-fade-up">
-      <HeaderCard title="Bekat Sxemalari" subtitle={stationName} status="ko'rish" color="blue" />
+      <HeaderCard title="Bekat Sxemalari" subtitle={stationName} status="ko'rish" />
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {schemas.map(s => (
           <div key={s.id} className="premium-card group relative overflow-hidden rounded-2xl bg-white/80 p-8 backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-xl">
@@ -716,7 +726,7 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
           <div className="h-full w-full overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-200/60 px-8 py-4 bg-slate-50/80">
               <h3 className="text-lg font-black text-slate-900 tracking-tight">Sxema Ko'rish</h3>
-              <button onClick={() => { setPreview(null); if (blobUrl) URL.revokeObjectURL(blobUrl) }} className="rounded-xl border border-slate-200/60 bg-white/80 p-2 text-slate-400 hover:text-slate-900 backdrop-blur-sm transition-all shadow-sm"><X size={24} /></button>
+              <button onClick={() => { setPreview(null); if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null } }} className="rounded-xl border border-slate-200/60 bg-white/80 p-2 text-slate-400 hover:text-slate-900 backdrop-blur-sm transition-all shadow-sm"><X size={24} /></button>
             </div>
             <iframe src={preview} className="h-[calc(100%-80px)] w-full" />
           </div>
@@ -726,10 +736,11 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
   )
 }
 
-export function WorkerTasksModal({ type, tasks, onClose }: {
+export function WorkerTasksModal({ type, tasks, onClose, onTaskClick }: {
   type: 'bugunBajarilgan' | 'qolibKetgan'
   tasks: { entry: ReportEntry, month: string, taskText?: string }[]
   onClose: () => void
+  onTaskClick?: (task: { entry: ReportEntry, month: string, taskText?: string }) => void
 }) {
   const isBajarilgan = type === 'bugunBajarilgan'
   const todayDate = new Date()
@@ -773,7 +784,10 @@ export function WorkerTasksModal({ type, tasks, onClose }: {
                 }
 
                 return (
-                  <div key={ti} className="flex flex-col gap-3 border-b border-slate-100 last:border-0 px-5 py-4 hover:bg-slate-50/50 transition-colors">
+                  <div key={ti} 
+                    className={`flex flex-col gap-3 border-b border-slate-100 last:border-0 px-5 py-4 transition-colors ${onTaskClick ? 'cursor-pointer hover:bg-slate-100' : 'hover:bg-slate-50/50'}`}
+                    onClick={() => onTaskClick && onTaskClick(task)}
+                  >
                     <div className={`inline-flex flex-col items-start self-start rounded-xl p-3 border shadow-sm ${isBajarilgan ? 'bg-emerald-50/80 border-emerald-100' : 'bg-red-50/80 border-red-100'
                       }`}>
                       <span className={`text-[9px] font-black uppercase tracking-widest ${isBajarilgan ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -828,7 +842,7 @@ const JOURNAL_DISPLAY_NAMES: Record<string, string> = {
   'mpsFriksion': 'MPS elektrodvigatellarni friksion tokini o\'lchash',
 }
 
-function TaskCompletionModal({ entry, entryIndex, session, stationId, stationName, onComplete, onClose }: {
+function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationId, stationName, onComplete, onClose }: {
   entry: ReportEntry
   entryIndex: number
   session: User

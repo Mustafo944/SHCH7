@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getCachedSession, signOut } from '@/lib/supabase-db'
 import type { User, Role } from '@/types'
@@ -13,6 +13,9 @@ export function useSessionGuard(expectedRole: Role | Role[]) {
   const router = useRouter()
   const [session, setSession] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  // expectedRole massiv referansini barqarorlashtirish
+  const expectedRoleRef = useRef(expectedRole)
+  expectedRoleRef.current = expectedRole
 
   useEffect(() => {
     let cancelled = false
@@ -29,7 +32,7 @@ export function useSessionGuard(expectedRole: Role | Role[]) {
           return
         }
 
-        const allowedRoles = Array.isArray(expectedRole) ? expectedRole : [expectedRole]
+        const allowedRoles = Array.isArray(expectedRoleRef.current) ? expectedRoleRef.current : [expectedRoleRef.current]
 
         if (!allowedRoles.includes(user.role)) {
           // Rolga mos sahifaga yo'naltirish
@@ -52,7 +55,7 @@ export function useSessionGuard(expectedRole: Role | Role[]) {
     init()
 
     return () => { cancelled = true }
-  }, [router, expectedRole])
+  }, [router])
 
   const handleSignOut = useCallback(async () => {
     // 1. Server tomonida Supabase session cookielarini tozalash

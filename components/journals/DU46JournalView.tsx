@@ -93,7 +93,7 @@ export function DU46JournalView({
         const loadedAllEntries = j.entries as DU46Entry[]
         setAllEntries(loadedAllEntries)
 
-        const monthEntries = loadedAllEntries.filter(e => e.journalMonth === journalMonth || (!e.journalMonth && journalMonth === getCurrentJournalMonth()))
+        const monthEntries = loadedAllEntries.filter(e => e.journalMonth === journalMonth)
 
         if (monthEntries.length > 0) {
           const allSubmitted = monthEntries.every(e => e.yuborildi)
@@ -205,7 +205,7 @@ export function DU46JournalView({
     setEntries(updated)
 
     const updatedWithMonth = updated.map(e => ({ ...e, journalMonth }))
-    const otherMonths = allEntries.filter(e => e.journalMonth !== journalMonth && !(!e.journalMonth && journalMonth === getCurrentJournalMonth()))
+    const otherMonths = allEntries.filter(e => e.journalMonth !== journalMonth)
     const newAllEntries = [...otherMonths, ...updatedWithMonth]
     setAllEntries(newAllEntries)
 

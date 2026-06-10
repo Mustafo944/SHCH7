@@ -1,8 +1,8 @@
+/* eslint-disable @next/next/no-img-element */
 import React, { useState } from 'react'
 import { createPortal } from 'react-dom'
 import useSWR from 'swr'
-import { BookOpen, Plus, Eye, Trash2, Download, FileText, X, Edit2, Check } from 'lucide-react'
-import { StationSchema } from '@/types'
+import { BookOpen, Eye, Trash2, Download, FileText, X, Edit2, Check } from 'lucide-react'
 import { getLibraryBooks, uploadLibraryBook, deleteLibraryBook, renameLibraryBook } from '@/lib/supabase-db'
 import { FormGroup } from '../../app/dispatcher/components/ui'
 

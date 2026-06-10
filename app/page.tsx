@@ -25,13 +25,11 @@ export default function LoginPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Saqlangan login/parolni yuklash
+    // Saqlangan loginni yuklash (parol saqlanmaydi)
     try {
-      const saved = localStorage.getItem('remembered-creds')
-      if (saved) {
-        const { l, p } = JSON.parse(atob(saved))
-        setLogin(l || '')
-        setPassword(p || '')
+      const savedLogin = localStorage.getItem('remembered-login')
+      if (savedLogin) {
+        setLogin(savedLogin)
         setRememberMe(true)
       }
     } catch { /* ignore */ }
@@ -66,11 +64,11 @@ export default function LoginPage() {
       const user = await signIn(login.trim(), password)
 
       if (user) {
-        // Esda saqlash
+        // Faqat loginni saqlash (parol saqlanmaydi — xavfsizlik)
         if (rememberMe) {
-          localStorage.setItem('remembered-creds', btoa(JSON.stringify({ l: login.trim(), p: password })))
+          localStorage.setItem('remembered-login', login.trim())
         } else {
-          localStorage.removeItem('remembered-creds')
+          localStorage.removeItem('remembered-login')
         }
         setNavigating(true)
         router.push(getRoleHome(user.role))

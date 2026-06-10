@@ -31,6 +31,7 @@ export function AlsnKodJournalView({
   onAccepted?: () => void
 }) {
   const [entries, setEntries] = useState<AlsnKodEntry[]>(Array.from({ length: 5 }, EMPTY_ALSN_KOD))
+  const [allEntries, setAllEntries] = useState<AlsnKodEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
@@ -40,11 +41,14 @@ export function AlsnKodJournalView({
     setLoading(true)
     getJournal(stationId, 'alsnKod').then(doc => {
       if (doc?.entries?.length) {
-        const filtered = (doc.entries as AlsnKodEntry[]).filter(
-          e => !e.journalMonth || e.journalMonth === journalMonth
-        )
+        const parsed = doc.entries as AlsnKodEntry[]
+        setAllEntries(parsed)
+        const filtered = parsed.filter(e => e.journalMonth === journalMonth)
         if (filtered.length > 0) setEntries(filtered)
         else setEntries(Array.from({ length: 5 }, EMPTY_ALSN_KOD))
+      } else {
+        setAllEntries([])
+        setEntries(Array.from({ length: 5 }, EMPTY_ALSN_KOD))
       }
     }).finally(() => setLoading(false))
   }, [stationId, journalMonth])
@@ -52,8 +56,12 @@ export function AlsnKodJournalView({
   const handleSave = async (data: AlsnKodEntry[], isSilent = false) => {
     if (!isSilent) setSaving(true)
     try {
+      const merged = allEntries.filter(e => e.journalMonth !== journalMonth)
       const toSave = data.map(e => ({ ...e, journalMonth }))
-      await upsertJournal(stationId, 'alsnKod', toSave as any, userName)
+      const finalEntries = [...merged, ...toSave]
+      setAllEntries(finalEntries)
+
+      await upsertJournal(stationId, 'alsnKod', finalEntries as any, userName)
       if (!isSilent) {
         setMsg('Saqlandi! ✅')
         setTimeout(() => setMsg(null), 2000)
