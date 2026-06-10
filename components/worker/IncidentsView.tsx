@@ -38,6 +38,7 @@ export default function IncidentsView({
       await onRead()
     } catch (err) {
       console.error(err)
+      alert("Xatolik yuz berdi: " + (err instanceof Error ? err.message : String(err)))
     } finally {
       setMarking(null)
     }
@@ -170,7 +171,7 @@ export default function IncidentsView({
 
                         <div className="flex items-center justify-between mt-4 border-t border-slate-100/50 pt-3">
                           <p className="text-[10px] font-bold text-slate-400">
-                            Kiritdi: <span className="text-slate-600">{inc.createdByName}</span>
+                            Kiritdi: <span className="text-slate-600">Aloqa dispetcheri</span>
                           </p>
 
                           {!isRead ? (

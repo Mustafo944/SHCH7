@@ -27,6 +27,7 @@ const AlsnKodJournalView = dynamic(() => import('@/components/JournalView').then
 const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
 import { BigActionCard, HeaderCard, JournalForm, WorkerGraphicsView, WorkerSchemasView, WorkerTasksModal } from '@/components/worker/WorkerComponents'
 import IncidentsView from '@/components/worker/IncidentsView'
+import { LibraryView } from '@/components/library/LibraryView'
 import {
   FileText,
   Map as MapIcon,
@@ -43,7 +44,7 @@ const _TOTAL_ROWS = 14
 export default function WorkerPage() {
   const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['worker', 'elektromexanik', 'elektromontyor'])
   const toast = useToast()
-  const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'selectPlanType' | 'journal' | 'viewReport' | 'incidents' | 'sxemalar' | 'grafiklar' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'kunlikIshlar' | 'boshqaJurnallar' | 'alsn' | 'alsnMonthSelect' | 'yerlatgich' | 'yerlatgichMonthSelect' | 'alsnKod' | 'alsnKodMonthSelect' | 'mpsFriksion' | 'mpsFriksionMonthSelect'>('home')
+  const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'selectPlanType' | 'journal' | 'viewReport' | 'incidents' | 'sxemalar' | 'grafiklar' | 'kutubxona' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'kunlikIshlar' | 'boshqaJurnallar' | 'alsn' | 'alsnMonthSelect' | 'yerlatgich' | 'yerlatgichMonthSelect' | 'alsnKod' | 'alsnKodMonthSelect' | 'mpsFriksion' | 'mpsFriksionMonthSelect'>('home')
 
   const [reports, setReports] = useState<WorkReport[]>([])
   const [incidents, setIncidents] = useState<Incident[]>([])
@@ -408,6 +409,13 @@ export default function WorkerPage() {
                   onClick={() => setView('incidents')}
                   badge={incidents.filter(i => !readIncidentIds.has(i.id)).length}
                 />
+                <BigActionCard
+                  title="Kutubxona"
+                  desc="Qo'llanmalar va kitoblarni o'qish."
+                  icon={<BookOpen size={24} strokeWidth={2} />}
+                  color="purple"
+                  onClick={() => setView('kutubxona')}
+                />
               </div>
             </div>
           )}
@@ -448,6 +456,12 @@ export default function WorkerPage() {
                   loadIncidents(session.id)
                 }}
               />
+            </div>
+          )}
+
+          {view === 'kutubxona' && (
+            <div className="animate-fade-up">
+              <LibraryView userName={session?.fullName || ''} userRole={session?.role || ''} />
             </div>
           )}
 

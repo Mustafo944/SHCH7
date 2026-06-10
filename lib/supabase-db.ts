@@ -638,15 +638,32 @@ export async function deleteSchema(stationId: string, schemaId: string): Promise
       throw new Error('Storage path not found for schema file');
     }
 
-    await supabase.storage.from('sxemalar').remove([storagePath]);
+    const { error: storageError } = await supabase.storage
+      .from('sxemalar')
+      .remove([storagePath]);
+
+    if (storageError) {
+      throw new Error(storageError.message);
+    }
   }
 
-  await supabase
+  const { error } = await supabase
     .from('station_schemas')
     .delete()
-    .eq('id', schemaId)
-    .eq('station_id', stationId);
+    .eq('id', schemaId);
+
+  if (error) throw new Error(error.message);
 }
+
+export async function renameSchemaFile(schemaId: string, newFileName: string): Promise<void> {
+  const { error } = await supabase
+    .from('station_schemas')
+    .update({ file_name: newFileName })
+    .eq('id', schemaId);
+  if (error) throw new Error(error.message);
+}
+
+// Global Graphics
 export const GLOBAL_GRAPHICS_STATION_ID = 'global_graphics'
 
 
@@ -662,8 +679,34 @@ export async function uploadGlobalGraphicFile(
   return uploadSchemaFile(GLOBAL_GRAPHICS_STATION_ID, file, grafikTuri, uploadedBy)
 }
 
-export async function deleteGlobalGraphicFile(schemaId: string): Promise<void> {
+export async function deleteGlobalGraphicFile(schemaId: string) {
   return deleteSchema(GLOBAL_GRAPHICS_STATION_ID, schemaId)
+}
+
+// Kutubxona (Library Books)
+export const LIBRARY_BOOKS_STATION_ID = 'global_library_books'
+
+export async function getLibraryBooks() {
+  return getSchemasByStation(LIBRARY_BOOKS_STATION_ID)
+}
+
+export async function uploadLibraryBook(file: File, bookTitle: string, uploadedBy: string = 'System') {
+  // Haqiqiy fayl kengaytmasini (extension) olamiz (masalan 'pdf', 'png')
+  const originalExt = file.name.split('.').pop() || 'pdf'
+  
+  // Nomi ichida nuqta bo'lmasa, kengaytmani qo'shamiz. Aks holda Supabase xato beradi (Invalid Key)
+  const finalFileName = bookTitle.includes('.') ? bookTitle : `${bookTitle}.${originalExt}`
+  
+  const newFile = new File([file], finalFileName, { type: file.type })
+  return uploadSchemaFile(LIBRARY_BOOKS_STATION_ID, newFile, 'book', uploadedBy)
+}
+
+export async function renameLibraryBook(bookId: string, newTitle: string) {
+  return renameSchemaFile(bookId, newTitle)
+}
+
+export async function deleteLibraryBook(bookId: string) {
+  return deleteSchema(LIBRARY_BOOKS_STATION_ID, bookId)
 }
 
 // ========== ISH JURNALLARI (DU-46, SHU-2) ==========

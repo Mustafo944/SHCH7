@@ -51,8 +51,9 @@ import {
 } from 'lucide-react'
 
 import { StatCard, TabButton, BigActionCard, WorkerForm, ReportList, SchemasView, ArchiveView, DownloadCard, WorkersModal, TodayTasksModal, IncidentAdminView } from './components'
+import { LibraryView } from '@/components/library/LibraryView'
 
-type Tab = 'bekatlar' | 'arxiv' | 'grafiklar' | 'baxtsiz_hodisalar'
+type Tab = 'bekatlar' | 'arxiv' | 'grafiklar' | 'baxtsiz_hodisalar' | 'kutubxona'
 
 type _WorkerEditData = {
   fullName: string
@@ -492,6 +493,7 @@ export default function DispatcherPage() {
               <TabButton active={tab === 'arxiv'} onClick={() => setTab('arxiv')} label="Arxiv" icon={<FileText size={16} className="sm:w-[18px] sm:h-[18px]" />} />
               <TabButton active={tab === 'grafiklar'} onClick={() => setTab('grafiklar')} label="Grafiklar" icon={<Download size={16} className="sm:w-[18px] sm:h-[18px]" />} />
               <TabButton active={tab === 'baxtsiz_hodisalar'} onClick={() => setTab('baxtsiz_hodisalar')} label="Baxtsiz Hodisalar" icon={<AlertTriangle size={16} className="sm:w-[18px] sm:h-[18px]" />} />
+              <TabButton active={tab === 'kutubxona'} onClick={() => setTab('kutubxona')} label="Kutubxona" icon={<BookOpen size={16} className="sm:w-[18px] sm:h-[18px]" />} />
             </div>
           </div>
 
@@ -811,6 +813,11 @@ export default function DispatcherPage() {
                 onAdd={handleAddIncident}
                 onDelete={handleRemoveIncident}
               />
+            )}
+            {tab === 'kutubxona' && (
+              <div className="animate-fade-up">
+                <LibraryView userName={session?.fullName || ''} userRole={session?.role || ''} />
+              </div>
             )}
           </div>
         </main>
