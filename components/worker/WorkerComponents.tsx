@@ -562,6 +562,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           session={session}
           stationId={stationId}
           stationName={stationName}
+          journalMonth={monthStr}
           onComplete={(taskType) => confirmBajarildi(completionIdx, taskType)}
           onClose={() => setCompletionIdx(null)}
         />
@@ -842,12 +843,13 @@ const JOURNAL_DISPLAY_NAMES: Record<string, string> = {
   'mpsFriksion': 'MPS elektrodvigatellarni friksion tokini o\'lchash',
 }
 
-function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationId, stationName, onComplete, onClose }: {
+function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationId, stationName, journalMonth, onComplete, onClose }: {
   entry: ReportEntry
   entryIndex: number
   session: User
   stationId: string
   stationName: string
+  journalMonth: string
   onComplete: (taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy') => void
   onClose: () => void
 }) {
@@ -903,7 +905,7 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationI
   if (activeJournal === 'du46') {
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-        <DU46JournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" onClose={() => handleJournalClose('DU-46', false)} onAccepted={() => handleJournalClose('DU-46', true)} />
+        <DU46JournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" journalMonth={journalMonth} onClose={() => handleJournalClose('DU-46', false)} onAccepted={() => handleJournalClose('DU-46', true)} />
       </div>,
       document.body
     )
@@ -921,6 +923,7 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationI
           stationName={stationName}
           userName={session.fullName}
           userRole="worker"
+          journalMonth={journalMonth}
           onClose={() => handleJournalClose('SHU-2', false)}
           onAccepted={() => handleJournalClose('SHU-2', true)}
           initialData={initialData}
@@ -932,7 +935,7 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationI
   if (activeJournal === 'yerlatgich') {
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-        <YerlatgichJournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" onClose={() => handleJournalClose('yerlatgich', false)} onAccepted={() => handleJournalClose('yerlatgich', true)} />
+        <YerlatgichJournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" journalMonth={journalMonth} onClose={() => handleJournalClose('yerlatgich', false)} onAccepted={() => handleJournalClose('yerlatgich', true)} />
       </div>,
       document.body
     )
@@ -940,7 +943,7 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationI
   if (activeJournal === 'alsnKod') {
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-        <AlsnKodJournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" onClose={() => handleJournalClose('alsnKod', false)} onAccepted={() => handleJournalClose('alsnKod', true)} />
+        <AlsnKodJournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" journalMonth={journalMonth} onClose={() => handleJournalClose('alsnKod', false)} onAccepted={() => handleJournalClose('alsnKod', true)} />
       </div>,
       document.body
     )
@@ -948,7 +951,7 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationI
   if (activeJournal === 'mpsFriksion') {
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-        <MpsFriksionJournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" onClose={() => handleJournalClose('mpsFriksion', false)} onAccepted={() => handleJournalClose('mpsFriksion', true)} />
+        <MpsFriksionJournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" journalMonth={journalMonth} onClose={() => handleJournalClose('mpsFriksion', false)} onAccepted={() => handleJournalClose('mpsFriksion', true)} />
       </div>,
       document.body
     )
