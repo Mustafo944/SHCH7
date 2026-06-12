@@ -522,14 +522,15 @@ export function DU46JournalView({
             </thead>
             <tbody>
               {entries.map((e, i) => {
-                const iAmCreator = isCreator(e)
+                const iAmRoleCreator = isCreator(e)
+                const isExactCreator = e.kamchilikImzo ? e.kamchilikImzo === userName : iAmRoleCreator
 
                 const hasNoCreator = !e.createdByRole && !e.kamchilik && !e.oyKun1 && !e.soatMinut1
-                const canWriteCol3 = isCurrentMonth && !isCol3Finished(e) && (iAmCreator || hasNoCreator) && !isDispatcher
+                const canWriteCol3 = isCurrentMonth && !isCol3Finished(e) && (iAmRoleCreator || hasNoCreator) && !isDispatcher
 
-                const canWriteCol12 = !isCol12Finished(e) && isCol3Finished(e) && !isDispatcher && iAmCreator
+                const canWriteCol12 = !isCol12Finished(e) && isCol3Finished(e) && !isDispatcher && isExactCreator
 
-                const canWriteMiddle = isCurrentMonth && !isDispatcher && (iAmCreator || hasNoCreator)
+                const canWriteMiddle = isCurrentMonth && !isDispatcher && (isExactCreator || hasNoCreator)
 
                 return (
                   <tr key={i} className="border-b border-slate-200 hover:bg-blue-50/50 transition-colors animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
@@ -608,7 +609,8 @@ export function DU46JournalView({
 
                       {/* — Boshlandi / Tasdiqlash zanjiri tugmalari */}
                       <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
-                        {e.kamchilik && iAmCreator && !e.kamchilikBajarildi && !isMonthInPast(journalMonth) && (
+                        {/* 1) Boshlandi tugmasi (faqat yozuvchi ko'radi) */}
+                        {e.kamchilik && iAmRoleCreator && !e.kamchilikBajarildi && !isMonthInPast(journalMonth) && (
                           <button
                             onClick={() => handleKamchilikBoshlandiClick(i)}
                             disabled={!e.oyKun1 || !e.soatMinut1}
@@ -624,7 +626,7 @@ export function DU46JournalView({
                             <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-1.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 w-full justify-center shadow-sm relative">
                               <CheckCircle2 size={12} strokeWidth={3} /> <span className="truncate">{e.kamchilikImzo}</span>
                             </div>
-                            {iAmCreator && !isMonthInPast(journalMonth) && !isCol3Finished(e) && (
+                            {isExactCreator && !isMonthInPast(journalMonth) && !isCol3Finished(e) && (
                               <button
                                 onClick={() => setApprovalChainModal({ index: i, isEdit: true, currentChain: e.approvalChain || [] })}
                                 className="absolute top-0 right-0 p-1 bg-white/80 rounded shadow-sm text-slate-400 hover:text-purple-600 border border-slate-200"
@@ -769,7 +771,7 @@ export function DU46JournalView({
 
                       {/* — Bajarildi / Tasdiqlash zanjiri tugmalari */}
                       <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
-                        {e.bartarafInfo && iAmCreator && !e.bartarafBajarildi && !isMonthInPast(journalMonth) && (
+                        {e.bartarafInfo && isExactCreator && !e.bartarafBajarildi && !isMonthInPast(journalMonth) && (
                           <button
                             onClick={() => handleBartarafBajarildiClick(i)}
                             disabled={!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi}
@@ -831,7 +833,7 @@ export function DU46JournalView({
                             </div>
                           )
                         })()}
-                        {/* 3-ustun tasdiqlanmagan ogohlantirish */}
+                        {/* 3) Telegramga yuborish */}
                         {e.bartarafInfo && !isCol3Finished(e) && (
                           <span className="text-[8px] font-black text-red-400 text-center leading-tight px-1 mt-1 uppercase tracking-tighter">
                             3-ustun oxirigacha tasdiqlanmagan
