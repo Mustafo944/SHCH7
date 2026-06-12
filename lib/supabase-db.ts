@@ -791,10 +791,13 @@ export async function getPendingJournalCounts(
             const userRoleToCheck = position || role
             
             let isMyTurn = false
-            if (next3 === 'DSP' || next12 === 'DSP') {
-              if (['bekat_boshlighi', 'bekat_navbatchisi'].includes(userRoleToCheck)) isMyTurn = true
-            } else if (next3 === userRoleToCheck || next12 === userRoleToCheck) {
-              isMyTurn = true
+            if (userRoleToCheck === 'bekat_navbatchisi') {
+              if (next3 !== null || next12 !== null) isMyTurn = true
+            } else {
+              if (next3 === userRoleToCheck || next12 === userRoleToCheck) isMyTurn = true
+              // Also allow generic 'worker' to match if the role in chain is 'elektromexanik' or similar? 
+              // Wait, the user role to check is exactly 'worker' or 'katta_elektromexanik'.
+              // We'll just do strict match:
             }
 
             if (isMyTurn) count++
