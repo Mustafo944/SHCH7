@@ -769,54 +769,35 @@ export async function getPendingJournalCounts(
         if (row.journal_type === 'du46') {
           const ents = (row.entries || []) as DU46Entry[]
           let count = 0
+
+          const getNextRole = (e: DU46Entry, col: 3 | 12) => {
+            const isBoshlandi = col === 3 ? e.kamchilikBajarildi : e.bartarafBajarildi
+            if (!isBoshlandi) return null
+            const chain = e.approvalChain || []
+            const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
+            if (approvals.length < chain.length) return chain[approvals.length]
+            const creator = e.createdByRole || 'worker'
+            if (creator === 'bekat_boshlighi') return null
+            const isAppr = col === 3 ? e.kamchilikBBTasdiqladi : e.bartarafBBTasdiqladi
+            if (!isAppr) return 'DSP'
+            return null
+          }
+
           for (const e of ents) {
             if (e.yuborildi) continue
 
-            const creator = e.createdByRole || 'worker'
+            const next3 = getNextRole(e, 3)
+            const next12 = getNextRole(e, 12)
+            const userRoleToCheck = position || role
             
-            // EM yoki Katta EM ekanligini aniqlaymiz (role yoki position orqali)
-            const isEM = ['elektromexanik', 'katta_elektromexanik'].includes(role) || 
-                         ['elektromexanik', 'katta_elektromexanik'].includes(position || '')
-            
-            // Montyor ekanligini aniqlaymiz
-            const isMontyor = role === 'elektromontyor' || position === 'elektromontyor'
-
-            if (isEM) {
-              // 3-ustun: Yo'l ustasi boshlagan va EM tasdiqi kerak
-              if (creator === 'yul_ustasi' && e.kamchilikBajarildi && e.kamchilikNeedsEM && !e.kamchilikEMTasdiqladi) {
-                count++
-              }
-              // 12-ustun: Yo'l ustasi bajargan va EM tasdiqi kerak
-              else if (creator === 'yul_ustasi' && e.bartarafBajarildi && e.bartarafNeedsEM && !e.bartarafEMTasdiqladi) {
-                count++
-              }
-              // BB yaratgan bo'lsa, uni EM/Katta EM tasdiqlashi (isConfirmer mantiqiga ko'ra)
-              else if (creator === 'bekat_boshlighi' && e.kamchilikBajarildi && !e.kamchilikBBTasdiqladi) {
-                count++
-              }
-              // 12-ustun BB yaratgan
-              else if (creator === 'bekat_boshlighi' && e.bartarafBajarildi && !e.bartarafBBTasdiqladi) {
-                count++
-              }
-            } else if ((role === 'worker' && !isEM) || isMontyor) {
-              // BB yaratgan bo'lsa, worker tasdiqlaydi
-              if (creator === 'bekat_boshlighi' && e.kamchilikBajarildi && !e.kamchilikBBTasdiqladi) {
-                count++
-              }
-              else if (creator === 'bekat_boshlighi' && e.bartarafBajarildi && !e.bartarafBBTasdiqladi) {
-                count++
-              }
-            } else if (['bekat_boshlighi', 'bekat_navbatchisi'].includes(role)) {
-              // Worker yoki yo'l ustasi yaratganini BB tasdiqlaydi
-              if (creator !== 'bekat_boshlighi') {
-                if (e.kamchilikBajarildi && !e.kamchilikBBTasdiqladi) {
-                  count++
-                }
-                else if (e.bartarafBajarildi && !e.bartarafBBTasdiqladi) {
-                  count++
-                }
-              }
+            let isMyTurn = false
+            if (next3 === 'DSP' || next12 === 'DSP') {
+              if (['bekat_boshlighi', 'bekat_navbatchisi'].includes(userRoleToCheck)) isMyTurn = true
+            } else if (next3 === userRoleToCheck || next12 === userRoleToCheck) {
+              isMyTurn = true
             }
+
+            if (isMyTurn) count++
           }
           du46 = count
         } else if (row.journal_type === 'shu2') {

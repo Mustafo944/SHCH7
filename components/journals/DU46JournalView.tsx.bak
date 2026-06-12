@@ -8,7 +8,6 @@ import type { DU46Entry } from '@/types'
 import { Plus, Trash2, CheckCircle2, Download, ChevronLeft } from 'lucide-react'
 import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel } from './helpers'
 import { TaskSelectModal, DateInput, TimeInput } from './JournalSelectModal'
-import { ApprovalChainModal } from './ApprovalChainModal'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMPTY ENTRY FACTORY
@@ -57,8 +56,8 @@ export function DU46JournalView({
   const [msg, setMsg] = useState<string | null>(null)
   const [taskModalIdx, setTaskModalIdx] = useState<number | null>(null)
 
-  // Tasdiqlash zanjirini tanlash modali
-  const [approvalChainModal, setApprovalChainModal] = useState<{ index: number, isEdit: boolean, currentChain: string[] } | null>(null)
+  // Yo'l ustasi uchun "Elektromexanik tasdiqlaydimi?" modal holati (faqat 3-ustun)
+  const [emConfirmModal, setEmConfirmModal] = useState<number | null>(null)
 
   // Bugungi sana va tanlangan oy
   const today = new Date()
@@ -164,60 +163,16 @@ export function DU46JournalView({
     return (creator === 'worker' && isWorker) || (creator === 'bekat_boshlighi' && isBB)
   }
 
-  // ── Yangi Dinamik Tasdiqlash Mantiqi ──
-  const getNextApproverRole = (e: DU46Entry, col: 3 | 12): string | null => {
-    const isBoshlandi = col === 3 ? e.kamchilikBajarildi : e.bartarafBajarildi
-    if (!isBoshlandi) return null
-    const chain = e.approvalChain || []
-    const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
-    
-    if (approvals.length < chain.length) {
-      return chain[approvals.length]
-    }
-    
+  /** Joriy foydalanuvchi tasdiqlash (confirmer) rolimi? */
+  const isConfirmer = (e: DU46Entry): boolean => {
     const creator = getCreator(e)
-    if (creator === 'bekat_boshlighi') return null
-    
-    const isApprovedByDSP = col === 3 ? e.kamchilikBBTasdiqladi : e.bartarafBBTasdiqladi
-    if (!isApprovedByDSP) return 'DSP'
-    
-    return null
+    if (creator === 'yul_ustasi') return isBB
+    return (creator === 'worker' && isBB) || (creator === 'bekat_boshlighi' && isElektromexanik)
   }
 
-  const isFinalApprover = (e: DU46Entry, col: 3 | 12): boolean => {
-    const nextRole = getNextApproverRole(e, col)
-    if (!nextRole) return false // All approved
-    if (nextRole === 'DSP') return true // DSP is always final
-    
-    // Yoki agar DSP kerak bo'lmasa, zanjir oxiridagi odam final bo'ladi
-    const chain = e.approvalChain || []
-    const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
-    if (approvals.length === chain.length - 1) {
-      const creator = getCreator(e)
-      if (creator === 'bekat_boshlighi') return true
-    }
-    return false
-  }
-
-  const isCol3Finished = (e: DU46Entry): boolean => {
-    if (e.kamchilikBBTasdiqladi) return true
-    const nextRole = getNextApproverRole(e, 3)
-    if (e.kamchilikBajarildi && nextRole === null) return true
-    return false
-  }
-
-  const isCol12Finished = (e: DU46Entry): boolean => {
-    if (e.bartarafBBTasdiqladi) return true
-    const nextRole = getNextApproverRole(e, 12)
-    if (e.bartarafBajarildi && nextRole === null) return true
-    return false
-  }
-
-  const canIApprove = (e: DU46Entry, col: 3 | 12): boolean => {
-    const nextRole = getNextApproverRole(e, col)
-    if (!nextRole) return false
-    if (nextRole === 'DSP') return isBB
-    return userRole === nextRole
+  /** Yo'l ustasi yaratgan yozuv uchun: elektromexanik tasdiqlash roli */
+  const isEMConfirmer = (e: DU46Entry): boolean => {
+    return getCreator(e) === 'yul_ustasi' && isElektromexanik
   }
 
   // ── Input yangilash ───────────────────────────────────────────────────────────
@@ -270,55 +225,57 @@ export function DU46JournalView({
   // ══════════════════════════════════════════════════════════════════════════════
 
   const handleKamchilikBoshlandiClick = (i: number) => {
-    setApprovalChainModal({ index: i, isEdit: false, currentChain: [] })
+    if (isYulUstasi) {
+      setEmConfirmModal(i)
+    } else {
+      handleKamchilikBoshlandi(i, false)
+    }
   }
 
-  const handleSaveApprovalChain = async (idx: number, chain: string[]) => {
+  const handleKamchilikBoshlandi = async (i: number, needsEM: boolean) => {
     const prev = [...entries]
     const updated = [...entries]
-    const e = updated[idx]
-    
-    if (approvalChainModal?.isEdit) {
-      updated[idx] = { ...e, approvalChain: chain }
-    } else {
-      updated[idx] = {
-        ...e,
-        kamchilikBajarildi: true,
-        kamchilikBajarildiAt: new Date().toISOString(),
-        kamchilikImzo: userName,
-        approvalChain: chain,
-        approvalsCol3: [],
-        approvalsCol12: []
-      }
+    updated[i] = {
+      ...updated[i],
+      kamchilikBajarildi: true,
+      kamchilikBajarildiAt: new Date().toISOString(),
+      kamchilikImzo: userName,
+      kamchilikNeedsEM: needsEM,
     }
-    
     try {
       await saveEntries(updated, prev)
-      setApprovalChainModal(null)
-      showMsg(approvalChainModal?.isEdit ? 'Tasdiqlash zanjiri yangilandi!' : 'Boshlandi belgilandi!')
-      if (!approvalChainModal?.isEdit) onAccepted?.()
+      showMsg('Boshlandi belgilandi!')
+      onAccepted?.()
+    } catch { /* saveEntries ichida xato ko'rsatiladi */ }
+  }
+
+  const handleKamchilikEMTasdiqlash = async (i: number) => {
+    const prev = [...entries]
+    const updated = [...entries]
+    updated[i] = {
+      ...updated[i],
+      kamchilikEMTasdiqladi: true,
+      kamchilikEMTasdiqladiAt: new Date().toISOString(),
+      kamchilikEMImzo: userName,
+    }
+    try {
+      await saveEntries(updated, prev)
+      showMsg('Elektromexanik tasdiqladi!')
     } catch { /* */ }
   }
 
   const handleKamchilikTasdiqlash = async (i: number) => {
+    const now = new Date()
+    const autoVaqt = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
     const prev = [...entries]
     const updated = [...entries]
-    const e = updated[i]
-    const nextRole = getNextApproverRole(e, 3)
-    
-    if (nextRole === 'DSP') {
-      updated[i] = {
-        ...e,
-        kamchilikBBTasdiqladi: true,
-        kamchilikBBTasdiqladiAt: new Date().toISOString(),
-        kamchilikBBImzo: userName,
-      }
-    } else if (nextRole) {
-      const newApprovals = [...(e.approvalsCol3 || [])]
-      newApprovals.push({ role: nextRole, signedBy: userName, signedAt: new Date().toISOString() })
-      updated[i] = { ...e, approvalsCol3: newApprovals }
+    updated[i] = {
+      ...updated[i],
+      kamchilikBBTasdiqladi: true,
+      kamchilikBBTasdiqladiAt: now.toISOString(),
+      kamchilikBBImzo: userName,
+      kamchilikBBVaqt: autoVaqt,
     }
-    
     try {
       await saveEntries(updated, prev)
       showMsg('Tasdiqlandi!')
@@ -330,6 +287,11 @@ export function DU46JournalView({
   // ══════════════════════════════════════════════════════════════════════════════
 
   const handleBartarafBajarildiClick = (i: number) => {
+    const needsEM = !!entries[i].kamchilikNeedsEM
+    handleBartarafBajarildi(i, needsEM)
+  }
+
+  const handleBartarafBajarildi = async (i: number, needsEM: boolean) => {
     const prev = [...entries]
     const updated = [...entries]
     updated[i] = {
@@ -337,32 +299,42 @@ export function DU46JournalView({
       bartarafBajarildi: true,
       bartarafBajarildiAt: new Date().toISOString(),
       bartarafImzo: userName,
+      bartarafNeedsEM: needsEM,
     }
-    saveEntries(updated, prev).then(() => {
+    try {
+      await saveEntries(updated, prev)
       showMsg('Bajarildi belgilandi!')
       onAccepted?.()
-    }).catch(() => {})
+    } catch { /* */ }
+  }
+
+  const handleBartarafEMTasdiqlash = async (i: number) => {
+    const prev = [...entries]
+    const updated = [...entries]
+    updated[i] = {
+      ...updated[i],
+      bartarafEMTasdiqladi: true,
+      bartarafEMTasdiqladiAt: new Date().toISOString(),
+      bartarafEMImzo: userName,
+    }
+    try {
+      await saveEntries(updated, prev)
+      showMsg('Elektromexanik tasdiqladi!')
+    } catch { /* */ }
   }
 
   const handleBartarafTasdiqlash = async (i: number) => {
+    const now = new Date()
+    const autoVaqt = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
     const prev = [...entries]
     const updated = [...entries]
-    const e = updated[i]
-    const nextRole = getNextApproverRole(e, 12)
-    
-    if (nextRole === 'DSP') {
-      updated[i] = {
-        ...e,
-        bartarafBBTasdiqladi: true,
-        bartarafBBTasdiqladiAt: new Date().toISOString(),
-        bartarafBBImzo: userName,
-      }
-    } else if (nextRole) {
-      const newApprovals = [...(e.approvalsCol12 || [])]
-      newApprovals.push({ role: nextRole, signedBy: userName, signedAt: new Date().toISOString() })
-      updated[i] = { ...e, approvalsCol12: newApprovals }
+    updated[i] = {
+      ...updated[i],
+      bartarafBBTasdiqladi: true,
+      bartarafBBTasdiqladiAt: now.toISOString(),
+      bartarafBBImzo: userName,
+      bartarafBBVaqt: autoVaqt,
     }
-    
     try {
       await saveEntries(updated, prev)
       showMsg('Tasdiqlandi!')
@@ -523,11 +495,12 @@ export function DU46JournalView({
             <tbody>
               {entries.map((e, i) => {
                 const iAmCreator = isCreator(e)
+                const iAmConfirmer = isConfirmer(e)
 
                 const hasNoCreator = !e.createdByRole && !e.kamchilik && !e.oyKun1 && !e.soatMinut1
-                const canWriteCol3 = isCurrentMonth && !isCol3Finished(e) && (iAmCreator || hasNoCreator) && !isDispatcher
+                const canWriteCol3 = isCurrentMonth && !e.kamchilikBBTasdiqladi && (iAmCreator || hasNoCreator) && !isDispatcher
 
-                const canWriteCol12 = !isCol12Finished(e) && isCol3Finished(e) && !isDispatcher && iAmCreator
+                const canWriteCol12 = !e.bartarafBBTasdiqladi && e.kamchilikBBTasdiqladi && !isDispatcher && iAmCreator
 
                 const canWriteMiddle = isCurrentMonth && !isDispatcher && (iAmCreator || hasNoCreator)
 
@@ -570,7 +543,7 @@ export function DU46JournalView({
 
                       {e.kamchilik && e.kamchilikBajarildi && (
                         <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center justify-end">
-                          {isCol3Finished(e) && e.kamchilikBBVaqt ? (
+                          {e.kamchilikBBTasdiqladi && e.kamchilikBBVaqt ? (
                             <div className="w-full rounded-xl bg-amber-100 px-2 py-2 text-center text-[10px] font-black text-amber-700 border border-amber-200 shadow-sm">
                               {e.kamchilikBBVaqt}
                             </div>
@@ -606,7 +579,7 @@ export function DU46JournalView({
                         )}
                       </div>
 
-                      {/* — Boshlandi / Tasdiqlash zanjiri tugmalari */}
+                      {/* — Boshlandi / EM Tasdiqlash / BB Tasdiqlash tugmalari */}
                       <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
                         {e.kamchilik && iAmCreator && !e.kamchilikBajarildi && !isMonthInPast(journalMonth) && (
                           <button
@@ -619,66 +592,54 @@ export function DU46JournalView({
                         )}
 
                         {e.kamchilikBajarildi && (
-                          <div className="flex flex-col items-center gap-1 w-full relative group/edit">
+                          <div className="flex flex-col items-center gap-1 w-full">
                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Boshladi:</span>
-                            <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-1.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 w-full justify-center shadow-sm relative">
+                            <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-1.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 w-full justify-center shadow-sm">
                               <CheckCircle2 size={12} strokeWidth={3} /> <span className="truncate">{e.kamchilikImzo}</span>
                             </div>
-                            {iAmCreator && !isMonthInPast(journalMonth) && !isCol3Finished(e) && (
-                              <button
-                                onClick={() => setApprovalChainModal({ index: i, isEdit: true, currentChain: e.approvalChain || [] })}
-                                className="absolute top-0 right-0 p-1 bg-white/80 rounded shadow-sm text-slate-400 hover:text-purple-600 border border-slate-200"
-                                title="Tasdiqlash zanjirini tahrirlash"
-                              >
-                                ✏️
-                              </button>
-                            )}
                           </div>
                         )}
 
-                        {e.approvalsCol3?.map((appr, idx) => (
-                          <div key={idx} className="flex flex-col items-center gap-1 w-full">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{appr.role.replace('_', ' ')}:</span>
-                            <div className="flex items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-1.5 text-[10px] font-bold text-blue-600 border border-blue-100 w-full justify-center shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} /> 
-                              <span className="truncate">{appr.signedBy}</span>
+                        {e.kamchilik && e.kamchilikBajarildi && e.kamchilikNeedsEM && !e.kamchilikEMTasdiqladi && isEMConfirmer(e) && !isMonthInPast(journalMonth) && (
+                          <button
+                            onClick={() => handleKamchilikEMTasdiqlash(i)}
+                            className="w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 bg-blue-500 text-white hover:bg-blue-600 border-transparent"
+                          >
+                            El.mexanik tasdiqlash
+                          </button>
+                        )}
+
+                        {e.kamchilikEMTasdiqladi && (
+                          <div className="flex flex-col items-center gap-1 w-full">
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">El.mexanik tasdiqladi:</span>
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-1.5 text-[10px] font-bold text-blue-600 border border-blue-100 w-full justify-center shadow-sm">
+                              <CheckCircle2 size={12} strokeWidth={3} /> <span className="truncate">{e.kamchilikEMImzo}</span>
                             </div>
                           </div>
-                        ))}
+                        )}
+
+                        {e.kamchilik && !e.kamchilikBBTasdiqladi && iAmConfirmer && !isMonthInPast(journalMonth) && (() => {
+                          const emDone = !e.kamchilikNeedsEM || !!e.kamchilikEMTasdiqladi
+                          const canConfirm = e.kamchilikBajarildi && emDone
+                          return (
+                            <button
+                              onClick={() => handleKamchilikTasdiqlash(i)}
+                              disabled={!canConfirm}
+                              className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${!canConfirm ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-amber-500 text-white hover:bg-amber-600 border-transparent'}`}
+                            >
+                              Tasdiqlash
+                            </button>
+                          )
+                        })()}
 
                         {e.kamchilikBBTasdiqladi && (
                           <div className="flex flex-col items-center gap-1 w-full">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bekat navbatchisi:</span>
-                            <div className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-1.5 text-[10px] font-bold text-amber-700 border border-amber-100 w-full justify-center shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} /> 
-                              <span className="truncate">{e.kamchilikBBImzo}</span>
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Tasdiqladi:</span>
+                            <div className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-1.5 text-[10px] font-bold text-amber-700 border border-amber-100 w-full justify-center shadow-sm">
+                              <CheckCircle2 size={12} strokeWidth={3} /> <span className="truncate">{e.kamchilikBBImzo}</span>
                             </div>
                           </div>
                         )}
-
-                        {canIApprove(e, 3) && !isMonthInPast(journalMonth) && (() => {
-                          const isFinal = isFinalApprover(e, 3)
-                          const canConfirm = !isFinal || !!e.kamchilikBBVaqt
-                          return (
-                            <div className="flex flex-col gap-1 w-full mt-1">
-                              {isFinal && (
-                                <TimeInput
-                                  value={e.kamchilikBBVaqt || ''}
-                                  onChange={val => update(i, 'kamchilikBBVaqt', val)}
-                                  readOnly={false}
-                                  className="w-full bg-white shadow-sm border border-slate-200"
-                                />
-                              )}
-                              <button
-                                onClick={() => handleKamchilikTasdiqlash(i)}
-                                disabled={!canConfirm}
-                                className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${!canConfirm ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-amber-500 text-white hover:bg-amber-600 border-transparent'}`}
-                              >
-                                Tasdiqlash
-                              </button>
-                            </div>
-                          )
-                        })()}
                       </div>
                     </td>
 
@@ -729,9 +690,9 @@ export function DU46JournalView({
                         />
                       </div>
 
-                      {e.bartarafInfo && e.bartarafBajarildi && (
+                      {e.bartarafInfo && e.bartarafBajarildi && e.kamchilikBBTasdiqladi && (
                         <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center justify-end">
-                          {isCol12Finished(e) && e.bartarafBBVaqt ? (
+                          {e.bartarafBBTasdiqladi && e.bartarafBBVaqt ? (
                             <div className="w-full rounded-xl bg-amber-100 px-2 py-2 text-center text-[10px] font-black text-amber-700 border border-amber-200 shadow-sm">
                               {e.bartarafBBVaqt}
                             </div>
@@ -762,12 +723,12 @@ export function DU46JournalView({
                                   ? 'bg-transparent focus:bg-white focus:shadow-inner text-slate-700'
                                   : 'bg-transparent text-slate-700 cursor-not-allowed'
                             }`}
-                            placeholder={!isCol3Finished(e) ? '3-ustun tasdiqlanishi kerak...' : ''}
+                            placeholder={!e.kamchilikBBTasdiqladi ? '3-ustun tasdiqlanishi kerak...' : ''}
                           />
                         )}
                       </div>
 
-                      {/* — Bajarildi / Tasdiqlash zanjiri tugmalari */}
+                      {/* — Bajarildi / EM Tasdiqlash / BB Tasdiqlash tugmalari */}
                       <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
                         {e.bartarafInfo && iAmCreator && !e.bartarafBajarildi && !isMonthInPast(journalMonth) && (
                           <button
@@ -775,52 +736,42 @@ export function DU46JournalView({
                             disabled={!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi}
                             className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${(!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi) ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'btn-gradient'}`}
                           >
-                            Tugadi
+                            Bajarildi
                           </button>
                         )}
 
                         {e.bartarafBajarildi && (
-                          <div className="flex flex-col items-center gap-1 w-full relative">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Tugadi:</span>
+                          <div className="flex flex-col items-center gap-1 w-full">
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bajardi:</span>
                             <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-1.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 w-full justify-center shadow-sm">
                               <CheckCircle2 size={12} strokeWidth={3} /> <span className="truncate">{e.bartarafImzo}</span>
                             </div>
                           </div>
                         )}
 
-                        {e.approvalsCol12?.map((appr, idx) => (
-                          <div key={idx} className="flex flex-col items-center gap-1 w-full">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{appr.role.replace('_', ' ')}:</span>
-                            <div className="flex items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-1.5 text-[10px] font-bold text-blue-600 border border-blue-100 w-full justify-center shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} /> 
-                              <span className="truncate">{appr.signedBy}</span>
-                            </div>
-                          </div>
-                        ))}
+                        {e.bartarafInfo && e.bartarafBajarildi && e.bartarafNeedsEM && !e.bartarafEMTasdiqladi && isEMConfirmer(e) && !isMonthInPast(journalMonth) && (
+                          <button
+                            onClick={() => handleBartarafEMTasdiqlash(i)}
+                            className="w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 bg-blue-500 text-white hover:bg-blue-600 border-transparent"
+                          >
+                            El.mexanik tasdiqlash
+                          </button>
+                        )}
 
-                        {e.bartarafBBTasdiqladi && (
+                        {e.bartarafEMTasdiqladi && (
                           <div className="flex flex-col items-center gap-1 w-full">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bekat navbatchisi:</span>
-                            <div className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-1.5 text-[10px] font-bold text-amber-700 border border-amber-100 w-full justify-center shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} /> 
-                              <span className="truncate">{e.bartarafBBImzo}</span>
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">El.mexanik tasdiqladi:</span>
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-1.5 text-[10px] font-bold text-blue-600 border border-blue-100 w-full justify-center shadow-sm">
+                              <CheckCircle2 size={12} strokeWidth={3} /> <span className="truncate">{e.bartarafEMImzo}</span>
                             </div>
                           </div>
                         )}
 
-                        {canIApprove(e, 12) && !isMonthInPast(journalMonth) && (() => {
-                          const isFinal = isFinalApprover(e, 12)
-                          const canConfirm = !isFinal || !!e.bartarafBBVaqt
+                        {e.bartarafInfo && !e.bartarafBBTasdiqladi && iAmConfirmer && !isMonthInPast(journalMonth) && (() => {
+                          const emDone = !e.bartarafNeedsEM || !!e.bartarafEMTasdiqladi
+                          const canConfirm = e.bartarafBajarildi && e.kamchilikBBTasdiqladi && emDone
                           return (
-                            <div className="flex flex-col gap-1 w-full mt-1">
-                              {isFinal && (
-                                <TimeInput
-                                  value={e.bartarafBBVaqt || ''}
-                                  onChange={val => update(i, 'bartarafBBVaqt', val)}
-                                  readOnly={false}
-                                  className="w-full bg-white shadow-sm border border-slate-200"
-                                />
-                              )}
+                            <div className="flex flex-col items-center gap-1 w-full">
                               <button
                                 onClick={() => handleBartarafTasdiqlash(i)}
                                 disabled={!canConfirm}
@@ -828,14 +779,22 @@ export function DU46JournalView({
                               >
                                 Tasdiqlash
                               </button>
+                              {!e.kamchilikBBTasdiqladi && (
+                                <span className="text-[8px] font-black text-red-400 text-center leading-tight px-1 mt-1 uppercase tracking-tighter">
+                                  3-ustun tasdiqlanmagan
+                                </span>
+                              )}
                             </div>
                           )
                         })()}
-                        {/* 3-ustun tasdiqlanmagan ogohlantirish */}
-                        {e.bartarafInfo && !isCol3Finished(e) && (
-                          <span className="text-[8px] font-black text-red-400 text-center leading-tight px-1 mt-1 uppercase tracking-tighter">
-                            3-ustun oxirigacha tasdiqlanmagan
-                          </span>
+
+                        {e.bartarafBBTasdiqladi && (
+                          <div className="flex flex-col items-center gap-1 w-full">
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Tasdiqladi:</span>
+                            <div className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-1.5 text-[10px] font-bold text-amber-700 border border-amber-100 w-full justify-center shadow-sm">
+                              <CheckCircle2 size={12} strokeWidth={3} /> <span className="truncate">{e.bartarafBBImzo}</span>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </td>
@@ -884,15 +843,47 @@ export function DU46JournalView({
         />
       )}
 
-      {/* ═══ Tasdiqlash Zanjiri Modali ═══ */}
-      {approvalChainModal !== null && (
-        <ApprovalChainModal
-          initialChain={approvalChainModal.currentChain}
-          isEdit={approvalChainModal.isEdit}
-          creatorRole={userRole}
-          onCancel={() => setApprovalChainModal(null)}
-          onSave={(chain) => handleSaveApprovalChain(approvalChainModal.index, chain)}
-        />
+      {/* ═══ Elektromexanik tasdiqlaydimi? Modal (Yo'l ustasi — faqat 3-ustun) ═══ */}
+      {emConfirmModal !== null && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-md animate-fade-up">
+          <div className="w-full max-w-sm rounded-[28px] bg-white p-8 shadow-2xl border border-slate-100 animate-scale-in">
+            <div className="mb-6 flex items-center justify-center">
+              <div className="rounded-2xl bg-blue-50 p-4">
+                <svg className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <h3 className="text-center text-lg font-black text-slate-900 mb-2">
+              Elektromexanik tasdiqlaydimi?
+            </h3>
+            <p className="text-center text-sm text-slate-500 mb-8">
+              Boshlandi belgilash uchun elektromexanik tasdiqlashi kerakmi?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  const idx = emConfirmModal
+                  setEmConfirmModal(null)
+                  handleKamchilikBoshlandi(idx, false)
+                }}
+                className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm font-black text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
+              >
+                Yo&apos;q
+              </button>
+              <button
+                onClick={() => {
+                  const idx = emConfirmModal
+                  setEmConfirmModal(null)
+                  handleKamchilikBoshlandi(idx, true)
+                }}
+                className="flex-1 rounded-xl bg-blue-500 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-all active:scale-95"
+              >
+                Ha
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

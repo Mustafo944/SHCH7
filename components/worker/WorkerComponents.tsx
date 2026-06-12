@@ -1195,7 +1195,7 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationI
   if (activeJournal === 'du46') {
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-        <DU46JournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" journalMonth={journalMonth} onClose={() => handleJournalClose('DU-46', false)} onAccepted={() => handleJournalClose('DU-46', true)} />
+        <DU46JournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole={session.position || 'worker'} journalMonth={journalMonth} onClose={() => handleJournalClose('DU-46', false)} onAccepted={() => handleJournalClose('DU-46', true)} />
       </div>,
       document.body
     )

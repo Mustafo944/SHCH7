@@ -149,6 +149,11 @@ export interface DU46Entry {
   kamchilikBBImzo: string
   kamchilikBBVaqt: string           // Avtomatik vaqt (soat:daqiqa)
 
+  // ── Dinamik Tasdiqlash Zanjiri (Yangi logikaga moslashuv) ──
+  approvalChain?: string[]          // Tasdiqlash ketma-ketligi rollari (masalan: ['yul_ustasi', 'katta_elektromexanik'])
+  approvalsCol3?: { role: string; signedBy: string; signedAt: string }[]
+  approvalsCol12?: { role: string; signedBy: string; signedAt: string }[]
+
   // ── Ustun 12 (bartarafInfo) uchun ──
   bartarafBajarildi: boolean        // Bajarildi belgilandi
   bartarafBajarildiAt: string

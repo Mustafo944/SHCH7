@@ -169,7 +169,7 @@ export default function BekatBoshlighiPage() {
               stationId={selectedStation}
               stationName={stationName || ''}
               userName={session?.fullName || ''}
-              userRole="bekat_boshlighi"
+              userRole={session?.position || 'bekat_boshlighi'}
               journalMonth={selectedJournalMonth}
               onClose={() => setShowJournal(false)}
             />

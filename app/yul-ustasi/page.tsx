@@ -137,7 +137,7 @@ export default function YulUstasiPage() {
               stationId={stationId}
               stationName={stationName}
               userName={session?.fullName || ''}
-              userRole="yul_ustasi"
+              userRole={session?.position || 'yul_ustasi'}
               journalMonth={selectedJournalMonth}
               onClose={() => setView('home')}
             />

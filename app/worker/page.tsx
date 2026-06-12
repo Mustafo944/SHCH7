@@ -586,7 +586,7 @@ export default function WorkerPage() {
               stationId={activeStationId}
               stationName={stationName}
               userName={session?.fullName || ''}
-              userRole="worker"
+              userRole={session?.position || 'worker'}
               journalMonth={selectedJournalMonth}
               onClose={() => {
                 setView('home')
