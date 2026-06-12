@@ -2,6 +2,11 @@ import { useState, useEffect, useRef } from 'react'
 
 export function playNotification() {
   try {
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('smartshch_muted') === 'true') {
+        return;
+      }
+    }
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const t = audioCtx.currentTime;
 
@@ -51,8 +56,28 @@ export function useNotificationSound(pendingCount: number) {
     setIsMutedState(muted)
     if (typeof window !== 'undefined') {
       localStorage.setItem('smartshch_muted', muted.toString())
+      window.dispatchEvent(new Event('smartshch_mute_changed'))
     }
   }
+
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'smartshch_muted') {
+        setIsMutedState(e.newValue === 'true')
+      }
+    }
+    const handleCustom = () => {
+      setIsMutedState(localStorage.getItem('smartshch_muted') === 'true')
+    }
+
+    window.addEventListener('storage', handleStorage)
+    window.addEventListener('smartshch_mute_changed', handleCustom)
+
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('smartshch_mute_changed', handleCustom)
+    }
+  }, [])
 
   useEffect(() => {
     // Only play sound when pending count INCREASES
