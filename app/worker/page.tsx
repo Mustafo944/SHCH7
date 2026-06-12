@@ -55,7 +55,7 @@ export default function WorkerPage() {
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
   const [selectedJournalType, setSelectedJournalType] = useState<JournalType | null>(null)
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
-  const [workerModal, setWorkerModal] = useState<'bugunBajarilgan' | 'qolibKetgan' | null>(null)
+  const [workerModal, setWorkerModal] = useState<'bugunBajarilgan' | 'qolibKetgan' | 'sababliBajarilmagan' | null>(null)
 
   const loadPendingCounts = useCallback(async (sid: string, role: string, position?: string) => {
     try {
@@ -178,9 +178,10 @@ export default function WorkerPage() {
     }
   }, [session?.id, loadWorkReports, loadIncidents])
 
-  const { bugunBajarilgan, qolibKetgan } = useMemo(() => {
-    const bugun: { entry: ReportEntry, month: string, taskText: string }[] = []
-    const qolib: { entry: ReportEntry, month: string, taskText: string }[] = []
+  const { bugunReja, qolibKetgan, sababliBajarilmagan } = useMemo(() => {
+    const bugun: { reportId: string, entry: ReportEntry, month: string, taskText: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy' }[] = []
+    const qolib: { reportId: string, entry: ReportEntry, month: string, taskText: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy' }[] = []
+    const sababli: { reportId: string, entry: ReportEntry, month: string, taskText: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy', reason: string, completedDate?: string }[] = []
 
     const today = new Date()
     const todayDay = today.getDate()
@@ -207,38 +208,50 @@ export default function WorkerPage() {
         if (isNaN(taskDay)) return
 
         // Har bir ustunni alohida ish sifatida hisoblash
-        const columns: { content: string, done: boolean }[] = []
-        if (e.haftalikJadval) columns.push({ content: e.haftalikJadval, done: !!e.doneHaftalik })
-        if (e.yillikJadval) columns.push({ content: e.yillikJadval, done: !!e.doneYillik })
-        if (e.yangiIshlar) columns.push({ content: e.yangiIshlar, done: !!e.doneYangi })
-        if (e.kmoBartaraf) columns.push({ content: e.kmoBartaraf, done: !!e.doneKmo })
-        if (e.majburiyOzgarish) columns.push({ content: e.majburiyOzgarish, done: !!e.doneMajburiy })
+        const columns: { content: string, done: boolean, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy', missedReason?: string, completedAfter?: string }[] = []
+        if (e.haftalikJadval) columns.push({ content: e.haftalikJadval, done: !!e.doneHaftalik, type: 'haftalik', missedReason: e.missedReasonHaftalik, completedAfter: e.completedAfterMissedDateHaftalik })
+        if (e.yillikJadval) columns.push({ content: e.yillikJadval, done: !!e.doneYillik, type: 'yillik', missedReason: e.missedReasonYillik, completedAfter: e.completedAfterMissedDateYillik })
+        if (e.yangiIshlar) columns.push({ content: e.yangiIshlar, done: !!e.doneYangi, type: 'yangi', missedReason: e.missedReasonYangi, completedAfter: e.completedAfterMissedDateYangi })
+        if (e.kmoBartaraf) columns.push({ content: e.kmoBartaraf, done: !!e.doneKmo, type: 'kmo', missedReason: e.missedReasonKmo, completedAfter: e.completedAfterMissedDateKmo })
+        if (e.majburiyOzgarish) columns.push({ content: e.majburiyOzgarish, done: !!e.doneMajburiy, type: 'majburiy', missedReason: e.missedReasonMajburiy, completedAfter: e.completedAfterMissedDateMajburiy })
 
         if (columns.length === 0) return
 
         columns.forEach(col => {
           if (isCurrentMonth) {
-            // Joriy oyda: muddati o'tgan va bajarilmagan
-            if (taskDay < todayDay && !col.done) {
-              qolib.push({ entry: e, month: r.month, taskText: col.content })
+            // Bugun bajarilishi kerak (bugungi ishlar)
+            if (taskDay === todayDay) {
+              bugun.push({ reportId: r.id, entry: e, month: r.month, taskText: col.content, type: col.type })
             }
-            // Bugun bajarilgan
-            if (taskDay === todayDay && col.done) {
-              bugun.push({ entry: e, month: r.month, taskText: col.content })
+
+            // Joriy oyda: muddati o'tgan
+            if (taskDay < todayDay) {
+              if (!col.done) {
+                if (col.missedReason) {
+                  sababli.push({ reportId: r.id, entry: e, month: r.month, taskText: col.content, type: col.type, reason: col.missedReason, completedDate: col.completedAfter })
+                } else {
+                  qolib.push({ reportId: r.id, entry: e, month: r.month, taskText: col.content, type: col.type })
+                }
+              }
             }
           } else if (isPrevMonth) {
             // O'tgan oyda: bajarilmagan barcha ishlar (muddat o'tib ketgan)
             if (!col.done) {
-              qolib.push({ entry: e, month: r.month, taskText: col.content })
+              if (col.missedReason) {
+                sababli.push({ reportId: r.id, entry: e, month: r.month, taskText: col.content, type: col.type, reason: col.missedReason, completedDate: col.completedAfter })
+              } else {
+                qolib.push({ reportId: r.id, entry: e, month: r.month, taskText: col.content, type: col.type })
+              }
             }
           }
         })
       })
     })
-    return { bugunBajarilgan: bugun, qolibKetgan: qolib }
+    return { bugunReja: bugun, qolibKetgan: qolib, sababliBajarilmagan: sababli }
   }, [reports, activeStationId])
 
   const missedTasksCount = qolibKetgan.length
+  const sababliTasksCount = sababliBajarilmagan.length
 
   if (!session || sessionLoading) return <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50"><div className="h-10 w-10 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600" /></div>
 
@@ -330,20 +343,20 @@ export default function WorkerPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {/* Bugun Bajarilgan Ishlar */}
+                <div className="grid gap-3 lg:grid-cols-3 sm:grid-cols-2">
+                  {/* Bugun Bajarilishi Kerak Bo'lgan Ishlar */}
                   <div
                     onClick={() => setWorkerModal('bugunBajarilgan')}
-                    className="cursor-pointer group relative overflow-hidden rounded-[20px] bg-emerald-50/50 p-4 sm:p-5 border border-emerald-100/60 transition-all hover:bg-emerald-50 hover:border-emerald-200 hover:shadow-md active:scale-[0.98] flex items-center gap-4"
+                    className="cursor-pointer group relative overflow-hidden rounded-[20px] bg-blue-50/50 p-4 sm:p-5 border border-blue-100/60 transition-all hover:bg-blue-50 hover:border-blue-200 hover:shadow-md active:scale-[0.98] flex items-center gap-4"
                   >
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-emerald-100/50 text-emerald-500 group-hover:scale-110 transition-transform">
-                      <CheckCircle2 size={26} strokeWidth={2.5} />
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-blue-100/50 text-blue-500 group-hover:scale-110 transition-transform">
+                      <FileText size={26} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-emerald-600">Bugun bajarilgan ishlar</p>
-                      <p className="text-xl sm:text-2xl font-black text-emerald-600 mt-0.5 mb-0.5">{bugunBajarilgan.length}</p>
-                      <p className="text-[10px] sm:text-[11px] font-medium text-emerald-700/70">
-                        {bugunBajarilgan.length > 0 ? "Bajarilgan ishlar mavjud" : "Sizda hali bajarilgan ishlar yo'q"}
+                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-blue-600">Bugun bajarilishi kerak</p>
+                      <p className="text-xl sm:text-2xl font-black text-blue-600 mt-0.5 mb-0.5">{bugunReja.length}</p>
+                      <p className="text-[10px] sm:text-[11px] font-medium text-blue-700/70">
+                        {bugunReja.length > 0 ? "Bugungi ishlar ro'yxati" : "Bugun uchun ish yo'q"}
                       </p>
                     </div>
                   </div>
@@ -360,7 +373,24 @@ export default function WorkerPage() {
                       <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-red-600">Bajarilmagan ishlar</p>
                       <p className="text-xl sm:text-2xl font-black text-red-600 mt-0.5 mb-0.5">{qolibKetgan.length}</p>
                       <p className="text-[10px] sm:text-[11px] font-medium text-red-700/70">
-                        {qolibKetgan.length > 0 ? "Bajarilmagan ishlar mavjud" : "Barcha ishlar o'z vaqtida bajarilgan"}
+                        {qolibKetgan.length > 0 ? "Izoxsiz bajarilmagan ishlar" : "Barcha ishlar o'z vaqtida bajarilgan"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Sababli Bajarilmagan Ishlar */}
+                  <div
+                    onClick={() => setWorkerModal('sababliBajarilmagan')}
+                    className="cursor-pointer group relative overflow-hidden rounded-[20px] bg-orange-50/50 p-4 sm:p-5 border border-orange-100/60 transition-all hover:bg-orange-50 hover:border-orange-200 hover:shadow-md active:scale-[0.98] flex items-center gap-4"
+                  >
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-orange-100/50 text-orange-500 group-hover:scale-110 transition-transform">
+                      <BookOpen size={26} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-orange-600">Sababli bajarilmagan</p>
+                      <p className="text-xl sm:text-2xl font-black text-orange-600 mt-0.5 mb-0.5">{sababliBajarilmagan.length}</p>
+                      <p className="text-[10px] sm:text-[11px] font-medium text-orange-700/70">
+                        {sababliBajarilmagan.length > 0 ? "Sabab ko'rsatilgan ishlar arxiv" : "Bunday ishlar yo'q"}
                       </p>
                     </div>
                   </div>
@@ -741,14 +771,23 @@ export default function WorkerPage() {
           {workerModal && (
             <WorkerTasksModal
               type={workerModal}
-              tasks={workerModal === 'bugunBajarilgan' ? bugunBajarilgan : qolibKetgan}
+              bugun={bugunReja}
+              qolib={qolibKetgan}
+              sababli={sababliBajarilmagan}
               onClose={() => setWorkerModal(null)}
               onTaskClick={(task) => {
-                const monthIdx = parseInt(task.month.split('-')[1], 10) - 1
-                setSelectedMonth(monthIdx)
-                setView('journal')
-                setWorkerModal(null)
+                if ((workerModal === 'bugunBajarilgan' || workerModal === 'qolibKetgan' || workerModal === 'sababliBajarilmagan') && task.month) {
+                  const mIdx = Number(task.month.split('-')[1]) - 1
+                  if (!isNaN(mIdx)) {
+                    setSelectedMonth(mIdx)
+                    setView('journal')
+                    setWorkerModal(null)
+                  }
+                }
               }}
+              onTasksUpdated={() => refreshData(session.id)}
+              stationId={activeStationId}
+              stationName={stationName}
             />
           )}
         </main>

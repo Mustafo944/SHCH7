@@ -179,8 +179,22 @@
         "nsh": "NSH-01 8.3.1"
       },
       {
+        "ish": "Uch va to'rta signalizatsiyali svetoforlarda lampa almashtirish.Bekatning bosh yo'llari va poyezdlar to'xtamasdan o'tadigan yo'llarda, kirish, chiqish va marshrut svetoforlarini qizil, sariq, yashil ko'rinishlarida; ogohlantiruvchi va to'suvchi svetoforlarida (avtoblokirovka uchastkasidan tashqari) :Ikki simlik",
+        "davriylik": "12 haftada bir marta",
+        "bajaruvchi": "SHN,SHNM",
+        "jurnal": "SHU-61",
+        "nsh": "NSH-01 8.3.1"
+      },
+      {
         "ish": "Bir tomonlama yo'nalishli avtoblokirovka bilan jihozlangan o'tish svetoforlarida: Bir simlik",
         "davriylik": "Kvartalda bir marta",
+        "bajaruvchi": "SHN,SHNM",
+        "jurnal": "SHU-61",
+        "nsh": "NSH-01 8.3.2"
+      },
+      {
+        "ish": "Bir tomonlama yo'nalishli avtoblokirovka bilan jihozlangan o'tish svetoforlarida: Ikki simlik",
+        "davriylik": "Bir yilda ikki marta",
         "bajaruvchi": "SHN,SHNM",
         "jurnal": "SHU-61",
         "nsh": "NSH-01 8.3.2"
@@ -651,7 +665,7 @@
         "nsh": "NSH-01 12.2"
       },
       {
-        "ish": "Elektrolitli kondensatorlarda,deshifrator yacheykalari,kodli avtoblokirovka deshifrator bloklarida kuchlanishni o'lchash/",
+        "ish": "Elektrolitli kondensatorlarda,deshifrator yacheykalari,kodli avtoblokirovka deshifrator bloklarida kuchlanishni o'lchash",
         "davriylik": "Kvartalda bir marta",
         "bajaruvchi": "SHN",
         "jurnal": "SHU-62",
@@ -691,10 +705,38 @@
         "nsh": "NSH-01 13.2"
       },
       {
-        "ish": "Qurilmalarni sozligi va ishlashini kompleks tekshirish, xamda ayrim nosoz kisimlarini almashtirish.",
+        "ish": "Kesishma svetoforlarida lampani almashtirish va kuchlanishni o'lchash:Svetofor lampalarini simining kuydirish nazorati bo'lmaganda tekshirish",
+        "davriylik": "Kvartalda bir marta",
+        "bajaruvchi": "SHN",
+        "jurnal": "SHU-61",
+        "nsh": "NSH-01 13.3"
+      },
+      {
+        "ish": "Kesishma svetoforlarida lampani almashtirish va kuchlanishni o'lchash:Svetofor lampalarini simining kuydirish nazorati bo'lganda tekshirish",
+        "davriylik": "Bir yilda ikki marta",
+        "bajaruvchi": "SHN",
+        "jurnal": "SHU-61",
+        "nsh": "NSH-01 13.3"
+      },
+      {
+        "ish": "Svetodiod modullarida kuchlanishni o'lchash va almashtirish",
+        "davriylik": "Bir yilda ikki marta va 30% svetodiod kuyganda",
+        "bajaruvchi": "SHN",
+        "jurnal": "SHU-61",
+        "nsh": "NSH-01 13.3"
+      },
+      {
+        "ish": "Qurilmalarni sozligi va ishlashini kompleks tekshirish, xamda ayrim nosoz kisimlarini almashtirish. (shlagbaum elektroprivodlari, elektroprivod montaji (himoya qobigi) izolyatsiyasinig qarshiligini tekshirish; reduktorning moyini almashtirish, shlagbaum bruslarining ko‘tarilishiga to‘sqinlik paydo bo‘lganda to‘siq motorini o‘chirish vaqtini tekshirish;Avtoshlagbuamning to‘liq tushirilishi va kesishmaning to‘siq qurilmasi qopqoqlarini ko‘tarish o‘rtasidagi vaqtni tekshirish.",
         "davriylik": "Bir yilda bir marta elektroprivodni yechmasdan, uch yilda bir marta elektroprivodni yechib tekshiraladi",
         "bajaruvchi": "SHNS,SHN, SHNM",
         "jurnal": "PU-67,SHU-2",
+        "nsh": "NSH-01 13.4"
+      },
+      {
+        "ish": "To'suvchi svetoforlardagi lampalarni va svetodiod modullarini almashtirish va kuchlanishini o'lchash",
+        "davriylik": "Bir yilda bir marta",
+        "bajaruvchi": "SHN, SHNM",
+        "jurnal": "SHU-61",
         "nsh": "NSH-01 13.4"
       },
       {
@@ -712,7 +754,7 @@
         "nsh": "NSH-01 13.7"
       },
       {
-        "ish": "Nazorat baza blokining (BBK) chiqish parametrlarini tekshirish va transport vositalarini aniqlash datchiklarining (DTR) ish faoliyatini tekshirish.",
+        "ish": "Nazorat baza blokining (BBK) chiqish parametrlarini tekshirish va transport vositalarini aniqlash datchiklarining (DTR) ish faoliyatini tekshirish. KZK nazorat qilish hududining o‘lchamlarini UZP qopqoqlarining o‘lchamlariga mosligini tekshirish.",
         "davriylik": "Bir yilda ikki marta",
         "bajaruvchi": "SHN, SHNM",
         "jurnal": "PU-67,SHU-2",
@@ -721,6 +763,13 @@
       {
         "ish": "Shlagbaum va UZP elektroyuritmalaridagi elektrodvigatellarni almashtirish:\nO'zgarmas tokli elektrodvigatel:",
         "davriylik": "Uch yilda bir marta",
+        "bajaruvchi": "SHN",
+        "jurnal": "PU-67, almashtirish jurnali",
+        "nsh": "NSH-01 13.9"
+      },
+      {
+        "ish": "Shlagbaum va UZP elektroyuritmalaridagi elektrodvigatellarni almashtirish:O'zgaruvchan tokli elektrodvigatel:",
+        "davriylik": "Besh yilda bir marta",
         "bajaruvchi": "SHN",
         "jurnal": "PU-67, almashtirish jurnali",
         "nsh": "NSH-01 13.9"
@@ -752,7 +801,7 @@
         "nsh": "NSH-01 15.3"
       },
       {
-        "ish": "KGU, UKSPS qurilmalarining nazorat simlarida sxemadan uzilgan holatda izolyatsiya qarshiligini o'lchash, kabel yashig'ini tekshirish.",
+        "ish": "KGU, UKSPS qurilmalarining nazorat simlarida sxemadan uzilgan holatda izolyatsiya qarshiligini o'lchash, kabel yashigini tekshirish.UKSPS nazorat qilish qurilmasining elektr zanjiri qarshiligini kabel uzilgan holatda o'lchash.",
         "davriylik": "Bir yilda ikki marta",
         "bajaruvchi": "SHN",
         "jurnal": "SHU-2",
@@ -853,14 +902,14 @@
     "bolim": "18. ELEKTR TA'MINOTI QURILMALARI",
     "ishlar": [
       {
-        "ish": "Elektr kuchlanishi bilan quvvatlanadigan qurilmalarni elementlari va asboblarini ko'rib, tekshirish imkoniyati borlarini tashqi tomondan tekshirish.",
+        "ish": "Elektr kuchlanishi bilan quvvatlanadigan qurilmalarni elementlari va asboblarini ko‘rib, tekshirish imkoniyati borlarini tashqi tomondan tekshirish. Montajni mahkamlangani va holatini tekshirish: relelar, knopkalar, ochiq buragichlar va kontaktorlarni holatini tekshirish; saqlagichlarni kuyganligini ogohlantiruvchi sxemani to‘g‘ri ishlayotganligini tekshirish; to‘g‘rilagichlar plastinalarini holatini ko‘rib chiqish.",
         "davriylik": "Kvartalda bir marta",
         "bajaruvchi": "SHN, SHNM",
         "jurnal": "SHU-2",
         "nsh": "NSH-01 18.1.2"
       },
       {
-        "ish": "Kuchlanishni ta'minlovchi qurilmalarda to'g'rilagichlarni, akkumulyator batareyalarini kuchlanishini avtomatik tarzda sozlab turuvchi bloklarni tekshirish.",
+        "ish": "Kuchlanishni ta’minlovchi qurilmalarda to‘g‘rilagichlarni, akkumulyator batareyalarini kuchlanishini avtomatik tarzda sozlab turuvchi bloklarni, paketli buragichlarni, kontaktorlarni, trubali saqlagichlarni holatini, nazorat relesi va ularni takrorlovchi relelarning ishining sozligini tekshirish; parametrlarni sozlash va o‘lchash; nosoz elementlarni almashtirish; asosiy va rezerv fiderlaridagi fazalarni bir – biriga mos kelishini, to‘g‘ri ishlayotganligini tekshirish.",
         "davriylik": "Ikki yilda bir marta",
         "bajaruvchi": "SHNS,RTU",
         "jurnal": "SHU-2",
@@ -881,14 +930,21 @@
         "nsh": "NSH-01 18.1.5"
       },
       {
-        "ish": "Stansiya va peregonlarda o'zgaruvchan tokli rezerv ta'minotning mavjudligi va sozligini tekshirish.",
+        "ish": "Stansiya va peregonlarda o'zgaruvchan tokli rezerv ta'minotning mavjudligi va sozligini kuchlanishni o'lchash hamda asosiy ta'minotdan rezerv ta'minotga o'tkazish yo'li bilan tekshirish:Navbatchi xodimlarda joylarda zaxira kuchlanishi nazorat qilinmaydigan joylarda.",
         "davriylik": "Kvartalda bir marta",
         "bajaruvchi": "SHN",
         "jurnal": "SHU-62,SHU-2",
         "nsh": "NSH-01 18.1.6"
       },
       {
-        "ish": "Rezerv kuchlanishidan, kuchlanish o'zgartirgichining ishlashini sinov yo'li bilan tekshirish.",
+        "ish": "Stansiya va peregonlarda o'zgaruvchan tokli rezerv ta'minotning mavjudligi va sozligini kuchlanishni o'lchash hamda asosiy ta'minotdan rezerv ta'minotga o'tkazish yo'li bilan tekshirish:Navbatchi xodimlarda joylarda zaxira kuchlanishi nazorat qilinadigan joylarda",
+        "davriylik": "Bir yilda ikki marta",
+        "bajaruvchi": "SHN",
+        "jurnal": "SHU-62,SHU-2",
+        "nsh": "NSH-01 18.1.6"
+      },
+      {
+        "ish": "Rezerv kuchlanishidan, kuchlanish o'zgartirgichining ishlashini sinov yo'li bilan tekshirish va chiqayotgan kuchlanishni yuklamani ulagan holda tekshirish.",
         "davriylik": "Bir yilda ikki marta",
         "bajaruvchi": "SHN",
         "jurnal": "SHU-2",
@@ -914,10 +970,24 @@
     "bolim": "18.2.AKKUMULYATORLAR",
     "ishlar": [
       {
-        "ish": "Akkumulyatorlar holatini, har bir akkumulyatorda kuchlanishni va elektrolit zichligini 12 A yuklama probnigi orqali o'zgaruvchan tok o'chirilgan holatda o'lchash; Butun sistema uchun",
+        "ish": "Akkumulyatorlar holatini, har bir akkumulyatorda kuchlanishni va elektrolit zichligini 12 A yuklama probnigi orqali o‘zgaruvchan tok o‘chirilgan holatda o‘lchash; plastinalarni sulfatlanib qolish holati, sinishi, plastinalar boshqa moddalar bilan qoplanmasligi, stelajlarni, bankalarni tozalash, ulanishlarni vazelin bilan moylash, batareya shkafini tozalash:Butun sistema uchun",
         "davriylik": "Bir yilda bir marta",
         "bajaruvchi": "SHNS",
         "jurnal": "SHU-63",
+        "nsh": "NSH-01 18.2.1"
+      },
+      {
+        "ish": "O'zgaruvchan tokni o'chirib,germetizatsiyalangan va kam xizmat ko'rsatiladigan akkumulyatorlar parametrlarini o'lchash",
+        "davriylik": "Bir yilda bir marta",
+        "bajaruvchi": "SHN,SHNM",
+        "jurnal": "SHU-63,SHU-66",
+        "nsh": "NSH-01 18.2.1"
+      },
+      {
+        "ish": "Ichki diagnostika vositalari bilan UBP akkumulyatorlarining sig'imini tekshirish",
+        "davriylik": "Bir yilda bir marta",
+        "bajaruvchi": "SHN,SHNM",
+        "jurnal": "SHU-2",
         "nsh": "NSH-01 18.2.1"
       },
       {
@@ -933,7 +1003,7 @@
     "bolim": "UZLUKSIZ QUVVAT QURILMALARI (UBP)",
     "ishlar": [
       {
-        "ish": "UBP, akkumulyatorlarni tashqi tekshirish va tashqi tozalash, akkumulyatorlarda kuchlanishni tekshirish, shamollatgichlarining ishlashini tekshirish.",
+        "ish": "UBP, akkumulyatorlarni tashqi tekshirish va tashqi tozalash, akkumulyatorlarda kuchlanishni tekshirish, shamollatgichlarining ishlashini tekshirish(tashqi(servis)baypasga o'tish bilan).",
         "davriylik": "Kvartalda bir marta",
         "bajaruvchi": "SHN, SHNM",
         "jurnal": "SHU-2",
@@ -952,7 +1022,7 @@
     "bolim": "18.3.DIZEL-GENERATOR AGREGAT",
     "ishlar": [
       {
-        "ish": "Tasmalarni tortilganligi va yaxshi joylashtirilganligini tekshirish, klapandagi oral, moy almashtirish, qo'yilgan detallarni mahkamligini tekshirish va qismlarni tozalash; filtrlarni yuvish; generator va starterlarni tekshirish.",
+        "ish": "Tasmalarni tortilganligi va yaxshi joylashtirilganligini tekshirish, klapandagi oral, moy almashtirish, qo‘yilgan detallarni mahkamligini tekshirish va qismlarni tozalash; filtrlarni yuvish; generator va starterlarni tekshirish; boshqaruv shiti va avtomatik blogini montaj va detallarni tozalash.",
         "davriylik": "Kvartalda bir marta",
         "bajaruvchi": "SHN",
         "jurnal": "SHU-2",
@@ -973,7 +1043,7 @@
         "nsh": "NSH-01 18.3.4"
       },
       {
-        "ish": "Qurilmaning texnik ko'rigi:\nYoqilg'i sistemasini, yoqilg'i tizimini tekshirish; yopiq sovutish tizimini yuvish va suvni almashtirish; moylash tizimini tekshirish.",
+        "ish": "Qurilmaning texnik ko'rigi:Yoqilg'i sistemasini, yoqilg'i tizimini tekshirish; yopiq sovutish tizimini yuvish va suvni almashtirish; moylash tizimini tekshirish; havo filtrini yuvish, turbina g'ildiragi, havo sovutgich trubasi, karterni moy taqsimlovchi ventilyatsiya tizimi; krivoship-shatun mexanizmini tekshirish, yoqilg'i nasosi, quvvat ajratuvchi mufta, generator privodini; DGA qurilmasini tekshirish tugaganidan keyin ishlashini tekshirish.",
         "davriylik": "Bir yilda bir marta",
         "bajaruvchi": "Tayinlangan xodim",
         "jurnal": "SHU-2",
@@ -985,29 +1055,50 @@
     "bolim": "18.4.XIMOYA QURILMALAR",
     "ishlar": [
       {
-        "ish": "Saqlagichlarning holatini tekshirish, kuyish nazorat sxemasining ishlashini tekshirish.",
+        "ish": "Saqlagichlarning holatini tekshirish, kuyish nazorat sxemasining ishlashini tekshirish, mustahkam qotirilganligi, texnik hujjatlarda tasdiqlangan me’yoriga mos kelishini tekshirish.",
         "davriylik": "Bir yilda ikki marta",
         "bajaruvchi": "SHN",
         "jurnal": "SHU-2",
         "nsh": "NSH-01 18.4.1"
       },
       {
-        "ish": "Saqlagichlarni (holatidan qat'iy nazar) TTU da tekshirilgan saqlagichlarga almashtirish.",
+        "ish": "Saqlagichdan fakt oqib o'tuvchi tok kuchini (yuklamasini) o'lchash",
+        "davriylik": "Almashganda",
+        "bajaruvchi": "SHN",
+        "jurnal": "MAXSUS JURNAL",
+        "nsh": "NSH-01 18.4.1"
+      },
+      {
+        "ish": "Saqlagichlarni (holatidan qat'iy nazar) TTU da tekshirilgan saqlagichlarga almashtirish: 5A va undan kichik nominallar; AVM (avtomatik o'chiruvchi) – rusumli. 5 A dan katta nominallar; 20A saqlagichlar (ajratkichlar)",
         "davriylik": "6-ilovada ko'rsatilgan muddatda",
         "bajaruvchi": "SHN",
         "jurnal": "MAXSUS JURNAL",
         "nsh": "NSH-01 18.4.2"
       },
       {
-        "ish": "EM posti, rele budkasi, kesishma konteynerlari, shkaflar va boshqa SMB inshootlarining ko'rinadigan yerlatgich qurilmalarini tekshirish.",
+        "ish": "EM postida ko'rinadigan yerga o'tkazuvchi qurilmalari,rele budkasi,shkaflar va boshqa SMB inshootlarni tekshirish",
         "davriylik": "Bir yilda ikki marta",
         "bajaruvchi": "SHN",
         "jurnal": "SHU-2",
+        "nsh": "NSH-01 18.4.3"
+      },
+      {
+        "ish": "Yerga ko'milgan yer o'tkazgichlarini tanlash asosida ochib tekshirish.",
+        "davriylik": "Besh yilda bir marta",
+        "bajaruvchi": "SHN,SHNM",
+        "jurnal": "SHU-2",
+        "nsh": "NSH-01 18.4.3"
+      },
+      {
+        "ish": "Chaqmoqdan himoya qiluvchi qurilmalarni sozlash va tekshirish, yashin qaytargich va tenglashtirgichlarning TTU sexida tekshirilgan muddatlariga mos kelishini tekshirish. Ishchi va himoya yerlatgichlarini, shuningdek o‘zgaruvchan tokli uchastkalarda kabel qobig‘ining yerlatgichini o‘lchash.",
+        "davriylik": "Bir yilda bir marta(bahorda chaqmoq bo'lishi mavsumi oldidan)",
+        "bajaruvchi": "SHN,RTU",
+        "jurnal": "SHU-79 peregonda,SHU-45",
         "nsh": "NSH-01 18.4.4"
       },
       {
-        "ish": "Chaqmoqdan himoya qiluvchi qurilmalarni sozlash va tekshirish.",
-        "davriylik": "Bir yilda bir marta(bahorda chaqmoq bo'lishi mavsumi oldidan)",
+        "ish": "To'g'rilovchi konturlarni butunligini o'lchov asboblari yordamida tekshirish",
+        "davriylik": "Uch yilda bir marta",
         "bajaruvchi": "SHN,RTU",
         "jurnal": "SHU-79 peregonda,SHU-45",
         "nsh": "NSH-01 18.4.4"
@@ -1025,14 +1116,14 @@
         "nsh": "NSH-01 19.1"
       },
       {
-        "ish": "Potensiallar farqini \"rels - yer\" tizimida o'lchash.",
+        "ish": "Potensiallar farqini “rels - yer” tizimida o'lchash. Yerga o'tkazuvchanligini elektr qarshiligini va o'zgarmas tokli elektr tortqi uchastkalarida karkasning fundament qismi armaturasida tok kuchini oqib o'tishini o'lchash; 0,6–0,8 m chuqurlikdagi anodli, belgisi almashadigan, tok yo'qotishi belgilangan normadan uch marta ortiq bo'lgan yer osti konstruksiyalarini tekshirish va baholash.",
         "davriylik": "Uch yilda bir marta",
         "bajaruvchi": "SHN, SHNM",
         "jurnal": "MAXSUS JURNAL",
         "nsh": "NSH-01 19.2"
       },
       {
-        "ish": "O'zgarmas tokli elektrlashtirilgan yo'llarning katodli zonalarida joylashgan yer osti konstruksiyalarini holatini tekshirish va baholash.",
+        "ish": "O‘zgarmas tokli elektrlashtirilgan yo‘llarning katodli zonalarida va boshqa barcha uchastkalarda joylashgan 0,6 – 0,8 m chuqurlikdagi yer osti konstruksiyalarini holatini tekshirish va baholash.",
         "davriylik": "Tanlash yo'li bilan 10 yil ishlagandan keyin.",
         "bajaruvchi": "SHN, SHNM",
         "jurnal": "MAXSUS JURNAL",

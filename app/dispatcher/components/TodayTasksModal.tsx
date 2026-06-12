@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react'
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, X } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, X, BookOpen, AlertTriangle, Download, FileText } from 'lucide-react'
 import { ReportEntry } from '@/types'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 export function TodayTasksModal({ type, tasks, onClose }: {
-  type: 'bajarilgan' | 'bajarilmagan'
-  tasks: { stationId: string; stationName: string; workerName: string; entry: ReportEntry; bajarilgan: boolean; month: string; taskText: string }[]
+  type: 'bugunReja' | 'qolibKetgan' | 'sababliBajarilmagan'
+  tasks: { stationId: string; stationName: string; workerName: string; entry: ReportEntry; month: string; taskText: string; type: string; reason?: string; completedDate?: string }[]
   onClose: () => void
 }) {
-  const isBajarilgan = type === 'bajarilgan'
   const [expandedStation, setExpandedStation] = useState<string | null>(null)
 
   const grouped = useMemo(() => {
@@ -23,20 +24,89 @@ export function TodayTasksModal({ type, tasks, onClose }: {
   const todayDate = new Date()
   const todayFormatted = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`
 
+  let title = ''
+  let headerColor = ''
+  let titleColor = ''
+
+  if (type === 'bugunReja') {
+    title = 'Bugun bajarilishi kerak bo\'lgan ishlar'
+    headerColor = 'bg-blue-50/50 border-blue-100'
+    titleColor = 'text-blue-900'
+  } else if (type === 'qolibKetgan') {
+    title = 'Bajarilmagan ishlar (Izoxsiz)'
+    headerColor = 'bg-red-50/50 border-red-100'
+    titleColor = 'text-red-900'
+  } else {
+    title = 'Sababli bajarilmagan ishlar (Arxiv)'
+    headerColor = 'bg-orange-50/50 border-orange-100'
+    titleColor = 'text-orange-900'
+  }
+
+  const downloadPDF = () => {
+    const doc = new jsPDF()
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(14)
+    doc.text(`Sababli bajarilmagan ishlar xisoboti (Barcha bekatlar)`, 14, 20)
+    doc.setFontSize(10)
+    doc.text(`Sana: ${todayFormatted}`, 14, 28)
+
+    const tableData = tasks.map((t, i) => {
+      let dateFormatted = t.entry.ragat
+      if (t.entry.ragat && t.month && t.month.includes('-')) {
+        const [yyyy, mm] = t.month.split('-')
+        dateFormatted = `${String(t.entry.ragat.trim()).padStart(2, '0')}.${mm}.${yyyy}`
+      }
+      const status = t.completedDate ? 'Bajarilgan ✅' : 'Bajarilmagan ❌'
+      
+      return [
+        i + 1,
+        t.stationName,
+        dateFormatted,
+        t.taskText,
+        t.reason || '',
+        status
+      ]
+    })
+
+    autoTable(doc, {
+      startY: 35,
+      head: [['#', 'Bekat', 'Sana', 'Ish nomi', 'Sabab (Izox)', 'Holati']],
+      body: tableData,
+      styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+      headStyles: { fillColor: [249, 115, 22] },
+      columnStyles: {
+        0: { cellWidth: 10 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 20 },
+        3: { cellWidth: 55 },
+        4: { cellWidth: 55 },
+        5: { cellWidth: 25 }
+      }
+    })
+
+    doc.save(`Sababli_bajarilmagan_dispetcher_${todayDate.getTime()}.pdf`)
+  }
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
-      <div className="flex h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
-        <div className={`flex items-center justify-between border-b px-6 sm:px-8 py-5 sm:py-6 ${isBajarilgan
-          ? 'border-emerald-100 bg-emerald-50/50'
-          : 'border-red-100 bg-red-50/50'
-          }`}>
+      <div className="flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
+        
+        {/* HEADER */}
+        <div className={`flex items-center justify-between border-b px-6 sm:px-8 py-5 sm:py-6 ${headerColor}`}>
           <div>
-            <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
-              {isBajarilgan ? 'Bugun bajarilgan ishlar' : 'Bugun bajarilmagan ishlar'}
+            <h3 className={`text-lg sm:text-xl font-black tracking-tight ${titleColor}`}>
+              {title}
             </h3>
-            <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-              {todayFormatted} · {tasks.length} ta ish · {stationEntries.length} ta bekat
-            </p>
+            <div className="flex items-center gap-4 mt-1">
+              <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest">
+                {todayFormatted} · {tasks.length} ta ish · {stationEntries.length} ta bekat
+              </p>
+              {type === 'sababliBajarilmagan' && tasks.length > 0 && (
+                <button onClick={downloadPDF} className="flex items-center gap-1.5 text-[10px] font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-md hover:bg-orange-200 transition-colors">
+                  <Download size={14} /> Yuklash (PDF)
+                </button>
+              )}
+            </div>
           </div>
           <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-2.5 sm:p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
             <X size={22} />
@@ -47,12 +117,11 @@ export function TodayTasksModal({ type, tasks, onClose }: {
           {tasks.length === 0 ? (
             <div className="flex h-full items-center justify-center p-6">
               <div className="text-center">
-                <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${isBajarilgan ? 'bg-emerald-50 text-emerald-400' : 'bg-slate-100 text-slate-300'
-                  }`}>
-                  {isBajarilgan ? <CheckCircle2 size={32} /> : <Clock size={32} />}
+                <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-300`}>
+                  {type === 'bugunReja' ? <CheckCircle2 size={32} /> : type === 'sababliBajarilmagan' ? <BookOpen size={32} /> : <AlertTriangle size={32} />}
                 </div>
                 <p className="text-sm font-black text-slate-400 uppercase tracking-widest">
-                  {isBajarilgan ? 'Bugun hali bajarilgan ish yo\'q' : 'Barcha ishlar bajarilgan!'}
+                  Bu ro'yxatda ishlar yo'q
                 </p>
               </div>
             </div>
@@ -62,16 +131,10 @@ export function TodayTasksModal({ type, tasks, onClose }: {
                 <button
                   key={stationId}
                   onClick={() => setExpandedStation(stationId)}
-                  className={`w-full flex items-center justify-between rounded-2xl border p-4 sm:p-5 transition-all hover:shadow-md active:scale-[0.98] group ${isBajarilgan
-                    ? 'border-emerald-100 bg-white hover:border-emerald-300 hover:bg-emerald-50/30'
-                    : 'border-red-100 bg-white hover:border-red-300 hover:bg-red-50/30'
-                    }`}
+                  className={`w-full flex items-center justify-between rounded-2xl border p-4 sm:p-5 transition-all hover:shadow-md active:scale-[0.98] group bg-white border-slate-200 hover:bg-slate-50`}
                 >
                   <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                    <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl text-sm sm:text-base font-black shadow-sm ${isBajarilgan
-                      ? 'bg-emerald-100 text-emerald-600 border border-emerald-200'
-                      : 'bg-red-100 text-red-600 border border-red-200'
-                      }`}>
+                    <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl text-sm sm:text-base font-black shadow-sm bg-slate-100 text-slate-600 border border-slate-200`}>
                       +{items.length}
                     </div>
                     <div className="text-left min-w-0">
@@ -85,8 +148,7 @@ export function TodayTasksModal({ type, tasks, onClose }: {
             </div>
           ) : (
             <div>
-              <div className={`sticky top-0 z-10 flex items-center gap-3 border-b px-4 sm:px-6 py-3 ${isBajarilgan ? 'border-emerald-100 bg-emerald-50/80' : 'border-red-100 bg-red-50/80'
-                } backdrop-blur-sm`}>
+              <div className={`sticky top-0 z-10 flex items-center gap-3 border-b px-4 sm:px-6 py-3 bg-white/80 backdrop-blur-sm border-slate-200`}>
                 <button
                   onClick={() => setExpandedStation(null)}
                   className="flex items-center gap-1.5 rounded-xl bg-white/80 border border-slate-200/60 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-white hover:text-slate-900 transition-all shadow-sm"
@@ -95,8 +157,7 @@ export function TodayTasksModal({ type, tasks, onClose }: {
                   <span className="hidden sm:inline">Bekatlar</span>
                 </button>
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-black ${isBajarilgan ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
-                    }`}>
+                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-black bg-slate-100 text-slate-600`}>
                     {grouped[expandedStation]?.items.length}
                   </div>
                   <div className="min-w-0">
@@ -114,29 +175,31 @@ export function TodayTasksModal({ type, tasks, onClose }: {
                     const [yyyy, mm] = task.month.split('-')
                     dateFormatted = `${String(task.entry.ragat.trim()).padStart(2, '0')}.${mm}.${yyyy}`
                   }
+                  
+                  const isCompletedAfter = !!task.completedDate
 
                   return (
-                    <div key={ti} className={`rounded-xl border p-3 sm:p-4 transition-colors ${isBajarilgan ? 'border-emerald-100 bg-white hover:bg-emerald-50/20' : 'border-red-100 bg-white hover:bg-red-50/20'
-                      }`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-wide border ${isBajarilgan
-                          ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                          : 'bg-red-50 text-red-600 border-red-100'
-                          }`}>
-                          {isBajarilgan ? <CheckCircle2 size={10} /> : <Clock size={10} />}
-                          {isBajarilgan ? dateFormatted : `${dateFormatted} gacha`}
+                    <div key={ti} className="rounded-xl border p-4 sm:p-5 transition-colors bg-white border-slate-200 hover:bg-slate-50">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-wide border ${isCompletedAfter ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                          {isCompletedAfter ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+                          Sana: {dateFormatted}
                         </span>
-                        {isBajarilgan && task.entry.bajarildiShn && (
-                          <span className="text-[9px] sm:text-[10px] font-bold text-emerald-500 truncate">
-                            ✓ {task.entry.bajarildiShn}
-                          </span>
-                        )}
                       </div>
-                      <p className="text-xs sm:text-[13px] font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">{text}</p>
-                      {!isBajarilgan && (
-                        <p className="mt-2 flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-red-400">
-                          <Clock size={10} /> Muddati o'tgan — bajarilmagan
-                        </p>
+                      <p className="text-sm font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">{text}</p>
+                      
+                      {task.reason && (
+                        <div className="mt-3 p-3 bg-orange-50/50 rounded-xl border border-orange-100/50">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-orange-800/50 mb-1">Izox:</p>
+                          <p className="text-[11px] font-semibold text-orange-900 leading-relaxed">{task.reason}</p>
+                        </div>
+                      )}
+
+                      {isCompletedAfter && (
+                        <div className="mt-3 inline-flex items-center gap-1.5 px-2 py-1 bg-emerald-100 rounded-md">
+                          <CheckCircle2 size={14} className="text-emerald-600" />
+                          <span className="text-[10px] font-black uppercase text-emerald-700">Kechikib bo'lsa ham bajarildi</span>
+                        </div>
                       )}
                     </div>
                   )

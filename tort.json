@@ -243,6 +243,13 @@
         "nsh": "NSH-01 10.2"
       },
       {
+        "ish": " Ikki ipli tarqalmaydigan va ikki ipli tarqaladigan,parallel ulagan ajratilgan qismda,yo'l relesi mavjud bo'lmagan joylarda",
+        "davriylik": "To'rt haftada bir marta",
+        "bajaruvchi": "SHN,SHNM",
+        "jurnal": "DU-46",
+        "nsh": "NSH-01 10.2"
+      },
+      {
         "ish": "Rels zanjirlari yo'l relelarida kuchlanishni o'lchash:\nstansiyada",
         "davriylik": "Bir oyda bir marta",
         "bajaruvchi": "SHN",
@@ -345,6 +352,13 @@
         "nsh": "NSH-01 13.1"
       },
       {
+        "ish": "Navbatchilar xizmat ko‘rsatadigan va xizmat ko‘rsatmaydigan kesishmalarda hamda bekat navbatchisi tomonidan nazorat qilinadigan kesishmalar (akkumulyator batareyalarini holatini, agar zaryad to‘laligini bildiruvchi moslama bo‘lsa) bunda akkumullyator batareyasini holati, shlagbaum ochib- yopish elektroyuritgich holati, shuningdek tozalash va sozlash, elektrodvigatel shёtkasi va kollektori holati, elektroprividni montaj va kontakt prujinalar holati, friktsiyaga ishlaganda tok kuchi sarfi (o‘lchanadi), tovushli qo‘ng‘iroqlarni ishlashi, kesishma svetoforlari va brus lampalari (svetodiod) ko‘rinishi va o‘chib-yonish chastotasi, boshqaruv pultidagi knopkalarni ishlashi, rels zanjirlaridagi drossel – transformator va kabel stoykalarini holati, navbatchilar xizmat ko‘rsatmaydigan kesishmadagi APS qurilmalarini sozligini nazorat qilish sxemasini tekshirish.",
+        "davriylik": "To'rt haftada bir marta,oyda bir marta,kompleks xizmat ko'rsatish",
+        "bajaruvchi": "SHN,SHNM",
+        "jurnal": "PU-67,SHU-2,Kesishma navbatchilari xizmat ko'rsatmaydigan kesishmalarda",
+        "nsh": "NSH-01 13.1"
+      },
+      {
         "ish": "To'suvchi svetoforlarni sozligini, ishlashini va ko'rinishini tekshirish, svetofor lampalarini simini butligi nazorati bo'lmaganda.",
         "davriylik": "To'rt haftada bir marta",
         "bajaruvchi": "SHN",
@@ -388,6 +402,20 @@
         "bajaruvchi": "SHNS,SHN",
         "jurnal": "SHU-2",
         "nsh": "NSH-01 18.1.1"
+      },
+      {
+        "ish": "Elektromexaniklar navbatchilik qilayotgan joylarda",
+        "davriylik": "Navbatchilikda bir marta",
+        "bajaruvchi": "SHN",
+        "jurnal": "SHU-2",
+        "nsh": "NSH-01 18.1.1"
+      },
+      {
+        "ish": "Elektromexaniklar navbatchilik qilmaydigan joylarda",
+        "davriylik": "Haftada bir marta",
+        "bajaruvchi": "SHN",
+        "jurnal": "SHU-2",
+        "nsh": "NSH-01 18.1.1"
       }
     ]
   },
@@ -397,6 +425,20 @@
       {
         "ish": "Akkumulyatorlar holatini, har bir akkumulyatorda kuchlanishni va elektrolit zichligini 12A yuklama probining yordamida o'zgaruvchan tok o'chirilgan holatda o'lchash; plastinalarning sulfatlanib qolish holati, sinish, plastinalar boshqa moddalar bilan qoplanmasligini tekshirish; stelyajlarni, bankalarni tozalash, ulagichlarni vazelin bilan Moylash, batareya shkafini tozalash:\n\nKuchlanishni avtomatik sozlash qurilmasi bor joylarda:",
         "davriylik": "To'rt haftada bir marta",
+        "bajaruvchi": "SHN",
+        "jurnal": "SHU-63",
+        "nsh": "NSH-01 18.2.1"
+      },
+      {
+        "ish": "Kuchlanishi avtomatik sozlash qurilmasi yo'q joylarda:Stansiyada",
+        "davriylik": "Ikki haftada bir marta",
+        "bajaruvchi": "SHN",
+        "jurnal": "SHU-63",
+        "nsh": "NSH-01 18.2.1"
+      },
+      {
+        "ish": "Peregonda",
+        "davriylik": "Bir oyda bir marta",
         "bajaruvchi": "SHN",
         "jurnal": "SHU-63",
         "nsh": "NSH-01 18.2.1"

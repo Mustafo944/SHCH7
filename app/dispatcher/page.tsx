@@ -77,7 +77,7 @@ export default function DispatcherPage() {
   const [activeJournalType, setActiveJournalType] = useState<JournalType | null>(null)
   const [activeJournalMonth, setActiveJournalMonth] = useState<string>('')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
-  const [todayModal, setTodayModal] = useState<'bajarilgan' | 'bajarilmagan' | null>(null)
+  const [todayModal, setTodayModal] = useState<'bugunReja' | 'qolibKetgan' | 'sababliBajarilmagan' | null>(null)
 
   const [form, setForm] = useState({
     fullName: '',
@@ -196,16 +196,10 @@ export default function DispatcherPage() {
   const prevMonthYear = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear()
   const prevMonthStr = `${prevMonthYear}-${String(prevMonthIdx + 1).padStart(2, '0')}`
 
-  const todayTasks = useMemo(() => {
-    const result: {
-      stationId: string
-      stationName: string
-      workerName: string
-      entry: ReportEntry
-      bajarilgan: boolean
-      month: string
-      taskText: string
-    }[] = []
+  const { todayReja, allQolibKetgan, allSababliBajarilmagan } = useMemo(() => {
+    const reja: any[] = []
+    const qolib: any[] = []
+    const sababli: any[] = []
 
     allReports
       .filter(r => r.month === currentMonthStr || r.month === prevMonthStr)
@@ -217,65 +211,49 @@ export default function DispatcherPage() {
 
           // Har bir ustunni alohida tekshiramiz
           const columns = [
-            { text: e.haftalikJadval, done: e.doneHaftalik },
-            { text: e.yillikJadval, done: e.doneYillik },
-            { text: e.yangiIshlar, done: e.doneYangi },
-            { text: e.kmoBartaraf, done: e.doneKmo },
-            { text: e.majburiyOzgarish, done: e.doneMajburiy }
+            { text: e.haftalikJadval, done: !!e.doneHaftalik, type: 'haftalik', reason: e.missedReasonHaftalik, comp: e.completedAfterMissedDateHaftalik },
+            { text: e.yillikJadval, done: !!e.doneYillik, type: 'yillik', reason: e.missedReasonYillik, comp: e.completedAfterMissedDateYillik },
+            { text: e.yangiIshlar, done: !!e.doneYangi, type: 'yangi', reason: e.missedReasonYangi, comp: e.completedAfterMissedDateYangi },
+            { text: e.kmoBartaraf, done: !!e.doneKmo, type: 'kmo', reason: e.missedReasonKmo, comp: e.completedAfterMissedDateKmo },
+            { text: e.majburiyOzgarish, done: !!e.doneMajburiy, type: 'majburiy', reason: e.missedReasonMajburiy, comp: e.completedAfterMissedDateMajburiy }
           ]
 
           columns.forEach(col => {
             if (!col.text) return
-            const isDone = !!col.done
+            
+            const taskObj = {
+              reportId: r.id,
+              stationId: r.stationId,
+              stationName: r.stationName,
+              workerName: r.workerName,
+              entry: e,
+              month: r.month,
+              taskText: col.text,
+              type: col.type,
+              reason: col.reason,
+              completedDate: col.comp
+            }
 
             if (isCurrentMonth) {
-              // Bajarilgan bo'lsa, faqat bugungilar (taskDay === todayDay)
-              if (isDone && taskDay === todayDay) {
-                result.push({
-                  stationId: r.stationId,
-                  stationName: r.stationName,
-                  workerName: r.workerName,
-                  entry: e,
-                  bajarilgan: true,
-                  month: r.month,
-                  taskText: col.text
-                })
+              if (taskDay === todayDay) {
+                reja.push(taskObj)
               }
-              // Bajarilmagan bo'lsa, faqat o'tib ketgan muddatlar (taskDay < todayDay)
-              else if (!isDone && taskDay < todayDay) {
-                result.push({
-                  stationId: r.stationId,
-                  stationName: r.stationName,
-                  workerName: r.workerName,
-                  entry: e,
-                  bajarilgan: false,
-                  month: r.month,
-                  taskText: col.text
-                })
+              if (taskDay < todayDay && !col.done) {
+                if (col.reason) sababli.push(taskObj)
+                else qolib.push(taskObj)
               }
             } else {
-              // O'tgan oyda: bajarilmagan barcha ishlar
-              if (!isDone) {
-                result.push({
-                  stationId: r.stationId,
-                  stationName: r.stationName,
-                  workerName: r.workerName,
-                  entry: e,
-                  bajarilgan: false,
-                  month: r.month,
-                  taskText: col.text
-                })
+              if (!col.done) {
+                if (col.reason) sababli.push(taskObj)
+                else qolib.push(taskObj)
               }
             }
           })
         })
       })
 
-    return result
+    return { todayReja: reja, allQolibKetgan: qolib, allSababliBajarilmagan: sababli }
   }, [allReports, currentMonthStr, prevMonthStr, todayDay])
-
-  const todayBajarilgan = todayTasks.filter(t => t.bajarilgan)
-  const todayBajarilmagan = todayTasks.filter(t => !t.bajarilgan)
 
   async function handleAddWorker(e: React.FormEvent) {
     e.preventDefault()
@@ -448,11 +426,11 @@ export default function DispatcherPage() {
 
           {/* Dashboard Stats */}
           <div className="mb-6 rounded-[24px] bg-white/50 backdrop-blur-xl p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 animate-fade-up">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <StatCard icon={<MapPin />} label="Bekatlar" value={stations.length} color="purple" />
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <StatCard icon={<MapPin />} label="BEKATLAR RO'YXATI" value={stations.length} color="purple" />
               <StatCard
                 icon={<Users />}
-                label="Ishchilar"
+                label="ISHCHILAR RO'YXATI"
                 value={workers.length}
                 onClick={() => setShowWorkersModal(true)}
                 clickable
@@ -460,20 +438,27 @@ export default function DispatcherPage() {
               />
               <StatCard
                 icon={<CheckCircle2 />}
-                label="Bugun bajarilgan"
-                value={todayBajarilgan.length}
-                onClick={() => setTodayModal('bajarilgan')}
+                label="Bugun bajarilishi kerak"
+                value={todayReja.length}
+                onClick={() => setTodayModal('bugunReja')}
                 clickable
-                color="emerald"
+                color="blue"
               />
               <StatCard
                 icon={<AlertTriangle />}
                 label="Bajarilmagan ishlar"
-                value={todayBajarilmagan.length}
-                active={todayBajarilmagan.length > 0}
-                onClick={() => setTodayModal('bajarilmagan')}
+                value={allQolibKetgan.length}
+                onClick={() => setTodayModal('qolibKetgan')}
                 clickable
                 color="red"
+              />
+              <StatCard
+                icon={<BookOpen />}
+                label="Sababli bajarilmagan"
+                value={allSababliBajarilmagan.length}
+                onClick={() => setTodayModal('sababliBajarilmagan')}
+                clickable
+                color="amber"
               />
             </div>
           </div>
@@ -851,7 +836,7 @@ export default function DispatcherPage() {
       {todayModal && (
         <TodayTasksModal
           type={todayModal}
-          tasks={todayModal === 'bajarilgan' ? todayBajarilgan : todayBajarilmagan}
+          tasks={todayModal === 'bugunReja' ? todayReja : todayModal === 'qolibKetgan' ? allQolibKetgan : allSababliBajarilmagan}
           onClose={() => setTodayModal(null)}
         />
       )}

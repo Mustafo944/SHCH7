@@ -45,6 +45,27 @@ export interface ReportEntry {
   doneKmo?: boolean;
   doneMajburiy?: boolean;
 
+  // Har bir ustun uchun bajarilmagan sababi (Izox)
+  missedReasonHaftalik?: string;
+  missedReasonYillik?: string;
+  missedReasonYangi?: string;
+  missedReasonKmo?: string;
+  missedReasonMajburiy?: string;
+
+  // Izox yozilgan sana
+  missedReasonDateHaftalik?: string;
+  missedReasonDateYillik?: string;
+  missedReasonDateYangi?: string;
+  missedReasonDateKmo?: string;
+  missedReasonDateMajburiy?: string;
+
+  // Sababli bajarilmagan ish keyinchalik bajarilgan bo'lsa
+  completedAfterMissedDateHaftalik?: string;
+  completedAfterMissedDateYillik?: string;
+  completedAfterMissedDateYangi?: string;
+  completedAfterMissedDateKmo?: string;
+  completedAfterMissedDateMajburiy?: string;
+
   bajarildiShn: string;
   bajarildiImzo: string;
   adImzosi: string;

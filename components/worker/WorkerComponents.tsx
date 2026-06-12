@@ -1,9 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight } from 'lucide-react'
+import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight, AlertTriangle, FileText } from 'lucide-react'
 import { getGlobalGraphics, getSchemasByStation, upsertReport } from '@/lib/supabase-db'
 import type { User, WorkReport, ReportEntry, StationSchema } from '@/types'
+import { supabase } from '@/lib/supabase'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, type ParsedTaskItem } from '@/lib/reja-data'
 import { MONTHS } from '@/lib/constants'
 import { DU46JournalView, SHU2JournalView, YerlatgichJournalView, AlsnKodJournalView, MpsFriksionJournalView } from '@/components/JournalView'
@@ -45,21 +48,22 @@ export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badg
   )
 }
 
-export function HeaderCard({ title, subtitle, status }: { title: string, subtitle: string, status: string }) {
+export function HeaderCard({ title, subtitle, status, statusColor }: { title: string, subtitle: string, status: string, statusColor?: string }) {
   const statusColors: Record<string, string> = {
     tasdiqlandi: 'badge-success',
     kutilmoqda: 'badge-warning',
     yangi: 'badge-info',
     "ko'rish": 'badge-info',
+    "error": 'bg-red-100 text-red-600 border-red-200 border shadow-sm px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest'
   }
   return (
     <div className="glass-card rounded-2xl p-6 shadow-sm">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">{title}</h2>
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{subtitle}</p>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{title}</h2>
+          <p className="text-[10px] sm:text-sm font-bold text-slate-400 uppercase tracking-widest">{subtitle}</p>
         </div>
-        <div className={`badge ${statusColors[status]}`}>{status}</div>
+        <div className={`${statusColor && statusColors[statusColor] ? statusColors[statusColor] : statusColors[status.toLowerCase()] || 'badge'}`}>{status}</div>
       </div>
     </div>
   )
@@ -71,6 +75,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   })))
   const [submitting, setSubmitting] = useState(false)
   const [formMessage, setFormMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null)
+  const [headerError, setHeaderError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalType, setModalType] = useState<'4-haftalik' | 'yillik'>('4-haftalik')
   const [modalIdx, setModalIdx] = useState(0)
@@ -144,8 +149,8 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     const currentActualMonth = currentDate.getMonth()
 
     if (month > currentActualMonth) {
-      setFormMessage({ type: 'error', text: `Hali ${MONTHS[month]} oyi boshlanmadi` })
-      setTimeout(() => setFormMessage(null), 3000)
+      setHeaderError(`Hali ${MONTHS[month]} oyi boshlanmadi`)
+      setTimeout(() => setHeaderError(null), 3000)
       return
     }
 
@@ -164,6 +169,19 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     if (taskType === 'yangi') entry.doneYangi = true
     if (taskType === 'kmo') entry.doneKmo = true
     if (taskType === 'majburiy') entry.doneMajburiy = true
+
+    const ragatNum = parseInt(entry.ragat)
+    if (!isNaN(ragatNum)) {
+      const ragatDate = new Date(new Date().getFullYear(), month, ragatNum)
+      // 5 kundan o'tib ketgan bo'lsa
+      if (Date.now() > ragatDate.getTime() + 5 * 24 * 60 * 60 * 1000) {
+        if (taskType === 'haftalik') (entry as any).completedAfterMissedDateHaftalik = new Date().toISOString()
+        if (taskType === 'yillik') (entry as any).completedAfterMissedDateYillik = new Date().toISOString()
+        if (taskType === 'yangi') (entry as any).completedAfterMissedDateYangi = new Date().toISOString()
+        if (taskType === 'kmo') (entry as any).completedAfterMissedDateKmo = new Date().toISOString()
+        if (taskType === 'majburiy') (entry as any).completedAfterMissedDateMajburiy = new Date().toISOString()
+      }
+    }
 
     // Hamma mavjud ishlar bajarilganligini tekshiramiz
     const needsHaftalik = !!entry.haftalikJadval && !entry.doneHaftalik
@@ -246,7 +264,12 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 
   return (
     <div className="space-y-6 animate-fade-up">
-      <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} status="yangi" />
+      <HeaderCard 
+        title="Jurnal To'ldirish" 
+        subtitle={`${MONTHS[month]} · ${stationName}`} 
+        status={headerError || "yangi"} 
+        statusColor={headerError ? "error" : "yangi"}
+      />
       <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm relative shadow-sm">
         <div className="sm:hidden absolute top-0 right-0 bg-purple-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
           O'ngga suring →
@@ -297,7 +320,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                         className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
                       />
                       {e.doneHaftalik && (
-                        <div className="absolute top-1 right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-sm" title="Bajarildi">
+                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${(e as any).completedAfterMissedDateHaftalik ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
                           <CheckCircle2 size={12} />
                         </div>
                       )}
@@ -320,7 +343,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                         className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
                       />
                       {e.doneYillik && (
-                        <div className="absolute top-1 right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-sm" title="Bajarildi">
+                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${(e as any).completedAfterMissedDateYillik ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
                           <CheckCircle2 size={12} />
                         </div>
                       )}
@@ -334,29 +357,50 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                       </button>
                     )}
                   </td>
-                  <td className="border-r border-slate-100 p-1 align-top">
-                    <textarea
-                      value={e.yangiIshlar}
-                      readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-                      onChange={(ev) => { const n = [...entries]; n[i].yangiIshlar = ev.target.value; setEntries(n) }}
-                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    />
+                  <td className="relative border-r border-slate-100 p-1 align-top">
+                    <div className="relative h-full">
+                      <textarea
+                        value={e.yangiIshlar}
+                        readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+                        onChange={(ev) => { const n = [...entries]; n[i].yangiIshlar = ev.target.value; setEntries(n) }}
+                        className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      />
+                      {e.doneYangi && (
+                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${(e as any).completedAfterMissedDateYangi ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
+                          <CheckCircle2 size={12} />
+                        </div>
+                      )}
+                    </div>
                   </td>
-                  <td className="border-r border-slate-100 p-1 align-top">
-                    <textarea
-                      value={e.kmoBartaraf}
-                      readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-                      onChange={(ev) => { const n = [...entries]; n[i].kmoBartaraf = ev.target.value; setEntries(n) }}
-                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    />
+                  <td className="relative border-r border-slate-100 p-1 align-top">
+                    <div className="relative h-full">
+                      <textarea
+                        value={e.kmoBartaraf}
+                        readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+                        onChange={(ev) => { const n = [...entries]; n[i].kmoBartaraf = ev.target.value; setEntries(n) }}
+                        className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      />
+                      {e.doneKmo && (
+                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${(e as any).completedAfterMissedDateKmo ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
+                          <CheckCircle2 size={12} />
+                        </div>
+                      )}
+                    </div>
                   </td>
-                  <td className="border-r border-slate-100 p-1 align-top">
-                    <textarea
-                      value={e.majburiyOzgarish}
-                      readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-                      onChange={(ev) => { const n = [...entries]; n[i].majburiyOzgarish = ev.target.value; setEntries(n) }}
-                      className={`min-h-[60px] w-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    />
+                  <td className="relative border-r border-slate-100 p-1 align-top">
+                    <div className="relative h-full">
+                      <textarea
+                        value={e.majburiyOzgarish}
+                        readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+                        onChange={(ev) => { const n = [...entries]; n[i].majburiyOzgarish = ev.target.value; setEntries(n) }}
+                        className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      />
+                      {e.doneMajburiy && (
+                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${(e as any).completedAfterMissedDateMajburiy ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
+                          <CheckCircle2 size={12} />
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="border-r border-slate-100 p-2 text-center align-middle font-medium text-purple-600">
                     {e.bajarildiShn}
@@ -365,34 +409,53 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                     {e.bajarildiImzo}
                   </td>
                   <td className="p-2 text-center align-middle">
-                    {e.adImzosi ? (
-                      <span className="inline-flex items-center gap-1 whitespace-pre-wrap rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100"><CheckCircle2 size={12} /> {e.adImzosi}</span>
-                    ) : isConfirmed ? (
-                      (() => {
-                        const hasHaftalik = !!e.haftalikJadval && !e.doneHaftalik
-                        const hasYillik = !!e.yillikJadval && !e.doneYillik
-                        const hasYangi = !!e.yangiIshlar && !e.doneYangi
-                        const hasKmo = !!e.kmoBartaraf && !e.doneKmo
-                        const hasMajburiy = !!e.majburiyOzgarish && !e.doneMajburiy
+                    {(() => {
+                        const isLate = !!((e as any).completedAfterMissedDateHaftalik || (e as any).completedAfterMissedDateYillik || (e as any).completedAfterMissedDateYangi || (e as any).completedAfterMissedDateKmo || (e as any).completedAfterMissedDateMajburiy)
+                        const lateDateStr = (e as any).completedAfterMissedDateHaftalik || (e as any).completedAfterMissedDateYillik || (e as any).completedAfterMissedDateYangi || (e as any).completedAfterMissedDateKmo || (e as any).completedAfterMissedDateMajburiy
+                        let formattedLateDate = ''
+                        if (lateDateStr) {
+                           const d = new Date(lateDateStr)
+                           formattedLateDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
+                        }
 
-                        const needsAction = hasHaftalik || hasYillik || hasYangi || hasKmo || hasMajburiy
-
-                        if (needsAction) {
+                        if (e.adImzosi) {
                           return (
-                            <button
-                              onClick={() => handleBajarishClick(i)}
-                              disabled={submitting}
-                              className="rounded-lg bg-purple-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-purple-600 transition-all active:scale-95 disabled:opacity-50"
-                            >
-                              Bajarish
-                            </button>
+                            <div className="flex flex-col items-center gap-1">
+                              <span className={`inline-flex items-center gap-1 whitespace-pre-wrap rounded-md px-2 py-1 text-[10px] font-bold border ${isLate ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                                <CheckCircle2 size={12} /> {e.adImzosi}
+                              </span>
+                              {isLate && formattedLateDate && (
+                                <span className="text-[9px] font-bold text-orange-500">{formattedLateDate} da bajarildi</span>
+                              )}
+                            </div>
                           )
                         }
-                        return null
-                      })()
-                    ) : (
-                      <span className="text-[10px] text-slate-300 italic">Kutilmoqda...</span>
-                    )}
+
+                        if (isConfirmed) {
+                          const hasHaftalik = !!e.haftalikJadval && !e.doneHaftalik
+                          const hasYillik = !!e.yillikJadval && !e.doneYillik
+                          const hasYangi = !!e.yangiIshlar && !e.doneYangi
+                          const hasKmo = !!e.kmoBartaraf && !e.doneKmo
+                          const hasMajburiy = !!e.majburiyOzgarish && !e.doneMajburiy
+
+                          const needsAction = hasHaftalik || hasYillik || hasYangi || hasKmo || hasMajburiy
+
+                          if (needsAction) {
+                            return (
+                              <button
+                                onClick={() => handleBajarishClick(i)}
+                                disabled={submitting}
+                                className="rounded-lg bg-purple-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-purple-600 transition-all active:scale-95 disabled:opacity-50"
+                              >
+                                Bajarish
+                              </button>
+                            )
+                          }
+                          return null
+                        }
+
+                        return <span className="text-[10px] text-slate-300 italic">Kutilmoqda...</span>
+                    })()}
                   </td>
                 </tr>
               ))}
@@ -737,84 +800,311 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
   )
 }
 
-export function WorkerTasksModal({ type, tasks, onClose, onTaskClick }: {
-  type: 'bugunBajarilgan' | 'qolibKetgan'
-  tasks: { entry: ReportEntry, month: string, taskText?: string }[]
+export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskClick, onTasksUpdated, stationId, stationName }: {
+  type: 'bugunBajarilgan' | 'qolibKetgan' | 'sababliBajarilmagan'
+  bugun: { reportId: string, entry: ReportEntry, month: string, taskText?: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy' }[]
+  qolib: { reportId: string, entry: ReportEntry, month: string, taskText?: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy' }[]
+  sababli: { reportId: string, entry: ReportEntry, month: string, taskText?: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy', reason?: string, completedDate?: string }[]
   onClose: () => void
-  onTaskClick?: (task: { entry: ReportEntry, month: string, taskText?: string }) => void
+  onTaskClick?: (task: any) => void
+  onTasksUpdated?: () => void
+  stationId?: string
+  stationName?: string
 }) {
-  const isBajarilgan = type === 'bugunBajarilgan'
+  const [promptMode, setPromptMode] = useState<boolean>(false)
+  const [promptTask, setPromptTask] = useState<any>(null)
+  const [promptReason, setPromptReason] = useState<string>('')
+  const [isUpdating, setIsUpdating] = useState<boolean>(false)
+
+  let tasks: any[] = []
+  let title = ''
+  let headerColor = ''
+  let titleColor = ''
+
+  if (type === 'bugunBajarilgan') {
+    tasks = bugun
+    title = 'Bugun bajarilishi kerak bo\'lgan ishlar'
+    headerColor = 'bg-blue-50/50 border-blue-100'
+    titleColor = 'text-blue-900'
+  } else if (type === 'qolibKetgan') {
+    tasks = qolib
+    title = 'Bajarilmagan ishlar (Izox kutmoqda)'
+    headerColor = 'bg-red-50/50 border-red-100'
+    titleColor = 'text-red-900'
+  } else {
+    tasks = sababli
+    title = 'Sababli bajarilmagan ishlar (Arxiv)'
+    headerColor = 'bg-orange-50/50 border-orange-100'
+    titleColor = 'text-orange-900'
+  }
+
   const todayDate = new Date()
   const todayFormatted = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`
 
+  const updateTaskInDb = async (task: any, updateFn: (entry: ReportEntry) => void) => {
+    if (!task.reportId) return
+    setIsUpdating(true)
+    try {
+      const { data: report } = await supabase.from('work_reports').select('entries').eq('id', task.reportId).single()
+      if (!report) return
+
+      const newEntries = [...report.entries]
+      const entryIndex = newEntries.findIndex((e: ReportEntry) => e.ragat === task.entry.ragat)
+      if (entryIndex === -1) return
+
+      updateFn(newEntries[entryIndex])
+
+      await supabase.from('work_reports').update({ entries: newEntries }).eq('id', task.reportId)
+      onTasksUpdated?.()
+    } catch (err) {
+      console.error('Update failed:', err)
+    } finally {
+      setIsUpdating(false)
+      setPromptMode(false)
+      setPromptTask(null)
+      setPromptReason('')
+    }
+  }
+
+  const handleSaveReason = () => {
+    if (!promptReason.trim() || !promptTask) return
+    updateTaskInDb(promptTask, (entry) => {
+      const field = `missedReason${promptTask.type.charAt(0).toUpperCase() + promptTask.type.slice(1)}`
+      const dateField = `missedReasonDate${promptTask.type.charAt(0).toUpperCase() + promptTask.type.slice(1)}`
+      ;(entry as any)[field] = promptReason.trim()
+      ;(entry as any)[dateField] = new Date().toISOString()
+    })
+  }
+
+  const handleRemoveReason = (task: any) => {
+    if (confirm("Ushbu ishdan izohni olib tashlaysizmi? Ish yana 'Bajarilmagan ishlar' safiga qaytadi.")) {
+      updateTaskInDb(task, (entry) => {
+        const field = `missedReason${task.type.charAt(0).toUpperCase() + task.type.slice(1)}`
+        const dateField = `missedReasonDate${task.type.charAt(0).toUpperCase() + task.type.slice(1)}`
+        const compField = `completedAfterMissedDate${task.type.charAt(0).toUpperCase() + task.type.slice(1)}`
+        delete (entry as any)[field]
+        delete (entry as any)[dateField]
+        delete (entry as any)[compField]
+      })
+    }
+  }
+
+  const handleMarkCompleted = (task: any) => {
+    if (confirm("Bu ish kechikib bo'lsa ham bajarildimi?")) {
+      updateTaskInDb(task, (entry) => {
+        const compField = `completedAfterMissedDate${task.type.charAt(0).toUpperCase() + task.type.slice(1)}`
+        ;(entry as any)[compField] = new Date().toISOString()
+      })
+    }
+  }
+
+  const downloadPDF = () => {
+    const doc = new jsPDF()
+    
+    // Roboto shriftini qoshamiz (yoki shunchaki standart shrift ishlatamiz)
+    doc.setFont("helvetica", "normal")
+    
+    doc.setFontSize(14)
+    doc.text(`Sababli bajarilmagan ishlar - ${stationName || 'Barcha bekatlar'}`, 14, 20)
+    
+    doc.setFontSize(10)
+    doc.text(`Sana: ${todayFormatted}`, 14, 28)
+
+    const tableData = tasks.map((t, i) => {
+      let dateFormatted = t.entry.ragat
+      if (t.entry.ragat && t.month && t.month.includes('-')) {
+        const [yyyy, mm] = t.month.split('-')
+        dateFormatted = `${String(t.entry.ragat.trim()).padStart(2, '0')}.${mm}.${yyyy}`
+      }
+      
+      const status = t.completedDate ? 'Bajarilgan ✅' : 'Bajarilmagan ❌'
+      
+      return [
+        i + 1,
+        dateFormatted,
+        t.taskText,
+        t.reason || '',
+        status
+      ]
+    })
+
+    autoTable(doc, {
+      startY: 35,
+      head: [['#', 'Sana', 'Ish nomi', 'Sabab (Izox)', 'Holati']],
+      body: tableData,
+      styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+      headStyles: { fillColor: [249, 115, 22] }, // Orange-500
+      columnStyles: {
+        0: { cellWidth: 10 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 70 },
+        3: { cellWidth: 55 },
+        4: { cellWidth: 25 }
+      }
+    })
+
+    doc.save(`Sababli_bajarilmagan_${stationName || 'Barcha'}_${todayDate.getTime()}.pdf`)
+  }
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all">
-      <div className="flex h-[80vh] w-full max-w-3xl flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
-        <div className={`flex items-center justify-between border-b px-8 py-6 ${isBajarilgan ? 'border-emerald-100 bg-emerald-50/50' : 'border-red-100 bg-red-50/50'}`}>
+      <div className="flex h-[80vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
+        
+        {/* HEADER */}
+        <div className={`flex items-center justify-between border-b px-8 py-6 ${headerColor}`}>
           <div>
-            <h3 className="text-xl font-black text-slate-900 tracking-tight">
-              {isBajarilgan ? 'Bugun bajarilgan ishlar ro\'yxati' : 'Bajarilmagan ishlar'}
+            <h3 className={`text-xl font-black tracking-tight ${titleColor}`}>
+              {title}
             </h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-              Bugungi sana: {todayFormatted} · Jami: {tasks.length} ta
-            </p>
+            <div className="flex items-center gap-4 mt-1">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                Bugungi sana: {todayFormatted} · Jami: {tasks.length} ta
+              </p>
+              {type === 'sababliBajarilmagan' && tasks.length > 0 && (
+                <button onClick={downloadPDF} className="flex items-center gap-1.5 text-[10px] font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-md hover:bg-orange-200 transition-colors">
+                  <Download size={14} /> Yuklash (PDF)
+                </button>
+              )}
+            </div>
           </div>
           <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
             <X size={24} />
           </button>
         </div>
 
+        {/* BODY */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-slate-50/30">
-          {tasks.length === 0 ? (
+          {promptMode ? (
+            <div className="flex h-full items-center justify-center">
+              <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
+                <div className="flex items-center gap-3 mb-4">
+                  <AlertTriangle className="text-red-500" size={28} />
+                  <h4 className="text-lg font-black text-slate-800">Ish nega bajarilmadi?</h4>
+                </div>
+                <p className="text-sm text-slate-500 mb-6 font-medium leading-relaxed">
+                  {promptTask?.taskText}
+                </p>
+                <textarea
+                  autoFocus
+                  className="w-full rounded-2xl border-2 border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-700 outline-none transition-all focus:border-red-400 focus:bg-white resize-none"
+                  rows={4}
+                  placeholder="Sababni yozing (masalan: Ehtiyot qism yo'qligi sababli)..."
+                  value={promptReason}
+                  onChange={e => setPromptReason(e.target.value)}
+                />
+                <div className="mt-6 flex justify-end gap-3">
+                  <button disabled={isUpdating} onClick={() => { setPromptMode(false); setPromptTask(null); setPromptReason('') }} className="px-5 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-colors">
+                    Bekor qilish
+                  </button>
+                  <button disabled={isUpdating || !promptReason.trim()} onClick={handleSaveReason} className="px-6 py-2.5 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 shadow-md shadow-red-500/20 transition-all disabled:opacity-50">
+                    {isUpdating ? 'Saqlanmoqda...' : 'Saqlash'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : tasks.length === 0 ? (
             <div className="flex h-full items-center justify-center text-center">
               <div>
                 <p className="text-sm font-black text-slate-400 uppercase tracking-widest">
-                  {isBajarilgan ? 'Bugun hali bajarilgan ish yo\'q' : 'Bajarilmagan ishlar yo\'q'}
+                  Bu ro'yxatda ishlar yo'q
                 </p>
               </div>
             </div>
           ) : (
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               {tasks.map((task, ti) => {
-                const text = task.taskText || task.entry.haftalikJadval || task.entry.yillikJadval || task.entry.yangiIshlar || task.entry.kmoBartaraf || task.entry.majburiyOzgarish || ''
-                // Sana hisoblash: month "2026-04", ragat "4" -> "04.04.2026"
+                const text = task.taskText || ''
                 let dateFormatted = task.entry.ragat
                 if (task.entry.ragat && task.month && task.month.includes('-')) {
                   const [yyyy, mm] = task.month.split('-')
                   dateFormatted = `${String(task.entry.ragat.trim()).padStart(2, '0')}.${mm}.${yyyy}`
                 }
 
+                // Ranglar turi bo'yicha
+                let statusColor = 'text-slate-500'
+                let statusBg = 'bg-slate-50 border-slate-200'
+                if (type === 'bugunBajarilgan') { statusColor = 'text-blue-600'; statusBg = 'bg-blue-50 border-blue-100' }
+                if (type === 'qolibKetgan') { statusColor = 'text-red-600'; statusBg = 'bg-red-50 border-red-100' }
+                if (type === 'sababliBajarilmagan') { statusColor = 'text-orange-600'; statusBg = 'bg-orange-50 border-orange-100' }
+                
+                const isCompletedAfter = !!task.completedDate
+                const isClickable = !!onTaskClick && type === 'bugunBajarilgan'
+
                 return (
-                  <div key={ti} 
-                    className={`flex flex-col gap-3 border-b border-slate-100 last:border-0 px-5 py-4 transition-colors ${onTaskClick ? 'cursor-pointer hover:bg-slate-100' : 'hover:bg-slate-50/50'}`}
-                    onClick={() => onTaskClick && onTaskClick(task)}
+                  <div 
+                    key={ti} 
+                    className={`group/item flex flex-col sm:flex-row gap-4 border-b border-slate-100 last:border-0 px-6 py-5 transition-all ${isClickable ? 'cursor-pointer hover:bg-blue-50/30 active:scale-[0.99]' : 'hover:bg-slate-50/50'}`}
+                    onClick={() => { if (isClickable) onTaskClick(task) }}
                   >
-                    <div className={`inline-flex flex-col items-start self-start rounded-xl p-3 border shadow-sm ${isBajarilgan ? 'bg-emerald-50/80 border-emerald-100' : 'bg-red-50/80 border-red-100'
-                      }`}>
-                      <span className={`text-[9px] font-black uppercase tracking-widest ${isBajarilgan ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {isBajarilgan ? 'Bajarilgan sana' : 'Bajarilishi kerak edi:'}
+                    
+                    {/* SANA */}
+                    <div className={`inline-flex flex-col items-center justify-center shrink-0 rounded-2xl p-3 border shadow-sm w-24 h-24 ${isCompletedAfter ? 'bg-emerald-50 border-emerald-100' : statusBg}`}>
+                      <span className={`text-[9px] font-black uppercase tracking-widest text-center ${isCompletedAfter ? 'text-emerald-500' : statusColor}`}>
+                        {type === 'bugunBajarilgan' ? 'Bugun' : 'Sana'}
                       </span>
-                      <span className={`text-sm font-black mt-1 ${isBajarilgan ? 'text-emerald-700' : 'text-red-700'}`}>
+                      <span className={`text-sm font-black mt-1 ${isCompletedAfter ? 'text-emerald-700' : statusColor}`}>
                         {dateFormatted}
                       </span>
                     </div>
-                    <div className="flex-1 min-w-0 w-full pt-1">
-                      <p className="text-[11px] font-medium text-slate-700 leading-relaxed whitespace-pre-wrap">{text}</p>
 
-                      <div className="mt-3 flex gap-4">
-                        {task.entry.bajarildiShn ? (
-                          <div className="flex items-center gap-1">
-                            <CheckCircle2 size={12} className="text-emerald-500" />
-                            <span className="text-[10px] font-bold text-emerald-600">Elektromexanik: {task.entry.bajarildiShn}</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1">
-                            <X size={12} className="text-red-500" />
-                            <span className="text-[10px] font-bold text-red-600">Elektromexanik: Bajarilmagan</span>
-                          </div>
-                        )}
-                      </div>
+                    {/* MA'LUMOT */}
+                    <div className="flex-1 min-w-0 py-1">
+                      <p className="text-[12px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">{text}</p>
+                      
+                      {/* Agar sabab bo'lsa */}
+                      {task.reason && (
+                        <div className="mt-3 p-3 bg-orange-50/50 rounded-xl border border-orange-100/50">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-orange-800/50 mb-1">Ko'rsatilgan sabab:</p>
+                          <p className="text-[11px] font-semibold text-orange-900 leading-relaxed">{task.reason}</p>
+                        </div>
+                      )}
+
+                      {/* Agar keyin bajarilgan bo'lsa */}
+                      {isCompletedAfter && (
+                        <div className="mt-3 inline-flex items-center gap-1.5 px-2 py-1 bg-emerald-100 rounded-md">
+                          <CheckCircle2 size={14} className="text-emerald-600" />
+                          <span className="text-[10px] font-black uppercase text-emerald-700">Kechikib bo'lsa ham bajarildi</span>
+                        </div>
+                      )}
                     </div>
+
+                    {/* TUGMALAR (ACTIONS) */}
+                    <div className="flex sm:flex-col justify-end sm:justify-start gap-2 shrink-0">
+                      {type === 'qolibKetgan' && (
+                        <div className="flex flex-col gap-2">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setPromptTask(task); setPromptMode(true); setPromptReason('') }}
+                            className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-red-100 hover:bg-red-200 text-red-700 text-[11px] font-black uppercase transition-colors"
+                          >
+                            <FileText size={14} /> Bajarilmaganligi sababi
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); if (onTaskClick) onTaskClick(task) }}
+                            className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white shadow-sm shadow-purple-500/20 text-[11px] font-black uppercase transition-colors"
+                          >
+                            <CheckCircle2 size={14} /> Bajarish
+                          </button>
+                        </div>
+                      )}
+
+                      {type === 'sababliBajarilmagan' && !isCompletedAfter && (
+                        <div className="flex flex-col gap-2">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); if (onTaskClick) onTaskClick(task) }}
+                            className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white shadow-sm shadow-purple-500/20 text-[11px] font-black uppercase transition-colors"
+                          >
+                            <CheckCircle2 size={14} /> Bajarish
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {isClickable && (
+                      <div className="flex shrink-0 items-center justify-center pl-2 sm:pl-4 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600 shadow-sm group-hover/item:bg-blue-500 group-hover/item:text-white transition-colors">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
