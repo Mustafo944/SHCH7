@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { useSessionGuard, useRealtimeSubscription, useToast } from '@/lib/hooks'
+import { useSessionGuard, useRealtimeSubscription, useToast, useNotificationSound } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { getStations, getStation } from '@/lib/store'
 import dynamic from 'next/dynamic'
@@ -17,7 +17,9 @@ import {
   BookOpen,
   AlertCircle,
   Map as MapIcon,
-  ChevronLeft
+  ChevronLeft,
+  Volume2,
+  VolumeX
 } from 'lucide-react'
 
 export default function BekatNavbatchisiPage() {
@@ -39,6 +41,8 @@ export default function BekatNavbatchisiPage() {
   const [showSchemas, setShowSchemas] = useState(false)
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
+
+  const { isMuted, setIsMuted } = useNotificationSound(pendingCounts.du46)
 
   const allStations = getStations()
 
@@ -112,6 +116,9 @@ export default function BekatNavbatchisiPage() {
                 <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
                 <span className="text-[11px] font-black text-slate-700 tracking-widest uppercase">{session?.fullName || roleLabel}</span>
               </div>
+              <button onClick={() => setIsMuted(!isMuted)} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-slate-500 hover:bg-slate-50 hover:text-purple-600 transition-all shadow-sm active:scale-95">
+                {isMuted ? <VolumeX size={20} strokeWidth={2.5} /> : <Volume2 size={20} strokeWidth={2.5} />}
+              </button>
               <button onClick={handleSignOut} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-purple-100/50 bg-purple-50/50 text-purple-600 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 hover:scale-105 active:scale-95 transition-all shadow-sm group">
                 <LogOut size={20} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
               </button>

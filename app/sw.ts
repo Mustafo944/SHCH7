@@ -37,8 +37,8 @@ const supabaseCaching: RuntimeCaching[] = [
       cacheName: 'supabase-storage-cache',
       plugins: [
         new ExpirationPlugin({
-          maxEntries: 50,
-          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 kun
+          maxEntries: 300,
+          maxAgeSeconds: 365 * 24 * 60 * 60, // 1 yil
         }),
       ],
     }),

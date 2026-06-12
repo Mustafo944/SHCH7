@@ -529,7 +529,7 @@ export async function getUnreadIncidentsCount(workerId: string): Promise<number>
   const { data: incidents, error: incidentsError } = await supabase
     .from('incidents')
     .select('id');
-    
+
   if (incidentsError || !incidents) return 0;
 
   // Get read incidents for this worker
@@ -604,7 +604,10 @@ export async function uploadSchemaFile(
 
   const { error: uploadError } = await supabase.storage
     .from('sxemalar')
-    .upload(filePath, file, { upsert: false });
+    .upload(filePath, file, {
+      upsert: false,
+      cacheControl: '31536000'
+    });
 
   if (uploadError) throw new Error(uploadError.message);
 
@@ -696,10 +699,10 @@ export async function getLibraryBooks() {
 export async function uploadLibraryBook(file: File, bookTitle: string, uploadedBy: string = 'System') {
   // Haqiqiy fayl kengaytmasini (extension) olamiz (masalan 'pdf', 'png')
   const originalExt = file.name.split('.').pop() || 'pdf'
-  
+
   // Nomi ichida nuqta bo'lmasa, kengaytmani qo'shamiz. Aks holda Supabase xato beradi (Invalid Key)
   const finalFileName = bookTitle.includes('.') ? bookTitle : `${bookTitle}.${originalExt}`
-  
+
   const newFile = new File([file], finalFileName, { type: file.type })
   return uploadSchemaFile(LIBRARY_BOOKS_STATION_ID, newFile, 'book', uploadedBy)
 }
@@ -789,7 +792,7 @@ export async function getPendingJournalCounts(
             const next3 = getNextRole(e, 3)
             const next12 = getNextRole(e, 12)
             const userRoleToCheck = position || role
-            
+
             let isMyTurn = false
             if (userRoleToCheck === 'bekat_navbatchisi') {
               if (next3 !== null || next12 !== null) isMyTurn = true

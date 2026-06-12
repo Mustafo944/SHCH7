@@ -12,7 +12,7 @@ import {
   getReadIncidentIds,
   getPendingJournalCounts
 } from '@/lib/supabase-db'
-import { useSessionGuard, useToast } from '@/lib/hooks'
+import { useSessionGuard, useToast, useNotificationSound } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import type { WorkReport, ReportEntry, Incident, JournalType } from '@/types'
 import { MONTHS } from '@/lib/constants'
@@ -36,7 +36,9 @@ import {
   Download,
   BookOpen,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Volume2,
+  VolumeX
 } from 'lucide-react'
 
 
@@ -53,6 +55,7 @@ export default function WorkerPage() {
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
   const [selectedReport, _setSelectedReport] = useState<WorkReport | null>(null)
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
+  const { isMuted, setIsMuted } = useNotificationSound(pendingCounts.du46)
   const [selectedJournalType, setSelectedJournalType] = useState<JournalType | null>(null)
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
   const [workerModal, setWorkerModal] = useState<'bugunBajarilgan' | 'qolibKetgan' | 'sababliBajarilmagan' | null>(null)
@@ -292,6 +295,9 @@ export default function WorkerPage() {
                   {session?.position === 'elektromexanik' ? 'Elektromexanik' : session?.position === 'katta_elektromexanik' ? 'Katta elektromexanik' : session?.position === 'elektromontyor' ? 'Elektromontyor' : 'Ishchi'}
                 </span>
               </div>
+              <button onClick={() => setIsMuted(!isMuted)} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-slate-500 hover:bg-slate-50 hover:text-purple-600 transition-all shadow-sm active:scale-95">
+                {isMuted ? <VolumeX size={20} strokeWidth={2.5} /> : <Volume2 size={20} strokeWidth={2.5} />}
+              </button>
               <button onClick={handleSignOut} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-purple-100/50 bg-purple-50/50 text-purple-600 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 hover:scale-105 active:scale-95 transition-all shadow-sm group">
                 <LogOut size={20} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
               </button>
