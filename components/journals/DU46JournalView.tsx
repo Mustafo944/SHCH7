@@ -75,7 +75,7 @@ export function DU46JournalView({
   const isWorker = isElektromexanik || isYulUstasi
   const isBB = ['bekat_boshlighi', 'bekat_navbatchisi'].includes(userRole)
   const isDispatcher = userRole === 'dispatcher'
-  const isEditor = isWorker || isBB
+  const isEditor = isWorker || isBB || isEchXodimi
 
   // ── Joriy oy tekshiruvi ────────────────────────────────────────────────────────
   const isCurrentMonth = journalMonth === getCurrentJournalMonth()
