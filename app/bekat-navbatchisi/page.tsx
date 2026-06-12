@@ -20,10 +20,10 @@ import {
   ChevronLeft
 } from 'lucide-react'
 
-export default function BekatBoshlighiPage() {
-  const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['bekat_boshlighi'])
+export default function BekatNavbatchisiPage() {
+  const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['bekat_navbatchisi'])
 
-  const roleLabel = 'Bekat Boshlig\'i'
+  const roleLabel = 'Bekat Navbatchisi'
   const toast = useToast()
 
   // Brauzer tab sarlavhasini rolga mos qilish
@@ -189,7 +189,7 @@ export default function BekatBoshlighiPage() {
                 <div>
                   <h2 className="text-2xl font-black text-slate-900">{stationName}</h2>
                   <p className="text-xs text-slate-500 uppercase tracking-widest">
-                    Bekat Boshlig&apos;i Boshqaruvi
+                    Bekat Navbatchisi Boshqaruvi
                   </p>
                 </div>
               </div>
