@@ -13,6 +13,7 @@ const AVAILABLE_ROLES = [
   { id: 'elektromexanik', label: 'Elektromexanik' },
   { id: 'bekat_boshlighi', label: 'Bekat boshlig\'i' },
   { id: 'yul_ustasi', label: 'Yo\'l ustasi' },
+  { id: 'ech_xodimi', label: 'ECH xodimi' },
 ]
 
 export function ApprovalChainModal({ initialChain, isEdit, creatorRole, onCancel, onSave }: ApprovalChainModalProps) {

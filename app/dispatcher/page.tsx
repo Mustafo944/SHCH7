@@ -84,7 +84,7 @@ export default function DispatcherPage() {
     login: '',
     password: '',
     phone: '',
-    role: 'worker' as 'worker' | 'bekat_boshlighi' | 'elektromexanik' | 'elektromontyor' | 'bekat_navbatchisi' | 'yul_ustasi',
+    role: 'worker' as 'worker' | 'bekat_boshlighi' | 'elektromexanik' | 'elektromontyor' | 'bekat_navbatchisi' | 'yul_ustasi' | 'ech_xodimi',
     stationIds: [] as string[],
   })
   const [editingWorkerId, setEditingWorkerId] = useState<string | null>(null)
@@ -820,7 +820,7 @@ export default function DispatcherPage() {
               login: w.login,
               password: '',
               phone: w.phone || '',
-              role: (['worker', 'bekat_boshlighi', 'elektromexanik', 'elektromontyor', 'bekat_navbatchisi', 'yul_ustasi'].includes(w.role) ? w.role : 'worker') as typeof form.role,
+              role: (['worker', 'bekat_boshlighi', 'elektromexanik', 'elektromontyor', 'bekat_navbatchisi', 'yul_ustasi', 'ech_xodimi'].includes(w.role) ? w.role : 'worker') as typeof form.role,
               stationIds: w.stationIds || []
             })
             setShowAddWorker(true)

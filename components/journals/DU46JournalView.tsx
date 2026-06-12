@@ -70,6 +70,7 @@ export function DU46JournalView({
 
   // ── Rollar ─────────────────────────────────────────────────────────────────────
   const isYulUstasi = userRole === 'yul_ustasi'
+  const isEchXodimi = userRole === 'ech_xodimi'
   const isElektromexanik = ['worker', 'elektromexanik', 'elektromontyor'].includes(userRole)
   const isWorker = isElektromexanik || isYulUstasi
   const isBB = ['bekat_boshlighi', 'bekat_navbatchisi'].includes(userRole)
@@ -155,12 +156,13 @@ export function DU46JournalView({
   }, [stationId, userRole, journalMonth, loadJournalData])
 
   // ── Yordamchi: qaysi rol yaratgan ─────────────────────────────────────────────
-  const getCreator = (e: DU46Entry): 'worker' | 'bekat_boshlighi' | 'yul_ustasi' => e.createdByRole || 'worker'
+  const getCreator = (e: DU46Entry): 'worker' | 'bekat_boshlighi' | 'yul_ustasi' | 'ech_xodimi' => e.createdByRole || 'worker'
 
   /** Joriy foydalanuvchi qatorni yaratgani (yozuvchi)mi? */
   const isCreator = (e: DU46Entry): boolean => {
     const creator = getCreator(e)
     if (creator === 'yul_ustasi') return isYulUstasi
+    if (creator === 'ech_xodimi') return isEchXodimi
     return (creator === 'worker' && isWorker) || (creator === 'bekat_boshlighi' && isBB)
   }
 
@@ -228,6 +230,7 @@ export function DU46JournalView({
     // Birinchi marta yozayotganda createdByRole ni belgilaymiz
     if (!n[i].createdByRole && (field === 'kamchilik' || field === 'oyKun1' || field === 'soatMinut1')) {
       if (isYulUstasi) n[i].createdByRole = 'yul_ustasi'
+      else if (isEchXodimi) n[i].createdByRole = 'ech_xodimi'
       else if (isElektromexanik) n[i].createdByRole = 'worker'
       else if (isBB) n[i].createdByRole = 'bekat_boshlighi'
     }

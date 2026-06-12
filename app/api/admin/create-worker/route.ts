@@ -6,7 +6,7 @@ type CreateWorkerBody = {
   login: string
   password: string
   phone: string
-  role: 'worker' | 'bekat_boshlighi' | 'elektromexanik' | 'elektromontyor' | 'bekat_navbatchisi' | 'yul_ustasi'
+  role: 'worker' | 'bekat_boshlighi' | 'elektromexanik' | 'elektromontyor' | 'bekat_navbatchisi' | 'yul_ustasi' | 'ech_xodimi'
   stationIds: string[]
   position: string
 }

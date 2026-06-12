@@ -97,7 +97,7 @@ export function WorkersModal({ workers, stations, onClose, onEdit, onDelete }: {
                         <h4 className="text-lg font-black text-slate-900 tracking-tight">{w.fullName}</h4>
                         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                           <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-100">
-                            {w.role === 'worker' ? 'Katta Elektromexanik' : w.role === 'elektromexanik' ? 'Elektromexanik' : w.role === 'elektromontyor' ? 'Elektromontyor' : w.role === 'bekat_navbatchisi' ? 'Bekat Navbatchisi' : w.role === 'yul_ustasi' ? "Yo'l Ustasi" : "Bekat Boshlig'i"}
+                            {w.role === 'worker' ? 'Katta Elektromexanik' : w.role === 'elektromexanik' ? 'Elektromexanik' : w.role === 'elektromontyor' ? 'Elektromontyor' : w.role === 'bekat_navbatchisi' ? 'Bekat Navbatchisi' : w.role === 'yul_ustasi' ? "Yo'l Ustasi" : w.role === 'ech_xodimi' ? "ECH Xodimi" : "Bekat Boshlig'i"}
                           </span>
                           <span className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
                             <Users size={14} className="text-slate-300" />

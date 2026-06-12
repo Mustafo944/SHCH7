@@ -1,10 +1,10 @@
 // Rollar
-export type Role = "dispatcher" | "worker" | "bekat_boshlighi" | "elektromexanik" | "elektromontyor" | "bekat_navbatchisi" | "yul_ustasi";
+export type Role = "dispatcher" | "worker" | "bekat_boshlighi" | "elektromexanik" | "elektromontyor" | "bekat_navbatchisi" | "yul_ustasi" | "ech_xodimi";
 
 export type IncidentStatus = "open" | "resolved" | "read";
 
 // Lavozimlar
-export type Position = "katta_elektromexanik" | "bekat_boshlighi" | "dispatcher" | "elektromexanik" | "elektromontyor" | "bekat_navbatchisi" | "yul_ustasi";
+export type Position = "katta_elektromexanik" | "bekat_boshlighi" | "dispatcher" | "elektromexanik" | "elektromontyor" | "bekat_navbatchisi" | "yul_ustasi" | "ech_xodimi";
 
 // Foydalanuvchi
 export interface User {
@@ -13,7 +13,7 @@ export interface User {
   fullName: string;
   role: Role;
   position: Position;
-  stationIds: string[]; // worker: max 5, bekat_boshlighi: max 3, yul_ustasi/others: max 1
+  stationIds: string[]; // worker: max 5, bekat_boshlighi: max 3, yul_ustasi/ech_xodimi/others: max 1
   phone: string;
   createdAt: string;
 }
@@ -170,7 +170,7 @@ export interface DU46Entry {
   bartarafBBVaqt: string            // Avtomatik vaqt (soat:daqiqa)
 
   // ── Umumiy ──
-  createdByRole?: 'worker' | 'bekat_boshlighi' | 'yul_ustasi'
+  createdByRole?: 'worker' | 'bekat_boshlighi' | 'yul_ustasi' | 'ech_xodimi'
   yuborildi: boolean
   dispetcherQabulQildi?: boolean
   dispetcherImzo?: string
