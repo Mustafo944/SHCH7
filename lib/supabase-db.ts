@@ -124,35 +124,42 @@ export async function signOut(): Promise<void> {
 }
 
 export async function getCachedSession(): Promise<User | null> {
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
+  try {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
 
-  if (error || !session?.user) return null;
+    if (error || !session?.user) return null;
 
-  // Local storage dan o'qish (Tezlik uchun)
-  if (typeof window !== 'undefined') {
-    const cached = localStorage.getItem('user-profile');
-    if (cached) {
+    // Local storage dan o'qish (Tezlik uchun)
+    if (typeof window !== 'undefined') {
       try {
-        const parsed = JSON.parse(cached);
-        // Validatsiya: zarur maydonlar mavjudligini tekshirish
-        if (parsed.id === session.user.id && parsed.role && parsed.fullName && parsed.position) {
-          return parsed;
+        const cached = localStorage.getItem('user-profile');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          // Validatsiya: zarur maydonlar mavjudligini tekshirish
+          if (parsed.id === session.user.id && parsed.role && parsed.fullName && parsed.position) {
+            return parsed;
+          }
         }
-      } catch {
-        localStorage.removeItem('user-profile');
+      } catch (e) {
+        try { localStorage.removeItem('user-profile'); } catch (e2) {}
       }
     }
-  }
 
-  const profile = await getUserProfileById(session.user.id);
-  if (profile && typeof window !== 'undefined') {
-    localStorage.setItem('user-profile', JSON.stringify(profile));
-  }
+    const profile = await getUserProfileById(session.user.id);
+    if (profile && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('user-profile', JSON.stringify(profile));
+      } catch (e) {}
+    }
 
-  return profile;
+    return profile;
+  } catch (err) {
+    console.error('getCachedSession error:', err);
+    return null;
+  }
 }
 
 export async function getCurrentSession(): Promise<User | null> {
