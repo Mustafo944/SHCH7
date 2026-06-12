@@ -824,35 +824,20 @@ export async function getPendingJournalCounts(
   }
 }
 
-
 export async function upsertJournal(
   stationId: string,
   journalType: JournalType,
   entries: DU46Entry[] | SHU2Entry[] | ALSNEntry[] | YerlatgichEntry[] | AlsnKodEntry[] | MpsFriksionEntry[],
   updatedBy: string
 ): Promise<StationJournal> {
-  const { data, error } = await supabase
-    .from('station_journals')
-    .upsert(
-      {
-        station_id: stationId,
-        journal_type: journalType,
-        entries: entries as unknown as Record<string, unknown>[],
-        updated_by: updatedBy,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'station_id,journal_type' }
-    )
-    .select()
-    .single()
-
-  if (error) {
-    throw new Error(error?.message ?? 'Upsert failed')
-  }
-
-  if (!data) {
-    throw new Error('Upsert failed - no data returned')
-  }
+  const { serverUpsertJournal } = await import('@/app/actions/journal-actions')
+  
+  const data = await serverUpsertJournal(
+    stationId, 
+    journalType, 
+    entries as unknown as Record<string, unknown>[], 
+    updatedBy
+  )
 
   return mapDbJournal(data as DbJournalRow)
 }
