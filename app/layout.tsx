@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   description: "Temir yo'l elektromexanik ish jurnali",
 };
 
+import { OfflineNotifier } from "@/components/OfflineNotifier";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="uz">
@@ -19,7 +21,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#0284c7" />
         <link rel="apple-touch-icon" href="/uty-logo.png" />
       </head>
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        {children}
+        <OfflineNotifier />
+      </body>
     </html>
   );
 }

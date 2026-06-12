@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
+import { safeStorage } from '../utils/storage'
 
 export function playNotification() {
   try {
     if (typeof window !== 'undefined') {
       try {
-        if (localStorage.getItem('smartshch_muted') === 'true') {
+        if (safeStorage.getItem('smartshch_muted') === 'true') {
           return;
         }
       } catch (e) {}
@@ -44,11 +45,11 @@ export function playNotification() {
 }
 
 export function useNotificationSound(pendingCount: number) {
-  // Try to load mute state from localStorage to persist user preference
+  // Try to load mute state from safeStorage to persist user preference
   const [isMuted, setIsMutedState] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
-        return localStorage.getItem('smartshch_muted') === 'true'
+        return safeStorage.getItem('smartshch_muted') === 'true'
       } catch (e) {
         return false
       }
@@ -62,7 +63,7 @@ export function useNotificationSound(pendingCount: number) {
     setIsMutedState(muted)
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem('smartshch_muted', muted.toString())
+        safeStorage.setItem('smartshch_muted', muted.toString())
       } catch (e) {}
       window.dispatchEvent(new Event('smartshch_mute_changed'))
     }

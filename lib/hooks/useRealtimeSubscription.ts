@@ -25,7 +25,13 @@ export function useRealtimeSubscription(
       supabase.removeChannel(ch)
     })
     channelsRef.current = []
-  }, [])
+
+    // Global xavfsizlik: Boshqa shu nomli kanallar qolib ketgan bo'lsa, hammasini tozalash
+    configs.forEach(cfg => {
+      const existingChannels = supabase.getChannels().filter(c => c.topic === `realtime:${cfg.channelName}`)
+      existingChannels.forEach(c => supabase.removeChannel(c))
+    })
+  }, [configs])
 
   useEffect(() => {
     if (!enabled || configs.length === 0) return

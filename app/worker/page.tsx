@@ -262,13 +262,14 @@ export default function WorkerPage() {
   const stationName = station?.name || '...'
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-purple-50/30 to-fuchsia-50/20 text-slate-900 selection:bg-purple-500/10">
-      {/* Background blur orbs to make glassmorphism pop */}
-      <div className="absolute top-[-10%] left-[-10%] h-[500px] w-[500px] rounded-full bg-purple-300/20 blur-[100px]" />
-      <div className="absolute bottom-[-10%] right-[-10%] h-[500px] w-[500px] rounded-full bg-indigo-300/20 blur-[100px]" />
-      <div className="absolute top-[40%] right-[20%] h-[300px] w-[300px] rounded-full bg-fuchsia-300/20 blur-[100px]" />
-
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_rgba(255,255,255,0.4),_transparent_80%),radial-gradient(ellipse_at_bottom_right,_rgba(255,255,255,0.3),_transparent_80%)]" />
+    <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 selection:bg-indigo-500/10">
+      {/* Aurora Mesh Background */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#ff7eb3] blur-[120px] opacity-30 mix-blend-multiply animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-[#8e44ad] blur-[120px] opacity-30 mix-blend-multiply"></div>
+        <div className="absolute top-[20%] right-[20%] w-[40%] h-[40%] rounded-full bg-[#4facfe] blur-[100px] opacity-20 mix-blend-multiply"></div>
+        <div className="absolute bottom-[20%] left-[20%] w-[50%] h-[50%] rounded-full bg-[#00f2fe] blur-[100px] opacity-20 mix-blend-multiply"></div>
+      </div>
 
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* App Header */}
@@ -315,13 +316,30 @@ export default function WorkerPage() {
           )}
           {view === 'selectStation' && (
             <div className="grid gap-6 sm:grid-cols-2 pt-10">
-              {session?.stationIds?.map(sid => (
-                <button key={sid} onClick={() => { setActiveStationId(sid); setView('home') }} className="group flex flex-col items-center p-12 rounded-3xl border border-purple-100 bg-white/80 shadow-lg backdrop-blur-sm transition-all hover:border-purple-300 hover:scale-[1.02] hover:shadow-xl active:scale-95 animate-fade-up">
-                  <div className="mb-6 text-5xl group-hover:scale-110 transition-transform">📍</div>
-                  <span className="text-xl font-black text-slate-900 tracking-tight">{getStation(sid)?.name}</span>
-                  <p className="mt-2 text-xs font-bold text-slate-400 uppercase tracking-widest">Bekatni tanlash</p>
-                </button>
-              ))}
+              {session?.stationIds?.length === 0 ? (
+                <div className="col-span-full flex flex-col items-center justify-center rounded-[32px] border border-slate-200 bg-white p-16 text-center shadow-sm">
+                  <div className="mb-6 rounded-full bg-amber-50 p-6">
+                    <span className="text-4xl">⚠️</span>
+                  </div>
+                  <h3 className="text-xl font-black text-slate-800">Hech qanday bekat biriktirilmagan</h3>
+                  <p className="mt-2 text-slate-500">Dispetcher bilan bog&apos;laning va bekatlaringizni so&apos;rang</p>
+                  <button
+                    onClick={handleSignOut}
+                    className="mt-8 flex items-center gap-2 rounded-xl bg-rose-50 px-6 py-3 font-bold text-rose-600 transition-all hover:bg-rose-100 active:scale-95 border border-rose-200"
+                  >
+                    <LogOut size={20} />
+                    <span>Tizimdan chiqish</span>
+                  </button>
+                </div>
+              ) : (
+                session?.stationIds?.map(sid => (
+                  <button key={sid} onClick={() => { setActiveStationId(sid); setView('home') }} className="group flex flex-col items-center p-12 rounded-3xl border border-purple-100 bg-white/80 shadow-lg backdrop-blur-sm transition-all hover:border-purple-300 hover:scale-[1.02] hover:shadow-xl active:scale-95 animate-fade-up">
+                    <div className="mb-6 text-5xl group-hover:scale-110 transition-transform">📍</div>
+                    <span className="text-xl font-black text-slate-900 tracking-tight">{getStation(sid)?.name}</span>
+                    <p className="mt-2 text-xs font-bold text-slate-400 uppercase tracking-widest">Bekatni tanlash</p>
+                  </button>
+                ))
+              )}
             </div>
           )}
 

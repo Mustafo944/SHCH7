@@ -9,15 +9,49 @@ import dynamic from 'next/dynamic'
 import { JournalMonthSelectModal } from '@/components/JournalView'
 
 const DU46JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DU46JournalView), { ssr: false })
-import { BigActionCard } from '@/components/worker/WorkerComponents'
 import { getPendingJournalCounts } from '@/lib/supabase-db'
 import {
   LogOut,
   BookOpen,
   AlertCircle,
   Volume2,
-  VolumeX
+  VolumeX,
+  ArrowRight
 } from 'lucide-react'
+
+// Custom Glass Component - Aurora / VisionOS Variation
+function EchGlassCard({ title, desc, icon, onClick, badge = 0 }: { title: string, desc: string, icon: React.ReactNode, onClick: () => void, badge?: number }) {
+  return (
+    <button 
+      onClick={onClick}
+      className="group relative flex w-full items-center justify-between p-6 bg-white/30 backdrop-blur-[40px] rounded-[32px] border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.07)] transition-all hover:bg-white/40 hover:shadow-[0_8px_32px_rgba(31,38,135,0.15)] hover:border-white/80 hover:-translate-y-1 active:scale-[0.98] text-left overflow-hidden"
+    >
+      {/* Glossy reflection line */}
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80"></div>
+      
+      <div className="flex items-center gap-6 z-10">
+        <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-white/90 to-white/50 shadow-[0_4px_16px_rgba(0,0,0,0.05)] border border-white/60 text-indigo-600 transition-transform group-hover:scale-110 group-hover:shadow-[0_8px_24px_rgba(79,70,229,0.2)] group-hover:text-indigo-700">
+          {icon}
+          {badge > 0 && (
+            <div className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-[11px] font-black text-white shadow-[0_0_12px_rgba(244,63,94,0.6)]">
+              {badge > 9 ? '9+' : badge}
+            </div>
+          )}
+        </div>
+        <div>
+          <h3 className="text-xl font-black text-slate-800 tracking-tight group-hover:text-indigo-900">{title}</h3>
+          <p className="mt-1 text-sm text-slate-600 font-medium max-w-[280px] leading-relaxed">
+            {desc}
+          </p>
+        </div>
+      </div>
+      
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/50 text-indigo-400 transition-all group-hover:bg-indigo-500 group-hover:text-white border border-white/60 shadow-sm shrink-0 z-10">
+        <ArrowRight size={20} strokeWidth={2.5} className="group-hover:translate-x-1 transition-transform duration-300" />
+      </div>
+    </button>
+  )
+}
 
 export default function EchXodimiPage() {
   const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['ech_xodimi'])
@@ -74,7 +108,14 @@ export default function EchXodimiPage() {
 
   // Bekat biriktirilmagan holat
   if (!stationId) return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-purple-50/30 to-fuchsia-50/20 text-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900">
+      {/* Aurora Mesh Background */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#ff7eb3] blur-[120px] opacity-30 mix-blend-multiply animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-[#8e44ad] blur-[120px] opacity-30 mix-blend-multiply"></div>
+        <div className="absolute top-[20%] right-[20%] w-[40%] h-[40%] rounded-full bg-[#4facfe] blur-[100px] opacity-20 mix-blend-multiply"></div>
+        <div className="absolute bottom-[20%] left-[20%] w-[50%] h-[50%] rounded-full bg-[#00f2fe] blur-[100px] opacity-20 mix-blend-multiply"></div>
+      </div>
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="flex flex-col items-center justify-center rounded-[32px] border border-slate-200 bg-white p-16 text-center shadow-sm max-w-md">
           <div className="mb-6 rounded-full bg-amber-50 p-6">
@@ -82,42 +123,54 @@ export default function EchXodimiPage() {
           </div>
           <h3 className="text-xl font-black text-slate-800">Hech qanday bekat biriktirilmagan</h3>
           <p className="mt-2 text-slate-500">Dispetcher bilan bog'laning va bekatlaringizni so'rang</p>
+          <button
+            onClick={handleSignOut}
+            className="mt-8 flex items-center gap-2 rounded-xl bg-rose-50 px-6 py-3 font-bold text-rose-600 transition-all hover:bg-rose-100 active:scale-95 border border-rose-200"
+          >
+            <LogOut size={20} />
+            <span>Tizimdan chiqish</span>
+          </button>
         </div>
       </div>
     </div>
   )
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-purple-50/30 to-fuchsia-50/20 text-slate-900 selection:bg-purple-500/10">
-      <div className="absolute top-[-10%] left-[-10%] h-[500px] w-[500px] rounded-full bg-purple-300/20 blur-[100px]" />
-      <div className="absolute bottom-[-10%] right-[-10%] h-[500px] w-[500px] rounded-full bg-indigo-300/20 blur-[100px]" />
-      <div className="absolute top-[40%] right-[20%] h-[300px] w-[300px] rounded-full bg-fuchsia-300/20 blur-[100px]" />
-
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_rgba(255,255,255,0.4),_transparent_80%),radial-gradient(ellipse_at_bottom_right,_rgba(255,255,255,0.3),_transparent_80%)]" />
+    <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 selection:bg-indigo-500/10">
+      {/* Aurora Mesh Background */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#ff7eb3] blur-[120px] opacity-30 mix-blend-multiply animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-[#8e44ad] blur-[120px] opacity-30 mix-blend-multiply"></div>
+        <div className="absolute top-[20%] right-[20%] w-[40%] h-[40%] rounded-full bg-[#4facfe] blur-[100px] opacity-20 mix-blend-multiply"></div>
+        <div className="absolute bottom-[20%] left-[20%] w-[50%] h-[50%] rounded-full bg-[#00f2fe] blur-[100px] opacity-20 mix-blend-multiply"></div>
+      </div>
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <header className="sticky top-0 z-50 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-[1600px] print:hidden">
-          <div className="flex items-center justify-between bg-white/60 backdrop-blur-2xl px-3 sm:px-5 py-2 sm:py-3 rounded-[24px] sm:rounded-[32px] border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-[16px] bg-white/80 p-2 shadow-sm border border-white/80">
+          <div className="flex items-center justify-between bg-white/40 backdrop-blur-3xl px-3 sm:px-5 py-2 sm:py-3 rounded-[24px] sm:rounded-[32px] border border-white/60 shadow-[0_8px_30px_rgba(31,38,135,0.06)] relative overflow-hidden">
+            {/* Header reflection */}
+            <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-60"></div>
+            
+            <div className="flex items-center gap-3 sm:gap-4 z-10">
+              <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-[16px] bg-white/90 p-2 shadow-sm border border-white/80">
                 <Image src="/uty-logo.png" alt="UTY" fill className="object-contain p-2 drop-shadow-sm" />
               </div>
               <div className="min-w-0 flex flex-col justify-center">
                 <h1 className="text-[15px] sm:text-[18px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
-                <p className="text-[8px] sm:text-[9.5px] font-black text-purple-600 truncate uppercase tracking-widest mt-1 drop-shadow-sm">SMART CONTROL TIZIMI</p>
+                <p className="text-[8px] sm:text-[9.5px] font-black text-indigo-600 truncate uppercase tracking-widest mt-1 drop-shadow-sm">SMART CONTROL TIZIMI</p>
                 <p className="text-[10px] font-black text-slate-400 truncate uppercase tracking-tight mt-0.5 sm:hidden">{session?.fullName}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className="hidden sm:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/60 border border-white/60 shadow-sm">
+            <div className="flex items-center gap-2 sm:gap-4 z-10">
+              <div className="hidden sm:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/50 border border-white/60 shadow-sm">
                 <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
                 <span className="text-[11px] font-black text-slate-700 tracking-widest uppercase">{session?.fullName || 'ECH Xodimi'}</span>
               </div>
-              <button onClick={() => setIsMuted(!isMuted)} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-slate-500 hover:bg-slate-50 hover:text-purple-600 transition-all shadow-sm active:scale-95">
+              <button onClick={() => setIsMuted(!isMuted)} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-white/60 bg-white/50 text-indigo-500 hover:bg-white hover:text-indigo-600 transition-all shadow-sm active:scale-95">
                 {isMuted ? <VolumeX size={20} strokeWidth={2.5} /> : <Volume2 size={20} strokeWidth={2.5} />}
               </button>
-              <button onClick={handleSignOut} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-purple-100/50 bg-purple-50/50 text-purple-600 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 hover:scale-105 active:scale-95 transition-all shadow-sm group">
+              <button onClick={handleSignOut} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-rose-100/50 bg-rose-50/50 text-rose-500 hover:bg-rose-500 hover:text-white hover:border-rose-500 hover:scale-105 active:scale-95 transition-all shadow-sm group">
                 <LogOut size={20} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
@@ -148,25 +201,25 @@ export default function EchXodimiPage() {
           )}
 
           {view === 'home' && (
-            <div className="space-y-6 animate-fade-up">
-              <div className="rounded-[24px] bg-white/50 backdrop-blur-xl p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80">
-                <h2 className="text-2xl font-black text-slate-900">{stationName}</h2>
-                <p className="mt-1 text-xs text-slate-500 uppercase tracking-widest">
+            <div className="space-y-6 animate-fade-up max-w-4xl">
+              {/* Glass Header */}
+              <div className="rounded-[32px] bg-white/30 backdrop-blur-[40px] p-8 shadow-[0_8px_32px_rgba(31,38,135,0.05)] border border-white/60 relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80"></div>
+                <h2 className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-indigo-900 tracking-tight relative z-10">{stationName}</h2>
+                <p className="mt-2 text-sm text-indigo-600/80 uppercase tracking-widest font-black relative z-10">
                   ECH Xodimi Boshqaruvi
                 </p>
               </div>
 
-              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-1">
-                <div className="col-span-full sm:col-span-2 lg:col-span-2">
-                  <BigActionCard
-                    title="DU-46 Jurnali"
-                    desc="Ko'rik, tekshiruvlar tahlili va nosozliklar jurnali."
-                    icon={<BookOpen size={24} strokeWidth={2} />}
-                    color="purple"
-                    onClick={() => setView('monthSelect')}
-                    badge={pendingCounts.du46}
-                  />
-                </div>
+              {/* Glass Button */}
+              <div className="grid gap-4 pt-2">
+                <EchGlassCard
+                  title="DU-46 Jurnali"
+                  desc="Ko'rik, texnikuvlar haqida ma'lumotlar. Tasdiqlash uchun oching."
+                  icon={<BookOpen size={28} strokeWidth={2} />}
+                  onClick={() => setView('monthSelect')}
+                  badge={pendingCounts.du46}
+                />
               </div>
             </div>
           )}

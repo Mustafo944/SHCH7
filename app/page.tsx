@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn, getCachedSession } from '@/lib/supabase-db'
+import { safeStorage } from '@/lib/utils/storage'
 import { User, Eye, EyeOff, Lock, ArrowRight } from 'lucide-react'
 
 function getRoleHome(role: string) {
@@ -29,7 +30,7 @@ export default function LoginPage() {
   useEffect(() => {
     // Saqlangan loginni yuklash (parol saqlanmaydi)
     try {
-      const savedLogin = localStorage.getItem('remembered-login')
+      const savedLogin = safeStorage.getItem('remembered-login')
       if (savedLogin) {
         setLogin(savedLogin)
         setRememberMe(true)
@@ -68,9 +69,9 @@ export default function LoginPage() {
       if (user) {
         // Faqat loginni saqlash (parol saqlanmaydi — xavfsizlik)
         if (rememberMe) {
-          localStorage.setItem('remembered-login', login.trim())
+          safeStorage.setItem('remembered-login', login.trim())
         } else {
-          localStorage.removeItem('remembered-login')
+          safeStorage.removeItem('remembered-login')
         }
         setNavigating(true)
         router.push(getRoleHome(user.role))

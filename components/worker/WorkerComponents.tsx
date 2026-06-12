@@ -15,34 +15,40 @@ const TOTAL_ROWS = 14
 
 export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badge = 0 }: { title: string, desc: string, icon: React.ReactNode, onClick: () => void, color?: 'purple' | 'cyan' | 'amber' | 'blue' | 'sky', badge?: number }) {
   const colorStyles: Record<string, { bg: string, text: string }> = {
-    purple: { bg: 'bg-purple-50', text: 'text-purple-600' },
-    cyan: { bg: 'bg-cyan-50', text: 'text-cyan-600' },
-    amber: { bg: 'bg-amber-50', text: 'text-amber-600' },
-    blue: { bg: 'bg-blue-50', text: 'text-blue-600' },
-    sky: { bg: 'bg-sky-50', text: 'text-sky-600' },
+    purple: { bg: 'bg-purple-50', text: 'text-indigo-600' },
+    cyan: { bg: 'bg-cyan-50', text: 'text-indigo-600' },
+    amber: { bg: 'bg-amber-50', text: 'text-indigo-600' },
+    blue: { bg: 'bg-blue-50', text: 'text-indigo-600' },
+    sky: { bg: 'bg-sky-50', text: 'text-indigo-600' },
   }
 
   const theme = colorStyles[color] || colorStyles.purple
 
   return (
-    <button onClick={onClick} className="group relative flex flex-col items-start p-5 bg-white/50 backdrop-blur-xl rounded-[24px] border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:bg-white/60 hover:border-purple-200/50 hover:-translate-y-1 active:scale-[0.98] text-left w-full h-full min-h-[140px]">
+    <button 
+      onClick={onClick} 
+      className="group relative flex flex-col items-start p-6 bg-white/30 backdrop-blur-[40px] rounded-[32px] border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.07)] transition-all hover:bg-white/40 hover:shadow-[0_8px_32px_rgba(31,38,135,0.15)] hover:border-white/80 hover:-translate-y-1 active:scale-[0.98] text-left w-full h-full min-h-[140px] overflow-hidden"
+    >
+      {/* Glossy reflection line */}
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80 z-20"></div>
+
       {badge > 0 && (
-        <div className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[11px] font-black text-white shadow-md shadow-red-500/30 z-10">
+        <div className="absolute top-4 right-4 flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-[11px] font-black text-white shadow-[0_0_12px_rgba(244,63,94,0.6)] z-30">
           {badge > 9 ? '9+' : badge}
         </div>
       )}
 
-      <div className={`rounded-[16px] p-3 mb-4 transition-transform group-hover:scale-110 ${theme.bg} ${theme.text}`}>
+      <div className={`relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-white/90 to-white/50 shadow-[0_4px_16px_rgba(0,0,0,0.05)] border border-white/60 mb-4 transition-transform group-hover:scale-110 group-hover:shadow-[0_8px_24px_rgba(79,70,229,0.2)] ${theme.text} group-hover:text-indigo-700`}>
         {icon}
       </div>
 
-      <h3 className="text-[15px] sm:text-base font-black text-slate-900 tracking-tight">{title}</h3>
-      <p className="mt-1 text-[11px] sm:text-xs text-slate-500 leading-relaxed font-medium line-clamp-2 pr-6">
+      <h3 className="relative z-10 text-[15px] sm:text-lg font-black text-slate-800 tracking-tight group-hover:text-indigo-900">{title}</h3>
+      <p className="relative z-10 mt-1 text-[11px] sm:text-sm text-slate-600 leading-relaxed font-medium line-clamp-2 pr-6">
         {desc}
       </p>
 
-      <div className="absolute bottom-6 right-6 flex h-8 w-8 items-center justify-center rounded-full bg-purple-100/50 text-purple-500 transition-colors group-hover:bg-purple-500 group-hover:text-white">
-        <ArrowRight size={16} strokeWidth={2.5} />
+      <div className="absolute bottom-6 right-6 flex h-10 w-10 items-center justify-center rounded-full bg-white/50 text-indigo-400 transition-all group-hover:bg-indigo-500 group-hover:text-white border border-white/60 shadow-sm z-10 shrink-0">
+        <ArrowRight size={18} strokeWidth={2.5} className="group-hover:translate-x-1 transition-transform duration-300" />
       </div>
     </button>
   )
@@ -57,11 +63,12 @@ export function HeaderCard({ title, subtitle, status, statusColor }: { title: st
     "error": 'bg-red-100 text-red-600 border-red-200 border shadow-sm px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest'
   }
   return (
-    <div className="glass-card rounded-2xl p-6 shadow-sm">
-      <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+    <div className="rounded-[32px] bg-white/30 backdrop-blur-[40px] p-6 sm:p-8 shadow-[0_8px_32px_rgba(31,38,135,0.05)] border border-white/60 relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80"></div>
+      <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between relative z-10">
         <div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{title}</h2>
-          <p className="text-[10px] sm:text-sm font-bold text-slate-400 uppercase tracking-widest">{subtitle}</p>
+          <h2 className="text-2xl sm:text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-indigo-900 tracking-tight">{title}</h2>
+          <p className="mt-1 text-xs sm:text-sm font-black text-indigo-600/80 uppercase tracking-widest">{subtitle}</p>
         </div>
         <div className={`${statusColor && statusColors[statusColor] ? statusColors[statusColor] : statusColors[status.toLowerCase()] || 'badge'}`}>{status}</div>
       </div>
@@ -645,13 +652,14 @@ function GrafikCard({
   onPreview: (filePath: string) => void
 }) {
   return (
-    <div className="premium-card group relative overflow-hidden rounded-2xl bg-white/80 p-6 backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-xl">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 transition-all group-hover:scale-110 group-hover:bg-white border border-slate-100 shadow-sm">
+    <div className="group relative overflow-hidden rounded-[32px] bg-white/30 p-6 backdrop-blur-[40px] border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.05)] transition-all hover:bg-white/40 hover:shadow-[0_8px_32px_rgba(31,38,135,0.15)] hover:border-white/80">
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80 z-20"></div>
+      <div className="relative z-10 mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-white/90 to-white/50 text-indigo-600 transition-transform duration-300 group-hover:scale-110 shadow-[0_4px_16px_rgba(0,0,0,0.05)] border border-white/60">
         <Download size={24} />
       </div>
 
-      <h4 className="font-black text-slate-900 tracking-tight">{title}</h4>
-      <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+      <h4 className="relative z-10 font-black text-slate-800 tracking-tight text-lg group-hover:text-indigo-900">{title}</h4>
+      <p className="relative z-10 mt-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
         {file ? file.fileName : 'Fayl joylanmagan'}
       </p>
 
@@ -772,13 +780,14 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
       <HeaderCard title="Bekat Sxemalari" subtitle={stationName} status="ko'rish" />
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {schemas.map(s => (
-          <div key={s.id} className="premium-card group relative overflow-hidden rounded-2xl bg-white/80 p-8 backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-xl">
-            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 transition-all group-hover:scale-110 group-hover:bg-white border border-slate-100 shadow-sm"><MapIcon size={28} /></div>
-            <h4 className="text-lg font-black text-slate-900 tracking-tight">{s.schemaType}</h4>
-            <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.fileName}</p>
-            <div className="mt-8 flex gap-3">
-              <button onClick={() => handlePreview(s.filePath)} className="flex-1 rounded-2xl bg-slate-50/80 border border-slate-200/60 py-4 text-xs font-black uppercase text-slate-600 hover:bg-purple-600 hover:text-white backdrop-blur-sm transition-all active:scale-95 shadow-sm">Ko'rish</button>
-              <a href={s.filePath} download className="rounded-2xl bg-slate-50/80 border border-slate-200/60 p-4 text-slate-400 hover:bg-slate-900 hover:text-white backdrop-blur-sm transition-all shadow-sm active:scale-95"><Download size={20} /></a>
+          <div key={s.id} className="group relative overflow-hidden rounded-[32px] bg-white/30 p-8 backdrop-blur-[40px] border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.05)] transition-all hover:bg-white/40 hover:shadow-[0_8px_32px_rgba(31,38,135,0.15)] hover:border-white/80">
+            <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80 z-20"></div>
+            <div className="relative z-10 mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-white/90 to-white/50 text-indigo-600 transition-transform duration-300 group-hover:scale-110 shadow-[0_4px_16px_rgba(0,0,0,0.05)] border border-white/60"><MapIcon size={28} /></div>
+            <h4 className="relative z-10 text-xl font-black text-slate-800 tracking-tight group-hover:text-indigo-900">{s.schemaType}</h4>
+            <p className="relative z-10 mt-1 text-[11px] font-bold text-slate-500 uppercase tracking-widest">{s.fileName}</p>
+            <div className="relative z-10 mt-8 flex gap-3">
+              <button onClick={() => handlePreview(s.filePath)} className="flex-1 rounded-2xl bg-white/50 border border-white/60 py-4 text-xs font-black uppercase text-indigo-600 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 backdrop-blur-md transition-all active:scale-95 shadow-sm">Ko'rish</button>
+              <a href={s.filePath} download className="rounded-2xl bg-white/50 border border-white/60 p-4 text-indigo-500 hover:bg-slate-900 hover:text-white hover:border-slate-900 backdrop-blur-md transition-all shadow-sm active:scale-95"><Download size={20} /></a>
             </div>
           </div>
         ))}

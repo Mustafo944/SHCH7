@@ -4,6 +4,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
+import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
 import type { DU46Entry } from '@/types'
 import { Plus, Trash2, CheckCircle2, Download, ChevronLeft } from 'lucide-react'
 import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel } from './helpers'
@@ -142,18 +143,21 @@ export function DU46JournalView({
 
   useEffect(() => {
     loadJournalData(false)
+  }, [loadJournalData])
 
-    const channel = supabase
-      .channel(`journal_du46_${userRole}_${stationId}_${journalMonth}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'station_journals', filter: `station_id=eq.${stationId}` },
-        () => loadJournalData(true)
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [stationId, userRole, journalMonth, loadJournalData])
+  useRealtimeSubscription(
+    stationId && journalMonth
+      ? [
+          {
+            channelName: `journal_du46_${userRole}_${stationId}_${journalMonth}`,
+            table: 'station_journals',
+            filter: `station_id=eq.${stationId}`,
+            onEvent: () => loadJournalData(true),
+          },
+        ]
+      : [],
+    !!stationId && !!journalMonth
+  )
 
   // ── Yordamchi: qaysi rol yaratgan ─────────────────────────────────────────────
   const getCreator = (e: DU46Entry): 'worker' | 'bekat_boshlighi' | 'yul_ustasi' | 'ech_xodimi' => e.createdByRole || 'worker'
@@ -248,16 +252,52 @@ export function DU46JournalView({
     setEntries(entries.slice(0, -1))
   }
 
-  // ── Saqlash (optimistik) ──────────────────────────────────────────────────────
+  // ── Saqlash (optimistik & xavfsiz) ─────────────────────────────────────────────
   const saveEntries = async (updated: DU46Entry[], prev: DU46Entry[]) => {
     setEntries(updated)
 
-    const updatedWithMonth = updated.map(e => ({ ...e, journalMonth }))
-    const otherMonths = allEntries.filter(e => e.journalMonth !== journalMonth)
-    const newAllEntries = [...otherMonths, ...updatedWithMonth]
-    setAllEntries(newAllEntries)
-
     try {
+      // 1. Bazadagi eng so'nggi holatni olish (Concurrency himoyasi)
+      const latestJournal = await getJournal(stationId, 'du46')
+      const latestAllEntries = (latestJournal?.entries as DU46Entry[]) || []
+
+      // 2. DB dagi joriy oydagi qatorlarni ajratish
+      const dbMonthEntries = latestAllEntries.filter(e => e.journalMonth === journalMonth)
+      
+      // 3. Mahalliy va DB dagi qatorlarni birlashtirish
+      const mergedMonthEntries = [...updated]
+      for (let i = 0; i < Math.max(mergedMonthEntries.length, dbMonthEntries.length); i++) {
+        const local = mergedMonthEntries[i]
+        const db = dbMonthEntries[i]
+        
+        if (!local && db) {
+          // Boshqa foydalanuvchi yangi qator qo'shgan
+          mergedMonthEntries.push(db)
+        } else if (local && db) {
+          // Ikkalasida ham bor. Tasdiqlashlarni yo'qotmaslik uchun DB dagi tasdiqlarni saqlab qolamiz
+          if (!local.kamchilikBajarildi && db.kamchilikBajarildi) {
+            mergedMonthEntries[i] = { ...local, kamchilikBajarildi: db.kamchilikBajarildi, kamchilikBajarildiAt: db.kamchilikBajarildiAt, kamchilikImzo: db.kamchilikImzo, createdByRole: db.createdByRole }
+          }
+          if (!local.bartarafBajarildi && db.bartarafBajarildi) {
+            mergedMonthEntries[i] = { ...mergedMonthEntries[i], bartarafBajarildi: db.bartarafBajarildi, bartarafBajarildiAt: db.bartarafBajarildiAt, bartarafImzo: db.bartarafImzo }
+          }
+          if (!local.kamchilikBBTasdiqladi && db.kamchilikBBTasdiqladi) {
+            mergedMonthEntries[i] = { ...mergedMonthEntries[i], kamchilikBBTasdiqladi: db.kamchilikBBTasdiqladi, kamchilikBBTasdiqladiAt: db.kamchilikBBTasdiqladiAt, kamchilikBBImzo: db.kamchilikBBImzo, kamchilikBBVaqt: db.kamchilikBBVaqt }
+          }
+          if (!local.bartarafBBTasdiqladi && db.bartarafBBTasdiqladi) {
+            mergedMonthEntries[i] = { ...mergedMonthEntries[i], bartarafBBTasdiqladi: db.bartarafBBTasdiqladi, bartarafBBTasdiqladiAt: db.bartarafBBTasdiqladiAt, bartarafBBImzo: db.bartarafBBImzo, bartarafBBVaqt: db.bartarafBBVaqt }
+          }
+        }
+      }
+
+      // Boshqa oylardagi qatorlarni ham DB dan olib saqlaymiz
+      const otherMonths = latestAllEntries.filter(e => e.journalMonth !== journalMonth)
+      const mergedWithMonth = mergedMonthEntries.map(e => ({ ...e, journalMonth }))
+      const newAllEntries = [...otherMonths, ...mergedWithMonth]
+
+      setAllEntries(newAllEntries)
+      setEntries(mergedMonthEntries)
+
       await upsertJournal(stationId, 'du46', newAllEntries, userName)
     } catch (err) {
       console.error('Saqlash xatosi:', err)

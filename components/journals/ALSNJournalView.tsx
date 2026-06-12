@@ -4,6 +4,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
+import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
 import type { ALSNEntry } from '@/types'
 import { Plus, Trash2, CheckCircle2, Download, ChevronLeft } from 'lucide-react'
 import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel } from './helpers'
@@ -74,18 +75,21 @@ export function ALSNJournalView({
 
   useEffect(() => {
     loadJournalData(false)
+  }, [loadJournalData])
 
-    const channel = supabase
-      .channel(`journal_alsn_${userRole}_${stationId}_${journalMonth}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'station_journals', filter: `station_id=eq.${stationId}` },
-        () => loadJournalData(true)
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [stationId, userRole, journalMonth, loadJournalData])
+  useRealtimeSubscription(
+    stationId && journalMonth
+      ? [
+          {
+            channelName: `journal_alsn_${userRole}_${stationId}_${journalMonth}`,
+            table: 'station_journals',
+            filter: `station_id=eq.${stationId}`,
+            onEvent: () => loadJournalData(true),
+          },
+        ]
+      : [],
+    !!stationId && !!journalMonth
+  )
 
   const update = (i: number, field: keyof ALSNEntry, val: string) => {
     const n = [...entries]

@@ -3,6 +3,7 @@ import type { User, WorkReport, StationSchema, ReportEntry, GrafikTuri, StationJ
 
 // Stations
 import { getStations, getStation } from './store';
+import { safeStorage } from './utils/storage';
 export { getStations, getStation };
 
 // DB SELECT konstantalari (takrorlanishni kamaytirish)
@@ -80,7 +81,7 @@ export async function signIn(login: string, password: string): Promise<User | nu
 
   if (user && typeof document !== 'undefined') {
     document.cookie = `user-role=${user.role}; path=/; max-age=86400; SameSite=Lax; Secure`;
-    localStorage.setItem('user-profile', JSON.stringify(user));
+    safeStorage.setItem('user-profile', JSON.stringify(user));
   }
 
   return user;
@@ -102,7 +103,7 @@ export async function signOut(): Promise<void> {
   if (typeof document !== 'undefined') {
     // Custom cookie va localStorage ni tozalash
     document.cookie = 'user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
-    localStorage.removeItem('user-profile');
+    safeStorage.removeItem('user-profile');
 
     // Supabase SSR ning BARCHA auth cookielarini majburan tozalash
     document.cookie.split(';').forEach(c => {
@@ -114,11 +115,7 @@ export async function signOut(): Promise<void> {
     });
 
     // Supabase localStorage kalitlarini ham tozalash
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('sb-')) {
-        localStorage.removeItem(key);
-      }
-    });
+    safeStorage.clearMatching('sb-');
   }
   await supabase.auth.signOut();
 }
@@ -134,25 +131,23 @@ export async function getCachedSession(): Promise<User | null> {
 
     // Local storage dan o'qish (Tezlik uchun)
     if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('user-profile');
-        if (cached) {
+      const cached = safeStorage.getItem('user-profile');
+      if (cached) {
+        try {
           const parsed = JSON.parse(cached);
           // Validatsiya: zarur maydonlar mavjudligini tekshirish
           if (parsed.id === session.user.id && parsed.role && parsed.fullName && parsed.position) {
             return parsed;
           }
+        } catch (e) {
+          safeStorage.removeItem('user-profile');
         }
-      } catch (e) {
-        try { localStorage.removeItem('user-profile'); } catch (e2) {}
       }
     }
 
     const profile = await getUserProfileById(session.user.id);
     if (profile && typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('user-profile', JSON.stringify(profile));
-      } catch (e) {}
+      safeStorage.setItem('user-profile', JSON.stringify(profile));
     }
 
     return profile;

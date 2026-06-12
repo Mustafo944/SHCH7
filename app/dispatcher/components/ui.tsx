@@ -10,27 +10,28 @@ export function StatCard({ icon, label, value, active, clickable, onClick, color
   color?: 'purple' | 'blue' | 'emerald' | 'red' | 'amber'
 }) {
   const styles: Record<string, { bg: string, border: string, iconBg: string, iconText: string, valueText: string }> = {
-    purple: { bg: 'bg-purple-50/50', border: 'border-purple-100/60', iconBg: 'bg-white', iconText: 'text-purple-500', valueText: 'text-purple-600' },
-    blue: { bg: 'bg-blue-50/50', border: 'border-blue-100/60', iconBg: 'bg-white', iconText: 'text-blue-500', valueText: 'text-blue-600' },
-    emerald: { bg: 'bg-emerald-50/50', border: 'border-emerald-100/60', iconBg: 'bg-white', iconText: 'text-emerald-500', valueText: 'text-emerald-600' },
-    red: { bg: 'bg-red-50/50', border: 'border-red-100/60', iconBg: 'bg-white', iconText: 'text-red-500', valueText: 'text-red-600' },
-    amber: { bg: 'bg-amber-50/50', border: 'border-amber-100/60', iconBg: 'bg-white', iconText: 'text-amber-500', valueText: 'text-amber-600' },
+    purple: { bg: 'bg-white/30', border: 'border-white/60', iconBg: 'bg-gradient-to-br from-white/90 to-white/50', iconText: 'text-indigo-600', valueText: 'text-indigo-900' },
+    blue: { bg: 'bg-white/30', border: 'border-white/60', iconBg: 'bg-gradient-to-br from-white/90 to-white/50', iconText: 'text-blue-600', valueText: 'text-blue-900' },
+    emerald: { bg: 'bg-white/30', border: 'border-white/60', iconBg: 'bg-gradient-to-br from-white/90 to-white/50', iconText: 'text-emerald-600', valueText: 'text-emerald-900' },
+    red: { bg: 'bg-white/30', border: 'border-white/60', iconBg: 'bg-gradient-to-br from-white/90 to-white/50', iconText: 'text-red-600', valueText: 'text-red-900' },
+    amber: { bg: 'bg-white/30', border: 'border-white/60', iconBg: 'bg-gradient-to-br from-white/90 to-white/50', iconText: 'text-amber-600', valueText: 'text-amber-900' },
   }
   const s = styles[color]
 
   return (
     <div
       onClick={onClick}
-      className={`group relative overflow-hidden rounded-[20px] ${s.bg} p-3 sm:p-5 border ${s.border} transition-all ${clickable ? 'cursor-pointer hover:shadow-md active:scale-[0.98]' : ''} flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4`}
+      className={`group relative overflow-hidden rounded-[32px] ${s.bg} p-5 sm:p-6 backdrop-blur-[40px] border ${s.border} shadow-[0_8px_32px_rgba(31,38,135,0.05)] transition-all ${clickable ? 'cursor-pointer hover:shadow-[0_8px_32px_rgba(31,38,135,0.15)] hover:bg-white/40 hover:border-white/80 active:scale-[0.98]' : ''} flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6`}
     >
-      <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl ${s.iconBg} shadow-sm border ${s.border} ${s.iconText} group-hover:scale-110 transition-transform`}>
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80 z-20"></div>
+      <div className={`relative z-10 flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-2xl sm:rounded-[20px] ${s.iconBg} shadow-[0_4px_16px_rgba(0,0,0,0.05)] border ${s.border} ${s.iconText} group-hover:scale-110 transition-transform`}>
         {icon}
       </div>
-      <div>
-        <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</p>
-        <p className={`text-xl sm:text-2xl font-black ${s.valueText} mt-0.5`}>{value}</p>
+      <div className="relative z-10">
+        <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-slate-500">{label}</p>
+        <p className={`text-2xl sm:text-3xl font-black ${s.valueText} mt-0.5`}>{value}</p>
       </div>
-      {active && <div className="absolute top-3 right-3 h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_8px_2px_rgba(239,68,68,0.3)] animate-ping" />}
+      {active && <div className="absolute top-4 right-4 h-3 w-3 rounded-full bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.6)] animate-ping" />}
     </div>
   )
 }
@@ -39,9 +40,9 @@ export function TabButton({ active, onClick, label, icon }: { active: boolean, o
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-[16px] px-3 py-2 sm:px-5 sm:py-3 text-[11px] sm:text-sm font-bold whitespace-nowrap transition-all duration-200 shrink-0 ${active
-        ? 'bg-gradient-to-r from-purple-600 to-violet-500 text-white shadow-lg shadow-purple-500/25'
-        : 'text-slate-500 hover:text-purple-700 hover:bg-white/60'
+      className={`flex items-center gap-2 sm:gap-3 rounded-xl sm:rounded-[20px] px-4 py-2.5 sm:px-6 sm:py-3.5 text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-300 shrink-0 ${active
+        ? 'bg-white/50 border border-white/80 shadow-[0_8px_24px_rgba(31,38,135,0.1)] text-indigo-900 backdrop-blur-3xl'
+        : 'text-slate-500 hover:text-indigo-700 hover:bg-white/30 backdrop-blur-xl border border-transparent'
         }`}
     >
       {icon}
@@ -52,26 +53,27 @@ export function TabButton({ active, onClick, label, icon }: { active: boolean, o
 
 export function BigActionCard({ title, desc, icon, onClick, count, color = 'purple' }: { title: string, desc: string, icon: React.ReactNode, onClick: () => void, count?: number, color?: 'purple' | 'amber' | 'blue' | 'emerald' }) {
   const colorMap: Record<string, string> = {
-    purple: 'from-purple-50 hover:border-purple-300 text-purple-600',
-    amber: 'from-amber-50 hover:border-amber-300 text-amber-600',
-    blue: 'from-blue-50 hover:border-blue-300 text-blue-600',
-    emerald: 'from-emerald-50 hover:border-emerald-300 text-emerald-600',
+    purple: 'text-indigo-600',
+    amber: 'text-amber-600',
+    blue: 'text-blue-600',
+    emerald: 'text-emerald-600',
   }
   return (
     <button
       onClick={onClick}
-      className={`premium-card group relative flex flex-col items-center justify-center p-10 bg-gradient-to-br to-transparent transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] text-center ${colorMap[color]}`}
+      className={`group relative flex flex-col items-center justify-center p-8 sm:p-10 bg-white/30 backdrop-blur-[40px] rounded-[32px] border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.07)] transition-all hover:bg-white/40 hover:shadow-[0_8px_32px_rgba(31,38,135,0.15)] hover:border-white/80 hover:-translate-y-1 active:scale-[0.98] text-center overflow-hidden ${colorMap[color]}`}
     >
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80 z-20"></div>
       {count !== undefined && count > 0 && (
-        <div className="absolute -top-4 -right-4 flex h-10 w-10 animate-bounce items-center justify-center rounded-full bg-red-500 text-lg font-black text-white shadow-xl shadow-red-500/40 z-10">
-          +{count}
+        <div className="absolute top-6 right-6 flex h-8 w-8 items-center justify-center rounded-full bg-rose-500 text-sm font-black text-white shadow-[0_0_12px_rgba(244,63,94,0.6)] z-30">
+          {count > 9 ? '9+' : count}
         </div>
       )}
-      <div className="rounded-2xl bg-purple-50/80 p-5 mb-4 transition-all duration-300 group-hover:scale-110 group-hover:bg-white inline-flex shadow-sm">
+      <div className="relative z-10 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-white/90 to-white/50 shadow-[0_4px_16px_rgba(0,0,0,0.05)] border border-white/60 mb-5 transition-transform duration-300 group-hover:scale-110 group-hover:shadow-[0_8px_24px_rgba(79,70,229,0.2)]">
         {icon}
       </div>
-      <h3 className="text-xl font-black text-slate-900 tracking-tight">{title}</h3>
-      <p className="mt-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">{desc}</p>
+      <h3 className="relative z-10 text-lg sm:text-xl font-black text-slate-800 tracking-tight group-hover:text-indigo-900">{title}</h3>
+      <p className="relative z-10 mt-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-slate-500">{desc}</p>
     </button>
   )
 }
