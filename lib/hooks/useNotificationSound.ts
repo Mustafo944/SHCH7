@@ -8,7 +8,7 @@ export function playNotification() {
         if (safeStorage.getItem('smartshch_muted') === 'true') {
           return;
         }
-      } catch (e) {}
+      } catch (_e) { /* safeStorage xavfsiz — xatolik e'tiborga olinmaydi */ }
     }
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const t = audioCtx.currentTime;
@@ -64,7 +64,7 @@ export function useNotificationSound(pendingCount: number) {
     if (typeof window !== 'undefined') {
       try {
         safeStorage.setItem('smartshch_muted', muted.toString())
-      } catch (e) {}
+      } catch (_e) { /* safeStorage xavfsiz — xatolik e'tiborga olinmaydi */ }
       window.dispatchEvent(new Event('smartshch_mute_changed'))
     }
   }
