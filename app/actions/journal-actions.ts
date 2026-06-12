@@ -1,9 +1,6 @@
 'use server'
 
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 // Service role bilan server tomonida upsert qilish (RLS ni chetlab o'tish uchun)
 export async function serverUpsertJournal(
@@ -12,8 +9,6 @@ export async function serverUpsertJournal(
   entries: any[],
   updatedBy: string
 ) {
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
-
   const { data, error } = await supabaseAdmin
     .from('station_journals')
     .upsert(

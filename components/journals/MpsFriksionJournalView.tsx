@@ -35,7 +35,7 @@ export function MpsFriksionJournalView({
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
-  const isWorker = userRole === 'worker'
+  const isWorker = ['worker', 'elektromexanik', 'elektromontyor'].includes(userRole)
 
   useEffect(() => {
     setLoading(true)
@@ -85,8 +85,8 @@ export function MpsFriksionJournalView({
     n[idx] = row
     setEntries(n)
     
-    if ((window as any).saveTimeout) clearTimeout((window as any).saveTimeout)
-    ;(window as any).saveTimeout = setTimeout(() => handleSave(n, true), 1500)
+    if ((window as any).mpsFriksionSaveTimeout) clearTimeout((window as any).mpsFriksionSaveTimeout)
+    ;(window as any).mpsFriksionSaveTimeout = setTimeout(() => handleSave(n, true), 1500)
   }
 
   const handleBajarildi = (idx: number) => {
@@ -103,7 +103,7 @@ export function MpsFriksionJournalView({
   }
 
   const addRow = () => { if (!isWorker) return; const n = [...entries, EMPTY_MPS_FRIKSION()]; setEntries(n); }
-  const removeRow = () => { if (!isWorker || entries.length <= 1) return; const n = entries.slice(0, -1); setEntries(n); }
+  const removeRow = () => { if (!isWorker || entries.length <= 1) return; const last = entries[entries.length - 1]; if (last.imzo) return; const n = entries.slice(0, -1); setEntries(n); handleSave(n, true); }
 
   const exportPDF = async () => {
     const { jsPDF } = await import('jspdf')

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn, getCachedSession } from '@/lib/supabase-db'
 import { safeStorage } from '@/lib/utils/storage'
+import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import { User, Eye, EyeOff, Lock, ArrowRight } from 'lucide-react'
 
 function getRoleHome(role: string) {
@@ -98,13 +99,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-violet-100/50 via-purple-50/50 to-fuchsia-100/50 p-4">
-      {/* Animated background elements */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-purple-300/40 blur-3xl" />
-        <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-fuchsia-300/40 blur-3xl" />
-        <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-300/30 blur-3xl" />
-      </div>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 p-4">
+      {/* Aurora Mesh Background */}
+      <AuroraMeshBackground />
 
       {/* Full screen loading overlay */}
       {(loading || navigating) && (

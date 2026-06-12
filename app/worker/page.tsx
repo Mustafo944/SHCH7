@@ -14,6 +14,7 @@ import {
 } from '@/lib/supabase-db'
 import { useSessionGuard, useToast, useNotificationSound } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
+import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import type { WorkReport, ReportEntry, Incident, JournalType } from '@/types'
 import { MONTHS } from '@/lib/constants'
 import dynamic from 'next/dynamic'
@@ -263,13 +264,7 @@ export default function WorkerPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 selection:bg-indigo-500/10">
-      {/* Aurora Mesh Background */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#ff7eb3] blur-[120px] opacity-30 mix-blend-multiply animate-pulse-slow"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-[#8e44ad] blur-[120px] opacity-30 mix-blend-multiply"></div>
-        <div className="absolute top-[20%] right-[20%] w-[40%] h-[40%] rounded-full bg-[#4facfe] blur-[100px] opacity-20 mix-blend-multiply"></div>
-        <div className="absolute bottom-[20%] left-[20%] w-[50%] h-[50%] rounded-full bg-[#00f2fe] blur-[100px] opacity-20 mix-blend-multiply"></div>
-      </div>
+      <AuroraMeshBackground />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* App Header */}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 
 interface RealtimeConfig {
@@ -19,26 +19,30 @@ export function useRealtimeSubscription(
   enabled = true
 ) {
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([])
+  // configs ni ref da saqlash — har renderda yangi massiv yaratilsa ham, qayta subscribe bo'lmaydi
+  const configsRef = useRef(configs)
+  configsRef.current = configs
 
-  const cleanup = useCallback(() => {
+  // Stabil kalit — faqat kanallar o'zgarganda qayta ulash uchun
+  const configKey = configs.map(c => c.channelName + c.table + (c.filter || '')).join(',')
+
+  useEffect(() => {
+    if (!enabled || configsRef.current.length === 0) return
+
+    // Oldingi kanallarni tozalash
     channelsRef.current.forEach(ch => {
       supabase.removeChannel(ch)
     })
     channelsRef.current = []
 
     // Global xavfsizlik: Boshqa shu nomli kanallar qolib ketgan bo'lsa, hammasini tozalash
-    configs.forEach(cfg => {
+    configsRef.current.forEach(cfg => {
       const existingChannels = supabase.getChannels().filter(c => c.topic === `realtime:${cfg.channelName}`)
       existingChannels.forEach(c => supabase.removeChannel(c))
     })
-  }, [configs])
 
-  useEffect(() => {
-    if (!enabled || configs.length === 0) return
-
-    cleanup()
-
-    const channels = configs.map(cfg => {
+    // Yangi kanallarni ochish
+    const channels = configsRef.current.map(cfg => {
       const channel = supabase
         .channel(cfg.channelName)
         .on(
@@ -58,7 +62,12 @@ export function useRealtimeSubscription(
 
     channelsRef.current = channels
 
-    return cleanup
+    return () => {
+      channelsRef.current.forEach(ch => {
+        supabase.removeChannel(ch)
+      })
+      channelsRef.current = []
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, configs.map(c => c.channelName + c.table + (c.filter || '')).join(','), cleanup])
+  }, [enabled, configKey])
 }

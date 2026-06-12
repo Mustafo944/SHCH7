@@ -35,7 +35,7 @@ export function AlsnKodJournalView({
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
-  const isWorker = userRole === 'worker'
+  const isWorker = ['worker', 'elektromexanik', 'elektromontyor'].includes(userRole)
 
   useEffect(() => {
     setLoading(true)
@@ -98,7 +98,7 @@ export function AlsnKodJournalView({
   }
 
   const addRow = () => { if (!isWorker) return; const n = [...entries, EMPTY_ALSN_KOD()]; setEntries(n); }
-  const removeRow = () => { if (!isWorker || entries.length <= 1) return; const n = entries.slice(0, -1); setEntries(n); }
+  const removeRow = () => { if (!isWorker || entries.length <= 1) return; const last = entries[entries.length - 1]; if (last.imzo) return; const n = entries.slice(0, -1); setEntries(n); handleSave(n, true); }
 
   const exportPDF = async () => {
     const { jsPDF } = await import('jspdf')

@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useSessionGuard, useRealtimeSubscription, useToast, useNotificationSound } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
+import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import { getStation } from '@/lib/store'
 import dynamic from 'next/dynamic'
 import { JournalMonthSelectModal } from '@/components/JournalView'
@@ -75,13 +76,7 @@ export default function YulUstasiPage() {
   // Bekat biriktirilmagan holat
   if (!stationId) return (
     <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900">
-      {/* Aurora Mesh Background */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#ff7eb3] blur-[120px] opacity-30 mix-blend-multiply animate-pulse-slow"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-[#8e44ad] blur-[120px] opacity-30 mix-blend-multiply"></div>
-        <div className="absolute top-[20%] right-[20%] w-[40%] h-[40%] rounded-full bg-[#4facfe] blur-[100px] opacity-20 mix-blend-multiply"></div>
-        <div className="absolute bottom-[20%] left-[20%] w-[50%] h-[50%] rounded-full bg-[#00f2fe] blur-[100px] opacity-20 mix-blend-multiply"></div>
-      </div>
+      <AuroraMeshBackground />
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="flex flex-col items-center justify-center rounded-[32px] border border-slate-200 bg-white p-16 text-center shadow-sm max-w-md">
           <div className="mb-6 rounded-full bg-amber-50 p-6">
@@ -103,13 +98,7 @@ export default function YulUstasiPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 selection:bg-indigo-500/10">
-      {/* Aurora Mesh Background */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#ff7eb3] blur-[120px] opacity-30 mix-blend-multiply animate-pulse-slow"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-[#8e44ad] blur-[120px] opacity-30 mix-blend-multiply"></div>
-        <div className="absolute top-[20%] right-[20%] w-[40%] h-[40%] rounded-full bg-[#4facfe] blur-[100px] opacity-20 mix-blend-multiply"></div>
-        <div className="absolute bottom-[20%] left-[20%] w-[50%] h-[50%] rounded-full bg-[#00f2fe] blur-[100px] opacity-20 mix-blend-multiply"></div>
-      </div>
+      <AuroraMeshBackground />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* App Header */}

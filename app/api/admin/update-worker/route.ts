@@ -26,11 +26,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 })
     }
 
-    const login = user.email?.replace('@shch-buxoro.local', '') ?? ''
     const { data: dispatcher } = await supabaseAdmin
       .from('users')
       .select('role')
-      .eq('login', login)
+      .eq('id', user.id)
       .single()
 
     if (!dispatcher || dispatcher.role !== 'dispatcher') {

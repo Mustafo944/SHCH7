@@ -2,8 +2,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { upsertJournal } from '@/lib/supabase-db'
+import { getJournal, upsertJournal } from '@/lib/supabase-db'
 import type { YerlatgichEntry } from '@/types'
 import { Plus, Trash2, Download, X } from 'lucide-react'
 import { getCurrentJournalMonth, isMonthInPast } from './helpers'
@@ -37,29 +36,31 @@ export function YerlatgichJournalView({
   const [msg, setMsg] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const isWorker = userRole === 'worker'
+  const isWorker = ['worker', 'elektromexanik', 'elektromontyor'].includes(userRole)
 
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('station_journals')
-        .select('entries')
-        .eq('station_id', stationId)
-        .eq('journal_type', 'yerlatgich')
-        .single()
-
-      if (data && data.entries) {
-        const parsed = (data.entries as unknown as YerlatgichEntry[]) || []
-        setAllEntries(parsed)
-        const currentMonthData = parsed.filter(e => e.journalMonth === journalMonth)
-        if (currentMonthData.length > 0) {
-          setEntries(currentMonthData)
+      try {
+        const doc = await getJournal(stationId, 'yerlatgich')
+        if (doc && doc.entries?.length) {
+          const parsed = doc.entries as YerlatgichEntry[]
+          setAllEntries(parsed)
+          const currentMonthData = parsed.filter(e => e.journalMonth === journalMonth)
+          if (currentMonthData.length > 0) {
+            setEntries(currentMonthData)
+          } else {
+            setEntries(Array.from({ length: 5 }, EMPTY_YERLATGICH))
+          }
         } else {
+          setAllEntries([])
           setEntries(Array.from({ length: 5 }, EMPTY_YERLATGICH))
         }
+      } catch (err) {
+        console.error('Yerlatgich journal yuklash xatosi:', err)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     load()
   }, [stationId, journalMonth])
@@ -127,8 +128,11 @@ export function YerlatgichJournalView({
   const removeRow = () => {
     if (!isWorker) return
     if (entries.length <= 1) return
+    const last = entries[entries.length - 1]
+    if (last.imzo || last.imzo2) return // Imzolangan qatorni o'chirmaslik
     const n = entries.slice(0, -1)
     setEntries(n)
+    handleSave(n, true)
   }
 
   const exportPDF = async () => {

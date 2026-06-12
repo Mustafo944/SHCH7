@@ -76,7 +76,7 @@ export function useNotificationSound(pendingCount: number) {
       }
     }
     const handleCustom = () => {
-      setIsMutedState(localStorage.getItem('smartshch_muted') === 'true')
+      setIsMutedState(safeStorage.getItem('smartshch_muted') === 'true')
     }
 
     window.addEventListener('storage', handleStorage)

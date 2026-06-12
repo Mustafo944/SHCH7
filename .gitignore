@@ -16,6 +16,10 @@
 # misc
 .DS_Store
 *.pem
+*.bak
+refactor.js
+tort.json
+yillik.json
 
 # debug
 npm-debug.log*
