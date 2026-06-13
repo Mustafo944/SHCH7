@@ -457,21 +457,52 @@ export function DU46JournalView({
     doc.setFont('helvetica', 'normal')
     doc.text(`Sana: ${dateStr}`, 14, 22)
 
-    const tableColumn = ['№', 'Oy va kun', 'Soat va daqiqa', 'Kamchilik bayoni', 'Oy/kun (xabar)', 'Soat (xabar)', 'Xabar usuli', 'Oy/kun (kelish)', 'Soat (kelish)', 'Kelgan imzo', 'Oy/kun (bartaraf)', 'Soat (bartaraf)', 'Bartaraf tafsiloti', 'Bajardi', 'Tasdiqladi']
+    const headRows = [
+      [
+        { content: '№', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: 'Oy/kun', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: 'Soat/daq', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: "Ko'rik, tekshiruvlar tahlili,\ntopilgan kamchiliklar bayoni", rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: "Tegishli xodimga\nxabar berilgan vaqt", colSpan: 3, styles: { halign: 'center' } },
+        { content: "Bartaraf etishga\nkelgan vaqti", colSpan: 3, styles: { halign: 'center' } },
+        { content: "Bartaraf qilganligi vaqti\nva tafsiloti", colSpan: 3, styles: { halign: 'center' } }
+      ],
+      [
+        { content: 'Oy/kun', styles: { halign: 'center' } },
+        { content: 'Soat', styles: { halign: 'center' } },
+        { content: 'Usuli', styles: { halign: 'center' } },
+        { content: 'Oy/kun', styles: { halign: 'center' } },
+        { content: 'Soat', styles: { halign: 'center' } },
+        { content: 'Imzo', styles: { halign: 'center' } },
+        { content: 'Oy/kun', styles: { halign: 'center' } },
+        { content: 'Soat', styles: { halign: 'center' } },
+        { content: 'Tafsilot', styles: { halign: 'center' } }
+      ]
+    ]
+    
     const tableRows = entries
       .filter(e => e.kamchilik || e.bartarafInfo || e.oyKun1 || e.soatMinut1)
-      .map((e, i) => [
-        e.nomber || String(i + 1),
-        e.oyKun1 || '', e.soatMinut1 || '', e.kamchilik || '',
-        e.oyKun2 || '', e.soatMinut2 || '', e.xabarUsuli || '',
-        e.oyKun3 || '', e.soatMinut3 || '', e.dspImzo || '',
-        e.oyKun4 || '', e.soatMinut4 || '', e.bartarafInfo || '',
-        e.bartarafBajarildi ? e.bartarafImzo : '-',
-        e.bartarafBBTasdiqladi ? e.bartarafBBImzo : '-',
-      ])
+      .map((e, i) => {
+        let col3 = e.kamchilik || ''
+        if (e.kamchilikBajarildi) col3 += `\n\nBoshladi: ${e.kamchilikImzo}`
+        if (e.approvalsCol3?.length) e.approvalsCol3.forEach(a => { col3 += `\n${a.role.replace('_', ' ')}: ${a.signedBy}` })
+        if (e.kamchilikBBTasdiqladi) col3 += `\nNavbatchi: ${e.kamchilikBBImzo}`
+
+        let col12 = e.bartarafInfo || ''
+        if (e.bartarafBajarildi) col12 += `\n\nTugadi: ${e.bartarafImzo}`
+        if (e.bartarafBBTasdiqladi) col12 += `\nNavbatchi: ${e.bartarafBBImzo}`
+
+        return [
+          e.nomber || String(i + 1),
+          e.oyKun1 || '', e.soatMinut1 || '', col3,
+          e.oyKun2 || '', e.soatMinut2 || '', e.xabarUsuli || '',
+          e.oyKun3 || '', e.soatMinut3 || '', e.dspImzo || '',
+          e.oyKun4 || '', e.soatMinut4 || '', col12
+        ]
+      })
 
     autoTable(doc, {
-      head: [tableColumn], body: tableRows, startY: 28, theme: 'grid',
+      head: headRows, body: tableRows, startY: 28, theme: 'grid',
       styles: { fontSize: 6, cellPadding: 2, overflow: 'linebreak', cellWidth: 'wrap' },
       headStyles: { fillColor: [8, 23, 40], textColor: [255, 255, 255], fontSize: 5.5, fontStyle: 'bold', halign: 'center' },
       alternateRowStyles: { fillColor: [240, 248, 255] },
