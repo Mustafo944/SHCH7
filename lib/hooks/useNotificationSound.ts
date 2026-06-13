@@ -10,7 +10,7 @@ export function playNotification() {
         }
       } catch (_e) { /* safeStorage xavfsiz — xatolik e'tiborga olinmaydi */ }
     }
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioCtx = new (window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext!)();
     const t = audioCtx.currentTime;
 
     // First tone (B5)

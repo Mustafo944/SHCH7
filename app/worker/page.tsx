@@ -169,9 +169,9 @@ export default function WorkerPage() {
   useRealtimeSubscription(realtimeConfigs, realtimeConfigs.length > 0)
 
   const { bugunReja, qolibKetgan, sababliBajarilmagan } = useMemo(() => {
-    const bugun: { reportId: string, entry: ReportEntry, month: string, taskText: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy' }[] = []
-    const qolib: { reportId: string, entry: ReportEntry, month: string, taskText: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy' }[] = []
-    const sababli: { reportId: string, entry: ReportEntry, month: string, taskText: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy', reason: string, completedDate?: string }[] = []
+    const bugun: { reportId: string, entry: ReportEntry, month: string, taskText: string, type: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy' }[] = []
+    const qolib: { reportId: string, entry: ReportEntry, month: string, taskText: string, type: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy' }[] = []
+    const sababli: { reportId: string, entry: ReportEntry, month: string, taskText: string, type: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy', reason: string, completedDate?: string }[] = []
 
     const today = new Date()
     const todayDay = today.getDate()
@@ -198,7 +198,7 @@ export default function WorkerPage() {
         if (isNaN(taskDay)) return
 
         // Har bir ustunni alohida ish sifatida hisoblash
-        const columns: { content: string, done: boolean, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy', missedReason?: string, completedAfter?: string }[] = []
+        const columns: { content: string, done: boolean, type: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy', missedReason?: string, completedAfter?: string }[] = []
         if (e.haftalikJadval) columns.push({ content: e.haftalikJadval, done: !!e.doneHaftalik, type: 'haftalik', missedReason: e.missedReasonHaftalik, completedAfter: e.completedAfterMissedDateHaftalik })
         if (e.yillikJadval) columns.push({ content: e.yillikJadval, done: !!e.doneYillik, type: 'yillik', missedReason: e.missedReasonYillik, completedAfter: e.completedAfterMissedDateYillik })
         if (e.yangiIshlar) columns.push({ content: e.yangiIshlar, done: !!e.doneYangi, type: 'yangi', missedReason: e.missedReasonYangi, completedAfter: e.completedAfterMissedDateYangi })

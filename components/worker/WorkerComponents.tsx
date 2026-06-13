@@ -182,11 +182,11 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       const ragatDate = new Date(new Date().getFullYear(), month, ragatNum)
       // 5 kundan o'tib ketgan bo'lsa
       if (Date.now() > ragatDate.getTime() + 5 * 24 * 60 * 60 * 1000) {
-        if (taskType === 'haftalik') (entry as any).completedAfterMissedDateHaftalik = new Date().toISOString()
-        if (taskType === 'yillik') (entry as any).completedAfterMissedDateYillik = new Date().toISOString()
-        if (taskType === 'yangi') (entry as any).completedAfterMissedDateYangi = new Date().toISOString()
-        if (taskType === 'kmo') (entry as any).completedAfterMissedDateKmo = new Date().toISOString()
-        if (taskType === 'majburiy') (entry as any).completedAfterMissedDateMajburiy = new Date().toISOString()
+        if (taskType === 'haftalik') entry.completedAfterMissedDateHaftalik = new Date().toISOString()
+        if (taskType === 'yillik') entry.completedAfterMissedDateYillik = new Date().toISOString()
+        if (taskType === 'yangi') entry.completedAfterMissedDateYangi = new Date().toISOString()
+        if (taskType === 'kmo') entry.completedAfterMissedDateKmo = new Date().toISOString()
+        if (taskType === 'majburiy') entry.completedAfterMissedDateMajburiy = new Date().toISOString()
       }
     }
 
@@ -327,7 +327,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                         className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
                       />
                       {e.doneHaftalik && (
-                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${(e as any).completedAfterMissedDateHaftalik ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
+                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateHaftalik ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
                           <CheckCircle2 size={12} />
                         </div>
                       )}
@@ -350,7 +350,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                         className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
                       />
                       {e.doneYillik && (
-                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${(e as any).completedAfterMissedDateYillik ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
+                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateYillik ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
                           <CheckCircle2 size={12} />
                         </div>
                       )}
@@ -373,7 +373,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                         className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-50 cursor-not-allowed' : ''}`}
                       />
                       {e.doneYangi && (
-                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${(e as any).completedAfterMissedDateYangi ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
+                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateYangi ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
                           <CheckCircle2 size={12} />
                         </div>
                       )}
@@ -388,7 +388,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                         className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
                       />
                       {e.doneKmo && (
-                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${(e as any).completedAfterMissedDateKmo ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
+                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateKmo ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
                           <CheckCircle2 size={12} />
                         </div>
                       )}
@@ -403,7 +403,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                         className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
                       />
                       {e.doneMajburiy && (
-                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${(e as any).completedAfterMissedDateMajburiy ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
+                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateMajburiy ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
                           <CheckCircle2 size={12} />
                         </div>
                       )}
@@ -417,8 +417,8 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                   </td>
                   <td className="p-2 text-center align-middle">
                     {(() => {
-                        const isLate = !!((e as any).completedAfterMissedDateHaftalik || (e as any).completedAfterMissedDateYillik || (e as any).completedAfterMissedDateYangi || (e as any).completedAfterMissedDateKmo || (e as any).completedAfterMissedDateMajburiy)
-                        const lateDateStr = (e as any).completedAfterMissedDateHaftalik || (e as any).completedAfterMissedDateYillik || (e as any).completedAfterMissedDateYangi || (e as any).completedAfterMissedDateKmo || (e as any).completedAfterMissedDateMajburiy
+                        const isLate = !!(e.completedAfterMissedDateHaftalik || e.completedAfterMissedDateYillik || e.completedAfterMissedDateYangi || e.completedAfterMissedDateKmo || e.completedAfterMissedDateMajburiy)
+                        const lateDateStr = e.completedAfterMissedDateHaftalik || e.completedAfterMissedDateYillik || e.completedAfterMissedDateYangi || e.completedAfterMissedDateKmo || e.completedAfterMissedDateMajburiy
                         let formattedLateDate = ''
                         if (lateDateStr) {
                            const d = new Date(lateDateStr)
@@ -879,32 +879,11 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
     updateTaskInDb(promptTask, (entry) => {
       const field = `missedReason${promptTask.type.charAt(0).toUpperCase() + promptTask.type.slice(1)}`
       const dateField = `missedReasonDate${promptTask.type.charAt(0).toUpperCase() + promptTask.type.slice(1)}`
-      ;(entry as any)[field] = promptReason.trim()
-      ;(entry as any)[dateField] = new Date().toISOString()
+      ;(entry as Record<string, unknown>)[field] = promptReason.trim()
+      ;(entry as Record<string, unknown>)[dateField] = new Date().toISOString()
     })
   }
 
-  const handleRemoveReason = (task: any) => {
-    if (confirm("Ushbu ishdan izohni olib tashlaysizmi? Ish yana 'Bajarilmagan ishlar' safiga qaytadi.")) {
-      updateTaskInDb(task, (entry) => {
-        const field = `missedReason${task.type.charAt(0).toUpperCase() + task.type.slice(1)}`
-        const dateField = `missedReasonDate${task.type.charAt(0).toUpperCase() + task.type.slice(1)}`
-        const compField = `completedAfterMissedDate${task.type.charAt(0).toUpperCase() + task.type.slice(1)}`
-        delete (entry as any)[field]
-        delete (entry as any)[dateField]
-        delete (entry as any)[compField]
-      })
-    }
-  }
-
-  const handleMarkCompleted = (task: any) => {
-    if (confirm("Bu ish kechikib bo'lsa ham bajarildimi?")) {
-      updateTaskInDb(task, (entry) => {
-        const compField = `completedAfterMissedDate${task.type.charAt(0).toUpperCase() + task.type.slice(1)}`
-        ;(entry as any)[compField] = new Date().toISOString()
-      })
-    }
-  }
 
   const downloadPDF = () => {
     const doc = new jsPDF()
