@@ -53,7 +53,10 @@ export function useRealtimeSubscription(
             table: cfg.table,
             ...(cfg.filter ? { filter: cfg.filter } : {}),
           },
-          () => cfg.onEvent()
+          () => {
+            const latestCfg = configsRef.current.find(c => c.channelName === cfg.channelName && c.table === cfg.table)
+            if (latestCfg) latestCfg.onEvent()
+          }
         )
         .subscribe()
 

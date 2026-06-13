@@ -12,7 +12,7 @@ import {
   getReadIncidentIds,
   getPendingJournalCounts
 } from '@/lib/supabase-db'
-import { useSessionGuard, useToast, useNotificationSound } from '@/lib/hooks'
+import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import type { WorkReport, ReportEntry, Incident, JournalType } from '@/types'
@@ -118,69 +118,56 @@ export default function WorkerPage() {
   }, [session, refreshData, viewInitialized])
 
   useEffect(() => {
-    if (!activeStationId || !session?.role) return
-
-    loadPendingCounts(activeStationId, session.role, session.position)
-
-    const journalChannel = supabase
-      .channel(`worker_journals_${activeStationId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals', filter: `station_id=eq.${activeStationId}` }, () => {
-        loadPendingCounts(activeStationId, session!.role, session!.position)
-      })
-      .subscribe()
-
-    return () => { supabase.removeChannel(journalChannel) }
-  }, [activeStationId, session, session?.role, loadPendingCounts])
-
-  useEffect(() => {
-    if (!session?.id) return
-
-    // ─── Realtime Subscriptions ───────────────
-    const workReportsChannel = supabase
-      .channel(`worker_reports_${session.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'work_reports',
-          filter: `worker_id=eq.${session.id}`
-        },
-        () => {
-          console.log('🚀 Realtime: Hisobot holati o\'zgardi!')
-          loadWorkReports(session.id)
-        }
-      )
-      .subscribe()
-
-    const incidentsChannel = supabase
-      .channel(`worker_incidents_${session.id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'incidents' },
-        () => {
-          loadIncidents(session.id)
-        }
-      )
-      .subscribe()
-
-    const incidentReadsChannel = supabase
-      .channel(`worker_incident_reads_${session.id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'incident_reads', filter: `worker_id=eq.${session.id}` },
-        () => {
-          loadIncidents(session.id)
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(workReportsChannel)
-      supabase.removeChannel(incidentsChannel)
-      supabase.removeChannel(incidentReadsChannel)
+    if (activeStationId && session?.role) {
+      loadPendingCounts(activeStationId, session.role, session.position)
     }
-  }, [session?.id, loadWorkReports, loadIncidents])
+  }, [activeStationId, session?.role, session?.position, loadPendingCounts])
+
+  const realtimeConfigs = useMemo(() => {
+    const configs = []
+
+    if (activeStationId && session?.role) {
+      configs.push({
+        channelName: `worker_journals_${activeStationId}`,
+        table: 'station_journals',
+        filter: `station_id=eq.${activeStationId}`,
+        onEvent: () => {
+          if (activeStationId && session?.role) {
+            loadPendingCounts(activeStationId, session.role, session.position)
+          }
+        }
+      })
+    }
+
+    if (session?.id) {
+      configs.push(
+        {
+          channelName: `worker_reports_${session.id}`,
+          table: 'work_reports',
+          filter: `worker_id=eq.${session.id}`,
+          onEvent: () => {
+            console.log('🚀 Realtime: Hisobot holati o\\'zgardi!')
+            loadWorkReports(session.id)
+          }
+        },
+        {
+          channelName: `worker_incidents_${session.id}`,
+          table: 'incidents',
+          onEvent: () => loadIncidents(session.id)
+        },
+        {
+          channelName: `worker_incident_reads_${session.id}`,
+          table: 'incident_reads',
+          filter: `worker_id=eq.${session.id}`,
+          onEvent: () => loadIncidents(session.id)
+        }
+      )
+    }
+
+    return configs
+  }, [activeStationId, session?.id, session?.role, session?.position, loadPendingCounts, loadWorkReports, loadIncidents])
+
+  useRealtimeSubscription(realtimeConfigs, realtimeConfigs.length > 0)
 
   const { bugunReja, qolibKetgan, sababliBajarilmagan } = useMemo(() => {
     const bugun: { reportId: string, entry: ReportEntry, month: string, taskText: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy' }[] = []

@@ -6,7 +6,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 export async function serverUpsertJournal(
   stationId: string,
   journalType: string,
-  entries: any[],
+  entries: Record<string, unknown>[],
   updatedBy: string
 ) {
   const { data, error } = await supabaseAdmin

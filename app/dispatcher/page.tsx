@@ -23,9 +23,9 @@ import {
   deleteGlobalGraphicFile,
   getDispatcherJournalSummary,
 } from '@/lib/supabase-db'
-import { useSessionGuard, useToast } from '@/lib/hooks'
+import { useSessionGuard, useToast, useRealtimeSubscription } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
-import type { User, Role, JournalType, ReportEntry } from '@/types'
+import type { User, Role, JournalType } from '@/types'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import { JournalSelectModal, JournalMonthSelectModal } from '@/components/JournalView'
 import dynamic from 'next/dynamic'
@@ -110,37 +110,28 @@ export default function DispatcherPage() {
     mutateJournalSummary()
   }, [mutateWorkers, mutateReports, mutateIncidents, mutateGraphics, mutateJournalSummary])
 
-  useEffect(() => {
-    if (!session) return
-
-    // Realtime Subscriptions вЂ” faqat o'zgargan jadval uchun SWR ni yangilash
-    const workReportsChannel = supabase
-      .channel('dispatcher_work_reports')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_reports' }, () => {
-        mutateReports()
-      })
-      .subscribe()
-
-    const incidentsChannel = supabase
-      .channel('dispatcher_incidents')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'incidents' }, () => {
-        mutateIncidents()
-      })
-      .subscribe()
-
-    const journalsChannel = supabase
-      .channel('dispatcher_journals')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'station_journals' }, () => {
-        mutateJournalSummary()
-      })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(workReportsChannel)
-      supabase.removeChannel(incidentsChannel)
-      supabase.removeChannel(journalsChannel)
-    }
+  const realtimeConfigs = useMemo(() => {
+    if (!session) return []
+    return [
+      {
+        channelName: 'dispatcher_work_reports',
+        table: 'work_reports',
+        onEvent: () => mutateReports()
+      },
+      {
+        channelName: 'dispatcher_incidents',
+        table: 'incidents',
+        onEvent: () => mutateIncidents()
+      },
+      {
+        channelName: 'dispatcher_journals',
+        table: 'station_journals',
+        onEvent: () => mutateJournalSummary()
+      }
+    ]
   }, [session, mutateReports, mutateIncidents, mutateJournalSummary])
+
+  useRealtimeSubscription(realtimeConfigs, realtimeConfigs.length > 0)
 
   // Calculated pending counts
   const pendingCounts = useMemo(() => {
@@ -198,9 +189,21 @@ export default function DispatcherPage() {
   const prevMonthStr = `${prevMonthYear}-${String(prevMonthIdx + 1).padStart(2, '0')}`
 
   const { todayReja, allQolibKetgan, allSababliBajarilmagan } = useMemo(() => {
-    const reja: any[] = []
-    const qolib: any[] = []
-    const sababli: any[] = []
+    type TaskObj = {
+      reportId: string
+      stationId: string
+      stationName: string
+      workerName: string
+      entry: Record<string, unknown>
+      month: string
+      taskText: string
+      type: string
+      reason?: string | null
+      completedDate?: string | null
+    }
+    const reja: TaskObj[] = []
+    const qolib: TaskObj[] = []
+    const sababli: TaskObj[] = []
 
     allReports
       .filter(r => r.month === currentMonthStr || r.month === prevMonthStr)
