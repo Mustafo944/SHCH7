@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react'
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, X, BookOpen, AlertTriangle, Download, FileText } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, X, BookOpen, AlertTriangle, Download } from 'lucide-react'
 import { ReportEntry } from '@/types'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
 export function TodayTasksModal({ type, tasks, onClose }: {
   type: 'bugunReja' | 'qolibKetgan' | 'sababliBajarilmagan'
-  tasks: { stationId: string; stationName: string; workerName: string; entry: ReportEntry; month: string; taskText: string; type: string; reason?: string; completedDate?: string }[]
+  tasks: { stationId: string; stationName: string; workerName: string; entry: ReportEntry; month: string; taskText: string; type: string; reason?: string | null; completedDate?: string | null }[]
   onClose: () => void
 }) {
   const [expandedStation, setExpandedStation] = useState<string | null>(null)

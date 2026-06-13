@@ -809,7 +809,7 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
   )
 }
 
-export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskClick, onTasksUpdated, stationId, stationName }: {
+export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskClick, onTasksUpdated, stationName }: {
   type: 'bugunBajarilgan' | 'qolibKetgan' | 'sababliBajarilmagan'
   bugun: { reportId: string, entry: ReportEntry, month: string, taskText?: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy' }[]
   qolib: { reportId: string, entry: ReportEntry, month: string, taskText?: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy' }[]
@@ -817,7 +817,6 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
   onClose: () => void
   onTaskClick?: (task: any) => void
   onTasksUpdated?: () => void
-  stationId?: string
   stationName?: string
 }) {
   const [promptMode, setPromptMode] = useState<boolean>(false)

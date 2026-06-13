@@ -1,9 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import useSWR from 'swr'
-import { supabase } from '@/lib/supabase'
+
 import {
   getStations,
 } from '@/lib/store'
@@ -25,7 +25,7 @@ import {
 } from '@/lib/supabase-db'
 import { useSessionGuard, useToast, useRealtimeSubscription } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
-import type { User, Role, JournalType } from '@/types'
+import type { User, Role, JournalType, ReportEntry } from '@/types'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import { JournalSelectModal, JournalMonthSelectModal } from '@/components/JournalView'
 import dynamic from 'next/dynamic'
@@ -194,7 +194,7 @@ export default function DispatcherPage() {
       stationId: string
       stationName: string
       workerName: string
-      entry: Record<string, unknown>
+      entry: ReportEntry
       month: string
       taskText: string
       type: string

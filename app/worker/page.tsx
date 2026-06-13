@@ -2,7 +2,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { supabase } from '@/lib/supabase'
+
 import {
   getStation,
 } from '@/lib/store'
@@ -36,7 +36,6 @@ import {
   LogOut,
   Download,
   BookOpen,
-  CheckCircle2,
   AlertTriangle,
   Volume2,
   VolumeX
@@ -146,7 +145,7 @@ export default function WorkerPage() {
           table: 'work_reports',
           filter: `worker_id=eq.${session.id}`,
           onEvent: () => {
-            console.log('🚀 Realtime: Hisobot holati o\\'zgardi!')
+            console.log("🚀 Realtime: Hisobot holati o'zgardi!")
             loadWorkReports(session.id)
           }
         },
@@ -242,7 +241,6 @@ export default function WorkerPage() {
   }, [reports, activeStationId])
 
   const missedTasksCount = qolibKetgan.length
-  const sababliTasksCount = sababliBajarilmagan.length
 
   if (!session || sessionLoading) return <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50"><div className="h-10 w-10 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600" /></div>
 
@@ -792,7 +790,6 @@ export default function WorkerPage() {
                 }
               }}
               onTasksUpdated={() => refreshData(session.id)}
-              stationId={activeStationId}
               stationName={stationName}
             />
           )}
