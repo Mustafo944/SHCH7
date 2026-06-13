@@ -503,10 +503,25 @@ export function DU46JournalView({
 
     autoTable(doc, {
       head: headRows, body: tableRows, startY: 28, theme: 'grid',
-      styles: { fontSize: 6, cellPadding: 2, overflow: 'linebreak', cellWidth: 'wrap' },
-      headStyles: { fillColor: [8, 23, 40], textColor: [255, 255, 255], fontSize: 5.5, fontStyle: 'bold', halign: 'center' },
+      styles: { fontSize: 6, cellPadding: 1.5, overflow: 'linebreak' },
+      margin: { left: 10, right: 10 },
+      headStyles: { fillColor: [8, 23, 40], textColor: [255, 255, 255], fontSize: 5, fontStyle: 'bold', halign: 'center' },
       alternateRowStyles: { fillColor: [240, 248, 255] },
-      columnStyles: { 0: { halign: 'center', cellWidth: 8 } },
+      columnStyles: { 
+        0: { halign: 'center', cellWidth: 6 },
+        1: { halign: 'center', cellWidth: 12 },
+        2: { halign: 'center', cellWidth: 12 },
+        // 3 is auto
+        4: { halign: 'center', cellWidth: 12 },
+        5: { halign: 'center', cellWidth: 12 },
+        6: { halign: 'center', cellWidth: 15 },
+        7: { halign: 'center', cellWidth: 12 },
+        8: { halign: 'center', cellWidth: 12 },
+        9: { halign: 'center', cellWidth: 18 },
+        10: { halign: 'center', cellWidth: 12 },
+        11: { halign: 'center', cellWidth: 12 },
+        // 12 is auto
+      },
     })
 
     doc.save(`DU-46_${stationName}_${dateStr.replace(/\./g, '-')}.pdf`)
