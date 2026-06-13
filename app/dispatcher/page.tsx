@@ -439,7 +439,7 @@ export default function DispatcherPage() {
               />
               <StatCard
                 icon={<CheckCircle2 />}
-                label="Bugun bajarilishi kerak"
+                label="BUGUNGI ISHLAR RO'YXATI"
                 value={todayReja.length}
                 onClick={() => setTodayModal('bugunReja')}
                 clickable

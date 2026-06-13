@@ -70,7 +70,9 @@ export function HeaderCard({ title, subtitle, status, statusColor }: { title: st
           <h2 className="text-2xl sm:text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-indigo-900 tracking-tight">{title}</h2>
           <p className="mt-1 text-xs sm:text-sm font-black text-indigo-600/80 uppercase tracking-widest">{subtitle}</p>
         </div>
-        <div className={`${statusColor && statusColors[statusColor] ? statusColors[statusColor] : statusColors[status.toLowerCase()] || 'badge'}`}>{status}</div>
+        {status && (
+          <div className={`${statusColor && statusColors[statusColor] ? statusColors[statusColor] : statusColors[status.toLowerCase()] || 'badge'}`}>{status}</div>
+        )}
       </div>
     </div>
   )
@@ -274,8 +276,8 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       <HeaderCard 
         title="Jurnal To'ldirish" 
         subtitle={`${MONTHS[month]} · ${stationName}`} 
-        status={headerError || "yangi"} 
-        statusColor={headerError ? "error" : "yangi"}
+        status={headerError || ""} 
+        statusColor={headerError ? "error" : "default"}
       />
       <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm relative shadow-sm">
         <div className="sm:hidden absolute top-0 right-0 bg-purple-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
@@ -334,6 +336,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                     </div>
                     {(!e.adImzosi && !isConfirmed && canEditPlan) && (
                       <button
+                        type="button"
                         onClick={() => openSelectModal(i, '4-haftalik')}
                         className="absolute bottom-2 right-2 rounded bg-purple-100 p-1 text-purple-600 shadow-sm transition hover:bg-purple-600 hover:text-white"
                       >
@@ -357,6 +360,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                     </div>
                     {(!e.adImzosi && !isConfirmed && canEditPlan) && (
                       <button
+                        type="button"
                         onClick={() => openSelectModal(i, 'yillik')}
                         className="absolute bottom-2 right-2 rounded bg-purple-100 p-1 text-purple-600 shadow-sm transition hover:bg-purple-600 hover:text-white"
                       >
@@ -504,8 +508,8 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
         </button>
       </div>
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-[300] flex items-start justify-center bg-slate-900/40 p-4 pt-[10vh] backdrop-blur-md transition-all">
+      {modalOpen && typeof document !== 'undefined' ? createPortal(
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all">
           <div className="relative flex h-[70vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-200/60 px-8 py-5 bg-slate-50/80">
               <h3 className="text-lg font-black text-slate-900 tracking-tight">
@@ -519,7 +523,6 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                 onChange={e => setModalSearch(e.target.value)}
                 placeholder="Vazifa qidirish..."
                 className="input-premium"
-                autoFocus
               />
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar bg-slate-50/30">
@@ -622,8 +625,9 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
               )}
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body
+      ) : null}
 
       {completionIdx !== null && entries[completionIdx] && (
         <TaskCompletionModal
@@ -831,7 +835,7 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
 
   if (type === 'bugunBajarilgan') {
     tasks = bugun
-    title = 'Bugun bajarilishi kerak bo\'lgan ishlar'
+    title = 'BUGUNGI ISHLAR RO\'YXATI'
     headerColor = 'bg-blue-50/50 border-blue-100'
     titleColor = 'text-blue-900'
   } else if (type === 'qolibKetgan') {

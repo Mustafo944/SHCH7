@@ -29,7 +29,7 @@ export function TodayTasksModal({ type, tasks, onClose }: {
   let titleColor = ''
 
   if (type === 'bugunReja') {
-    title = 'Bugun bajarilishi kerak bo\'lgan ishlar'
+    title = 'BUGUNGI ISHLAR RO\'YXATI'
     headerColor = 'bg-blue-50/50 border-blue-100'
     titleColor = 'text-blue-900'
   } else if (type === 'qolibKetgan') {

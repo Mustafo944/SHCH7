@@ -357,7 +357,7 @@ export default function WorkerPage() {
                       <FileText size={26} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-blue-600">Bugun bajarilishi kerak</p>
+                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-blue-600">BUGUNGI ISHLAR RO'YXATI</p>
                       <p className="text-xl sm:text-2xl font-black text-blue-600 mt-0.5 mb-0.5">{bugunReja.length}</p>
                       <p className="text-[10px] sm:text-[11px] font-medium text-blue-700/70">
                         {bugunReja.length > 0 ? "Bugungi ishlar ro'yxati" : "Bugun uchun ish yo'q"}
