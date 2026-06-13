@@ -174,19 +174,21 @@ export function DU46JournalView({
   const getNextApproverRole = (e: DU46Entry, col: 3 | 12): string | null => {
     const isBoshlandi = col === 3 ? e.kamchilikBajarildi : e.bartarafBajarildi
     if (!isBoshlandi) return null
-    const chain = e.approvalChain || []
-    const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
     
-    if (approvals.length < chain.length) {
-      return chain[approvals.length]
+    if (col === 3) {
+      const chain = e.approvalChain || []
+      const approvals = e.approvalsCol3 || []
+      if (approvals.length < chain.length) return chain[approvals.length]
+      
+      const creator = getCreator(e)
+      if (creator === 'bekat_boshlighi') return null
+      
+      if (!e.kamchilikBBTasdiqladi) return 'DSP'
+      return null
     }
     
-    const creator = getCreator(e)
-    if (col === 3 && creator === 'bekat_boshlighi') return null
-    
-    const isApprovedByDSP = col === 3 ? e.kamchilikBBTasdiqladi : e.bartarafBBTasdiqladi
-    if (!isApprovedByDSP) return 'DSP'
-    
+    // 12-ustun: Faqat DSP tasdiqlaydi
+    if (!e.bartarafBBTasdiqladi) return 'DSP'
     return null
   }
 
@@ -195,12 +197,13 @@ export function DU46JournalView({
     if (!nextRole) return false // All approved
     if (nextRole === 'DSP') return true // DSP is always final
     
-    // Yoki agar DSP kerak bo'lmasa, zanjir oxiridagi odam final bo'ladi
-    const chain = e.approvalChain || []
-    const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
-    if (approvals.length === chain.length - 1) {
-      const creator = getCreator(e)
-      if (creator === 'bekat_boshlighi') return true
+    if (col === 3) {
+      const chain = e.approvalChain || []
+      const approvals = e.approvalsCol3 || []
+      if (approvals.length === chain.length - 1) {
+        const creator = getCreator(e)
+        if (creator === 'bekat_boshlighi') return true
+      }
     }
     return false
   }
@@ -391,19 +394,12 @@ export function DU46JournalView({
     const prev = [...entries]
     const updated = [...entries]
     const e = updated[i]
-    const nextRole = getNextApproverRole(e, 12)
     
-    if (nextRole === 'DSP') {
-      updated[i] = {
-        ...e,
-        bartarafBBTasdiqladi: true,
-        bartarafBBTasdiqladiAt: new Date().toISOString(),
-        bartarafBBImzo: userName,
-      }
-    } else if (nextRole) {
-      const newApprovals = [...(e.approvalsCol12 || [])]
-      newApprovals.push({ role: nextRole, signedBy: userName, signedAt: new Date().toISOString() })
-      updated[i] = { ...e, approvalsCol12: newApprovals }
+    updated[i] = {
+      ...e,
+      bartarafBBTasdiqladi: true,
+      bartarafBBTasdiqladiAt: new Date().toISOString(),
+      bartarafBBImzo: userName,
     }
     
     try {
@@ -834,15 +830,7 @@ export function DU46JournalView({
                           </div>
                         )}
 
-                        {e.approvalsCol12?.map((appr, idx) => (
-                          <div key={idx} className="flex flex-col items-center gap-1 w-full">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{appr.role.replace('_', ' ')}:</span>
-                            <div className="flex items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-1.5 text-[10px] font-bold text-blue-600 border border-blue-100 w-full justify-center shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} /> 
-                              <span className="truncate">{appr.signedBy}</span>
-                            </div>
-                          </div>
-                        ))}
+
 
                         {e.bartarafBBTasdiqladi && (
                           <div className="flex flex-col items-center gap-1 w-full">
