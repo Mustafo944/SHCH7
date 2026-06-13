@@ -914,8 +914,8 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
       
       return [
         i + 1,
-        dateFormatted,
-        t.taskText,
+        dateFormatted ? String(dateFormatted) : '',
+        t.taskText || '',
         t.reason || '',
         status
       ]
