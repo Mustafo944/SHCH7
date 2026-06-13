@@ -182,7 +182,7 @@ export function DU46JournalView({
     }
     
     const creator = getCreator(e)
-    if (creator === 'bekat_boshlighi') return null
+    if (col === 3 && creator === 'bekat_boshlighi') return null
     
     const isApprovedByDSP = col === 3 ? e.kamchilikBBTasdiqladi : e.bartarafBBTasdiqladi
     if (!isApprovedByDSP) return 'DSP'
@@ -574,7 +574,7 @@ export function DU46JournalView({
 
                 const canWriteCol12 = !isCol12Finished(e) && isCol3Finished(e) && !isDispatcher && hasRightToFix
 
-                const canWriteMiddle = isCurrentMonth && !isDispatcher && (hasRightToFix || hasNoCreator)
+                const canWriteMiddle = isCurrentMonth && !isDispatcher && !isCol12Finished(e) && (hasRightToFix || hasNoCreator)
 
                 return (
                   <tr key={i} className="border-b border-slate-200 hover:bg-blue-50/50 transition-colors animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
