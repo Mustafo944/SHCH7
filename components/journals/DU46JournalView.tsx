@@ -72,7 +72,7 @@ export function DU46JournalView({
   // ── Rollar ─────────────────────────────────────────────────────────────────────
   const isYulUstasi = userRole === 'yul_ustasi'
   const isEchXodimi = userRole === 'ech_xodimi'
-  const isElektromexanik = ['worker', 'elektromexanik', 'elektromontyor'].includes(userRole)
+  const isElektromexanik = ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(userRole)
   const isWorker = isElektromexanik || isYulUstasi
   const isBB = ['bekat_boshlighi', 'bekat_navbatchisi'].includes(userRole)
   const isDispatcher = userRole === 'dispatcher'
