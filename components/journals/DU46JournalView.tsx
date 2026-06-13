@@ -567,13 +567,14 @@ export function DU46JournalView({
               {entries.map((e, i) => {
                 const iAmRoleCreator = isCreator(e)
                 const isExactCreator = e.kamchilikImzo ? e.kamchilikImzo === userName : iAmRoleCreator
+                const hasRightToFix = isExactCreator || (e.approvalChain && e.approvalChain.includes(userRole))
 
                 const hasNoCreator = !e.createdByRole && !e.kamchilik && !e.oyKun1 && !e.soatMinut1
                 const canWriteCol3 = isCurrentMonth && !isCol3Finished(e) && (iAmRoleCreator || hasNoCreator) && !isDispatcher
 
-                const canWriteCol12 = !isCol12Finished(e) && isCol3Finished(e) && !isDispatcher && isExactCreator
+                const canWriteCol12 = !isCol12Finished(e) && isCol3Finished(e) && !isDispatcher && hasRightToFix
 
-                const canWriteMiddle = isCurrentMonth && !isDispatcher && (isExactCreator || hasNoCreator)
+                const canWriteMiddle = isCurrentMonth && !isDispatcher && (hasRightToFix || hasNoCreator)
 
                 return (
                   <tr key={i} className="border-b border-slate-200 hover:bg-blue-50/50 transition-colors animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
@@ -814,7 +815,7 @@ export function DU46JournalView({
 
                       {/* — Bajarildi / Tasdiqlash zanjiri tugmalari */}
                       <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
-                        {e.bartarafInfo && isExactCreator && !e.bartarafBajarildi && !isMonthInPast(journalMonth) && (
+                        {e.bartarafInfo && hasRightToFix && !e.bartarafBajarildi && !isMonthInPast(journalMonth) && (
                           <button
                             onClick={() => handleBartarafBajarildiClick(i)}
                             disabled={!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi}
