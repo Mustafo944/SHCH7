@@ -460,23 +460,23 @@ export function DU46JournalView({
     const headRows: any[] = [
       [
         { content: '№', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-        { content: 'Oy/kun', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-        { content: 'Soat/daq', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: 'Oy va\nkun', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: 'Soat va\ndaqiqa', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
         { content: "Ko'rik, tekshiruvlar tahlili,\ntopilgan kamchiliklar bayoni", rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
         { content: "Tegishli xodimga\nxabar berilgan vaqt", colSpan: 3, styles: { halign: 'center' } },
-        { content: "Bartaraf etishga\nkelgan vaqti", colSpan: 3, styles: { halign: 'center' } },
-        { content: "Bartaraf qilganligi vaqti\nva tafsiloti", colSpan: 3, styles: { halign: 'center' } }
+        { content: "Tegishli xodimning nosozlik va buzilishlarni\nbartaraf etishga kelgan vaqti", colSpan: 3, styles: { halign: 'center' } },
+        { content: "Aniqlangan nosozliklar va buzilishlarni bartaraf\nqilganligi vaqti va xodimning imzosi", colSpan: 3, styles: { halign: 'center' } }
       ],
       [
         { content: 'Oy/kun', styles: { halign: 'center' } },
-        { content: 'Soat', styles: { halign: 'center' } },
-        { content: 'Usuli', styles: { halign: 'center' } },
+        { content: 'Soat va daqiqa', styles: { halign: 'center' } },
+        { content: 'Xabar berish\nusuli', styles: { halign: 'center' } },
         { content: 'Oy/kun', styles: { halign: 'center' } },
-        { content: 'Soat', styles: { halign: 'center' } },
-        { content: 'Imzo', styles: { halign: 'center' } },
+        { content: 'Soat va daqiqa', styles: { halign: 'center' } },
+        { content: 'Bartaraf etishga kelgan\nxodimning imzosi', styles: { halign: 'center' } },
         { content: 'Oy/kun', styles: { halign: 'center' } },
-        { content: 'Soat', styles: { halign: 'center' } },
-        { content: 'Tafsilot', styles: { halign: 'center' } }
+        { content: 'Soat va daqiqa', styles: { halign: 'center' } },
+        { content: 'Nosozliklar va buzilishlarning\ntafsiloti', styles: { halign: 'center' } }
       ]
     ]
     
