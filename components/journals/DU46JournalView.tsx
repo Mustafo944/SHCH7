@@ -457,7 +457,7 @@ export function DU46JournalView({
     doc.setFont('helvetica', 'normal')
     doc.text(`Sana: ${dateStr}`, 14, 22)
 
-    const headRows = [
+    const headRows: any[] = [
       [
         { content: '№', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
         { content: 'Oy/kun', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },

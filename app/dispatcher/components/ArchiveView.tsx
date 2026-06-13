@@ -230,7 +230,7 @@ export function JournalArchiveCard({ journal, type, stationName }: {
       doc.text(`Yangilangan: ${journal.updatedBy}`, 14, 28)
 
       if (type === 'du46') {
-        const headRows = [
+        const headRows: any[] = [
           [
             { content: '№', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
             { content: 'Oy/kun', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
