@@ -813,22 +813,24 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
   )
 }
 
+type WorkerTaskItem = { reportId: string, entry: ReportEntry, month: string, taskText?: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy', reason?: string, completedDate?: string }
+
 export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskClick, onTasksUpdated, stationName }: {
   type: 'bugunBajarilgan' | 'qolibKetgan' | 'sababliBajarilmagan'
-  bugun: { reportId: string, entry: ReportEntry, month: string, taskText?: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy' }[]
-  qolib: { reportId: string, entry: ReportEntry, month: string, taskText?: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy' }[]
-  sababli: { reportId: string, entry: ReportEntry, month: string, taskText?: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy', reason?: string, completedDate?: string }[]
+  bugun: WorkerTaskItem[]
+  qolib: WorkerTaskItem[]
+  sababli: WorkerTaskItem[]
   onClose: () => void
-  onTaskClick?: (task: any) => void
+  onTaskClick?: (task: WorkerTaskItem) => void
   onTasksUpdated?: () => void
   stationName?: string
 }) {
   const [promptMode, setPromptMode] = useState<boolean>(false)
-  const [promptTask, setPromptTask] = useState<any>(null)
+  const [promptTask, setPromptTask] = useState<WorkerTaskItem | null>(null)
   const [promptReason, setPromptReason] = useState<string>('')
   const [isUpdating, setIsUpdating] = useState<boolean>(false)
 
-  let tasks: any[] = []
+  let tasks: WorkerTaskItem[] = []
   let title = ''
   let headerColor = ''
   let titleColor = ''
@@ -853,7 +855,7 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
   const todayDate = new Date()
   const todayFormatted = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`
 
-  const updateTaskInDb = async (task: any, updateFn: (entry: ReportEntry) => void) => {
+  const updateTaskInDb = async (task: WorkerTaskItem, updateFn: (entry: ReportEntry) => void) => {
     if (!task.reportId) return
     setIsUpdating(true)
     try {
@@ -881,10 +883,10 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
   const handleSaveReason = () => {
     if (!promptReason.trim() || !promptTask) return
     updateTaskInDb(promptTask, (entry) => {
-      const field = `missedReason${promptTask.type.charAt(0).toUpperCase() + promptTask.type.slice(1)}`
-      const dateField = `missedReasonDate${promptTask.type.charAt(0).toUpperCase() + promptTask.type.slice(1)}`
-      ;(entry as Record<string, unknown>)[field] = promptReason.trim()
-      ;(entry as Record<string, unknown>)[dateField] = new Date().toISOString()
+      const field = `missedReason${promptTask.type.charAt(0).toUpperCase() + promptTask.type.slice(1)}` as keyof ReportEntry
+      const dateField = `missedReasonDate${promptTask.type.charAt(0).toUpperCase() + promptTask.type.slice(1)}` as keyof ReportEntry
+      ;(entry as unknown as Record<string, string>)[field] = promptReason.trim()
+      ;(entry as unknown as Record<string, string>)[dateField] = new Date().toISOString()
     })
   }
 
