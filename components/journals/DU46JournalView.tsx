@@ -339,10 +339,12 @@ export function DU46JournalView({
     }
     
     try {
-      await saveEntries(updated, prev)
+      const isEdit = approvalChainModal?.isEdit
       setApprovalChainModal(null)
-      showMsg(approvalChainModal?.isEdit ? 'Tasdiqlash zanjiri yangilandi!' : 'Boshlandi belgilandi!')
-      if (!approvalChainModal?.isEdit) onAccepted?.()
+      showMsg(isEdit ? 'Tasdiqlash zanjiri yangilandi!' : 'Boshlandi belgilandi!')
+      if (!isEdit) onAccepted?.()
+      
+      await saveEntries(updated, prev)
     } catch { /* */ }
   }
 
