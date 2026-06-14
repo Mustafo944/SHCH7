@@ -14,7 +14,7 @@ import {
   deleteWorker,
   getAllReports,
   getIncidents,
-  getReadIncidents,
+  getReadIncidentIds,
   confirmReport,
   confirmReportEntry,
   addIncident,
@@ -106,7 +106,7 @@ export default function DispatcherPage() {
 
   const { data: readIncidentIdsData, mutate: mutateReadIds } = useSWR(
     session ? `dispatcher_read_incidents_${session.login}` : null,
-    () => getReadIncidents(session!.login)
+    () => getReadIncidentIds(session!.login)
   )
   const readIncidentIds = useMemo(() => new Set(readIncidentIdsData || []), [readIncidentIdsData])
 
@@ -351,40 +351,16 @@ export default function DispatcherPage() {
     if (!session) return
     try {
       await confirmReportEntry(reportId, entryIndex)
-      setFormMsg({ type: 'ok', text: 'вњ… Tasdiqlandi!' })
+      setFormMsg({ type: 'ok', text: '✅ Tasdiqlandi!' })
       setTimeout(() => setFormMsg(null), 2000)
       refreshData()
     } catch (err: unknown) {
-      console.error('вќЊ Tasdiqlash xatosi:', err)
+      console.error('Tasdiqlash xatosi:', err)
       setFormMsg({
         type: 'err',
         text: err instanceof Error ? err.message : "Xatolik yuz berdi"
       })
       setTimeout(() => setFormMsg(null), 3000)
-    }
-  }
-
-  async function handleAddIncident(month: string, content: string) {
-    if (!session) return
-    try {
-      await addIncident(month, content, session.fullName)
-      refreshData()
-    } catch (err: unknown) {
-      setFormMsg({
-        type: 'err',
-        text: err instanceof Error ? err.message : "Xatolik yuz berdi"
-      })
-    }
-  }
-
-  async function handleRemoveIncident(id: string) {
-    if (!session) return
-    if (!confirm('Haqiqatdan ham o\'chirishni xohlaysizmi?')) return
-    try {
-      await deleteIncident(id)
-      refreshData()
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Xatolik yuz berdi")
     }
   }
 

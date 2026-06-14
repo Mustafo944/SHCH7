@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import Image from 'next/image'
 import { LogOut, ShieldAlert } from 'lucide-react'
 import useSWR from 'swr'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
@@ -54,7 +55,7 @@ export default function MehnatMuhofazasiPage() {
           <div className="px-4 py-4 sm:px-6 md:px-8 mx-auto max-w-[1400px] flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-white shadow-sm border border-slate-100">
-                <img src="/uty-logo.png" alt="Logo" className="h-8 w-8 object-contain" />
+                <Image src="/uty-logo.png" alt="Logo" width={32} height={32} className="h-8 w-8 object-contain" />
               </div>
               <div className="hidden sm:block">
                 <p className="text-[10px] font-black tracking-widest text-purple-600 uppercase">Smart SHCH</p>
