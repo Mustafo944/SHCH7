@@ -207,7 +207,7 @@ function IncidentMonthList({ grouped, onDelete }: { grouped: Record<string, Inci
                       <div className="pr-12">
                         <p className="text-xs font-bold text-slate-500 mb-2">{formatDateUz(inc.createdAt)}</p>
                         <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed break-words overflow-hidden">{inc.content}</p>
-                        <p className="text-[10px] font-black text-slate-400 mt-3 flex items-center gap-1"><Edit size={10} /> Aloqa dispetcheri</p>
+                        <p className="text-[10px] font-black text-slate-400 mt-3 flex items-center gap-1"><Edit size={10} /> Mehnat muhofazasi muhandisi</p>
                       </div>
                     </div>
                   ))}

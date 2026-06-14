@@ -14,6 +14,7 @@ import {
   deleteWorker,
   getAllReports,
   getIncidents,
+  getReadIncidents,
   confirmReport,
   confirmReportEntry,
   addIncident,
@@ -51,8 +52,9 @@ import {
   AlertTriangle
 } from 'lucide-react'
 
-import { StatCard, TabButton, BigActionCard, WorkerForm, ReportList, SchemasView, ArchiveView, DownloadCard, WorkersModal, TodayTasksModal, IncidentAdminView } from './components'
+import { StatCard, TabButton, BigActionCard, WorkerForm, ReportList, SchemasView, ArchiveView, DownloadCard, WorkersModal, TodayTasksModal } from './components'
 import { LibraryView } from '@/components/library/LibraryView'
+import IncidentsView from '@/components/worker/IncidentsView'
 
 type Tab = 'bekatlar' | 'arxiv' | 'grafiklar' | 'baxtsiz_hodisalar' | 'kutubxona'
 
@@ -101,6 +103,12 @@ export default function DispatcherPage() {
   const { data: allIncidents = [], mutate: mutateIncidents } = useSWR(session ? 'dispatcher_incidents' : null, getIncidents)
   const { data: globalGraphics = [], mutate: mutateGraphics } = useSWR(session ? 'dispatcher_graphics' : null, getGlobalGraphics)
   const { data: journalSummary = {}, mutate: mutateJournalSummary } = useSWR(session ? 'dispatcher_journals' : null, getDispatcherJournalSummary)
+  
+  const { data: readIncidentIdsData, mutate: mutateReadIds } = useSWR(
+    session ? `dispatcher_read_incidents_${session.login}` : null,
+    () => getReadIncidents(session!.login)
+  )
+  const readIncidentIds = useMemo(() => new Set(readIncidentIdsData || []), [readIncidentIdsData])
 
   const refreshData = useCallback(() => {
     mutateWorkers()
@@ -108,7 +116,8 @@ export default function DispatcherPage() {
     mutateIncidents()
     mutateGraphics()
     mutateJournalSummary()
-  }, [mutateWorkers, mutateReports, mutateIncidents, mutateGraphics, mutateJournalSummary])
+    mutateReadIds()
+  }, [mutateWorkers, mutateReports, mutateIncidents, mutateGraphics, mutateJournalSummary, mutateReadIds])
 
   const realtimeConfigs = useMemo(() => {
     if (!session) return []
@@ -794,10 +803,11 @@ export default function DispatcherPage() {
             )}
 
             {tab === 'baxtsiz_hodisalar' && (
-              <IncidentAdminView
+              <IncidentsView
                 incidents={allIncidents}
-                onAdd={handleAddIncident}
-                onDelete={handleRemoveIncident}
+                readIds={readIncidentIds}
+                workerId={session?.login || ''}
+                onRead={async () => { mutateReadIds() }}
               />
             )}
             {tab === 'kutubxona' && (

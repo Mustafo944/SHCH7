@@ -14,6 +14,7 @@ function getRoleHome(role: string) {
   if (role === 'bekat_navbatchisi') return '/bekat-navbatchisi'
   if (role === 'yul_ustasi') return '/yul-ustasi'
   if (role === 'ech_xodimi') return '/ech-xodimi'
+  if (role === 'mehnat_muhofazasi') return '/mehnat-muhofazasi'
   return '/worker' // worker, elektromexanik, elektromontyor
 }
 
