@@ -103,7 +103,7 @@ export default function DispatcherPage() {
   const { data: allIncidents = [], mutate: mutateIncidents } = useSWR(session ? 'dispatcher_incidents' : null, getIncidents)
   const { data: globalGraphics = [], mutate: mutateGraphics } = useSWR(session ? 'dispatcher_graphics' : null, getGlobalGraphics)
   const { data: journalSummary = {}, mutate: mutateJournalSummary } = useSWR(session ? 'dispatcher_journals' : null, getDispatcherJournalSummary)
-  
+
   const { data: readIncidentIdsData, mutate: mutateReadIds } = useSWR(
     session ? `dispatcher_read_incidents_${session.login}` : null,
     () => getReadIncidents(session!.login)
@@ -233,7 +233,7 @@ export default function DispatcherPage() {
 
           columns.forEach(col => {
             if (!col.text) return
-            
+
             const taskObj = {
               reportId: r.id,
               stationId: r.stationId,
