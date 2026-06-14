@@ -787,7 +787,7 @@ export default function DispatcherPage() {
               <IncidentsView
                 incidents={allIncidents}
                 readIds={readIncidentIds}
-                workerId={session?.login || ''}
+                workerId={session?.id || ''}
                 onRead={async () => { mutateReadIds() }}
               />
             )}
