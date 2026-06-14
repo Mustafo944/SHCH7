@@ -19,13 +19,14 @@ export default function MehnatMuhofazasiPage() {
   )
 
   const handleAddIncident = useCallback(async (month: string, content: string) => {
+    if (!session) return
     try {
-      await addIncident({ month, content })
+      await addIncident(month, content, session.fullName)
       mutateIncidents()
     } catch (err) {
       alert("Hodisani qo'shishda xatolik yuz berdi")
     }
-  }, [mutateIncidents])
+  }, [session, mutateIncidents])
 
   const handleRemoveIncident = useCallback(async (id: string) => {
     try {
