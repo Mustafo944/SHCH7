@@ -263,6 +263,7 @@ export function JournalArchiveCard({ journal, type, stationName }: {
 
             let col12 = e.bartarafInfo || ''
             if (e.bartarafBajarildi) col12 += `\n\nTugadi: ${e.bartarafImzo}`
+            if (e.approvalsCol12?.length) e.approvalsCol12.forEach((a: any) => { col12 += `\n${a.role.replace('_', ' ')}: ${a.signedBy}` })
             if (e.bartarafBBTasdiqladi) col12 += `\nNavbatchi: ${e.bartarafBBImzo}`
 
             return [
