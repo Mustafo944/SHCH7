@@ -82,13 +82,20 @@ export default function DispatcherPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [todayModal, setTodayModal] = useState<'bugunReja' | 'qolibKetgan' | 'sababliBajarilmagan' | null>(null)
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    fullName: string;
+    login: string;
+    password?: string;
+    phone: string;
+    role: Exclude<Role, 'dispatcher'>;
+    stationIds: string[];
+  }>({
     fullName: '',
     login: '',
     password: '',
     phone: '',
-    role: 'worker' as 'worker' | 'bekat_boshlighi' | 'elektromexanik' | 'elektromontyor' | 'bekat_navbatchisi' | 'yul_ustasi' | 'ech_xodimi',
-    stationIds: [] as string[],
+    role: 'worker',
+    stationIds: [],
   })
   const [editingWorkerId, setEditingWorkerId] = useState<string | null>(null)
   const [formMsg, setFormMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
