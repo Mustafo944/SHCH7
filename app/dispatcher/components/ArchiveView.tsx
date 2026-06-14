@@ -230,7 +230,7 @@ export function JournalArchiveCard({ journal, type, stationName }: {
       doc.text(`Yangilangan: ${journal.updatedBy}`, 14, 28)
 
       if (type === 'du46') {
-        const headRows: unknown[] = [
+        const headRows = [
           [
             { content: '№', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
             { content: 'Oy va\nkun', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
@@ -251,7 +251,7 @@ export function JournalArchiveCard({ journal, type, stationName }: {
             { content: 'Soat va daqiqa', styles: { halign: 'center' } },
             { content: 'Nosozliklar va buzilishlarning\ntafsiloti', styles: { halign: 'center' } }
           ]
-        ]
+        ] as import('jspdf-autotable').RowInput[]
 
         const tableRows = du46Entries
           .filter(e => e.kamchilik || e.bartarafInfo || e.oyKun1 || e.soatMinut1)
