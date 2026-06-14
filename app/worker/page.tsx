@@ -623,7 +623,7 @@ export default function WorkerPage() {
 
           {view === 'boshqaJurnallar' && (
             <div className="space-y-6 animate-fade-up">
-              <HeaderCard title="Boshqa jurnallar" subtitle={stationName} status="ko'rish" />
+              <HeaderCard title="Boshqa jurnallar" subtitle={stationName} />
               <div className="grid gap-4 max-w-lg mx-auto">
                 <button
                   onClick={() => setView('alsnMonthSelect')}

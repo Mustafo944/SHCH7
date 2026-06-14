@@ -54,7 +54,7 @@ export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badg
   )
 }
 
-export function HeaderCard({ title, subtitle, status, statusColor }: { title: string, subtitle: string, status: string, statusColor?: string }) {
+export function HeaderCard({ title, subtitle, status, statusColor }: { title: string, subtitle: string, status?: string, statusColor?: string }) {
   const statusColors: Record<string, string> = {
     tasdiqlandi: 'badge-success',
     kutilmoqda: 'badge-warning',
@@ -261,7 +261,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   if (!canEditPlan && !draftReport) {
     return (
       <div className="space-y-6 animate-fade-up">
-        <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} status="ko'rish" />
+        <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} />
         <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-12 text-center shadow-sm backdrop-blur-sm">
           <h3 className="text-xl font-black text-slate-900 tracking-tight mb-2">Oylik ish reja hali tuzilmagan</h3>
           <p className="text-slate-500 font-medium max-w-md mx-auto mb-8">Ushbu bekat va oy uchun oylik ish reja Katta elektromexanik tomonidan hali tizimga kiritilmagan. Iltimos kuting.</p>
@@ -714,7 +714,7 @@ export function WorkerGraphicsView() {
 
   return (
     <div className="space-y-6 animate-fade-up">
-      <HeaderCard title="Grafiklar" subtitle="Umumiy ish reja grafiklari" status="ko'rish" />
+      <HeaderCard title="Grafiklar" subtitle="Umumiy ish reja grafiklari" />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <GrafikCard title="Yillik ish reja grafigi" file={yillik} onPreview={setPreview} />
@@ -781,7 +781,7 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
 
   return (
     <div className="space-y-6 animate-fade-up">
-      <HeaderCard title="Bekat Sxemalari" subtitle={stationName} status="ko'rish" />
+      <HeaderCard title="Bekat Sxemalari" subtitle={stationName} />
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {schemas.map(s => (
           <div key={s.id} className="group relative overflow-hidden rounded-[32px] bg-white/30 p-8 backdrop-blur-[40px] border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.05)] transition-all hover:bg-white/40 hover:shadow-[0_8px_32px_rgba(31,38,135,0.15)] hover:border-white/80">
