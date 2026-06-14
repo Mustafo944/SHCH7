@@ -49,35 +49,37 @@ export function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations
           </div>
         </div>
 
-        <div className="rounded-2xl bg-slate-50/80 p-6 border border-slate-100">
-          <label className="mb-4 block text-[10px] font-black uppercase tracking-widest text-slate-400">Bekatlarni biriktirish ({form.stationIds.length})</label>
-          <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
-            {stations.map((s: Station) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => {
-                  const exists = form.stationIds.includes(s.id)
-                  if (exists) {
-                    setForm({ ...form, stationIds: form.stationIds.filter((id: string) => id !== s.id) })
-                  } else {
-                    const max = form.role === 'worker' ? 5 : form.role === 'bekat_boshlighi' ? 3 : 1
-                    if (form.stationIds.length >= max) {
-                      setFormMsg({ type: 'err', text: `Bu lavozim uchun ko'pi bilan ${max} ta bekat tanlash mumkin` })
-                      setTimeout(() => setFormMsg(null), 3000)
+        {form.role !== 'mehnat_muhofazasi' && (
+          <div className="rounded-2xl bg-slate-50/80 p-6 border border-slate-100">
+            <label className="mb-4 block text-[10px] font-black uppercase tracking-widest text-slate-400">Bekatlarni biriktirish ({form.stationIds.length})</label>
+            <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+              {stations.map((s: Station) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    const exists = form.stationIds.includes(s.id)
+                    if (exists) {
+                      setForm({ ...form, stationIds: form.stationIds.filter((id: string) => id !== s.id) })
                     } else {
-                      setForm({ ...form, stationIds: [...form.stationIds, s.id] })
+                      const max = form.role === 'worker' ? 5 : form.role === 'bekat_boshlighi' ? 3 : 1
+                      if (form.stationIds.length >= max) {
+                        setFormMsg({ type: 'err', text: `Bu lavozim uchun ko'pi bilan ${max} ta bekat tanlash mumkin` })
+                        setTimeout(() => setFormMsg(null), 3000)
+                      } else {
+                        setForm({ ...form, stationIds: [...form.stationIds, s.id] })
+                      }
                     }
-                  }
-                }}
-                className={`flex items-center gap-2 rounded-xl p-3 text-xs font-bold border transition-all duration-200 ${form.stationIds.includes(s.id) ? 'bg-white border-slate-200 text-slate-900 shadow-sm' : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-200/50'}`}
-              >
-                <div className={`h-1.5 w-1.5 rounded-full ${form.stationIds.includes(s.id) ? 'bg-sky-500' : 'bg-slate-200'}`} />
-                {s.name}
-              </button>
-            ))}
+                  }}
+                  className={`flex items-center gap-2 rounded-xl p-3 text-xs font-bold border transition-all duration-200 ${form.stationIds.includes(s.id) ? 'bg-white border-slate-200 text-slate-900 shadow-sm' : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-200/50'}`}
+                >
+                  <div className={`h-1.5 w-1.5 rounded-full ${form.stationIds.includes(s.id) ? 'bg-sky-500' : 'bg-slate-200'}`} />
+                  {s.name}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {message && (
