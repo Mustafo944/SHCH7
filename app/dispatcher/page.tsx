@@ -111,7 +111,7 @@ export default function DispatcherPage() {
 
   const { data: readIncidentIdsData, mutate: mutateReadIds } = useSWR(
     session ? `dispatcher_read_incidents_${session.login}` : null,
-    () => getReadIncidentIds(session!.login)
+    () => getReadIncidentIds(session!.id)
   )
   const readIncidentIds = useMemo(() => new Set(readIncidentIdsData || []), [readIncidentIdsData])
 
