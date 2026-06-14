@@ -6,8 +6,8 @@ import { FormGroup } from './ui'
 export function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, message, setFormMsg }: {
   onSubmit: (e: React.FormEvent) => void
   onCancel: () => void
-  form: { fullName: string; login: string; password: string; phone: string; role: Exclude<Role, 'dispatcher'>; stationIds: string[] }
-  setForm: (form: { fullName: string; login: string; password: string; phone: string; role: Exclude<Role, 'dispatcher'>; stationIds: string[] }) => void
+  form: { fullName: string; login: string; password?: string; phone: string; role: Exclude<Role, 'dispatcher'>; stationIds: string[] }
+  setForm: React.Dispatch<React.SetStateAction<{ fullName: string; login: string; password?: string; phone: string; role: Exclude<Role, 'dispatcher'>; stationIds: string[] }>>
   isEdit: boolean
   stations: { id: string; name: string }[]
   message: { type: 'ok' | 'err'; text: string } | null

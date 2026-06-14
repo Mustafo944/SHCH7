@@ -4,7 +4,7 @@ export type Role = "dispatcher" | "worker" | "bekat_boshlighi" | "elektromexanik
 export type IncidentStatus = "open" | "resolved" | "read";
 
 // Lavozimlar
-export type Position = "katta_elektromexanik" | "bekat_boshlighi" | "dispatcher" | "elektromexanik" | "elektromontyor" | "bekat_navbatchisi" | "yul_ustasi" | "ech_xodimi";
+export type Position = "katta_elektromexanik" | "bekat_boshlighi" | "dispatcher" | "elektromexanik" | "elektromontyor" | "bekat_navbatchisi" | "yul_ustasi" | "ech_xodimi" | "mehnat_muhofazasi";
 
 // Foydalanuvchi
 export interface User {
