@@ -17,8 +17,6 @@ import {
   getReadIncidentIds,
   confirmReport,
   confirmReportEntry,
-  addIncident,
-  deleteIncident,
   getGlobalGraphics,
   uploadGlobalGraphicFile,
   deleteGlobalGraphicFile,

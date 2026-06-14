@@ -30,7 +30,7 @@ export function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations
           <div className="grid gap-4 sm:grid-cols-2">
             <FormGroup label="F.I.SH" value={form.fullName} onChange={(val) => setForm({ ...form, fullName: val })} placeholder="Masalan: Azizov Aziz" />
             <FormGroup label="Login" value={form.login} onChange={(val) => setForm({ ...form, login: val })} placeholder="azizov123" />
-            <FormGroup label="Parol" value={form.password} onChange={(val) => setForm({ ...form, password: val })} placeholder="••••••••" type="password" />
+            <FormGroup label="Parol" value={form.password || ''} onChange={(val) => setForm({ ...form, password: val })} placeholder="••••••••" type="password" />
             <FormGroup label="Telefon" value={form.phone} onChange={(val) => setForm({ ...form, phone: val })} placeholder="+99890..." />
           </div>
 
