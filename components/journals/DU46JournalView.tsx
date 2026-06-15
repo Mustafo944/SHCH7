@@ -111,10 +111,10 @@ export function DU46JournalView({
               if (!dbRow && localRow) {
                 merged.push(localRow)
               } else if (dbRow && localRow) {
-                // mahalliy o'zgarishlarni saqlab qolish
-                if (!dbRow.kamchilikBajarildi && (localRow.kamchilik || localRow.oyKun1)) {
-                  merged[i] = { ...dbRow, ...localRow }
-                }
+                // Live (realtime) yangilanishlar barcha foydalanuvchilarda bir xil ko'rinishi uchun
+                // doim ma'lumotlar bazasidan kelgan eng so'nggi holatni olamiz.
+                // Shunda boshqa foydalanuvchi kiritgan o'zgarish darhol ekranda paydo bo'ladi.
+                merged[i] = dbRow
               }
             }
             return merged
