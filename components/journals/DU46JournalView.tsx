@@ -243,28 +243,20 @@ export function DU46JournalView({
   }
 
   const canIApprove = (e: DU46Entry, col: 3 | 12): boolean => {
-    const isBoshlandi = col === 3 ? e.kamchilikBajarildi : e.bartarafBajarildi
-    if (!isBoshlandi) return false
-
-    // DSP (bekat navbatchisi) faqat o'z navbatida tasdiqlaydi (chunki u hammadan keyin oxirida)
     const nextRole = getNextApproverRole(e, col)
+    if (!nextRole) return false
     if (nextRole === 'DSP') return isBB
+    return userRole === nextRole
+  }
 
-    // Boshqa ishchilar o'z navbatini kutmasdan darhol tasdiqlashi mumkin
-    const chain = e.approvalChain || []
-    const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
-    
-    // 12-ustunda yozuvchi o'zini tasdiqlamaydi
-    if (col === 12) {
-      const writerRole = e.bartarafByRole || getCreator(e)
-      if (userRole === writerRole) return false
-    }
-
-    if (chain.includes(userRole)) {
-      if (!approvals.some(a => a.role === userRole)) return true
-    }
-
-    return false
+  // Hozir kim tasdiqlashi kerakligini aniqlaydigan yordamchi
+  const getWaitingForRole = (e: DU46Entry, col: 3 | 12): string | null => {
+    const isBoshlandi = col === 3 ? e.kamchilikBajarildi : e.bartarafBajarildi
+    if (!isBoshlandi) return null
+    const nextRole = getNextApproverRole(e, col)
+    if (!nextRole) return null
+    if (nextRole === 'DSP') return 'Bekat navbatchisi'
+    return nextRole.replace('_', ' ')
   }
 
   // ── Input yangilash ───────────────────────────────────────────────────────────
@@ -390,6 +382,7 @@ export function DU46JournalView({
     const prev = [...entries]
     const updated = [...entries]
     const e = updated[i]
+    const nextRole = getNextApproverRole(e, 3)
     if (isBB) {
       updated[i] = {
         ...e,
@@ -397,9 +390,9 @@ export function DU46JournalView({
         kamchilikBBTasdiqladiAt: new Date().toISOString(),
         kamchilikBBImzo: userName,
       }
-    } else {
+    } else if (nextRole) {
       const newApprovals = [...(e.approvalsCol3 || [])]
-      newApprovals.push({ role: userRole, signedBy: userName, signedAt: new Date().toISOString() })
+      newApprovals.push({ role: nextRole, signedBy: userName, signedAt: new Date().toISOString() })
       updated[i] = { ...e, approvalsCol3: newApprovals }
     }
     
@@ -433,6 +426,7 @@ export function DU46JournalView({
     const prev = [...entries]
     const updated = [...entries]
     const e = updated[i]
+    const nextRole = getNextApproverRole(e, 12)
     if (isBB) {
       updated[i] = {
         ...e,
@@ -440,9 +434,9 @@ export function DU46JournalView({
         bartarafBBTasdiqladiAt: new Date().toISOString(),
         bartarafBBImzo: userName,
       }
-    } else {
+    } else if (nextRole) {
       const newApprovals = [...(e.approvalsCol12 || [])]
-      newApprovals.push({ role: userRole, signedBy: userName, signedAt: new Date().toISOString() })
+      newApprovals.push({ role: nextRole, signedBy: userName, signedAt: new Date().toISOString() })
       updated[i] = { ...e, approvalsCol12: newApprovals }
     }
     
@@ -789,7 +783,7 @@ export function DU46JournalView({
                           </div>
                         )}
 
-                        {canIApprove(e, 3) && !isMonthInPast(journalMonth) && (() => {
+                        {canIApprove(e, 3) && !isMonthInPast(journalMonth) ? (() => {
                           const isFinal = isFinalApprover(e, 3)
                           const canConfirm = !isFinal || !!e.kamchilikBBVaqt
                           return (
@@ -811,7 +805,17 @@ export function DU46JournalView({
                               </button>
                             </div>
                           )
-                        })()}
+                        })() : (
+                          // Tasdiqlash tugmasi yo'q bo'lsa, lekin u ushbu zanjirda qatnashayotgan bo'lsa
+                          (!isMonthInPast(journalMonth) && e.approvalChain?.includes(userRole) && !(e.approvalsCol3 || []).some(a => a.role === userRole)) && (
+                            <div className="w-full rounded-xl bg-orange-50 px-2 py-1.5 border border-orange-100 mt-1 flex flex-col items-center">
+                              <span className="text-[8px] font-bold uppercase text-orange-400">Navbat kutilmoqda</span>
+                              <span className="text-[9px] font-black text-orange-600 text-center leading-tight">
+                                Avval {getWaitingForRole(e, 3)} tasdiqlashi kerak
+                              </span>
+                            </div>
+                          )
+                        )}
                       </div>
                     </td>
 
@@ -940,7 +944,7 @@ export function DU46JournalView({
                           </div>
                         )}
 
-                        {canIApprove(e, 12) && !isMonthInPast(journalMonth) && (() => {
+                        {canIApprove(e, 12) && !isMonthInPast(journalMonth) ? (() => {
                           const isFinal = isFinalApprover(e, 12)
                           const canConfirm = !isFinal || !!e.bartarafBBVaqt
                           return (
@@ -962,7 +966,17 @@ export function DU46JournalView({
                               </button>
                             </div>
                           )
-                        })()}
+                        })() : (
+                          // Tasdiqlash tugmasi yo'q bo'lsa, lekin u ushbu zanjirda qatnashayotgan bo'lsa va hali tasdiqlamagan bo'lsa
+                          (!isMonthInPast(journalMonth) && e.approvalChain?.includes(userRole) && !(e.approvalsCol12 || []).some(a => a.role === userRole) && (e.bartarafByRole || getCreator(e)) !== userRole) && (
+                            <div className="w-full rounded-xl bg-orange-50 px-2 py-1.5 border border-orange-100 mt-1 flex flex-col items-center">
+                              <span className="text-[8px] font-bold uppercase text-orange-400">Navbat kutilmoqda</span>
+                              <span className="text-[9px] font-black text-orange-600 text-center leading-tight">
+                                Avval {getWaitingForRole(e, 12)} tasdiqlashi kerak
+                              </span>
+                            </div>
+                          )
+                        )}
                         {/* 3) Telegramga yuborish */}
                         {e.bartarafInfo && !isCol3Finished(e) && (
                           <span className="text-[8px] font-black text-red-400 text-center leading-tight px-1 mt-1 uppercase tracking-tighter">
