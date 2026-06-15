@@ -1,5 +1,5 @@
 // Rollar
-export type Role = "dispatcher" | "worker" | "bekat_boshlighi" | "elektromexanik" | "elektromontyor" | "bekat_navbatchisi" | "yul_ustasi" | "ech_xodimi" | "mehnat_muhofazasi";
+export type Role = "dispatcher" | "worker" | "bekat_boshlighi" | "elektromexanik" | "elektromontyor" | "katta_elektromexanik" | "bekat_navbatchisi" | "yul_ustasi" | "ech_xodimi" | "mehnat_muhofazasi";
 
 export type IncidentStatus = "open" | "resolved" | "read";
 

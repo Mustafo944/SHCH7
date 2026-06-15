@@ -15,7 +15,7 @@ function getRoleHome(role: string) {
   if (role === 'yul_ustasi') return '/yul-ustasi'
   if (role === 'ech_xodimi') return '/ech-xodimi'
   if (role === 'mehnat_muhofazasi') return '/mehnat-muhofazasi'
-  return '/worker' // worker, elektromexanik, elektromontyor
+  return '/worker' // worker, elektromexanik, elektromontyor, katta_elektromexanik
 }
 
 export default function LoginPage() {
