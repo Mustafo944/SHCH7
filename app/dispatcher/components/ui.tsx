@@ -1,13 +1,14 @@
 import React from 'react'
 
-export function StatCard({ icon, label, value, active, clickable, onClick, color = 'purple' }: {
+export function StatCard({ icon, label, value, active, clickable, onClick, color = 'purple', subtext }: {
   icon: React.ReactNode,
   label: string,
   value: string | number,
   active?: boolean,
   clickable?: boolean,
   onClick?: () => void,
-  color?: 'purple' | 'blue' | 'emerald' | 'red' | 'amber'
+  color?: 'purple' | 'blue' | 'emerald' | 'red' | 'amber',
+  subtext?: React.ReactNode
 }) {
   const styles: Record<string, { bg: string, border: string, iconBg: string, iconText: string, valueText: string }> = {
     purple: { bg: 'bg-white/30', border: 'border-white/60', iconBg: 'bg-gradient-to-br from-white/90 to-white/50', iconText: 'text-indigo-600', valueText: 'text-indigo-900' },
@@ -29,7 +30,10 @@ export function StatCard({ icon, label, value, active, clickable, onClick, color
       </div>
       <div className="relative z-10">
         <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-slate-500">{label}</p>
-        <p className={`text-2xl sm:text-3xl font-black ${s.valueText} mt-0.5`}>{value}</p>
+        <div className="flex items-end gap-3 mt-0.5">
+          <p className={`text-2xl sm:text-3xl font-black ${s.valueText}`}>{value}</p>
+          {subtext && <div className="mb-1">{subtext}</div>}
+        </div>
       </div>
       {active && <div className="absolute top-4 right-4 h-3 w-3 rounded-full bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.6)] animate-ping" />}
     </div>

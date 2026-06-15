@@ -237,6 +237,7 @@ export default function DispatcherPage() {
       type: string
       reason?: string | null
       completedDate?: string | null
+      done?: boolean
     }
     const reja: TaskObj[] = []
     const qolib: TaskObj[] = []
@@ -272,7 +273,8 @@ export default function DispatcherPage() {
               taskText: col.text,
               type: col.type,
               reason: col.reason,
-              completedDate: col.comp
+              completedDate: col.comp,
+              done: col.done
             }
 
             if (isCurrentMonth) {
@@ -454,6 +456,13 @@ export default function DispatcherPage() {
                 icon={<CheckCircle2 />}
                 label="BUGUNGI ISHLAR RO'YXATI"
                 value={todayReja.length}
+                subtext={
+                  todayReja.filter(t => t.done).length > 0 ? (
+                    <span className="text-[11px] font-black text-emerald-600 bg-emerald-100/50 px-2.5 py-1 rounded-md inline-flex items-center gap-1">
+                      <CheckCircle2 size={12} /> {todayReja.filter(t => t.done).length} ta bajarildi
+                    </span>
+                  ) : null
+                }
                 onClick={() => setTodayModal('bugunReja')}
                 clickable
                 color="blue"

@@ -6,7 +6,7 @@ import autoTable from 'jspdf-autotable'
 
 export function TodayTasksModal({ type, tasks, onClose }: {
   type: 'bugunReja' | 'qolibKetgan' | 'sababliBajarilmagan'
-  tasks: { stationId: string; stationName: string; workerName: string; entry: ReportEntry; month: string; taskText: string; type: string; reason?: string | null; completedDate?: string | null }[]
+  tasks: { stationId: string; stationName: string; workerName: string; entry: ReportEntry; month: string; taskText: string; type: string; reason?: string | null; completedDate?: string | null; done?: boolean }[]
   onClose: () => void
 }) {
   const [expandedStation, setExpandedStation] = useState<string | null>(null)
@@ -127,24 +127,39 @@ export function TodayTasksModal({ type, tasks, onClose }: {
             </div>
           ) : expandedStation === null ? (
             <div className="p-4 sm:p-6 space-y-2">
-              {stationEntries.map(([stationId, { stationName, workerName, items }]) => (
+              {stationEntries.map(([stationId, { stationName, workerName, items }]) => {
+                const doneCount = items.filter(t => t.done).length;
+                return (
                 <button
                   key={stationId}
                   onClick={() => setExpandedStation(stationId)}
                   className={`w-full flex items-center justify-between rounded-2xl border p-4 sm:p-5 transition-all hover:shadow-md active:scale-[0.98] group bg-white border-slate-200 hover:bg-slate-50`}
                 >
                   <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                    <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl text-sm sm:text-base font-black shadow-sm bg-slate-100 text-slate-600 border border-slate-200`}>
-                      +{items.length}
+                    <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl text-sm sm:text-base font-black shadow-sm bg-slate-100 text-slate-600 border border-slate-200 relative`}>
+                      {items.length}
+                      {type === 'bugunReja' && items.length === doneCount && doneCount > 0 && (
+                        <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5 border-2 border-white">
+                          <CheckCircle2 size={12} className="text-white" />
+                        </div>
+                      )}
                     </div>
                     <div className="text-left min-w-0">
                       <h4 className="text-sm sm:text-base font-black text-slate-900 truncate">{stationName}</h4>
                       <p className="text-[10px] sm:text-xs font-bold text-slate-400 truncate">{workerName}</p>
                     </div>
                   </div>
-                  <ChevronRight size={20} className="shrink-0 text-slate-300 group-hover:text-slate-600 transition-colors" />
+                  <div className="flex items-center gap-3">
+                    {type === 'bugunReja' && doneCount > 0 && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 rounded-lg border border-emerald-100/50">
+                        <CheckCircle2 size={14} className="text-emerald-500" />
+                        <span className="text-[10px] sm:text-xs font-black text-emerald-600">{doneCount} ta bajarildi</span>
+                      </div>
+                    )}
+                    <ChevronRight size={20} className="shrink-0 text-slate-300 group-hover:text-slate-600 transition-colors" />
+                  </div>
                 </button>
-              ))}
+              )})}
             </div>
           ) : (
             <div>
@@ -180,11 +195,17 @@ export function TodayTasksModal({ type, tasks, onClose }: {
 
                   return (
                     <div key={ti} className="rounded-xl border p-4 sm:p-5 transition-colors bg-white border-slate-200 hover:bg-slate-50">
-                      <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center justify-between mb-3">
                         <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-wide border ${isCompletedAfter ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
                           {isCompletedAfter ? <CheckCircle2 size={12} /> : <Clock size={12} />}
                           Sana: {dateFormatted}
                         </span>
+                        {task.done && type === 'bugunReja' && (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 rounded-md shrink-0">
+                            <CheckCircle2 size={14} className="text-emerald-600" />
+                            <span className="text-[10px] font-black uppercase text-emerald-700">Bajarilgan</span>
+                          </div>
+                        )}
                       </div>
                       <p className="text-sm font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">{text}</p>
                       
