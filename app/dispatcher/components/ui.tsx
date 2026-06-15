@@ -79,13 +79,17 @@ export function BigActionCard({ title, desc, icon, onClick, count, color = 'purp
 }
 
 export function FormGroup({ label, value, onChange, placeholder, type = 'text' }: { label: string, value: string, onChange: (val: string) => void, placeholder: string, type?: string }) {
+  const [val, setVal] = React.useState(value)
+  React.useEffect(() => setVal(value), [value])
+
   return (
     <div className="space-y-1.5">
       <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</label>
       <input
         type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={() => { if (val !== value) onChange(val) }}
         placeholder={placeholder}
         className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-sky-500/50 focus:bg-white"
       />
