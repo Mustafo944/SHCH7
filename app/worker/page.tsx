@@ -7,7 +7,7 @@ import {
   getStation,
 } from '@/lib/store'
 import {
-  getReportsByWorker,
+  getReportsByStations,
   getIncidents,
   getReadIncidentIds,
   getPendingJournalCounts
@@ -70,9 +70,9 @@ export default function WorkerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const loadWorkReports = useCallback(async (userId: string) => {
+  const loadWorkReports = useCallback(async (stationIds: string[]) => {
     try {
-      const r = await getReportsByWorker(userId)
+      const r = await getReportsByStations(stationIds)
       setReports(r)
     } catch {
       toast.error('Hisobotlarni yuklashda xatolik')
@@ -94,9 +94,9 @@ export default function WorkerPage() {
     }
   }, [])
 
-  const refreshData = useCallback(async (userId: string) => {
+  const refreshData = useCallback(async (userId: string, stationIds: string[]) => {
     await Promise.all([
-      loadWorkReports(userId),
+      loadWorkReports(stationIds),
       loadIncidents(userId)
     ])
   }, [loadWorkReports, loadIncidents])
@@ -108,7 +108,7 @@ export default function WorkerPage() {
     if (!session) return
 
     if (!viewInitialized) {
-      refreshData(session.id)
+      refreshData(session.id, session.stationIds || [])
       const stationsList = session.stationIds || []
       if (stationsList.length > 1) setView('selectStation')
       else if (stationsList.length === 1) setActiveStationId(stationsList[0])
@@ -143,10 +143,10 @@ export default function WorkerPage() {
         {
           channelName: `worker_reports_${session.id}`,
           table: 'work_reports',
-          filter: `worker_id=eq.${session.id}`,
+          // Removed worker_id filter so workers receive updates for reports made by other workers at their stations (like Katta Elektromexanik)
           onEvent: () => {
             console.log("🚀 Realtime: Hisobot holati o'zgardi!")
-            loadWorkReports(session.id)
+            loadWorkReports(session.stationIds || [])
           }
         },
         {
@@ -164,7 +164,7 @@ export default function WorkerPage() {
     }
 
     return configs
-  }, [activeStationId, session?.id, session?.role, session?.position, loadPendingCounts, loadWorkReports, loadIncidents])
+  }, [activeStationId, session?.id, session?.role, session?.position, session?.stationIds, loadPendingCounts, loadWorkReports, loadIncidents])
 
   useRealtimeSubscription(realtimeConfigs, realtimeConfigs.length > 0)
 
@@ -473,7 +473,7 @@ export default function WorkerPage() {
               stationName={stationName!}
               month={selectedMonth}
               reports={reports}
-              onSubmit={() => { refreshData(session!.id); setView('home') }}
+              onSubmit={() => { refreshData(session!.id, session!.stationIds || []); setView('home') }}
               onCancel={() => setView('home')}
             />
           )}
@@ -789,7 +789,7 @@ export default function WorkerPage() {
                   }
                 }
               }}
-              onTasksUpdated={() => refreshData(session.id)}
+              onTasksUpdated={() => refreshData(session!.id, session!.stationIds || [])}
               stationName={stationName}
             />
           )}

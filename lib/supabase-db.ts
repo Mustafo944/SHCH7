@@ -318,11 +318,27 @@ export async function getReportsByStation(stationId: string): Promise<WorkReport
     .select(WORK_REPORT_COLUMNS)
     .eq('station_id', stationId)
     .neq('week_label', 'Draft Oylik Reja')
-    .order('submitted_at', { ascending: false });
+    .order('month', { ascending: false });
 
   if (error || !data) return [];
   return (data as DbWorkReportRow[]).map(mapDbReport);
 }
+
+export async function getReportsByStations(stationIds: string[]): Promise<WorkReport[]> {
+  if (!stationIds || stationIds.length === 0) return [];
+  
+  const { data, error } = await supabase
+    .from('work_reports')
+    .select(WORK_REPORT_COLUMNS)
+    .in('station_id', stationIds)
+    // Removed the 'Draft Oylik Reja' filter so that draft reports can also be seen and edited by authorized users (e.g., Katta Elektromexanik) before submission.
+    .order('month', { ascending: false });
+
+  if (error || !data) return [];
+  return (data as DbWorkReportRow[]).map(mapDbReport);
+}
+
+
 
 export async function getReportByWorkerAndMonth(workerId: string, month: string): Promise<WorkReport | null> {
   const { data, error } = await supabase
