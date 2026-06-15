@@ -10,7 +10,6 @@ import autoTable from 'jspdf-autotable'
 import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, type ParsedTaskItem } from '@/lib/reja-data'
 import { MONTHS } from '@/lib/constants'
 import { DU46JournalView, SHU2JournalView, YerlatgichJournalView, AlsnKodJournalView, MpsFriksionJournalView } from '@/components/JournalView'
-import { getStations, getStation } from '@/lib/store'
 
 const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck, lang }: any) => {
   const [val, setVal] = useState(value)
@@ -665,21 +664,19 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                             `Bajaruvchi: ${task.bajaruvchi}` +
                             (task.jurnal ? `\nJurnal: ${task.jurnal}` : '')
 
-                          setEntries(prev => {
-                            const n = [...prev]
-                            const row = { ...n[modalIdx] }
-                            
-                            if (modalType === '4-haftalik') {
-                              row.haftalikJadval = text
-                              if (task.jurnal) row.jurnalHaftalik = task.jurnal
-                            } else {
-                              row.yillikJadval = text
-                              if (task.jurnal) row.jurnalYillik = task.jurnal
-                            }
-                            
-                            n[modalIdx] = row
-                            return n
-                          })
+                          const newEntries = [...entries]
+                          const row = { ...newEntries[modalIdx] }
+                          
+                          if (modalType === '4-haftalik') {
+                            row.haftalikJadval = text
+                            if (task.jurnal) row.jurnalHaftalik = task.jurnal
+                          } else {
+                            row.yillikJadval = text
+                            if (task.jurnal) row.jurnalYillik = task.jurnal
+                          }
+                          
+                          newEntries[modalIdx] = row
+                          setEntries(newEntries)
 
                           // Modal yopilishini ozgina kechiktiramiz (UI qotmasligi uchun)
                           setTimeout(() => {
@@ -696,7 +693,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                               workerPhone: draftReport?.workerPhone || session.phone || '',
                               stationId, 
                               stationName, 
-                              entries: n, 
+                              entries: newEntries, 
                               month: monthStr, 
                               year: String(new Date().getFullYear()), 
                               weekLabel: 'Draft Oylik Reja'

@@ -72,7 +72,7 @@ export default function WorkerPage() {
     } else if (view !== 'home') {
       setView('home')
     }
-  }, [view, workerModal, selectedJournalType])
+  }, [view, workerModal, selectedJournalType, isSignOutModalOpen])
 
   useHardwareBack(isSubViewActive, handleHardwareBack)
 

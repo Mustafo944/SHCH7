@@ -98,7 +98,7 @@ export default function DispatcherPage() {
     } else if (selectedStation !== null) {
       setSelectedStation(null)
     }
-  }, [activeJournalType, todayModal, showWorkersModal, showAddWorker, selectedReportType, selectedStation])
+  }, [activeJournalType, todayModal, showWorkersModal, showAddWorker, selectedReportType, selectedStation, isSignOutModalOpen])
 
   useHardwareBack(isSubViewActive, handleHardwareBack)
 
