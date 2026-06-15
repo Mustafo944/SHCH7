@@ -38,7 +38,8 @@ import {
   BookOpen,
   AlertTriangle,
   Volume2,
-  VolumeX
+  VolumeX,
+  CheckCircle2
 } from 'lucide-react'
 
 
@@ -185,7 +186,7 @@ export default function WorkerPage() {
   useRealtimeSubscription(realtimeConfigs, realtimeConfigs.length > 0)
 
   const { bugunReja, qolibKetgan, sababliBajarilmagan } = useMemo(() => {
-    const bugun: { reportId: string, entry: ReportEntry, month: string, taskText: string, type: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy' }[] = []
+    const bugun: { reportId: string, entry: ReportEntry, month: string, taskText: string, type: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy', done: boolean }[] = []
     const qolib: { reportId: string, entry: ReportEntry, month: string, taskText: string, type: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy' }[] = []
     const sababli: { reportId: string, entry: ReportEntry, month: string, taskText: string, type: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy', reason: string, completedDate?: string }[] = []
 
@@ -227,7 +228,7 @@ export default function WorkerPage() {
           if (isCurrentMonth) {
             // Bugun bajarilishi kerak (bugungi ishlar)
             if (taskDay === todayDay) {
-              bugun.push({ reportId: r.id, entry: e, month: r.month, taskText: col.content, type: col.type })
+              bugun.push({ reportId: r.id, entry: e, month: r.month, taskText: col.content, type: col.type, done: col.done })
             }
 
             // Joriy oyda: muddati o'tgan
@@ -369,14 +370,19 @@ export default function WorkerPage() {
                     onClick={() => setWorkerModal('bugunBajarilgan')}
                     className="cursor-pointer group relative overflow-hidden rounded-[20px] bg-blue-50/50 p-4 sm:p-5 border border-blue-100/60 transition-all hover:bg-blue-50 hover:border-blue-200 hover:shadow-md active:scale-[0.98] flex items-center gap-4"
                   >
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-blue-100/50 text-blue-500 group-hover:scale-110 transition-transform">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-blue-100/50 text-blue-500 group-hover:scale-110 transition-transform relative">
                       <FileText size={26} strokeWidth={2.5} />
+                      {bugunReja.length > 0 && bugunReja.filter(b => b.done).length === bugunReja.length && (
+                        <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5 border-2 border-white">
+                          <CheckCircle2 size={12} className="text-white" />
+                        </div>
+                      )}
                     </div>
                     <div>
                       <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-blue-600">BUGUNGI ISHLAR RO'YXATI</p>
                       <p className="text-xl sm:text-2xl font-black text-blue-600 mt-0.5 mb-0.5">{bugunReja.length}</p>
                       <p className="text-[10px] sm:text-[11px] font-medium text-blue-700/70">
-                        {bugunReja.length > 0 ? "Bugungi ishlar ro'yxati" : "Bugun uchun ish yo'q"}
+                        {bugunReja.length > 0 ? `${bugunReja.length} ta bugungi ishlar ro'yxati. ${bugunReja.filter(b => b.done).length} ta ish bajarilgan` : "Bugun uchun ish yo'q"}
                       </p>
                     </div>
                   </div>

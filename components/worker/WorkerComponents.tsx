@@ -920,7 +920,7 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
   )
 }
 
-type WorkerTaskItem = { reportId: string, entry: ReportEntry, month: string, taskText?: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy', reason?: string, completedDate?: string }
+type WorkerTaskItem = { reportId: string, entry: ReportEntry, month: string, taskText?: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy', reason?: string, completedDate?: string, done?: boolean }
 
 export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskClick, onTasksUpdated, stationName }: {
   type: 'bugunBajarilgan' | 'qolibKetgan' | 'sababliBajarilmagan'
@@ -1149,7 +1149,15 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
 
                     {/* MA'LUMOT */}
                     <div className="flex-1 min-w-0 py-1">
-                      <p className="text-[12px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">{text}</p>
+                      <div className="flex items-start justify-between gap-4">
+                        <p className="text-[12px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">{text}</p>
+                        {task.done && type === 'bugunBajarilgan' && (
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 rounded-lg shrink-0">
+                            <CheckCircle2 size={16} className="text-emerald-600" />
+                            <span className="text-[10px] font-black uppercase text-emerald-700">Bajarilgan</span>
+                          </div>
+                        )}
+                      </div>
                       
                       {/* Agar sabab bo'lsa */}
                       {task.reason && (
