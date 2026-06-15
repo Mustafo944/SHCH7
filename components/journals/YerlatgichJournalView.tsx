@@ -6,6 +6,23 @@ import { getJournal, upsertJournal } from '@/lib/supabase-db'
 import type { YerlatgichEntry } from '@/types'
 import { Plus, Trash2, Download, X } from 'lucide-react'
 import { getCurrentJournalMonth, isMonthInPast } from './helpers'
+import { DateInput, TimeInput } from './JournalSelectModal'
+
+const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
+  const [val, setVal] = useState(value)
+  useEffect(() => setVal(value), [value])
+  return (
+    <input
+      type="text"
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => { if (val !== value) onChange(val) }}
+      disabled={readOnly}
+      className={className}
+      placeholder={placeholder}
+    />
+  )
+}
 
 const EMPTY_YERLATGICH = (): YerlatgichEntry => ({
   sana: '', kuchlanishNomi: '', olchanganQiymat: '', imzo: '',
@@ -97,8 +114,7 @@ export function YerlatgichJournalView({
     ;(row as any)[field] = val
     n[idx] = row
     setEntries(n)
-    if ((window as any).yerlatgichTimeout) clearTimeout((window as any).yerlatgichTimeout)
-    ;(window as any).yerlatgichTimeout = setTimeout(() => handleSave(n, true), 1500)
+    handleSave(n, true)
   }
 
   const handleBajarildi = (idx: number, isRightSide: boolean) => {
@@ -232,14 +248,14 @@ export function YerlatgichJournalView({
                 const inputClass = "w-full border-0 bg-transparent p-2 text-center focus:ring-2 focus:ring-inset focus:ring-purple-500 disabled:opacity-70 disabled:bg-slate-50 transition-all font-medium text-slate-700"
                 return (
                   <tr key={i} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="border-r border-slate-100 p-0 w-[100px]">
-                      <input type="text" className={inputClass} value={e.sana} onChange={ev => updateEntry(i, 'sana', ev.target.value)} disabled={leftDisabled} placeholder="Sana" />
+                    <td className="border-r border-slate-100 p-0 text-center w-[120px]">
+                      <LocalInput className={inputClass} value={e.sana} onChange={(val: string) => updateEntry(i, 'sana', val)} readOnly={leftDisabled} placeholder="Sana" />
                     </td>
-                    <td className="border-r border-slate-100 p-0">
-                      <input type="text" className={inputClass} value={e.kuchlanishNomi} onChange={ev => updateEntry(i, 'kuchlanishNomi', ev.target.value)} disabled={leftDisabled} />
+                    <td className="border-r border-slate-100 p-0 text-center">
+                      <LocalInput className={inputClass} value={e.kuchlanishNomi} onChange={(val: string) => updateEntry(i, 'kuchlanishNomi', val)} readOnly={leftDisabled} />
                     </td>
-                    <td className="border-r border-slate-100 p-0">
-                      <input type="text" className={inputClass} value={e.olchanganQiymat} onChange={ev => updateEntry(i, 'olchanganQiymat', ev.target.value)} disabled={leftDisabled} />
+                    <td className="border-r border-slate-100 p-0 text-center w-[150px]">
+                      <LocalInput className={inputClass} value={e.olchanganQiymat} onChange={(val: string) => updateEntry(i, 'olchanganQiymat', val)} readOnly={leftDisabled} />
                     </td>
                     <td className="border-r border-slate-100 p-0 text-center w-[150px]">
                       {e.imzo ? (
@@ -254,11 +270,11 @@ export function YerlatgichJournalView({
                         </button>
                       ) : null}
                     </td>
-                    <td className="border-r border-slate-100 p-0 w-[100px]">
-                      <input type="text" className={inputClass} value={e.sana2} onChange={ev => updateEntry(i, 'sana2', ev.target.value)} disabled={rightDisabled} placeholder="Sana" />
+                    <td className="border-r border-slate-100 p-0 text-center w-[120px] bg-slate-50/50">
+                      <LocalInput className={inputClass} value={e.sana2} onChange={(val: string) => updateEntry(i, 'sana2', val)} readOnly={rightDisabled} placeholder="Sana" />
                     </td>
-                    <td className="border-r border-slate-100 p-0">
-                      <input type="text" className={inputClass} value={e.olchanganQiymat2} onChange={ev => updateEntry(i, 'olchanganQiymat2', ev.target.value)} disabled={rightDisabled} />
+                    <td className="border-r border-slate-100 p-0 text-center w-[150px] bg-slate-50/50">
+                      <LocalInput className={inputClass} value={e.olchanganQiymat2} onChange={(val: string) => updateEntry(i, 'olchanganQiymat2', val)} readOnly={rightDisabled} />
                     </td>
                     <td className="p-0 text-center w-[150px]">
                       {e.imzo2 ? (

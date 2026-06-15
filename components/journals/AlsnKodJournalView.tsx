@@ -7,6 +7,22 @@ import type { AlsnKodEntry } from '@/types'
 import { Plus, Trash2, Download, X } from 'lucide-react'
 import { getCurrentJournalMonth, isMonthInPast } from './helpers'
 
+const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
+  const [val, setVal] = useState(value)
+  useEffect(() => setVal(value), [value])
+  return (
+    <input
+      type="text"
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => { if (val !== value) onChange(val) }}
+      disabled={readOnly}
+      className={className}
+      placeholder={placeholder}
+    />
+  )
+}
+
 const EMPTY_ALSN_KOD = (): AlsnKodEntry => ({
   sana: '', rzNomi: '', rzUzunligi: '', juftYonalish: '',
   toqYonalish: '', izox: '', imzo: '',
@@ -167,12 +183,12 @@ export function AlsnKodJournalView({
                 const ic = "w-full border-0 bg-transparent p-2 text-center focus:ring-2 focus:ring-inset focus:ring-blue-500 disabled:opacity-60 disabled:bg-slate-50 transition-all font-medium text-slate-700"
                 return (
                   <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="border-r border-slate-100 p-0 w-[110px]"><input type="text" className={ic} value={e.sana} onChange={ev => updateEntry(i, 'sana', ev.target.value)} disabled={dis} /></td>
-                    <td className="border-r border-slate-100 p-0"><input type="text" className={ic} value={e.rzNomi} onChange={ev => updateEntry(i, 'rzNomi', ev.target.value)} disabled={dis} /></td>
-                    <td className="border-r border-slate-100 p-0 w-[120px]"><input type="text" className={ic} value={e.rzUzunligi} onChange={ev => updateEntry(i, 'rzUzunligi', ev.target.value)} disabled={dis} /></td>
-                    <td className="border-r border-slate-100 p-0 w-[120px]"><input type="text" className={ic} value={e.juftYonalish} onChange={ev => updateEntry(i, 'juftYonalish', ev.target.value)} disabled={dis} /></td>
-                    <td className="border-r border-slate-100 p-0 w-[120px]"><input type="text" className={ic} value={e.toqYonalish} onChange={ev => updateEntry(i, 'toqYonalish', ev.target.value)} disabled={dis} /></td>
-                    <td className="border-r border-slate-100 p-0 w-[150px]"><input type="text" className={ic} value={e.izox} onChange={ev => updateEntry(i, 'izox', ev.target.value)} disabled={dis} /></td>
+                    <td className="border-r border-slate-100 p-0 w-[110px]"><LocalInput className={ic} value={e.sana} onChange={(val: string) => updateEntry(i, 'sana', val)} readOnly={dis} /></td>
+                    <td className="border-r border-slate-100 p-0"><LocalInput className={ic} value={e.rzNomi} onChange={(val: string) => updateEntry(i, 'rzNomi', val)} readOnly={dis} /></td>
+                    <td className="border-r border-slate-100 p-0 w-[120px]"><LocalInput className={ic} value={e.rzUzunligi} onChange={(val: string) => updateEntry(i, 'rzUzunligi', val)} readOnly={dis} /></td>
+                    <td className="border-r border-slate-100 p-0 w-[120px]"><LocalInput className={ic} value={e.juftYonalish} onChange={(val: string) => updateEntry(i, 'juftYonalish', val)} readOnly={dis} /></td>
+                    <td className="border-r border-slate-100 p-0 w-[120px]"><LocalInput className={ic} value={e.toqYonalish} onChange={(val: string) => updateEntry(i, 'toqYonalish', val)} readOnly={dis} /></td>
+                    <td className="border-r border-slate-100 p-0 w-[150px]"><LocalInput className={ic} value={e.izox} onChange={(val: string) => updateEntry(i, 'izox', val)} readOnly={dis} /></td>
                     <td className="p-0 text-center w-[150px]">
                       {e.imzo ? (
                         <div className="p-2 text-xs font-black text-emerald-600 bg-emerald-50 rounded mx-1">{e.imzo}</div>

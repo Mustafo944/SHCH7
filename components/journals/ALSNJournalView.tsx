@@ -10,6 +10,21 @@ import { Plus, Trash2, CheckCircle2, Download, ChevronLeft } from 'lucide-react'
 import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel } from './helpers'
 import { DateInput, TimeInput } from './JournalSelectModal'
 
+const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
+  const [val, setVal] = useState(value)
+  useEffect(() => setVal(value), [value])
+  return (
+    <input
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => { if (val !== value) onChange(val) }}
+      readOnly={readOnly}
+      className={className}
+      placeholder={placeholder}
+    />
+  )
+}
+
 const EMPTY_ALSN = (): ALSNEntry => ({
   nomber: '',
   sana: '', tekshirilganVaqt: '', poezdRaqami: '', teplovozRaqami: '',
@@ -254,9 +269,9 @@ export function ALSNJournalView({
                   <tr key={i} className={`border-b border-slate-200 hover:bg-blue-50/50 transition-colors animate-fade-up ${isLocked ? 'bg-emerald-50/30' : ''}`} style={{ animationDelay: `${i * 50}ms` }}>
                     {/* № */}
                     <td className="border-r border-slate-200 p-1 text-center bg-slate-50/30">
-                      <input
+                      <LocalInput
                         value={e.nomber || ''}
-                        onChange={ev => update(i, 'nomber', ev.target.value)}
+                        onChange={(val: string) => update(i, 'nomber', val)}
                         readOnly={!isWorker || isLocked}
                         placeholder={String(i + 1)}
                         className="w-full rounded bg-transparent text-center font-black text-slate-400 outline-none transition-all focus:bg-white focus:text-purple-600"
@@ -281,63 +296,63 @@ export function ALSNJournalView({
                     </td>
                     {/* Poezd Raqami */}
                     <td className="border-r border-slate-200 p-0.5">
-                      <input
+                      <LocalInput
                         value={e.poezdRaqami || ''}
-                        onChange={ev => update(i, 'poezdRaqami', ev.target.value)}
+                        onChange={(val: string) => update(i, 'poezdRaqami', val)}
                         readOnly={!isWorker || isLocked}
                         className={`w-full rounded bg-transparent px-2 py-3 text-center text-[11px] font-bold outline-none transition-all focus:bg-white ${isLocked ? 'text-slate-400' : 'text-slate-900'}`}
                       />
                     </td>
                     {/* Teplovoz raqami */}
                     <td className="border-r border-slate-200 p-0.5">
-                      <input
+                      <LocalInput
                         value={e.teplovozRaqami || ''}
-                        onChange={ev => update(i, 'teplovozRaqami', ev.target.value)}
+                        onChange={(val: string) => update(i, 'teplovozRaqami', val)}
                         readOnly={!isWorker || isLocked}
                         className={`w-full rounded bg-transparent px-2 py-3 text-center text-[11px] font-bold outline-none transition-all focus:bg-white ${isLocked ? 'text-slate-400' : 'text-slate-900'}`}
                       />
                     </td>
                     {/* Mashinist Familiyasi */}
                     <td className="border-r border-slate-200 p-0.5">
-                      <input
+                      <LocalInput
                         value={e.mashinistFamiliyasi || ''}
-                        onChange={ev => update(i, 'mashinistFamiliyasi', ev.target.value)}
+                        onChange={(val: string) => update(i, 'mashinistFamiliyasi', val)}
                         readOnly={!isWorker || isLocked}
                         className={`w-full rounded bg-transparent px-2 py-3 text-[11px] font-bold outline-none transition-all focus:bg-white ${isLocked ? 'text-slate-400' : 'text-slate-900'}`}
                       />
                     </td>
                     {/* RPS */}
                     <td className="border-r border-slate-200 p-0.5">
-                      <input
+                      <LocalInput
                         value={e.rps || ''}
-                        onChange={ev => update(i, 'rps', ev.target.value)}
+                        onChange={(val: string) => update(i, 'rps', val)}
                         readOnly={!isWorker || isLocked}
                         className={`w-full rounded bg-transparent px-2 py-3 text-center text-[11px] font-bold outline-none transition-all focus:bg-white ${isLocked ? 'text-slate-400' : 'text-slate-900'}`}
                       />
                     </td>
                     {/* ALSN */}
                     <td className="border-r border-slate-200 p-0.5">
-                      <input
+                      <LocalInput
                         value={e.alsn || ''}
-                        onChange={ev => update(i, 'alsn', ev.target.value)}
+                        onChange={(val: string) => update(i, 'alsn', val)}
                         readOnly={!isWorker || isLocked}
                         className={`w-full rounded bg-transparent px-2 py-3 text-center text-[11px] font-bold outline-none transition-all focus:bg-white ${isLocked ? 'text-slate-400' : 'text-slate-900'}`}
                       />
                     </td>
                     {/* Svetofor Ko'rinishi */}
                     <td className="border-r border-slate-200 p-0.5">
-                      <input
+                      <LocalInput
                         value={e.svetoforKorinishi || ''}
-                        onChange={ev => update(i, 'svetoforKorinishi', ev.target.value)}
+                        onChange={(val: string) => update(i, 'svetoforKorinishi', val)}
                         readOnly={!isWorker || isLocked}
                         className={`w-full rounded bg-transparent px-2 py-3 text-center text-[11px] font-bold outline-none transition-all focus:bg-white ${isLocked ? 'text-slate-400' : 'text-slate-900'}`}
                       />
                     </td>
                     {/* Poezd o'tgan yo'l */}
                     <td className="border-r border-slate-200 p-0.5">
-                      <input
+                      <LocalInput
                         value={e.poezdOtganYol || ''}
-                        onChange={ev => update(i, 'poezdOtganYol', ev.target.value)}
+                        onChange={(val: string) => update(i, 'poezdOtganYol', val)}
                         readOnly={!isWorker || isLocked}
                         className={`w-full rounded bg-transparent px-2 py-3 text-center text-[11px] font-bold outline-none transition-all focus:bg-white ${isLocked ? 'text-slate-400' : 'text-slate-900'}`}
                       />

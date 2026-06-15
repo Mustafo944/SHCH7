@@ -10,6 +10,42 @@ import { Plus, Trash2, CheckCircle2, Download, ChevronLeft } from 'lucide-react'
 import { getCurrentJournalMonth, isMonthInPast } from './helpers'
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// LOCAL COMPONENTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck, lang }: any) => {
+  const [val, setVal] = useState(value)
+  useEffect(() => setVal(value), [value])
+  return (
+    <textarea
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => { if (val !== value) onChange(val) }}
+      readOnly={readOnly}
+      className={className}
+      rows={rows}
+      spellCheck={spellCheck}
+      lang={lang}
+    />
+  )
+}
+
+const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
+  const [val, setVal] = useState(value)
+  useEffect(() => setVal(value), [value])
+  return (
+    <input
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => { if (val !== value) onChange(val) }}
+      readOnly={readOnly}
+      className={className}
+      placeholder={placeholder}
+    />
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // EMPTY ENTRY FACTORY
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -302,22 +338,18 @@ export function SHU2JournalView({
                 return (
                   <tr key={i} className={`border-b border-slate-200 hover:bg-blue-50/50 transition-colors animate-fade-up ${isLocked ? 'bg-emerald-50/30' : ''}`} style={{ animationDelay: `${i * 50}ms` }}>
                     <td className="border-r border-slate-200 p-2 text-center bg-slate-50/30">
-                      <input
-                        value={e.nomber}
-                        onChange={ev => {
-                          const n = [...entries]
-                          n[i] = { ...n[i], nomber: ev.target.value }
-                          setEntries(n)
-                        }}
+                      <LocalInput
+                        value={e.nomber || ''}
+                        onChange={(val: string) => update(i, 'nomber', val)}
                         readOnly={isDispatcher || !!e.yuborildi}
                         placeholder={String(i + 1)}
                         className="w-full rounded bg-transparent text-center font-black text-slate-400 outline-none focus:bg-white transition-all focus:text-purple-600"
                       />
                     </td>
                     <td className="border-r border-slate-200 p-2">
-                      <input
+                      <LocalInput
                         value={displaySana}
-                        onChange={ev => update(i, 'sana', ev.target.value)}
+                        onChange={(val: string) => update(i, 'sana', val)}
                         readOnly={isLocked || isDispatcher}
                         className={`w-full rounded bg-transparent px-2 py-2 text-center font-bold outline-none transition-all focus:bg-white ${isLocked ? 'text-slate-400' : 'text-slate-900'}`}
                         placeholder="kk.oo.yyyy"
@@ -327,9 +359,9 @@ export function SHU2JournalView({
                       {isDispatcher ? (
                         <div className="px-2 py-2 min-h-[40px] text-slate-700">{displayYozuv || <span className="text-slate-300">—</span>}</div>
                       ) : (
-                        <textarea
+                        <LocalTextarea
                           value={displayYozuv}
-                          onChange={ev => update(i, 'yozuv', ev.target.value)}
+                          onChange={(val: string) => update(i, 'yozuv', val)}
                           readOnly={isLocked}
                           rows={2}
                           spellCheck={false}

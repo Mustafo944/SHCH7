@@ -7,6 +7,22 @@ import type { MpsFriksionEntry } from '@/types'
 import { Plus, Trash2, Download, X } from 'lucide-react'
 import { getCurrentJournalMonth, isMonthInPast } from './helpers'
 
+const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
+  const [val, setVal] = useState(value)
+  useEffect(() => setVal(value), [value])
+  return (
+    <input
+      type="text"
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => { if (val !== value) onChange(val) }}
+      disabled={readOnly}
+      className={className}
+      placeholder={placeholder}
+    />
+  )
+}
+
 const EMPTY_MPS_FRIKSION = (): MpsFriksionEntry => ({
   sana: '', strRaqami: '', normalTokPlus: '', normalTokMinus: '',
   friksionTokPlus: '', friksionTokMinus: '', izox: '', imzo: '',
@@ -188,13 +204,13 @@ export function MpsFriksionJournalView({
                 const ic = "w-full border-0 bg-transparent p-2 text-center focus:ring-2 focus:ring-inset focus:ring-purple-500 disabled:opacity-60 disabled:bg-slate-50 transition-all font-medium text-slate-700"
                 return (
                   <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="border-r border-slate-100 p-0 w-[100px]"><input type="text" className={ic} value={e.sana} onChange={ev => updateEntry(i, 'sana', ev.target.value)} disabled={dis} /></td>
-                    <td className="border-r border-slate-100 p-0 w-[50px]"><input type="text" className={ic} value={e.strRaqami} onChange={ev => updateEntry(i, 'strRaqami', ev.target.value)} disabled={dis} /></td>
-                    <td className="border-r border-slate-100 p-0 w-[100px]"><input type="text" className={ic} value={e.normalTokPlus} onChange={ev => updateEntry(i, 'normalTokPlus', ev.target.value)} disabled={dis} /></td>
-                    <td className="border-r border-slate-100 p-0 w-[100px]"><input type="text" className={ic} value={e.normalTokMinus} onChange={ev => updateEntry(i, 'normalTokMinus', ev.target.value)} disabled={dis} /></td>
-                    <td className="border-r border-slate-100 p-0 w-[100px]"><input type="text" className={ic} value={e.friksionTokPlus} onChange={ev => updateEntry(i, 'friksionTokPlus', ev.target.value)} disabled={dis} /></td>
-                    <td className="border-r border-slate-100 p-0 w-[100px]"><input type="text" className={ic} value={e.friksionTokMinus} onChange={ev => updateEntry(i, 'friksionTokMinus', ev.target.value)} disabled={dis} /></td>
-                    <td className="border-r border-slate-100 p-0 w-[120px]"><input type="text" className={ic} value={e.izox} onChange={ev => updateEntry(i, 'izox', ev.target.value)} disabled={dis} /></td>
+                    <td className="border-r border-slate-100 p-0 w-[100px]"><LocalInput className={ic} value={e.sana} onChange={(val: string) => updateEntry(i, 'sana', val)} readOnly={dis} /></td>
+                    <td className="border-r border-slate-100 p-0 w-[50px]"><LocalInput className={ic} value={e.strRaqami} onChange={(val: string) => updateEntry(i, 'strRaqami', val)} readOnly={dis} /></td>
+                    <td className="border-r border-slate-100 p-0 w-[100px]"><LocalInput className={ic} value={e.normalTokPlus} onChange={(val: string) => updateEntry(i, 'normalTokPlus', val)} readOnly={dis} /></td>
+                    <td className="border-r border-slate-100 p-0 w-[100px]"><LocalInput className={ic} value={e.normalTokMinus} onChange={(val: string) => updateEntry(i, 'normalTokMinus', val)} readOnly={dis} /></td>
+                    <td className="border-r border-slate-100 p-0 w-[100px]"><LocalInput className={ic} value={e.friksionTokPlus} onChange={(val: string) => updateEntry(i, 'friksionTokPlus', val)} readOnly={dis} /></td>
+                    <td className="border-r border-slate-100 p-0 w-[100px]"><LocalInput className={ic} value={e.friksionTokMinus} onChange={(val: string) => updateEntry(i, 'friksionTokMinus', val)} readOnly={dis} /></td>
+                    <td className="border-r border-slate-100 p-0 w-[120px]"><LocalInput className={ic} value={e.izox} onChange={(val: string) => updateEntry(i, 'izox', val)} readOnly={dis} /></td>
                     <td className="p-0 text-center w-[120px]">
                       {e.imzo ? (
                         <div className="p-2 text-xs font-black text-emerald-600 bg-emerald-50 rounded mx-1">{e.imzo}</div>
