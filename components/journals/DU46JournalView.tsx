@@ -243,10 +243,28 @@ export function DU46JournalView({
   }
 
   const canIApprove = (e: DU46Entry, col: 3 | 12): boolean => {
+    const isBoshlandi = col === 3 ? e.kamchilikBajarildi : e.bartarafBajarildi
+    if (!isBoshlandi) return false
+
+    // DSP (bekat navbatchisi) faqat o'z navbatida tasdiqlaydi (chunki u hammadan keyin oxirida)
     const nextRole = getNextApproverRole(e, col)
-    if (!nextRole) return false
     if (nextRole === 'DSP') return isBB
-    return userRole === nextRole
+
+    // Boshqa ishchilar o'z navbatini kutmasdan darhol tasdiqlashi mumkin
+    const chain = e.approvalChain || []
+    const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
+    
+    // 12-ustunda yozuvchi o'zini tasdiqlamaydi
+    if (col === 12) {
+      const writerRole = e.bartarafByRole || getCreator(e)
+      if (userRole === writerRole) return false
+    }
+
+    if (chain.includes(userRole)) {
+      if (!approvals.some(a => a.role === userRole)) return true
+    }
+
+    return false
   }
 
   // ── Input yangilash ───────────────────────────────────────────────────────────
@@ -372,18 +390,16 @@ export function DU46JournalView({
     const prev = [...entries]
     const updated = [...entries]
     const e = updated[i]
-    const nextRole = getNextApproverRole(e, 3)
-    
-    if (nextRole === 'DSP') {
+    if (isBB) {
       updated[i] = {
         ...e,
         kamchilikBBTasdiqladi: true,
         kamchilikBBTasdiqladiAt: new Date().toISOString(),
         kamchilikBBImzo: userName,
       }
-    } else if (nextRole) {
+    } else {
       const newApprovals = [...(e.approvalsCol3 || [])]
-      newApprovals.push({ role: nextRole, signedBy: userName, signedAt: new Date().toISOString() })
+      newApprovals.push({ role: userRole, signedBy: userName, signedAt: new Date().toISOString() })
       updated[i] = { ...e, approvalsCol3: newApprovals }
     }
     
@@ -417,18 +433,16 @@ export function DU46JournalView({
     const prev = [...entries]
     const updated = [...entries]
     const e = updated[i]
-    const nextRole = getNextApproverRole(e, 12)
-    
-    if (nextRole === 'DSP') {
+    if (isBB) {
       updated[i] = {
         ...e,
         bartarafBBTasdiqladi: true,
         bartarafBBTasdiqladiAt: new Date().toISOString(),
         bartarafBBImzo: userName,
       }
-    } else if (nextRole) {
+    } else {
       const newApprovals = [...(e.approvalsCol12 || [])]
-      newApprovals.push({ role: nextRole, signedBy: userName, signedAt: new Date().toISOString() })
+      newApprovals.push({ role: userRole, signedBy: userName, signedAt: new Date().toISOString() })
       updated[i] = { ...e, approvalsCol12: newApprovals }
     }
     

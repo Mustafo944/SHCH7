@@ -826,13 +826,30 @@ export async function getPendingJournalCounts(
             const userRoleToCheck = position || role
 
             let isMyTurn = false
+
             if (userRoleToCheck === 'bekat_navbatchisi') {
               if (next3 === 'DSP' || next12 === 'DSP') isMyTurn = true
             } else {
-              if (next3 === userRoleToCheck || next12 === userRoleToCheck) isMyTurn = true
-              // Also allow generic 'worker' to match if the role in chain is 'elektromexanik' or similar? 
-              // Wait, the user role to check is exactly 'worker' or 'katta_elektromexanik'.
-              // We'll just do strict match:
+              // Har qanday tasdiqlash zanjiridagi ishchi uchun (navbat kutilmaydi):
+              const checkCol = (col: 3 | 12) => {
+                const isBoshlandi = col === 3 ? e.kamchilikBajarildi : e.bartarafBajarildi
+                if (!isBoshlandi) return false
+                
+                const chain = e.approvalChain || []
+                const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
+                
+                // Agar ro'yxatda bo'lsa va hali tasdiqlamagan bo'lsa:
+                if (chain.includes(userRoleToCheck)) {
+                  if (col === 12) {
+                    const writerRole = e.bartarafByRole || getCreator(e)
+                    if (userRoleToCheck === writerRole) return false // Yozuvchi o'zini tasdiqlamaydi
+                  }
+                  if (!approvals.some(a => a.role === userRoleToCheck)) return true
+                }
+                return false
+              }
+
+              if (checkCol(3) || checkCol(12)) isMyTurn = true
             }
 
             if (isMyTurn) count++
