@@ -58,11 +58,14 @@ export default function WorkerPage() {
   const { isMuted, setIsMuted } = useNotificationSound(pendingCounts.du46)
   const [selectedJournalType, setSelectedJournalType] = useState<JournalType | null>(null)
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
+  const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false)
   const [workerModal, setWorkerModal] = useState<'bugunBajarilgan' | 'qolibKetgan' | 'sababliBajarilmagan' | null>(null)
 
-  const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null
+  const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen
   const handleHardwareBack = useCallback(() => {
-    if (selectedJournalType !== null) {
+    if (isSignOutModalOpen) {
+      setIsSignOutModalOpen(false)
+    } else if (selectedJournalType !== null) {
       setSelectedJournalType(null)
     } else if (workerModal !== null) {
       setWorkerModal(null)
@@ -292,7 +295,7 @@ export default function WorkerPage() {
               <button onClick={() => setIsMuted(!isMuted)} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-slate-500 hover:bg-slate-50 hover:text-purple-600 transition-all shadow-sm active:scale-95">
                 {isMuted ? <VolumeX size={20} strokeWidth={2.5} /> : <Volume2 size={20} strokeWidth={2.5} />}
               </button>
-              <button onClick={handleSignOut} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-purple-100/50 bg-purple-50/50 text-purple-600 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 hover:scale-105 active:scale-95 transition-all shadow-sm group">
+              <button onClick={() => setIsSignOutModalOpen(true)} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-purple-100/50 bg-purple-50/50 text-purple-600 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 hover:scale-105 active:scale-95 transition-all shadow-sm group">
                 <LogOut size={20} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
@@ -317,7 +320,7 @@ export default function WorkerPage() {
                   <h3 className="text-xl font-black text-slate-800">Hech qanday bekat biriktirilmagan</h3>
                   <p className="mt-2 text-slate-500">Dispetcher bilan bog&apos;laning va bekatlaringizni so&apos;rang</p>
                   <button
-                    onClick={handleSignOut}
+                    onClick={() => setIsSignOutModalOpen(true)}
                     className="mt-8 flex items-center gap-2 rounded-xl bg-rose-50 px-6 py-3 font-bold text-rose-600 transition-all hover:bg-rose-100 active:scale-95 border border-rose-200"
                   >
                     <LogOut size={20} />
@@ -808,6 +811,33 @@ export default function WorkerPage() {
           )}
         </main>
       </div>
+
+      {/* SIGN OUT MODAL */}
+      {isSignOutModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-[32px] bg-white p-8 text-center shadow-2xl animate-fade-up">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[24px] bg-rose-50 shadow-inner">
+              <LogOut size={32} className="text-rose-500" strokeWidth={2.5} />
+            </div>
+            <h3 className="mb-2 text-2xl font-black text-slate-900 tracking-tight">Tizimdan chiqish</h3>
+            <p className="mb-8 text-sm font-medium text-slate-500">Haqiqatan ham tizimdan chiqmoqchimisiz?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsSignOutModalOpen(false)}
+                className="flex-1 rounded-2xl bg-slate-100 py-4 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-200 active:bg-slate-300"
+              >
+                Bekor qilish
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="flex-1 rounded-2xl bg-rose-500 py-4 text-sm font-bold text-white shadow-lg shadow-rose-500/30 transition-all hover:bg-rose-600 active:scale-95"
+              >
+                Ha, chiqish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
     </div>
   )

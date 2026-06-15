@@ -79,10 +79,13 @@ export default function DispatcherPage() {
   const [activeJournalMonth, setActiveJournalMonth] = useState<string>('')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [todayModal, setTodayModal] = useState<'bugunReja' | 'qolibKetgan' | 'sababliBajarilmagan' | null>(null)
+  const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false)
 
-  const isSubViewActive = selectedStation !== null || showAddWorker || showWorkersModal || activeJournalType !== null || todayModal !== null || selectedReportType !== null;
+  const isSubViewActive = selectedStation !== null || showAddWorker || showWorkersModal || activeJournalType !== null || todayModal !== null || selectedReportType !== null || isSignOutModalOpen;
   const handleHardwareBack = useCallback(() => {
-    if (activeJournalType !== null) {
+    if (isSignOutModalOpen) {
+      setIsSignOutModalOpen(false)
+    } else if (activeJournalType !== null) {
       setActiveJournalType(null)
     } else if (todayModal !== null) {
       setTodayModal(null)
@@ -422,7 +425,7 @@ export default function DispatcherPage() {
               </div>
 
               <button
-                onClick={handleSignOut}
+                onClick={() => setIsSignOutModalOpen(true)}
                 className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-purple-100/50 bg-purple-50/50 text-purple-600 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 hover:scale-105 active:scale-95 transition-all shadow-sm group"
               >
                 <LogOut size={20} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
@@ -860,6 +863,33 @@ export default function DispatcherPage() {
             <div className="mt-8 flex justify-end gap-3">
               <button onClick={() => setDeleteConfirmId(null)} className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Bekor qilish</button>
               <button onClick={confirmDeleteWorker} className="rounded-xl bg-red-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all">O&apos;chirish</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SIGN OUT MODAL */}
+      {isSignOutModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-[32px] bg-white p-8 text-center shadow-2xl animate-fade-up">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[24px] bg-rose-50 shadow-inner">
+              <LogOut size={32} className="text-rose-500" strokeWidth={2.5} />
+            </div>
+            <h3 className="mb-2 text-2xl font-black text-slate-900 tracking-tight">Tizimdan chiqish</h3>
+            <p className="mb-8 text-sm font-medium text-slate-500">Haqiqatan ham tizimdan chiqmoqchimisiz?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsSignOutModalOpen(false)}
+                className="flex-1 rounded-2xl bg-slate-100 py-4 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-200 active:bg-slate-300"
+              >
+                Bekor qilish
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="flex-1 rounded-2xl bg-rose-500 py-4 text-sm font-bold text-white shadow-lg shadow-rose-500/30 transition-all hover:bg-rose-600 active:scale-95"
+              >
+                Ha, chiqish
+              </button>
             </div>
           </div>
         </div>
