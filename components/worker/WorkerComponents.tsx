@@ -10,6 +10,39 @@ import autoTable from 'jspdf-autotable'
 import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, type ParsedTaskItem } from '@/lib/reja-data'
 import { MONTHS } from '@/lib/constants'
 import { DU46JournalView, SHU2JournalView, YerlatgichJournalView, AlsnKodJournalView, MpsFriksionJournalView } from '@/components/JournalView'
+import { getStations, getStation } from '@/lib/store'
+
+const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck, lang }: any) => {
+  const [val, setVal] = useState(value)
+  useEffect(() => setVal(value), [value])
+  return (
+    <textarea
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => { if (val !== value) onChange(val) }}
+      readOnly={readOnly}
+      className={className}
+      rows={rows}
+      spellCheck={spellCheck}
+      lang={lang}
+    />
+  )
+}
+
+const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
+  const [val, setVal] = useState(value)
+  useEffect(() => setVal(value), [value])
+  return (
+    <input
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => { if (val !== value) onChange(val) }}
+      readOnly={readOnly}
+      className={className}
+      placeholder={placeholder}
+    />
+  )
+}
 
 const TOTAL_ROWS = 14
 
@@ -100,19 +133,19 @@ const MemoizedJournalRow = React.memo(({
   return (
     <tr className="group border-b border-slate-100 hover:bg-slate-50 transition-colors">
       <td className="border-r border-slate-100 p-1 align-top">
-        <input
+        <LocalInput
           value={e.ragat}
           readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-          onChange={(ev) => updateEntry(i, 'ragat', ev.target.value)}
+          onChange={(val: string) => updateEntry(i, 'ragat', val)}
           className={`w-full rounded bg-transparent text-center font-bold text-purple-600 outline-none focus:bg-white ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-40' : ''}`}
         />
       </td>
       <td className="relative border-r border-slate-100 p-1 align-top">
         <div className="relative">
-          <textarea
+          <LocalTextarea
             value={e.haftalikJadval}
             readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-            onChange={(ev) => updateEntry(i, 'haftalikJadval', ev.target.value)}
+            onChange={(val: string) => updateEntry(i, 'haftalikJadval', val)}
             className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
           />
           {e.doneHaftalik && (
@@ -133,10 +166,10 @@ const MemoizedJournalRow = React.memo(({
       </td>
       <td className="relative border-r border-slate-100 p-1 align-top">
         <div className="relative">
-          <textarea
+          <LocalTextarea
             value={e.yillikJadval}
             readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-            onChange={(ev) => updateEntry(i, 'yillikJadval', ev.target.value)}
+            onChange={(val: string) => updateEntry(i, 'yillikJadval', val)}
             className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
           />
           {e.doneYillik && (
@@ -157,10 +190,10 @@ const MemoizedJournalRow = React.memo(({
       </td>
       <td className="relative border-r border-slate-100 p-1 align-top">
         <div className="relative h-full">
-          <textarea
+          <LocalTextarea
             value={e.yangiIshlar}
             readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-            onChange={(ev) => updateEntry(i, 'yangiIshlar', ev.target.value)}
+            onChange={(val: string) => updateEntry(i, 'yangiIshlar', val)}
             className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-50 cursor-not-allowed' : ''}`}
           />
           {e.doneYangi && (
@@ -172,10 +205,10 @@ const MemoizedJournalRow = React.memo(({
       </td>
       <td className="relative border-r border-slate-100 p-1 align-top">
         <div className="relative h-full">
-          <textarea
+          <LocalTextarea
             value={e.kmoBartaraf}
             readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-            onChange={(ev) => updateEntry(i, 'kmoBartaraf', ev.target.value)}
+            onChange={(val: string) => updateEntry(i, 'kmoBartaraf', val)}
             className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
           />
           {e.doneKmo && (
@@ -187,10 +220,10 @@ const MemoizedJournalRow = React.memo(({
       </td>
       <td className="relative border-r border-slate-100 p-1 align-top">
         <div className="relative h-full">
-          <textarea
+          <LocalTextarea
             value={e.majburiyOzgarish}
             readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-            onChange={(ev) => updateEntry(i, 'majburiyOzgarish', ev.target.value)}
+            onChange={(val: string) => updateEntry(i, 'majburiyOzgarish', val)}
             className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
           />
           {e.doneMajburiy && (
