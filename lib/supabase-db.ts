@@ -809,9 +809,22 @@ export async function getPendingJournalCounts(
               if (!e.kamchilikBBTasdiqladi) return 'DSP'
               return null
             } else {
+              const creatorRole = getCreator(e)
+              const col3Participants = new Set<string>()
+              
+              if (creatorRole !== 'bekat_boshlighi') {
+                col3Participants.add(creatorRole)
+              }
+              chain.forEach(r => col3Participants.add(r))
+
               const writerRole = e.bartarafByRole || getCreator(e)
-              const requiredChainFor12 = chain.filter(r => r !== writerRole)
-              const nextRequiredRole = requiredChainFor12.find(r => !approvals.some(a => a.role === r))
+              const requiredChainFor12 = Array.from(col3Participants).filter(r => r !== writerRole)
+              
+              const nextRequiredRole = requiredChainFor12.find(r => !approvals.some(a => {
+                if (r === 'worker' && ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(a.role)) return true
+                return a.role === r
+              }))
+              
               if (nextRequiredRole) return nextRequiredRole
               if (!e.bartarafBBTasdiqladi) return 'DSP'
               return null
@@ -838,13 +851,31 @@ export async function getPendingJournalCounts(
                 const chain = e.approvalChain || []
                 const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
                 
-                // Agar ro'yxatda bo'lsa va hali tasdiqlamagan bo'lsa:
-                if (chain.includes(userRoleToCheck)) {
-                  if (col === 12) {
-                    const writerRole = e.bartarafByRole || getCreator(e)
-                    if (userRoleToCheck === writerRole) return false // Yozuvchi o'zini tasdiqlamaydi
+                let isParticipant = false
+                if (col === 3) {
+                  isParticipant = chain.includes(userRoleToCheck) || (userRoleToCheck === 'katta_elektromexanik' && chain.includes('worker'))
+                } else {
+                  const creatorRole = getCreator(e)
+                  const col3Participants = new Set<string>()
+                  if (creatorRole !== 'bekat_boshlighi') col3Participants.add(creatorRole)
+                  chain.forEach(r => col3Participants.add(r))
+                  
+                  const writerRole = e.bartarafByRole || getCreator(e)
+                  col3Participants.delete(writerRole)
+                  
+                  if (col3Participants.has(userRoleToCheck) || (['elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(userRoleToCheck) && col3Participants.has('worker'))) {
+                    isParticipant = true
                   }
-                  if (!approvals.some(a => a.role === userRoleToCheck)) return true
+                }
+
+                // Agar ro'yxatda bo'lsa va hali tasdiqlamagan bo'lsa:
+                if (isParticipant) {
+                  if (!approvals.some(a => {
+                    if (userRoleToCheck === a.role) return true
+                    if (['elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(userRoleToCheck) && a.role === 'worker') return true
+                    if (['elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(a.role) && userRoleToCheck === 'worker') return true
+                    return false
+                  })) return true
                 }
                 return false
               }

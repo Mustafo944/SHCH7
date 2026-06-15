@@ -190,17 +190,28 @@ export function DU46JournalView({
       return null
     } else {
       // 12-ustun:
-      // Qoida: Kim yozishidan qat'iy nazar, oxirgi tasdiq DOIM DSP (bekat navbatchisi) tomonidan
-      // DSP rolidan boshqa qatnashchilar (3-ustun chain'dan) navbatma-navbat tasdiqlaydi,
-      // lekin yozuvchi o'zi yana tasdiqlamas uchun writerRole olib tashlanadi.
+      // Qoida: 3-ustunda kimlar qatnashgan bo'lsa (yozuvchi + zanjir), 12-ustunda ham shu rollar qatnashishi kerak.
+      // Ulardan "Tugadi" deb yozgan odam olib tashlanadi (chunki u o'zi bajardi).
+      
+      const creatorRole = getCreator(e)
+      const col3Participants = new Set<string>()
+      
+      if (creatorRole !== 'bekat_boshlighi') {
+        col3Participants.add(creatorRole)
+      }
+      chain.forEach(r => col3Participants.add(r))
+
       const writerRole = e.bartarafByRole || getCreator(e)
-      // DSP ni hech qachon olib tashlamaymiz – u har doim eng oxirida keladi
-      const requiredChainFor12 = chain.filter(r => r !== writerRole)
-      const nextRequiredRole = requiredChainFor12.find(r => !approvals.some(a => a.role === r))
+      
+      const requiredChainFor12 = Array.from(col3Participants).filter(r => r !== writerRole)
+      
+      const nextRequiredRole = requiredChainFor12.find(r => !approvals.some(a => {
+        if (r === 'worker' && ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(a.role)) return true
+        return a.role === r
+      }))
       
       if (nextRequiredRole) return nextRequiredRole
       
-      // Hamma qatnashchilar tasdiqlagan bo'lsa ham, oxirida DSP tasdiqlamagan bo'lsa, DSP'ga o'tkazamiz
       const isBBTasdiqladi = e.bartarafBBTasdiqladi
       if (!isBBTasdiqladi) return 'DSP'
       
@@ -246,6 +257,7 @@ export function DU46JournalView({
     const nextRole = getNextApproverRole(e, col)
     if (!nextRole) return false
     if (nextRole === 'DSP') return isBB
+    if (nextRole === 'worker') return isWorker
     return userRole === nextRole
   }
 
@@ -256,6 +268,7 @@ export function DU46JournalView({
     const nextRole = getNextApproverRole(e, col)
     if (!nextRole) return null
     if (nextRole === 'DSP') return 'Bekat navbatchisi'
+    if (nextRole === 'worker') return 'Elektromexanik / Xodim'
     return nextRole.replace('_', ' ')
   }
 
