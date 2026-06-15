@@ -794,17 +794,28 @@ export async function getPendingJournalCounts(
           const ents = (row.entries || []) as DU46Entry[]
           let count = 0
 
-          const getNextRole = (e: DU46Entry, col: 3 | 12) => {
+          const getCreator = (e: DU46Entry) => e.createdByRole || 'worker'
+
+          const getNextRole = (e: DU46Entry, col: 3 | 12): string | null => {
             const isBoshlandi = col === 3 ? e.kamchilikBajarildi : e.bartarafBajarildi
             if (!isBoshlandi) return null
             const chain = e.approvalChain || []
             const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
-            if (approvals.length < chain.length) return chain[approvals.length]
-            const creator = e.createdByRole || 'worker'
-            if (creator === 'bekat_boshlighi') return null
-            const isAppr = col === 3 ? e.kamchilikBBTasdiqladi : e.bartarafBBTasdiqladi
-            if (!isAppr) return 'DSP'
-            return null
+            
+            if (col === 3) {
+              if (approvals.length < chain.length) return chain[approvals.length]
+              const creator = getCreator(e)
+              if (creator === 'bekat_boshlighi') return null
+              if (!e.kamchilikBBTasdiqladi) return 'DSP'
+              return null
+            } else {
+              const writerRole = e.bartarafByRole || getCreator(e)
+              const requiredChainFor12 = chain.filter(r => r !== writerRole)
+              const nextRequiredRole = requiredChainFor12.find(r => !approvals.some(a => a.role === r))
+              if (nextRequiredRole) return nextRequiredRole
+              if (!e.bartarafBBTasdiqladi) return 'DSP'
+              return null
+            }
           }
 
           for (const e of ents) {
@@ -816,7 +827,7 @@ export async function getPendingJournalCounts(
 
             let isMyTurn = false
             if (userRoleToCheck === 'bekat_navbatchisi') {
-              if (next3 !== null || next12 !== null) isMyTurn = true
+              if (next3 === 'DSP' || next12 === 'DSP') isMyTurn = true
             } else {
               if (next3 === userRoleToCheck || next12 === userRoleToCheck) isMyTurn = true
               // Also allow generic 'worker' to match if the role in chain is 'elektromexanik' or similar? 
