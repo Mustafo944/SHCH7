@@ -21,7 +21,6 @@ import {
   uploadGlobalGraphicFile,
   deleteGlobalGraphicFile,
   getDispatcherJournalSummary,
-  getPendingJournalCounts,
 } from '@/lib/supabase-db'
 import { useSessionGuard, useToast, useRealtimeSubscription, useHardwareBack } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'

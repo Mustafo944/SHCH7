@@ -265,6 +265,7 @@ const MemoizedJournalRow = React.memo(({
     prevProps.submitting === nextProps.submitting
   )
 })
+MemoizedJournalRow.displayName = 'MemoizedJournalRow'
 
 export function JournalForm({ session, stationId, stationName, month, reports, onSubmit, onCancel }: { session: User, stationId: string, stationName: string, month: number, reports: WorkReport[], onSubmit: () => void, onCancel: () => void }) {
   const [entries, setEntries] = useState<ReportEntry[]>(Array.from({ length: TOTAL_ROWS }, (_, i) => ({
