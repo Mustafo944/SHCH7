@@ -189,13 +189,18 @@ export function DU46JournalView({
       
       return null
     } else {
-      // 12-ustun
+      // 12-ustun:
+      // Qoida: Kim yozishidan qat'iy nazar, oxirgi tasdiq DOIM DSP (bekat navbatchisi) tomonidan
+      // DSP rolidan boshqa qatnashchilar (3-ustun chain'dan) navbatma-navbat tasdiqlaydi,
+      // lekin yozuvchi o'zi yana tasdiqlamas uchun writerRole olib tashlanadi.
       const writerRole = e.bartarafByRole || getCreator(e)
+      // DSP ni hech qachon olib tashlamaymiz – u har doim eng oxirida keladi
       const requiredChainFor12 = chain.filter(r => r !== writerRole)
       const nextRequiredRole = requiredChainFor12.find(r => !approvals.some(a => a.role === r))
       
       if (nextRequiredRole) return nextRequiredRole
       
+      // Hamma qatnashchilar tasdiqlagan bo'lsa ham, oxirida DSP tasdiqlamagan bo'lsa, DSP'ga o'tkazamiz
       const isBBTasdiqladi = e.bartarafBBTasdiqladi
       if (!isBBTasdiqladi) return 'DSP'
       
@@ -205,19 +210,19 @@ export function DU46JournalView({
 
   const isFinalApprover = (e: DU46Entry, col: 3 | 12): boolean => {
     const nextRole = getNextApproverRole(e, col)
-    if (!nextRole) return false // All approved
-    if (nextRole === 'DSP') return true // DSP is always final
+    if (!nextRole) return false
+    // DSP har doim oxirgi tasdiqlovchi (har ikki ustun uchun ham)
+    if (nextRole === 'DSP') return true
     
-    const chain = e.approvalChain || []
+    // Faqat 3-ustun uchun qo'shimcha tekshiruv:
+    // Bekat navbatchisi yozgan bo'lsa va chain'dagi oxirgi xodim tasdiqlash navbatida bo'lsa
     if (col === 3) {
+      const chain = e.approvalChain || []
       const approvals = e.approvalsCol3 || []
       if (approvals.length === chain.length - 1) {
         const creator = getCreator(e)
         if (creator === 'bekat_boshlighi') return true
       }
-    } else {
-      // For Col 12, DSP is ALWAYS the final approver, so if nextRole is not DSP, it's not final
-      return false
     }
     
     return false
