@@ -173,10 +173,11 @@ export default function DispatcherPage() {
   const pendingCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     allReports.forEach(r => {
-      // Faqat kundalik bajarilgan ishlarni (bajarildiShn) tasdiqlash uchun +1 qo'shamiz
-      // Oylik ish rejani o'zi uchun dispetcherga +1 chiqmaydi
+      const isPending = !r.confirmedAt && r.entries.some(e =>
+        (e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish) && !e.adImzosi
+      )
       const hasPendingDaily = r.entries.some(e => e.bajarildiShn && !e.adImzosi)
-      if (hasPendingDaily) {
+      if (isPending || hasPendingDaily) {
         counts[r.stationId] = (counts[r.stationId] || 0) + 1
       }
     })

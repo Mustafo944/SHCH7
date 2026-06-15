@@ -47,12 +47,13 @@ export function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow }: {
         className="flex cursor-pointer items-center justify-between p-6"
       >
         <div className="flex items-center gap-4">
-          <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 ${
-              pendingDailyCount > 0
-                ? 'bg-sky-50 text-sky-600'
-                : 'bg-emerald-50 text-emerald-600'
+          <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 ${isPlanPending
+            ? 'bg-amber-50 text-amber-600'
+            : pendingDailyCount > 0
+              ? 'bg-sky-50 text-sky-600'
+              : 'bg-emerald-50 text-emerald-600'
             }`}>
-            {pendingDailyCount > 0 ? <FileText size={24} /> : <CheckCircle2 size={24} />}
+            {isPlanPending ? <Clock size={24} /> : pendingDailyCount > 0 ? <FileText size={24} /> : <CheckCircle2 size={24} />}
           </div>
           <div>
             <h3 className="text-sm font-black text-slate-900">{report.workerName}</h3>
@@ -62,6 +63,7 @@ export function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow }: {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {isPlanPending && <span className="badge-warning badge rounded-lg px-3 py-1 text-[10px] font-black">REJA KUTILMOQDA</span>}
           {isAccepted && pendingDailyCount > 0 && (
             <span className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-1 text-[10px] font-black text-sky-600">
               {pendingDailyCount} ta tasdiqlash
@@ -79,6 +81,15 @@ export function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow }: {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <span className="text-xs text-slate-400">Ishchi: <span className="font-bold text-slate-600">{report.workerName}</span></span>
             <div className="flex gap-2">
+              {isPlanPending && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onConfirm() }}
+                  className="flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95"
+                >
+                  <CheckCircle2 size={14} />
+                  Rejani Qabul Qilish
+                </button>
+              )}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
