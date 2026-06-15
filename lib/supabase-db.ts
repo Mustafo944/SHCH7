@@ -353,24 +353,27 @@ export async function getReportByWorkerAndMonth(workerId: string, month: string)
 }
 
 export async function upsertReport(
-  report: Omit<WorkReport, 'id' | 'submittedAt' | 'confirmedAt' | 'confirmedBy'>
+  report: Omit<WorkReport, 'id' | 'submittedAt' | 'confirmedAt' | 'confirmedBy'> & { id?: string }
 ): Promise<WorkReport> {
+  const payload: any = {
+    worker_id: report.workerId,
+    worker_name: report.workerName,
+    worker_phone: report.workerPhone,
+    station_id: report.stationId,
+    station_name: report.stationName,
+    week_label: report.weekLabel,
+    month: report.month, // Removing suffix hack, using actual month
+    year: report.year,
+    entries: report.entries,
+    submitted_at: new Date().toISOString(),
+  };
+  if (report.id) payload.id = report.id;
+
   const { data, error } = await supabase
     .from('work_reports')
     .upsert(
-      {
-        worker_id: report.workerId,
-        worker_name: report.workerName,
-        worker_phone: report.workerPhone,
-        station_id: report.stationId,
-        station_name: report.stationName,
-        week_label: report.weekLabel,
-        month: report.month, // Removing suffix hack, using actual month
-        year: report.year,
-        entries: report.entries,
-        submitted_at: new Date().toISOString(),
-      },
-      { onConflict: 'worker_id,month,station_id' }
+      payload,
+      { onConflict: report.id ? 'id' : 'worker_id,month,station_id' }
     )
     .select()
     .single();

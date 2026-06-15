@@ -138,7 +138,16 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         await upsertReport({
-          workerId: session.id, workerName: session.fullName, workerPhone: session.phone || '', stationId, stationName, entries, month: monthStr, year: String(new Date().getFullYear()), weekLabel: 'Oylik Reja'
+          id: reportId || undefined,
+          workerId: draftReport?.workerId || session.id, 
+          workerName: draftReport?.workerName || session.fullName, 
+          workerPhone: draftReport?.workerPhone || session.phone || '', 
+          stationId, 
+          stationName, 
+          entries, 
+          month: monthStr, 
+          year: String(new Date().getFullYear()), 
+          weekLabel: 'Oylik Reja'
         })
         onSubmit()
         return
@@ -213,7 +222,16 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     setSubmitting(true)
     try {
       await upsertReport({
-        workerId: session.id, workerName: session.fullName, workerPhone: session.phone || '', stationId, stationName, entries: newEntries, month: monthStr, year: String(new Date().getFullYear()), weekLabel: 'Oylik Reja'
+        id: reportId || undefined,
+        workerId: draftReport?.workerId || session.id,
+        workerName: draftReport?.workerName || session.fullName,
+        workerPhone: draftReport?.workerPhone || session.phone || '',
+        stationId, 
+        stationName, 
+        entries: newEntries, 
+        month: monthStr, 
+        year: String(new Date().getFullYear()), 
+        weekLabel: 'Oylik Reja'
       })
       setFormMessage({ type: 'success', text: 'Muvaffaqiyatli saqlandi!' })
       setTimeout(() => setFormMessage(null), 3000)
@@ -589,7 +607,16 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                           // Avtomatik saqlash
                           try {
                             await upsertReport({
-                              workerId: session.id, workerName: session.fullName, workerPhone: session.phone || '', stationId, stationName, entries: n, month: monthStr, year: String(new Date().getFullYear()), weekLabel: 'Draft Oylik Reja'
+                              id: reportId || undefined,
+                              workerId: draftReport?.workerId || session.id,
+                              workerName: draftReport?.workerName || session.fullName,
+                              workerPhone: draftReport?.workerPhone || session.phone || '',
+                              stationId, 
+                              stationName, 
+                              entries: n, 
+                              month: monthStr, 
+                              year: String(new Date().getFullYear()), 
+                              weekLabel: 'Draft Oylik Reja'
                             })
                           } catch (e) {
                             console.error('Auto-save failed:', e)
