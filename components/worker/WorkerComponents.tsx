@@ -659,25 +659,33 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                       <button
                         key={ti}
                         onClick={async () => {
-                          const n = [...entries]
-
                           const text =
                             `[${task.manba}${task.raqam ? ` ${task.raqam}` : ''}] ${task.ish}\n` +
                             `Davriyligi: ${task.davriylik}\n` +
                             `Bajaruvchi: ${task.bajaruvchi}` +
                             (task.jurnal ? `\nJurnal: ${task.jurnal}` : '')
 
-                          if (modalType === '4-haftalik') {
-                            n[modalIdx].haftalikJadval = text
-                            if (task.jurnal) n[modalIdx].jurnalHaftalik = task.jurnal
-                          } else {
-                            n[modalIdx].yillikJadval = text
-                            if (task.jurnal) n[modalIdx].jurnalYillik = task.jurnal
-                          }
+                          setEntries(prev => {
+                            const n = [...prev]
+                            const row = { ...n[modalIdx] }
+                            
+                            if (modalType === '4-haftalik') {
+                              row.haftalikJadval = text
+                              if (task.jurnal) row.jurnalHaftalik = task.jurnal
+                            } else {
+                              row.yillikJadval = text
+                              if (task.jurnal) row.jurnalYillik = task.jurnal
+                            }
+                            
+                            n[modalIdx] = row
+                            return n
+                          })
 
-                          setEntries(n)
-                          setModalOpen(false)
-                          setSelectedBolim(null)
+                          // Modal yopilishini ozgina kechiktiramiz (UI qotmasligi uchun)
+                          setTimeout(() => {
+                            setModalOpen(false)
+                            setSelectedBolim(null)
+                          }, 10)
 
                           // Avtomatik saqlash
                           try {
