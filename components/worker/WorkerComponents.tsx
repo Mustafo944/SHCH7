@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight, AlertTriangle, FileText } from 'lucide-react'
-import { getGlobalGraphics, getSchemasByStation, upsertReport } from '@/lib/supabase-db'
+import { getGlobalGraphics, getSchemasByStation, upsertReport, updateReportEntries } from '@/lib/supabase-db'
 import type { User, WorkReport, ReportEntry, StationSchema } from '@/types'
 import { supabase } from '@/lib/supabase'
 import jsPDF from 'jspdf'
@@ -221,18 +221,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 
     setSubmitting(true)
     try {
-      await upsertReport({
-        id: reportId || undefined,
-        workerId: draftReport?.workerId || session.id,
-        workerName: draftReport?.workerName || session.fullName,
-        workerPhone: draftReport?.workerPhone || session.phone || '',
-        stationId, 
-        stationName, 
-        entries: newEntries, 
-        month: monthStr, 
-        year: String(new Date().getFullYear()), 
-        weekLabel: 'Oylik Reja'
-      })
+      await updateReportEntries(reportId, newEntries)
       setFormMessage({ type: 'success', text: 'Muvaffaqiyatli saqlandi!' })
       setTimeout(() => setFormMessage(null), 3000)
     } catch (err: unknown) {

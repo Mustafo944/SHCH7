@@ -12,7 +12,7 @@ import {
   getReadIncidentIds,
   getPendingJournalCounts
 } from '@/lib/supabase-db'
-import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription } from '@/lib/hooks'
+import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription, useHardwareBack } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import type { WorkReport, ReportEntry, Incident, JournalType } from '@/types'
@@ -59,6 +59,19 @@ export default function WorkerPage() {
   const [selectedJournalType, setSelectedJournalType] = useState<JournalType | null>(null)
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
   const [workerModal, setWorkerModal] = useState<'bugunBajarilgan' | 'qolibKetgan' | 'sababliBajarilmagan' | null>(null)
+
+  const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null
+  const handleHardwareBack = useCallback(() => {
+    if (selectedJournalType !== null) {
+      setSelectedJournalType(null)
+    } else if (workerModal !== null) {
+      setWorkerModal(null)
+    } else if (view !== 'home') {
+      setView('home')
+    }
+  }, [view, workerModal, selectedJournalType])
+
+  useHardwareBack(isSubViewActive, handleHardwareBack)
 
   const loadPendingCounts = useCallback(async (sid: string, role: string, position?: string) => {
     try {

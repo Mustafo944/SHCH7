@@ -21,8 +21,9 @@ import {
   uploadGlobalGraphicFile,
   deleteGlobalGraphicFile,
   getDispatcherJournalSummary,
+  getPendingJournalCounts,
 } from '@/lib/supabase-db'
-import { useSessionGuard, useToast, useRealtimeSubscription } from '@/lib/hooks'
+import { useSessionGuard, useToast, useRealtimeSubscription, useHardwareBack } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import type { User, Role, JournalType, ReportEntry } from '@/types'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
@@ -79,6 +80,25 @@ export default function DispatcherPage() {
   const [activeJournalMonth, setActiveJournalMonth] = useState<string>('')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [todayModal, setTodayModal] = useState<'bugunReja' | 'qolibKetgan' | 'sababliBajarilmagan' | null>(null)
+
+  const isSubViewActive = selectedStation !== null || showAddWorker || showWorkersModal || activeJournalType !== null || todayModal !== null || selectedReportType !== null;
+  const handleHardwareBack = useCallback(() => {
+    if (activeJournalType !== null) {
+      setActiveJournalType(null)
+    } else if (todayModal !== null) {
+      setTodayModal(null)
+    } else if (showWorkersModal) {
+      setShowWorkersModal(false)
+    } else if (showAddWorker) {
+      setShowAddWorker(false)
+    } else if (selectedReportType !== null) {
+      setSelectedReportType(null)
+    } else if (selectedStation !== null) {
+      setSelectedStation(null)
+    }
+  }, [activeJournalType, todayModal, showWorkersModal, showAddWorker, selectedReportType, selectedStation])
+
+  useHardwareBack(isSubViewActive, handleHardwareBack)
 
   const [form, setForm] = useState<{
     fullName: string;

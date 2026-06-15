@@ -1,4 +1,5 @@
 export { useSessionGuard } from './useSessionGuard'
 export { useRealtimeSubscription } from './useRealtimeSubscription'
+export { useHardwareBack } from './useHardwareBack'
 export { useToast } from './useToast'
 export { useNotificationSound } from './useNotificationSound'
