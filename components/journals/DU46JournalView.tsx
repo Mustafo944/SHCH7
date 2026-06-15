@@ -12,6 +12,42 @@ import { TaskSelectModal, DateInput, TimeInput } from './JournalSelectModal'
 import { ApprovalChainModal } from './ApprovalChainModal'
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// LOCAL COMPONENTS (PREVENT EXCESSIVE RE-RENDERS)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck, lang }: any) => {
+  const [val, setVal] = useState(value)
+  useEffect(() => setVal(value), [value])
+  return (
+    <textarea
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => { if (val !== value) onChange(val) }}
+      readOnly={readOnly}
+      className={className}
+      rows={rows}
+      spellCheck={spellCheck}
+      lang={lang}
+    />
+  )
+}
+
+const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
+  const [val, setVal] = useState(value)
+  useEffect(() => setVal(value), [value])
+  return (
+    <input
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={() => { if (val !== value) onChange(val) }}
+      readOnly={readOnly}
+      className={className}
+      placeholder={placeholder}
+    />
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // EMPTY ENTRY FACTORY
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -674,13 +710,9 @@ export function DU46JournalView({
                   <tr key={i} className="border-b border-slate-200 hover:bg-blue-50/50 transition-colors animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
                     {/* --- № --- */}
                     <td className="border-r border-slate-200 p-1 text-center bg-slate-50/30">
-                      <input
-                        value={e.nomber}
-                        onChange={ev => {
-                          const n = [...entries]
-                          n[i] = { ...n[i], nomber: ev.target.value }
-                          setEntries(n)
-                        }}
+                      <LocalInput
+                        value={e.nomber || ''}
+                        onChange={(val: string) => update(i, 'nomber', val)}
                         readOnly={isDispatcher || !!e.yuborildi}
                         placeholder={String(i + 1)}
                         className="w-full rounded bg-transparent text-center font-black text-slate-400 outline-none focus:bg-white transition-all focus:text-purple-600"
@@ -727,9 +759,9 @@ export function DU46JournalView({
                           </div>
                         ) : (
                           <div className="relative group/text">
-                            <textarea
+                            <LocalTextarea
                               value={e.kamchilik || ''}
-                              onChange={ev => update(i, 'kamchilik', ev.target.value)}
+                              onChange={(val: string) => update(i, 'kamchilik', val)}
                               readOnly={!canWriteCol3}
                               rows={3}
                               spellCheck={false}
@@ -849,9 +881,9 @@ export function DU46JournalView({
                             className="bg-transparent focus:bg-white focus:shadow-inner"
                           />
                         ) : (
-                          <input
+                          <LocalInput
                             value={(e[field] as string) || ''}
-                            onChange={ev => update(i, field, ev.target.value)}
+                            onChange={(val: string) => update(i, field, val)}
                             readOnly={!canWriteMiddle}
                             className="w-full rounded bg-transparent px-1.5 py-3 text-center text-[11px] outline-none transition-all focus:bg-white focus:shadow-inner"
                           />
@@ -898,9 +930,9 @@ export function DU46JournalView({
                             {e.bartarafInfo || <span className="text-slate-300">—</span>}
                           </div>
                         ) : (
-                          <textarea
+                          <LocalTextarea
                             value={e.bartarafInfo || ''}
-                            onChange={ev => update(i, 'bartarafInfo', ev.target.value)}
+                            onChange={(val: string) => update(i, 'bartarafInfo', val)}
                             readOnly={!canWriteCol12}
                             rows={3}
                             spellCheck={false}
