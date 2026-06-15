@@ -62,7 +62,7 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl
   const PROTECTED_ROUTES: Record<string, string[]> = {
     '/dispatcher': ['dispatcher'],
-    '/worker': ['worker', 'elektromexanik', 'elektromontyor'],
+    '/worker': ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'],
     '/bekat-boshlighi': ['bekat_boshlighi'],
     '/bekat-navbatchisi': ['bekat_navbatchisi'],
     '/yul-ustasi': ['yul_ustasi'],
@@ -112,6 +112,7 @@ export async function updateSession(request: NextRequest) {
       worker: '/worker',
       elektromexanik: '/worker',
       elektromontyor: '/worker',
+      katta_elektromexanik: '/worker',
       bekat_boshlighi: '/bekat-boshlighi',
       bekat_navbatchisi: '/bekat-navbatchisi',
       yul_ustasi: '/yul-ustasi',
