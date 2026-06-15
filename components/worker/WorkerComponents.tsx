@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
-import { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight, AlertTriangle, FileText } from 'lucide-react'
 import { getGlobalGraphics, getSchemasByStation, upsertReport, updateReportEntries } from '@/lib/supabase-db'
@@ -78,6 +78,194 @@ export function HeaderCard({ title, subtitle, status, statusColor }: { title: st
   )
 }
 
+const MemoizedJournalRow = React.memo(({ 
+  e, 
+  i, 
+  isConfirmed, 
+  canEditPlan, 
+  updateEntry, 
+  openSelectModal, 
+  handleBajarishClick, 
+  submitting 
+}: {
+  e: ReportEntry;
+  i: number;
+  isConfirmed: boolean;
+  canEditPlan: boolean;
+  updateEntry: (index: number, field: keyof ReportEntry, value: string) => void;
+  openSelectModal: (index: number, type: '4-haftalik' | 'yillik') => void;
+  handleBajarishClick: (index: number) => void;
+  submitting: boolean;
+}) => {
+  return (
+    <tr className="group border-b border-slate-100 hover:bg-slate-50 transition-colors">
+      <td className="border-r border-slate-100 p-1 align-top">
+        <input
+          value={e.ragat}
+          readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+          onChange={(ev) => updateEntry(i, 'ragat', ev.target.value)}
+          className={`w-full rounded bg-transparent text-center font-bold text-purple-600 outline-none focus:bg-white ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-40' : ''}`}
+        />
+      </td>
+      <td className="relative border-r border-slate-100 p-1 align-top">
+        <div className="relative">
+          <textarea
+            value={e.haftalikJadval}
+            readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+            onChange={(ev) => updateEntry(i, 'haftalikJadval', ev.target.value)}
+            className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
+          />
+          {e.doneHaftalik && (
+            <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateHaftalik ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
+              <CheckCircle2 size={12} />
+            </div>
+          )}
+        </div>
+        {(!e.adImzosi && !isConfirmed && canEditPlan) && (
+          <button
+            type="button"
+            onClick={() => openSelectModal(i, '4-haftalik')}
+            className="absolute bottom-2 right-2 rounded bg-purple-100 p-1 text-purple-600 shadow-sm transition hover:bg-purple-600 hover:text-white"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
+        )}
+      </td>
+      <td className="relative border-r border-slate-100 p-1 align-top">
+        <div className="relative">
+          <textarea
+            value={e.yillikJadval}
+            readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+            onChange={(ev) => updateEntry(i, 'yillikJadval', ev.target.value)}
+            className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
+          />
+          {e.doneYillik && (
+            <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateYillik ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
+              <CheckCircle2 size={12} />
+            </div>
+          )}
+        </div>
+        {(!e.adImzosi && !isConfirmed && canEditPlan) && (
+          <button
+            type="button"
+            onClick={() => openSelectModal(i, 'yillik')}
+            className="absolute bottom-2 right-2 rounded bg-purple-100 p-1 text-purple-600 shadow-sm transition hover:bg-purple-600 hover:text-white"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
+        )}
+      </td>
+      <td className="relative border-r border-slate-100 p-1 align-top">
+        <div className="relative h-full">
+          <textarea
+            value={e.yangiIshlar}
+            readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+            onChange={(ev) => updateEntry(i, 'yangiIshlar', ev.target.value)}
+            className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-50 cursor-not-allowed' : ''}`}
+          />
+          {e.doneYangi && (
+            <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateYangi ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
+              <CheckCircle2 size={12} />
+            </div>
+          )}
+        </div>
+      </td>
+      <td className="relative border-r border-slate-100 p-1 align-top">
+        <div className="relative h-full">
+          <textarea
+            value={e.kmoBartaraf}
+            readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+            onChange={(ev) => updateEntry(i, 'kmoBartaraf', ev.target.value)}
+            className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
+          />
+          {e.doneKmo && (
+            <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateKmo ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
+              <CheckCircle2 size={12} />
+            </div>
+          )}
+        </div>
+      </td>
+      <td className="relative border-r border-slate-100 p-1 align-top">
+        <div className="relative h-full">
+          <textarea
+            value={e.majburiyOzgarish}
+            readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+            onChange={(ev) => updateEntry(i, 'majburiyOzgarish', ev.target.value)}
+            className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
+          />
+          {e.doneMajburiy && (
+            <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateMajburiy ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
+              <CheckCircle2 size={12} />
+            </div>
+          )}
+        </div>
+      </td>
+      <td className="border-r border-slate-100 p-2 text-center align-middle font-medium text-purple-600">
+        {e.bajarildiShn}
+      </td>
+      <td className="border-r border-slate-100 p-2 text-center align-middle italic text-slate-400">
+        {e.bajarildiImzo}
+      </td>
+      <td className="p-2 text-center align-middle">
+        {(() => {
+            const isLate = !!(e.completedAfterMissedDateHaftalik || e.completedAfterMissedDateYillik || e.completedAfterMissedDateYangi || e.completedAfterMissedDateKmo || e.completedAfterMissedDateMajburiy)
+            const lateDateStr = e.completedAfterMissedDateHaftalik || e.completedAfterMissedDateYillik || e.completedAfterMissedDateYangi || e.completedAfterMissedDateKmo || e.completedAfterMissedDateMajburiy
+            let formattedLateDate = ''
+            if (lateDateStr) {
+               const d = new Date(lateDateStr)
+               formattedLateDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
+            }
+
+            if (e.adImzosi) {
+              return (
+                <div className="flex flex-col items-center gap-1">
+                  <span className={`inline-flex items-center gap-1 whitespace-pre-wrap rounded-md px-2 py-1 text-[10px] font-bold border ${isLate ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                    <CheckCircle2 size={12} /> {e.adImzosi}
+                  </span>
+                  {isLate && formattedLateDate && (
+                    <span className="text-[9px] font-bold text-orange-500">{formattedLateDate} da bajarildi</span>
+                  )}
+                </div>
+              )
+            }
+
+            if (isConfirmed) {
+              const hasHaftalik = !!e.haftalikJadval && !e.doneHaftalik
+              const hasYillik = !!e.yillikJadval && !e.doneYillik
+              const hasYangi = !!e.yangiIshlar && !e.doneYangi
+              const hasKmo = !!e.kmoBartaraf && !e.doneKmo
+              const hasMajburiy = !!e.majburiyOzgarish && !e.doneMajburiy
+
+              const needsAction = hasHaftalik || hasYillik || hasYangi || hasKmo || hasMajburiy
+
+              if (needsAction) {
+                return (
+                  <button
+                    onClick={() => handleBajarishClick(i)}
+                    disabled={submitting}
+                    className="rounded-lg bg-purple-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-purple-600 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    Bajarish
+                  </button>
+                )
+              }
+              return null
+            }
+
+            return <span className="text-[10px] text-slate-300 italic">Kutilmoqda...</span>
+        })()}
+      </td>
+    </tr>
+  )
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.e === nextProps.e &&
+    prevProps.isConfirmed === nextProps.isConfirmed &&
+    prevProps.canEditPlan === nextProps.canEditPlan &&
+    prevProps.submitting === nextProps.submitting
+  )
+})
+
 export function JournalForm({ session, stationId, stationName, month, reports, onSubmit, onCancel }: { session: User, stationId: string, stationName: string, month: number, reports: WorkReport[], onSubmit: () => void, onCancel: () => void }) {
   const [entries, setEntries] = useState<ReportEntry[]>(Array.from({ length: TOTAL_ROWS }, (_, i) => ({
     ragat: String(i + 1), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: ''
@@ -123,13 +311,24 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     if (last.adImzosi) return
     setEntries(entries.slice(0, -1))
   }
-  const openSelectModal = (idx: number, type: '4-haftalik' | 'yillik') => {
+  
+  const openSelectModal = useCallback((idx: number, type: '4-haftalik' | 'yillik') => {
     setModalIdx(idx)
     setModalType(type)
     setModalSearch('')
     setSelectedBolim(null)
     setModalOpen(true)
-  }
+  }, [])
+
+  const updateEntry = useCallback((index: number, field: keyof ReportEntry, value: string) => {
+    setEntries(prev => {
+      const n = [...prev]
+      n[index] = { ...n[index], [field]: value }
+      return n
+    })
+  }, [])
+
+
 
   async function handleSubmit() {
     setSubmitting(true)
@@ -162,7 +361,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     setSubmitting(false)
   }
 
-  const handleBajarishClick = (idx: number) => {
+  const handleBajarishClick = useCallback((idx: number) => {
     const currentDate = new Date()
     const currentActualMonth = currentDate.getMonth()
 
@@ -173,7 +372,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     }
 
     setCompletionIdx(idx)
-  }
+  }, [month])
 
   const confirmBajarildi = async (idx: number, taskType?: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy') => {
     if (!reportId) return
@@ -318,164 +517,17 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
             </thead>
             <tbody>
               {entries.map((e, i) => (
-                <tr key={i} className="group border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                  <td className="border-r border-slate-100 p-1 align-top">
-                    <input
-                      value={e.ragat}
-                      readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-                      onChange={(ev) => { const n = [...entries]; n[i].ragat = ev.target.value; setEntries(n) }}
-                      className={`w-full rounded bg-transparent text-center font-bold text-purple-600 outline-none focus:bg-white ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-40' : ''}`}
-                    />
-                  </td>
-                  <td className="relative border-r border-slate-100 p-1 align-top">
-                    <div className="relative">
-                      <textarea
-                        value={e.haftalikJadval}
-                        readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-                        onChange={(ev) => { const n = [...entries]; n[i].haftalikJadval = ev.target.value; setEntries(n) }}
-                        className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
-                      />
-                      {e.doneHaftalik && (
-                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateHaftalik ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
-                          <CheckCircle2 size={12} />
-                        </div>
-                      )}
-                    </div>
-                    {(!e.adImzosi && !isConfirmed && canEditPlan) && (
-                      <button
-                        type="button"
-                        onClick={() => openSelectModal(i, '4-haftalik')}
-                        className="absolute bottom-2 right-2 rounded bg-purple-100 p-1 text-purple-600 shadow-sm transition hover:bg-purple-600 hover:text-white"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
-                      </button>
-                    )}
-                  </td>
-                  <td className="relative border-r border-slate-100 p-1 align-top">
-                    <div className="relative">
-                      <textarea
-                        value={e.yillikJadval}
-                        readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-                        onChange={(ev) => { const n = [...entries]; n[i].yillikJadval = ev.target.value; setEntries(n) }}
-                        className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
-                      />
-                      {e.doneYillik && (
-                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateYillik ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
-                          <CheckCircle2 size={12} />
-                        </div>
-                      )}
-                    </div>
-                    {(!e.adImzosi && !isConfirmed && canEditPlan) && (
-                      <button
-                        type="button"
-                        onClick={() => openSelectModal(i, 'yillik')}
-                        className="absolute bottom-2 right-2 rounded bg-purple-100 p-1 text-purple-600 shadow-sm transition hover:bg-purple-600 hover:text-white"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
-                      </button>
-                    )}
-                  </td>
-                  <td className="relative border-r border-slate-100 p-1 align-top">
-                    <div className="relative h-full">
-                      <textarea
-                        value={e.yangiIshlar}
-                        readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-                        onChange={(ev) => { const n = [...entries]; n[i].yangiIshlar = ev.target.value; setEntries(n) }}
-                        className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      />
-                      {e.doneYangi && (
-                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateYangi ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
-                          <CheckCircle2 size={12} />
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="relative border-r border-slate-100 p-1 align-top">
-                    <div className="relative h-full">
-                      <textarea
-                        value={e.kmoBartaraf}
-                        readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-                        onChange={(ev) => { const n = [...entries]; n[i].kmoBartaraf = ev.target.value; setEntries(n) }}
-                        className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
-                      />
-                      {e.doneKmo && (
-                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateKmo ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
-                          <CheckCircle2 size={12} />
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="relative border-r border-slate-100 p-1 align-top">
-                    <div className="relative h-full">
-                      <textarea
-                        value={e.majburiyOzgarish}
-                        readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
-                        onChange={(ev) => { const n = [...entries]; n[i].majburiyOzgarish = ev.target.value; setEntries(n) }}
-                        className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
-                      />
-                      {e.doneMajburiy && (
-                        <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateMajburiy ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
-                          <CheckCircle2 size={12} />
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="border-r border-slate-100 p-2 text-center align-middle font-medium text-purple-600">
-                    {e.bajarildiShn}
-                  </td>
-                  <td className="border-r border-slate-100 p-2 text-center align-middle italic text-slate-400">
-                    {e.bajarildiImzo}
-                  </td>
-                  <td className="p-2 text-center align-middle">
-                    {(() => {
-                        const isLate = !!(e.completedAfterMissedDateHaftalik || e.completedAfterMissedDateYillik || e.completedAfterMissedDateYangi || e.completedAfterMissedDateKmo || e.completedAfterMissedDateMajburiy)
-                        const lateDateStr = e.completedAfterMissedDateHaftalik || e.completedAfterMissedDateYillik || e.completedAfterMissedDateYangi || e.completedAfterMissedDateKmo || e.completedAfterMissedDateMajburiy
-                        let formattedLateDate = ''
-                        if (lateDateStr) {
-                           const d = new Date(lateDateStr)
-                           formattedLateDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
-                        }
-
-                        if (e.adImzosi) {
-                          return (
-                            <div className="flex flex-col items-center gap-1">
-                              <span className={`inline-flex items-center gap-1 whitespace-pre-wrap rounded-md px-2 py-1 text-[10px] font-bold border ${isLate ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                                <CheckCircle2 size={12} /> {e.adImzosi}
-                              </span>
-                              {isLate && formattedLateDate && (
-                                <span className="text-[9px] font-bold text-orange-500">{formattedLateDate} da bajarildi</span>
-                              )}
-                            </div>
-                          )
-                        }
-
-                        if (isConfirmed) {
-                          const hasHaftalik = !!e.haftalikJadval && !e.doneHaftalik
-                          const hasYillik = !!e.yillikJadval && !e.doneYillik
-                          const hasYangi = !!e.yangiIshlar && !e.doneYangi
-                          const hasKmo = !!e.kmoBartaraf && !e.doneKmo
-                          const hasMajburiy = !!e.majburiyOzgarish && !e.doneMajburiy
-
-                          const needsAction = hasHaftalik || hasYillik || hasYangi || hasKmo || hasMajburiy
-
-                          if (needsAction) {
-                            return (
-                              <button
-                                onClick={() => handleBajarishClick(i)}
-                                disabled={submitting}
-                                className="rounded-lg bg-purple-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-purple-600 transition-all active:scale-95 disabled:opacity-50"
-                              >
-                                Bajarish
-                              </button>
-                            )
-                          }
-                          return null
-                        }
-
-                        return <span className="text-[10px] text-slate-300 italic">Kutilmoqda...</span>
-                    })()}
-                  </td>
-                </tr>
+                <MemoizedJournalRow
+                  key={i}
+                  e={e}
+                  i={i}
+                  isConfirmed={isConfirmed}
+                  canEditPlan={canEditPlan}
+                  updateEntry={updateEntry}
+                  openSelectModal={openSelectModal}
+                  handleBajarishClick={handleBajarishClick}
+                  submitting={submitting}
+                />
               ))}
             </tbody>
           </table>

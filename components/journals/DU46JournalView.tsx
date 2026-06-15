@@ -178,15 +178,29 @@ export function DU46JournalView({
     const chain = e.approvalChain || []
     const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
     
-    if (approvals.length < chain.length) return chain[approvals.length]
-    
-    const creator = getCreator(e)
-    if (creator === 'bekat_boshlighi') return null
-    
-    const isBBTasdiqladi = col === 3 ? e.kamchilikBBTasdiqladi : e.bartarafBBTasdiqladi
-    if (!isBBTasdiqladi) return 'DSP'
-    
-    return null
+    if (col === 3) {
+      if (approvals.length < chain.length) return chain[approvals.length]
+      
+      const creator = getCreator(e)
+      if (creator === 'bekat_boshlighi') return null
+      
+      const isBBTasdiqladi = e.kamchilikBBTasdiqladi
+      if (!isBBTasdiqladi) return 'DSP'
+      
+      return null
+    } else {
+      // 12-ustun
+      const writerRole = e.bartarafByRole || getCreator(e)
+      const requiredChainFor12 = chain.filter(r => r !== writerRole)
+      const nextRequiredRole = requiredChainFor12.find(r => !approvals.some(a => a.role === r))
+      
+      if (nextRequiredRole) return nextRequiredRole
+      
+      const isBBTasdiqladi = e.bartarafBBTasdiqladi
+      if (!isBBTasdiqladi) return 'DSP'
+      
+      return null
+    }
   }
 
   const isFinalApprover = (e: DU46Entry, col: 3 | 12): boolean => {
@@ -195,10 +209,15 @@ export function DU46JournalView({
     if (nextRole === 'DSP') return true // DSP is always final
     
     const chain = e.approvalChain || []
-    const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
-    if (approvals.length === chain.length - 1) {
-      const creator = getCreator(e)
-      if (creator === 'bekat_boshlighi') return true
+    if (col === 3) {
+      const approvals = e.approvalsCol3 || []
+      if (approvals.length === chain.length - 1) {
+        const creator = getCreator(e)
+        if (creator === 'bekat_boshlighi') return true
+      }
+    } else {
+      // For Col 12, DSP is ALWAYS the final approver, so if nextRole is not DSP, it's not final
+      return false
     }
     
     return false
@@ -381,6 +400,7 @@ export function DU46JournalView({
       bartarafBajarildi: true,
       bartarafBajarildiAt: new Date().toISOString(),
       bartarafImzo: userName,
+      bartarafByRole: userRole,
     }
     saveEntries(updated, prev).then(() => {
       showMsg('Bajarildi belgilandi!')

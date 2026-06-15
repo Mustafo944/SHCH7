@@ -158,6 +158,7 @@ export interface DU46Entry {
   bartarafBajarildi: boolean        // Bajarildi belgilandi
   bartarafBajarildiAt: string
   bartarafImzo: string              // Bajarildi bosgan ism
+  bartarafByRole?: string           // Bajarildi bosgan foydalanuvchi roli
   // Elektromexanik tasdiqlash (yo'l ustasi oqimida)
   bartarafNeedsEM?: boolean
   bartarafEMTasdiqladi?: boolean
