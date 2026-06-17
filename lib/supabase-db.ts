@@ -43,6 +43,8 @@ interface DbWorkReportRow {
   submitted_at: string;
   confirmed_at: string | null;
   confirmed_by: string | null;
+  rejected_at: string | null;
+  rejected_by: string | null;
 }
 
 interface DbIncidentRow {
@@ -287,6 +289,8 @@ function mapDbReport(row: DbWorkReportRow): WorkReport {
     submittedAt: row.submitted_at,
     confirmedAt: row.confirmed_at || null,
     confirmedBy: row.confirmed_by || null,
+    rejectedAt: row.rejected_at || null,
+    rejectedBy: row.rejected_by || null,
   };
 }
 
@@ -388,6 +392,31 @@ export async function confirmReport(reportId: string, dispatcherName: string): P
     .update({
       confirmed_at: new Date().toISOString(),
       confirmed_by: dispatcherName,
+      // Qabul qilinganda rad etish ma'lumotlarini tozalaymiz
+      rejected_at: null,
+      rejected_by: null,
+    })
+    .eq('id', reportId)
+    .select()
+    .single();
+
+  if (error || !data) return null;
+  return mapDbReport(data as DbWorkReportRow);
+}
+
+/** Aloqa dispetcheri oylik ish rejani rad etadi.
+ * Katta elektromexanik qayta yuborishi kerak bo'ladi.
+ */
+export async function rejectReport(reportId: string, dispatcherName: string): Promise<WorkReport | null> {
+  const { data, error } = await supabase
+    .from('work_reports')
+    .update({
+      // Tasdiqni olib tashlaymiz
+      confirmed_at: null,
+      confirmed_by: null,
+      // Rad etish ma'lumotlarini yozamiz
+      rejected_at: new Date().toISOString(),
+      rejected_by: dispatcherName,
     })
     .eq('id', reportId)
     .select()

@@ -86,6 +86,8 @@ export interface WorkReport {
   submittedAt: string;
   confirmedAt: string | null;
   confirmedBy: string | null;
+  rejectedAt: string | null;
+  rejectedBy: string | null;
 }
 
 export interface Incident {

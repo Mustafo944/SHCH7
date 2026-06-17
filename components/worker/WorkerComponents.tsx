@@ -312,6 +312,8 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   const [modalSearch, setModalSearch] = useState('')
   const [selectedBolim, setSelectedBolim] = useState<number | null>(null)
   const [isConfirmed, setIsConfirmed] = useState(false)
+  const [isRejected, setIsRejected] = useState(false)
+  const [rejectedBy, setRejectedBy] = useState<string | null>(null)
   const [reportId, setReportId] = useState<string | null>(null)
   const [completionIdx, setCompletionIdx] = useState<number | null>(null)
   const monthStr = `${new Date().getFullYear()}-${String(month + 1).padStart(2, '0')}`
@@ -323,12 +325,16 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     if (draft) {
       setEntries(draft.entries)
       setIsConfirmed(!!draft.confirmedAt)
+      setIsRejected(!!draft.rejectedAt)
+      setRejectedBy(draft.rejectedBy || null)
       setReportId(draft.id)
     } else {
       setEntries(Array.from({ length: TOTAL_ROWS }, (_, i) => ({
         ragat: String(i + 1), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: ''
       })))
       setIsConfirmed(false)
+      setIsRejected(false)
+      setRejectedBy(null)
       setReportId(null)
     }
   }, [draftReport])
@@ -518,6 +524,21 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
         status={headerError || ""} 
         statusColor={headerError ? "error" : "default"}
       />
+      {/* Rad qilingan reja banneri */}
+      {isRejected && canEditPlan && (
+        <div className="flex items-start gap-4 rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-500">
+            <AlertTriangle size={20} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-black text-red-700 mb-0.5">Oylik ish reja rad qilindi!</p>
+            <p className="text-xs text-red-600 leading-relaxed">
+              {rejectedBy ? <><span className="font-bold">{rejectedBy}</span> tomonidan rad etildi. </> : ''}
+              Rejani tahrirlang va qaytadan yuboring.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm relative shadow-sm">
         <div className="sm:hidden absolute top-0 right-0 bg-purple-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
           O'ngga suring →

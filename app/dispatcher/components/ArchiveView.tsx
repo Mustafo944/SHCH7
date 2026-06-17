@@ -6,11 +6,12 @@ import { MONTHS } from '@/lib/constants'
 import { ReportCard } from './ReportList'
 import { DU46JournalView, SHU2JournalView } from '@/components/JournalView'
 
-export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry }: {
+export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, onReject }: {
   stations: { id: string; name: string }[]
   allReports: WorkReport[]
   onConfirm: (reportId: string) => void
   onConfirmEntry: (reportId: string, idx: number) => void
+  onReject: (reportId: string) => void
 }) {
   const [selStation, setSelStation] = useState<string | null>(null)
   const [selYear, setSelYear] = useState('2026')
@@ -100,7 +101,7 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry }:
                       {archiveReports.length === 0
                         ? <div className="premium-card flex h-48 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Bu oy uchun hisobot yo'q</div>
                         : archiveReports.map((r) => (
-                          <ReportCard key={r.id} report={r} onConfirm={() => onConfirm(r.id)} onConfirmRow={(idx: number) => onConfirmEntry(r.id, idx)} />
+                          <ReportCard key={r.id} report={r} onConfirm={() => onConfirm(r.id)} onConfirmRow={(idx: number) => onConfirmEntry(r.id, idx)} onReject={() => onReject(r.id)} />
                         ))
                       }
                     </div>

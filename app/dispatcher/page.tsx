@@ -17,6 +17,7 @@ import {
   getReadIncidentIds,
   confirmReport,
   confirmReportEntry,
+  rejectReport,
   getGlobalGraphics,
   uploadGlobalGraphicFile,
   deleteGlobalGraphicFile,
@@ -245,13 +246,14 @@ export default function DispatcherPage() {
 
     allReports
       .filter(r => r.month === currentMonthStr || r.month === prevMonthStr)
+      // Faqat dispetcher qabul qilgan rejalar bugungi ishlarga tushadi
+      .filter(r => !!r.confirmedAt)
       .forEach(r => {
         const isCurrentMonth = r.month === currentMonthStr
         r.entries.forEach(e => {
           const taskDay = parseInt((e.ragat || '').trim(), 10)
           if (isNaN(taskDay)) return
 
-          // Har bir ustunni alohida tekshiramiz
           const columns = [
             { text: e.haftalikJadval, done: !!e.doneHaftalik, type: 'haftalik', reason: e.missedReasonHaftalik, comp: e.completedAfterMissedDateHaftalik },
             { text: e.yillikJadval, done: !!e.doneYillik, type: 'yillik', reason: e.missedReasonYillik, comp: e.completedAfterMissedDateYillik },
@@ -373,6 +375,20 @@ export default function DispatcherPage() {
       setFormMsg({
         type: 'err',
         text: err instanceof Error ? err.message : "Xatolik yuz berdi"
+      })
+    }
+  }
+
+  async function handleRejectReport(reportId: string) {
+    if (!session) return
+    try {
+      await rejectReport(reportId, session.fullName)
+      refreshData()
+      toast.info('Oylik reja rad qilindi. Katta elektromexanik qayta yuborishi kerak.')
+    } catch (err: unknown) {
+      setFormMsg({
+        type: 'err',
+        text: err instanceof Error ? err.message : "Rad etishda xatolik yuz berdi"
       })
     }
   }
@@ -597,6 +613,7 @@ export default function DispatcherPage() {
                             reports={allReports.filter(r => r.stationId === selectedStation)}
                             onConfirm={handleConfirmReport}
                             onConfirmRow={handleConfirmEntry}
+                            onReject={handleRejectReport}
                           />
                         )}
 
@@ -781,6 +798,7 @@ export default function DispatcherPage() {
 
                 onConfirm={handleConfirmReport}
                 onConfirmEntry={handleConfirmEntry}
+                onReject={handleRejectReport}
               />
             )}
 
