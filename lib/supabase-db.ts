@@ -357,7 +357,7 @@ export async function getReportByWorkerAndMonth(workerId: string, month: string)
 }
 
 export async function upsertReport(
-  report: Omit<WorkReport, 'id' | 'submittedAt' | 'confirmedAt' | 'confirmedBy'> & { id?: string }
+  report: Omit<WorkReport, 'id' | 'submittedAt' | 'confirmedAt' | 'confirmedBy' | 'rejectedAt' | 'rejectedBy'> & { id?: string }
 ): Promise<WorkReport> {
   const payload: Record<string, unknown> = {
     worker_id: report.workerId,
