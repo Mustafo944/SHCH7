@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 import { OfflineNotifier } from "@/components/OfflineNotifier";
+import { SWRProvider } from "@/components/SWRProvider";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -22,8 +23,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/uty-logo.png" />
       </head>
       <body className={inter.className}>
-        {children}
-        <OfflineNotifier />
+        <SWRProvider>
+          {children}
+          <OfflineNotifier />
+        </SWRProvider>
       </body>
     </html>
   );

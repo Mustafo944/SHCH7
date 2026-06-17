@@ -7,7 +7,7 @@ interface RealtimeConfig {
   channelName: string
   table: string
   filter?: string
-  onEvent: () => void
+  onEvent: (payload?: any) => void
 }
 
 /**
@@ -19,12 +19,14 @@ export function useRealtimeSubscription(
   enabled = true
 ) {
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([])
-  // configs ni ref da saqlash — har renderda yangi massiv yaratilsa ham, qayta subscribe bo'lmaydi
   const configsRef = useRef(configs)
   configsRef.current = configs
 
   // Stabil kalit — faqat kanallar o'zgarganda qayta ulash uchun
   const configKey = configs.map(c => c.channelName + c.table + (c.filter || '')).join(',')
+
+  // Debounce timeouts ref
+  const timeoutsRef = useRef<Record<string, NodeJS.Timeout>>({})
 
   useEffect(() => {
     if (!enabled || configsRef.current.length === 0) return
@@ -53,9 +55,19 @@ export function useRealtimeSubscription(
             table: cfg.table,
             ...(cfg.filter ? { filter: cfg.filter } : {}),
           },
-          () => {
+          (payload) => {
             const latestCfg = configsRef.current.find(c => c.channelName === cfg.channelName && c.table === cfg.table)
-            if (latestCfg) latestCfg.onEvent()
+            if (latestCfg) {
+              // Debounce event by 500ms to prevent UI freezing on mass updates
+              const timeoutKey = `${cfg.channelName}_${cfg.table}`
+              if (timeoutsRef.current[timeoutKey]) {
+                clearTimeout(timeoutsRef.current[timeoutKey])
+              }
+              timeoutsRef.current[timeoutKey] = setTimeout(() => {
+                latestCfg.onEvent(payload)
+                delete timeoutsRef.current[timeoutKey]
+              }, 500)
+            }
           }
         )
         .subscribe()
@@ -70,6 +82,9 @@ export function useRealtimeSubscription(
         supabase.removeChannel(ch)
       })
       channelsRef.current = []
+      // Clear timeouts on unmount
+      Object.values(timeoutsRef.current).forEach(clearTimeout)
+      timeoutsRef.current = {}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, configKey])
