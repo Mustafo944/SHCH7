@@ -1314,6 +1314,24 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session
   const [selectedTaskType, setSelectedTaskType] = useState<'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy' | null>(null)
   const [localProgress, setLocalProgress] = useState<Record<string, boolean>>({})
 
+  const storageKey = useMemo(() => {
+    if (!reportId || _entryIndex === -1 || !selectedTaskType) return null
+    return `visitedJournals_${reportId}_${_entryIndex}_${selectedTaskType}`
+  }, [reportId, _entryIndex, selectedTaskType])
+
+  useEffect(() => {
+    if (storageKey) {
+      try {
+        const saved = localStorage.getItem(storageKey)
+        if (saved) {
+          setVisitedJournals(new Set(JSON.parse(saved)))
+        }
+      } catch {}
+    } else {
+      setVisitedJournals(new Set())
+    }
+  }, [storageKey])
+
   // Matndan jurnal nomini ajratib olish (eski yozuvlar uchun fallback)
   const extractJurnal = (text: string): string => {
     const match = text.match(/Jurnal:\s*(.+)$/m)
@@ -1360,7 +1378,13 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session
 
   const handleJournalClose = (journalName: string, isDone = false, isInProgress = false) => {
     if (isDone) {
-      setVisitedJournals(prev => new Set(prev).add(journalName))
+      setVisitedJournals(prev => {
+        const next = new Set(prev).add(journalName)
+        if (storageKey) {
+          localStorage.setItem(storageKey, JSON.stringify(Array.from(next)))
+        }
+        return next
+      })
     }
     if (isInProgress && selectedTaskType) {
       setLocalProgress(prev => ({ ...prev, [selectedTaskType]: true }))
@@ -1484,7 +1508,7 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-purple-600">{currentTask?.label}</span>
                 {availableTasks.length > 1 && (
-                  <button onClick={() => { setSelectedTaskType(null); setVisitedJournals(new Set()) }} className="text-[10px] font-black text-slate-400 hover:text-purple-600 underline">Ortga</button>
+                  <button onClick={() => { setSelectedTaskType(null) }} className="text-[10px] font-black text-slate-400 hover:text-purple-600 underline">Ortga</button>
                 )}
               </div>
               <p className="text-[11px] text-slate-600 whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">{currentTask?.text}</p>
@@ -1549,12 +1573,23 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session
                 Bekor qilish
               </button>
               <button
-                onClick={() => selectedTaskType && onComplete(selectedTaskType)}
-                disabled={!allDone || isInProgress}
-                className="flex-1 rounded-xl bg-emerald-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => {
+                  if (isInProgress) {
+                    onClose()
+                  } else if (selectedTaskType) {
+                    if (storageKey) localStorage.removeItem(storageKey)
+                    onComplete(selectedTaskType)
+                  }
+                }}
+                disabled={!isInProgress && !allDone}
+                className={`flex-1 rounded-xl px-6 py-3 text-sm font-black text-white shadow-lg transition-all active:scale-95 ${
+                  isInProgress 
+                    ? 'bg-amber-500 shadow-amber-500/20 hover:bg-amber-600'
+                    : (!allDone ? 'bg-slate-300 shadow-none cursor-not-allowed text-slate-500' : 'bg-emerald-500 shadow-emerald-500/20 hover:bg-emerald-600')
+                }`}
               >
                 {isInProgress 
-                  ? 'Kutish (Navbatchi tasdiqlashi kerak)'
+                  ? 'Kutish (Yopish)'
                   : allDone 
                     ? 'Bajarildi — Saqlash' 
                     : 'Avval jurnallarga yozuv kiriting'}
