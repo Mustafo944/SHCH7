@@ -230,7 +230,7 @@ export function DU46JournalView({
       )
       if (!alreadyLinked && taskContext.taskText) {
         // Find first empty row (or create new if all are full)
-        const emptyIndex = entries.findIndex(e => !e.kamchilik && !e.oyKun1 && !e.soatMinut1 && !e.bartarafInfo)
+        const emptyIndex = entries.findIndex(e => !e.kamchilik && !e.oyKun1 && !e.soatMinut1 && !e.bartarafInfo && !e.kamchilikBajarildi)
         
         setEntries(prev => {
           const n = [...prev]
