@@ -182,7 +182,7 @@ const MemoizedJournalRow = React.memo(({
               <CheckCircle2 size={12} />
             </div>
           )}
-          {!e.doneHaftalik && !!e.haftalikJadval && showJarayonda && (
+          {!e.doneHaftalik && !!e.haftalikJadval && e.inProgressHaftalik && (
             <div className="absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm bg-orange-400" title="Kutilmoqda">
               <Clock size={12} />
             </div>
@@ -211,7 +211,7 @@ const MemoizedJournalRow = React.memo(({
               <CheckCircle2 size={12} />
             </div>
           )}
-          {!e.doneYillik && !!e.yillikJadval && showJarayonda && (
+          {!e.doneYillik && !!e.yillikJadval && e.inProgressYillik && (
             <div className="absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm bg-orange-400" title="Kutilmoqda">
               <Clock size={12} />
             </div>
@@ -240,7 +240,7 @@ const MemoizedJournalRow = React.memo(({
               <CheckCircle2 size={12} />
             </div>
           )}
-          {!e.doneYangi && !!e.yangiIshlar && showJarayonda && (
+          {!e.doneYangi && !!e.yangiIshlar && e.inProgressYangi && (
             <div className="absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm bg-orange-400" title="Kutilmoqda">
               <Clock size={12} />
             </div>
@@ -260,7 +260,7 @@ const MemoizedJournalRow = React.memo(({
               <CheckCircle2 size={12} />
             </div>
           )}
-          {!e.doneKmo && !!e.kmoBartaraf && showJarayonda && (
+          {!e.doneKmo && !!e.kmoBartaraf && e.inProgressKmo && (
             <div className="absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm bg-orange-400" title="Kutilmoqda">
               <Clock size={12} />
             </div>
@@ -280,7 +280,7 @@ const MemoizedJournalRow = React.memo(({
               <CheckCircle2 size={12} />
             </div>
           )}
-          {!e.doneMajburiy && !!e.majburiyOzgarish && showJarayonda && (
+          {!e.doneMajburiy && !!e.majburiyOzgarish && e.inProgressMajburiy && (
             <div className="absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm bg-orange-400" title="Kutilmoqda">
               <Clock size={12} />
             </div>
