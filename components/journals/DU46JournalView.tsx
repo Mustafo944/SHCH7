@@ -310,7 +310,18 @@ export function DU46JournalView({
     const nextRole = getNextApproverRole(e, col)
     if (!nextRole) return false
     if (nextRole === 'DSP') return isBB
-    if (nextRole === 'worker') return isWorker
+    if (nextRole === 'worker') {
+      // Agar 12-ustun bo'lsa va joriy foydalanuvchi "Tugadi" ni bosgan bo'lsa — tasdiqlay olmaydi
+      if (col === 12 && e.bartarafByRole) {
+        const tugadiBosganRol = e.bartarafByRole
+        const workerRoles = ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik']
+        const iAmTheTugadiUser = workerRoles.includes(tugadiBosganRol) && isWorker
+        if (iAmTheTugadiUser) return false
+      }
+      return isWorker
+    }
+    // Agar 12-ustun bo'lsa va joriy rol "Tugadi" bosgan rol bilan bir xil bo'lsa — tasdiqlay olmaydi
+    if (col === 12 && e.bartarafByRole === userRole) return false
     return userRole === nextRole
   }
 
@@ -1075,15 +1086,31 @@ export function DU46JournalView({
                             </div>
                           )
                         })() : (
-                          // Tasdiqlash tugmasi yo'q bo'lsa, lekin u ushbu zanjirda qatnashayotgan bo'lsa va hali tasdiqlamagan bo'lsa
-                          (!isMonthInPast(journalMonth) && e.approvalChain?.includes(userRole) && !(e.approvalsCol12 || []).some(a => a.role === userRole) && (e.bartarafByRole || getCreator(e)) !== userRole) && (
-                            <div className="w-full rounded-xl bg-orange-50 px-2 py-1.5 border border-orange-100 mt-1 flex flex-col items-center">
-                              <span className="text-[8px] font-bold uppercase text-orange-400">Navbat kutilmoqda</span>
-                              <span className="text-[9px] font-black text-orange-600 text-center leading-tight">
-                                Avval {getWaitingForRole(e, 12)} tasdiqlashi kerak
-                              </span>
-                            </div>
-                          )
+                          // "Navbat kutilmoqda" — faqat: zanjirda qatnashuvchi, hali tasdiqlamagan, "Tugadi" bosmaganlar uchun
+                          (() => {
+                            const tugadiRole = e.bartarafByRole
+                            const workerRoles = ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik']
+                            const iAmTugadiUser = tugadiRole &&
+                              (tugadiRole === userRole || (workerRoles.includes(tugadiRole) && isWorker))
+                            const alreadyApproved = (e.approvalsCol12 || []).some(a => a.role === userRole)
+                            const inChain = e.approvalChain?.includes(userRole)
+                            if (
+                              !isMonthInPast(journalMonth) &&
+                              inChain &&
+                              !alreadyApproved &&
+                              !iAmTugadiUser
+                            ) {
+                              return (
+                                <div className="w-full rounded-xl bg-orange-50 px-2 py-1.5 border border-orange-100 mt-1 flex flex-col items-center">
+                                  <span className="text-[8px] font-bold uppercase text-orange-400">Navbat kutilmoqda</span>
+                                  <span className="text-[9px] font-black text-orange-600 text-center leading-tight">
+                                    Avval {getWaitingForRole(e, 12)} tasdiqlashi kerak
+                                  </span>
+                                </div>
+                              )
+                            }
+                            return null
+                          })()
                         )}
                         {/* 3) Telegramga yuborish */}
                         {e.bartarafInfo && !isCol3Finished(e) && (
