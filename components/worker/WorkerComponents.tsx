@@ -14,6 +14,14 @@ import { DU46JournalView, SHU2JournalView, YerlatgichJournalView, AlsnKodJournal
 const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck, lang }: any) => {
   const [val, setVal] = useState(value)
   useEffect(() => setVal(value), [value])
+  
+  useEffect(() => {
+    if (val !== value) {
+      const timer = setTimeout(() => onChange(val), 500)
+      return () => clearTimeout(timer)
+    }
+  }, [val, value, onChange])
+
   return (
     <textarea
       value={val}
@@ -31,6 +39,14 @@ const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck,
 const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
   const [val, setVal] = useState(value)
   useEffect(() => setVal(value), [value])
+
+  useEffect(() => {
+    if (val !== value) {
+      const timer = setTimeout(() => onChange(val), 500)
+      return () => clearTimeout(timer)
+    }
+  }, [val, value, onChange])
+
   return (
     <input
       value={val}

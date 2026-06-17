@@ -206,13 +206,8 @@ export function JournalArchiveCard({ journal, type, stationName }: {
   const du46Entries = entries as DU46Entry[]
   const shu2Entries = entries as SHU2Entry[]
 
-  const qabulCount = type === 'du46'
-    ? du46Entries.filter(e => e.dispetcherQabulQildi).length
-    : shu2Entries.filter(e => e.dispetcherQabulQildi).length
-  const yuborildiCount = type === 'du46'
-    ? du46Entries.filter(e => e.yuborildi).length
-    : shu2Entries.filter(e => e.yuborildi).length
   const filteredEntries = entries.filter(e => type === 'du46' ? (e as DU46Entry).kamchilik || (e as DU46Entry).bartarafInfo : (e as SHU2Entry).yozuv)
+
 
   const handleDownload = async () => {
     setDownloading(true)
@@ -302,15 +297,14 @@ export function JournalArchiveCard({ journal, type, stationName }: {
           },
         })
       } else {
-        const tableColumn = ['№', 'Sana', 'Yozuv', 'Imzo', 'Holat']
+        const tableColumn = ['№', 'Sana', 'Yozuv', 'Imzo']
         const tableRows = shu2Entries
           .filter(e => e.yozuv)
           .map((e, i) => [
             e.nomber || String(i + 1),
             e.sana || '',
             e.yozuv || '',
-            (e as SHU2Entry).tasdiqlandi ? ((e as SHU2Entry).tasdiqlaganImzo || (e as SHU2Entry).imzo) : '',
-            (e as SHU2Entry).dispetcherQabulQildi ? 'Qabul' : (e as SHU2Entry).yuborildi ? 'Kutilmoqda' : 'Yangi'
+            (e as SHU2Entry).tasdiqlandi ? ((e as SHU2Entry).tasdiqlaganImzo || (e as SHU2Entry).imzo) : ''
           ])
 
         autoTable(doc, {
@@ -362,14 +356,6 @@ export function JournalArchiveCard({ journal, type, stationName }: {
           <div className="h-2 w-2 rounded-full bg-sky-400" />
           <span className="text-xs font-bold text-slate-500">Jami yozuvlar: <span className="text-slate-900">{filteredEntries.length}</span></span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-emerald-400" />
-          <span className="text-xs font-bold text-slate-500">Qabul: <span className="text-slate-900">{qabulCount}</span></span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-amber-400" />
-          <span className="text-xs font-bold text-slate-500">Yuborildi: <span className="text-slate-900">{yuborildiCount}</span></span>
-        </div>
         <button
           onClick={() => setExpanded(!expanded)}
           className="ml-auto text-xs font-bold text-sky-600 hover:text-sky-700 uppercase tracking-widest transition-colors"
@@ -390,7 +376,6 @@ export function JournalArchiveCard({ journal, type, stationName }: {
                   <th className="p-2.5 text-left border-r border-slate-100">Kamchilik</th>
                   <th className="p-2.5 text-center border-r border-slate-100">Xabar usuli</th>
                   <th className="p-2.5 text-left border-r border-slate-100">Bartaraf info</th>
-                  <th className="p-2.5 text-center">Holat</th>
                 </tr>
               </thead>
               <tbody>
@@ -402,14 +387,6 @@ export function JournalArchiveCard({ journal, type, stationName }: {
                     <td className="p-2.5 text-slate-700 border-r border-slate-50 max-w-[250px] whitespace-pre-wrap">{e.kamchilik || '—'}</td>
                     <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.xabarUsuli || '—'}</td>
                     <td className="p-2.5 text-slate-700 max-w-[250px] whitespace-pre-wrap">{e.bartarafInfo || '—'}</td>
-                    <td className="p-2.5 text-center">
-                      {(e as DU46Entry).dispetcherQabulQildi
-                        ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600 border border-emerald-100">✓ Qabul</span>
-                        : (e as DU46Entry).yuborildi
-                          ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[8px] font-bold text-amber-600 border border-amber-100">⏳ Kutilmoqda</span>
-                          : <span className="text-[8px] font-bold text-slate-300">Yangi</span>
-                      }
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -422,7 +399,6 @@ export function JournalArchiveCard({ journal, type, stationName }: {
                   <th className="p-2.5 text-center border-r border-slate-100">Sana</th>
                   <th className="p-2.5 text-left border-r border-slate-100">Yozuv</th>
                   <th className="p-2.5 text-center border-r border-slate-100">Imzo</th>
-                  <th className="p-2.5 text-center">Holat</th>
                 </tr>
               </thead>
               <tbody>
@@ -432,14 +408,6 @@ export function JournalArchiveCard({ journal, type, stationName }: {
                     <td className="p-2.5 text-center text-slate-600 border-r border-slate-50">{e.sana || '—'}</td>
                     <td className="p-2.5 text-slate-700 border-r border-slate-50 max-w-[400px] whitespace-pre-wrap">{e.yozuv || '—'}</td>
                     <td className="p-2.5 text-center text-slate-500 border-r border-slate-50">{(e as SHU2Entry).tasdiqlandi ? ((e as SHU2Entry).tasdiqlaganImzo || (e as SHU2Entry).imzo) : '—'}</td>
-                    <td className="p-2.5 text-center">
-                      {(e as SHU2Entry).dispetcherQabulQildi
-                        ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600 border border-emerald-100">✓ Qabul</span>
-                        : (e as SHU2Entry).yuborildi
-                          ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[8px] font-bold text-amber-600 border border-amber-100">⏳ Kutilmoqda</span>
-                          : <span className="text-[8px] font-bold text-slate-300">Yangi</span>
-                      }
-                    </td>
                   </tr>
                 ))}
               </tbody>

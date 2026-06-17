@@ -18,6 +18,14 @@ import { ApprovalChainModal } from './ApprovalChainModal'
 const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck, lang }: any) => {
   const [val, setVal] = useState(value)
   useEffect(() => setVal(value), [value])
+  
+  useEffect(() => {
+    if (val !== value) {
+      const timer = setTimeout(() => onChange(val), 500)
+      return () => clearTimeout(timer)
+    }
+  }, [val, value, onChange])
+
   return (
     <textarea
       value={val}
@@ -35,6 +43,14 @@ const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck,
 const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
   const [val, setVal] = useState(value)
   useEffect(() => setVal(value), [value])
+
+  useEffect(() => {
+    if (val !== value) {
+      const timer = setTimeout(() => onChange(val), 500)
+      return () => clearTimeout(timer)
+    }
+  }, [val, value, onChange])
+
   return (
     <input
       value={val}
@@ -214,7 +230,7 @@ export function DU46JournalView({
     const creator = getCreator(e)
     if (creator === 'yul_ustasi') return isYulUstasi
     if (creator === 'ech_xodimi') return isEchXodimi
-    if (creator === 'bekat_boshlighi') return userRole === 'bekat_boshlighi'
+    if (creator === 'bekat_boshlighi') return isBB // isBB o'z ichiga bekat_navbatchisini ham oladi
     return creator === 'worker' && isWorker
   }
 
@@ -367,8 +383,7 @@ export function DU46JournalView({
       if (isYulUstasi) n[i].createdByRole = 'yul_ustasi'
       else if (isEchXodimi) n[i].createdByRole = 'ech_xodimi'
       else if (isElektromexanik) n[i].createdByRole = 'worker'
-      else if (userRole === 'bekat_boshlighi') n[i].createdByRole = 'bekat_boshlighi'
-      // Bug #4 fix: bekat_navbatchisi creator bo'la olmaydi
+      else if (isBB) n[i].createdByRole = 'bekat_boshlighi' // BB va DSP ham shu rol ostida saqlanadi
     }
 
     setEntries(n)
