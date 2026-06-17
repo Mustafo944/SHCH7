@@ -255,8 +255,8 @@ export function DU46JournalView({
         })
         
         showMsg("Vazifa matni avtomatik kiritildi", 3000)
-      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, taskContext, entries.length])
 
   useRealtimeSubscription(

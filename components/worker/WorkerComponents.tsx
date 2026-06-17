@@ -1349,7 +1349,9 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session
         if (saved) {
           setVisitedJournals(new Set(JSON.parse(saved)))
         }
-      } catch {}
+      } catch (e) {
+        console.error("Error reading visitedJournals from localStorage", e)
+      }
     } else {
       setVisitedJournals(new Set())
     }
