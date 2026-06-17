@@ -17,7 +17,7 @@ const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck,
   
   useEffect(() => {
     if (val !== value) {
-      const timer = setTimeout(() => onChange(val), 150)
+      const timer = setTimeout(() => onChange(val), 50)
       return () => clearTimeout(timer)
     }
   }, [val, value, onChange])
@@ -42,7 +42,7 @@ const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) 
 
   useEffect(() => {
     if (val !== value) {
-      const timer = setTimeout(() => onChange(val), 150)
+      const timer = setTimeout(() => onChange(val), 50)
       return () => clearTimeout(timer)
     }
   }, [val, value, onChange])
