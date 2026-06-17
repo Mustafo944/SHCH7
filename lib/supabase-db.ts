@@ -9,7 +9,7 @@ export { getStations, getStation };
 // DB SELECT konstantalari (takrorlanishni kamaytirish)
 const USER_COLUMNS = 'id, login, full_name, role, position, station_ids, phone, created_at' as const;
 
-const WORK_REPORT_COLUMNS = 'id, worker_id, worker_name, worker_phone, station_id, station_name, week_label, month, year, entries, submitted_at, confirmed_at, confirmed_by' as const;
+const WORK_REPORT_COLUMNS = 'id, worker_id, worker_name, worker_phone, station_id, station_name, week_label, month, year, entries, submitted_at, confirmed_at, confirmed_by, rejected_at, rejected_by' as const;
 
 const INCIDENT_COLUMNS = 'id, month, content, created_at, created_by_name' as const;
 
@@ -424,6 +424,104 @@ export async function rejectReport(reportId: string, dispatcherName: string): Pr
 
   if (error || !data) return null;
   return mapDbReport(data as DbWorkReportRow);
+}
+
+export async function updateReportEntryInProgress(
+  reportId: string,
+  entryIndex: number,
+  taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy'
+): Promise<void> {
+  const { data: current, error: fetchError } = await supabase
+    .from('work_reports')
+    .select('entries')
+    .eq('id', reportId)
+    .single();
+
+  if (fetchError || !current) {
+    console.error('Report not found for inProgress update:', fetchError);
+    return;
+  }
+
+  const entries = [...(current.entries as ReportEntry[])];
+  const entry = entries[entryIndex];
+  if (!entry) return;
+
+  const typeKeyMap: Record<string, keyof ReportEntry> = {
+    haftalik: 'inProgressHaftalik',
+    yillik: 'inProgressYillik',
+    yangi: 'inProgressYangi',
+    kmo: 'inProgressKmo',
+    majburiy: 'inProgressMajburiy'
+  };
+
+  const key = typeKeyMap[taskType];
+  if (key) {
+    (entry as any)[key] = true;
+  }
+
+  await supabase
+    .from('work_reports')
+    .update({ entries })
+    .eq('id', reportId);
+}
+
+export async function markReportEntryDoneFromJournal(
+  reportId: string,
+  entryIndex: number,
+  taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy',
+  workerName: string
+): Promise<void> {
+  const { data: current, error: fetchError } = await supabase
+    .from('work_reports')
+    .select('entries, worker_name')
+    .eq('id', reportId)
+    .single();
+
+  if (fetchError || !current) {
+    console.error('Report not found for done update:', fetchError);
+    return;
+  }
+
+  const entries = [...(current.entries as ReportEntry[])];
+  const entry = entries[entryIndex];
+  if (!entry) return;
+
+  const typeKeyMap: Record<string, keyof ReportEntry> = {
+    haftalik: 'doneHaftalik',
+    yillik: 'doneYillik',
+    yangi: 'doneYangi',
+    kmo: 'doneKmo',
+    majburiy: 'doneMajburiy'
+  };
+
+  const inProgressKeyMap: Record<string, keyof ReportEntry> = {
+    haftalik: 'inProgressHaftalik',
+    yillik: 'inProgressYillik',
+    yangi: 'inProgressYangi',
+    kmo: 'inProgressKmo',
+    majburiy: 'inProgressMajburiy'
+  };
+
+  const key = typeKeyMap[taskType];
+  const inProgKey = inProgressKeyMap[taskType];
+
+  if (key) {
+    (entry as any)[key] = true;
+    (entry as any)[inProgKey] = false; // "Bajarildi" bo'lsa "Jarayonda" olib tashlanadi
+  }
+
+  // Set the overall "Bajarildi" flag if we are checking
+  entry.bajarilganSana = new Date().toISOString();
+  // workerName parametridan kelgan ism aslida Navbatchi/BB ni ismi,
+  // ShN ni ismi esa report.worker_name dan olinadi
+  entry.bajarildiShn = current.worker_name || 'ShN';
+  entry.bajarildiImzo = current.worker_name || 'ShN';
+  entry.adImzosi = workerName;
+
+  await supabase
+    .from('work_reports')
+    .update({ entries })
+    .eq('id', reportId);
 }
 
 export async function confirmReportEntry(

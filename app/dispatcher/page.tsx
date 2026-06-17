@@ -174,7 +174,7 @@ export default function DispatcherPage() {
   const pendingCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     allReports.forEach(r => {
-      const isPending = !r.confirmedAt && r.entries.some(e =>
+      const isPending = !r.confirmedAt && !r.rejectedAt && r.entries.some(e =>
         (e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish) && !e.adImzosi
       )
       const hasPendingDaily = r.entries.some(e => e.bajarildiShn && !e.adImzosi)

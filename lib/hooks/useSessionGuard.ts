@@ -59,16 +59,14 @@ export function useSessionGuard(expectedRole: Role | Role[]) {
     return () => { cancelled = true }
   }, [router])
 
-  const handleSignOut = useCallback(async () => {
-    // 1. Server tomonida Supabase session cookielarini tozalash
-    try {
-      await fetch('/api/auth/signout', { method: 'POST' })
-    } catch {
-      // Agar server so'rovi ishlamasa, davom etamiz
-    }
-    // 2. Client tomonida ham tozalash
-    await signOut()
-    // 3. Sahifani to'liq qayta yuklash (brauzer kesh va React state tozalanadi)
+  const handleSignOut = useCallback(() => {
+    // 1. Server tomoniga so'rovni kutingizsiz yuborish (fon rejimida ishlaydi)
+    fetch('/api/auth/signout', { method: 'POST', keepalive: true }).catch(() => {})
+    
+    // 2. Client tomonida lokal ma'lumotlarni tozalash (sinxrron)
+    signOut().catch(() => {})
+    
+    // 3. Darhol sahifani qayta yuklash
     window.location.href = '/'
   }, [])
 

@@ -521,7 +521,7 @@ export default function WorkerPage() {
 
           {view === 'viewReport' && selectedReport && (
             <div className="animate-fade-up">
-              <HeaderCard title="Hisobot Ko'rinishi" subtitle={`${selectedReport.month} В· ${stationName}`} status={selectedReport.confirmedAt || selectedReport.entries.every(e => !e.haftalikJadval && !e.yillikJadval && !e.yangiIshlar && !e.kmoBartaraf && !e.majburiyOzgarish || e.adImzosi) ? 'tasdiqlandi' : 'kutilmoqda'} />
+              <HeaderCard title="Hisobot Ko'rinishi" subtitle={`${selectedReport.month} · ${stationName}`} status={selectedReport.rejectedAt ? 'rad etilgan' : selectedReport.confirmedAt || selectedReport.entries.every(e => !e.haftalikJadval && !e.yillikJadval && !e.yangiIshlar && !e.kmoBartaraf && !e.majburiyOzgarish || e.adImzosi) ? 'tasdiqlandi' : 'kutilmoqda'} />
               <div className="mt-6 mb-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm relative shadow-sm">
                 <div className="sm:hidden absolute top-0 right-0 bg-purple-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
                   O&apos;ngga suring →

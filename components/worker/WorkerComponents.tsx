@@ -106,6 +106,7 @@ export function HeaderCard({ title, subtitle, status, statusColor }: { title: st
   const statusColors: Record<string, string> = {
     tasdiqlandi: 'badge-success',
     kutilmoqda: 'badge-warning',
+    "rad etilgan": 'badge-danger',
     yangi: 'badge-info',
     "ko'rish": 'badge-info',
     "error": 'bg-red-100 text-red-600 border-red-200 border shadow-sm px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest'
@@ -283,6 +284,24 @@ const MemoizedJournalRow = React.memo(({
               const hasYangi = !!e.yangiIshlar && !e.doneYangi
               const hasKmo = !!e.kmoBartaraf && !e.doneKmo
               const hasMajburiy = !!e.majburiyOzgarish && !e.doneMajburiy
+
+              const isInProgressRow = (hasHaftalik && e.inProgressHaftalik) ||
+                                      (hasYillik && e.inProgressYillik) ||
+                                      (hasYangi && e.inProgressYangi) ||
+                                      (hasKmo && e.inProgressKmo) ||
+                                      (hasMajburiy && e.inProgressMajburiy)
+
+              if (isInProgressRow) {
+                return (
+                  <button
+                    onClick={() => handleBajarishClick(i)}
+                    disabled={submitting}
+                    className="rounded-lg bg-amber-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-amber-600 transition-all active:scale-95 disabled:opacity-50 animate-pulse"
+                  >
+                    Jarayonda
+                  </button>
+                )
+              }
 
               const needsAction = hasHaftalik || hasYillik || hasYangi || hasKmo || hasMajburiy
 
@@ -773,10 +792,11 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
         document.body
       ) : null}
 
-      {completionIdx !== null && entries[completionIdx] && (
+      {completionIdx !== null && reportId !== null && (
         <TaskCompletionModal
           entry={entries[completionIdx]}
           entryIndex={completionIdx}
+          reportId={reportId}
           session={session}
           stationId={stationId}
           stationName={stationName}
@@ -1278,9 +1298,10 @@ const JOURNAL_DISPLAY_NAMES: Record<string, string> = {
   'mpsFriksion': 'MPS elektrodvigatellarni friksion tokini o\'lchash',
 }
 
-function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationId, stationName, journalMonth, onComplete, onClose }: {
+function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session, stationId, stationName, journalMonth, onComplete, onClose }: {
   entry: ReportEntry
   entryIndex: number
+  reportId: string
   session: User
   stationId: string
   stationName: string
@@ -1291,6 +1312,7 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationI
   const [activeJournal, setActiveJournal] = useState<'du46' | 'shu2' | 'yerlatgich' | 'alsnKod' | 'mpsFriksion' | null>(null)
   const [visitedJournals, setVisitedJournals] = useState<Set<string>>(new Set())
   const [selectedTaskType, setSelectedTaskType] = useState<'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy' | null>(null)
+  const [localProgress, setLocalProgress] = useState<Record<string, boolean>>({})
 
   // Matndan jurnal nomini ajratib olish (eski yozuvlar uchun fallback)
   const extractJurnal = (text: string): string => {
@@ -1325,13 +1347,23 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationI
     return currentTask.journals.split(',').map(j => j.trim()).filter(Boolean)
   }, [currentTask])
 
+  const isInProgress = useMemo(() => {
+    if (!selectedTaskType) return false;
+    if (localProgress[selectedTaskType]) return true;
+    const key = `inProgress${selectedTaskType.charAt(0).toUpperCase() + selectedTaskType.slice(1)}` as keyof ReportEntry;
+    return !!entry[key];
+  }, [entry, selectedTaskType, localProgress]);
+
   const supportedRequired = requiredJournals.filter(j => j in SUPPORTED_JOURNALS)
   const unsupportedRequired = requiredJournals.filter(j => !(j in SUPPORTED_JOURNALS))
   const allDone = selectedTaskType && (supportedRequired.length === 0 || supportedRequired.every(j => visitedJournals.has(j)))
 
-  const handleJournalClose = (journalName: string, isDone = false) => {
+  const handleJournalClose = (journalName: string, isDone = false, isInProgress = false) => {
     if (isDone) {
       setVisitedJournals(prev => new Set(prev).add(journalName))
+    }
+    if (isInProgress && selectedTaskType) {
+      setLocalProgress(prev => ({ ...prev, [selectedTaskType]: true }))
     }
     setActiveJournal(null)
   }
@@ -1340,7 +1372,21 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationI
   if (activeJournal === 'du46') {
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-        <DU46JournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole={session.position || 'worker'} journalMonth={journalMonth} onClose={() => handleJournalClose('DU-46', false)} onAccepted={() => handleJournalClose('DU-46', true)} />
+        <DU46JournalView 
+          stationId={stationId} 
+          stationName={stationName} 
+          userName={session.fullName} 
+          userRole={session.position || 'worker'} 
+          journalMonth={journalMonth} 
+          onClose={() => handleJournalClose('DU-46', false)} 
+          onAccepted={(isDone, isInProgress) => handleJournalClose('DU-46', isDone, isInProgress)}
+          taskContext={{
+            reportId: reportId,
+            entryIndex: _entryIndex,
+            taskType: selectedTaskType!,
+            taskText: currentTask?.text
+          }}
+        />
       </div>,
       document.body
     )
@@ -1457,17 +1503,19 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationI
                     onClick={() => setActiveJournal(SUPPORTED_JOURNALS[name])}
                     className={`w-full flex items-center justify-between rounded-2xl border p-5 transition-all active:scale-[0.98] ${isDone
                       ? 'border-emerald-200 bg-emerald-50/80'
-                      : 'border-purple-200 bg-purple-50/50 hover:bg-purple-100 hover:border-purple-300'
+                      : isInProgress
+                        ? 'border-amber-200 bg-amber-50/80'
+                        : 'border-purple-200 bg-purple-50/50 hover:bg-purple-100 hover:border-purple-300'
                       }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isDone ? 'bg-emerald-100 text-emerald-600' : 'bg-purple-100 text-purple-600'}`}>
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isDone ? 'bg-emerald-100 text-emerald-600' : isInProgress ? 'bg-amber-100 text-amber-600' : 'bg-purple-100 text-purple-600'}`}>
                         {isDone ? <CheckCircle2 size={20} /> : <BookOpen size={20} />}
                       </div>
                       <div className="text-left">
                         <span className="text-sm font-black text-slate-900">{JOURNAL_DISPLAY_NAMES[name] || name}</span>
-                        <p className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: isDone ? '#059669' : '#0284c7' }}>
-                          {isDone ? 'Yozuv kiritildi' : 'Yozuv kiritish →'}
+                        <p className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: isDone ? '#059669' : isInProgress ? '#d97706' : '#0284c7' }}>
+                          {isDone ? 'Yozuv kiritildi' : isInProgress ? 'Jarayonda' : 'Yozuv kiritish →'}
                         </p>
                       </div>
                     </div>
@@ -1498,10 +1546,14 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, session, stationI
               </button>
               <button
                 onClick={() => selectedTaskType && onComplete(selectedTaskType)}
-                disabled={!allDone}
+                disabled={!allDone || isInProgress}
                 className="flex-1 rounded-xl bg-emerald-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {allDone ? 'Bajarildi — Saqlash' : 'Avval jurnallarga yozuv kiriting'}
+                {isInProgress 
+                  ? 'Kutish (Navbatchi tasdiqlashi kerak)'
+                  : allDone 
+                    ? 'Bajarildi — Saqlash' 
+                    : 'Avval jurnallarga yozuv kiriting'}
               </button>
             </div>
           </>

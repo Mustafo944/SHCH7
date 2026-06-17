@@ -45,6 +45,13 @@ export interface ReportEntry {
   doneKmo?: boolean;
   doneMajburiy?: boolean;
 
+  // Har bir ustun uchun jarayonda holati (DU-46 boshlanganda, lekin yakunlanmaganda)
+  inProgressHaftalik?: boolean;
+  inProgressYillik?: boolean;
+  inProgressYangi?: boolean;
+  inProgressKmo?: boolean;
+  inProgressMajburiy?: boolean;
+
   // Har bir ustun uchun bajarilmagan sababi (Izox)
   missedReasonHaftalik?: string;
   missedReasonYillik?: string;
@@ -178,6 +185,11 @@ export interface DU46Entry {
   dispetcherQabulQildi?: boolean
   dispetcherImzo?: string
   journalMonth?: string
+  
+  // ── Oylik Ish Rejasi bilan bog'lanish (Task Link) ──
+  linkedReportId?: string
+  linkedEntryIndex?: number
+  linkedTaskType?: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy'
 }
 
 // SHU-2 jurnal yozuvi

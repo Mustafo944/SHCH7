@@ -97,6 +97,7 @@ export function DU46JournalView({
   journalMonth = getCurrentJournalMonth(),
   onClose,
   onAccepted,
+  taskContext,
 }: {
   stationId: string
   stationName: string
@@ -104,7 +105,13 @@ export function DU46JournalView({
   userRole: string
   journalMonth?: string
   onClose: () => void
-  onAccepted?: () => void
+  onAccepted?: (isDone?: boolean, isInProgress?: boolean) => void
+  taskContext?: {
+    reportId: string
+    entryIndex: number
+    taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy'
+    taskText?: string
+  }
 }) {
   const [entries, setEntries] = useState<DU46Entry[]>(() => Array.from({ length: 5 }, () => EMPTY_DU46(journalMonth)))
   const [allEntries, setAllEntries] = useState<DU46Entry[]>([])
@@ -164,15 +171,22 @@ export function DU46JournalView({
               // Bug #16 fix: yangi bo'sh qatorlarga joriy oy beriladi
               merged.push(EMPTY_DU46(journalMonth), EMPTY_DU46(journalMonth), EMPTY_DU46(journalMonth))
             }
-            for (let i = 0; i < Math.max(merged.length, prev.length); i++) {
+            for (let i = 0; i < merged.length; i++) {
               const dbRow = merged[i]
               const localRow = prev[i]
-              if (!dbRow && localRow) {
-                merged.push(localRow)
-              } else if (dbRow && localRow) {
+              if (dbRow && localRow) {
                 // Live (realtime) yangilanishlar barcha foydalanuvchilarda bir xil ko'rinishi uchun
                 // doim ma'lumotlar bazasidan kelgan eng so'nggi holatni olamiz.
                 merged[i] = dbRow
+              }
+            }
+            // Agar foydalanuvchi lokalda ko'proq qator qo'shgan bo'lsa va unda ma'lumot bo'lsa, ularni saqlab qolamiz
+            if (prev.length > merged.length) {
+              for (let i = merged.length; i < prev.length; i++) {
+                const localRow = prev[i];
+                if (localRow.kamchilik || localRow.bartarafInfo) {
+                   merged.push(localRow);
+                }
               }
             }
             return merged
@@ -206,6 +220,46 @@ export function DU46JournalView({
   useEffect(() => {
     loadJournalData(false)
   }, [loadJournalData])
+
+  // ── Auto-populate row based on taskContext ──
+  useEffect(() => {
+    if (!loading && taskContext && entries.length > 0) {
+      // Check if we already have a row linked to this task
+      const alreadyLinked = entries.some(
+        e => e.linkedReportId === taskContext.reportId && e.linkedTaskType === taskContext.taskType
+      )
+      if (!alreadyLinked && taskContext.taskText) {
+        // Find first empty row (or create new if all are full)
+        const emptyIndex = entries.findIndex(e => !e.kamchilik && !e.oyKun1 && !e.soatMinut1 && !e.bartarafInfo)
+        
+        setEntries(prev => {
+          const n = [...prev]
+          if (emptyIndex !== -1) {
+            n[emptyIndex] = {
+              ...n[emptyIndex],
+              kamchilik: taskContext.taskText || '',
+              linkedReportId: taskContext.reportId,
+              linkedEntryIndex: taskContext.entryIndex,
+              linkedTaskType: taskContext.taskType,
+              createdByRole: userRole as any
+            }
+          } else {
+            // Append a new row if no empty rows
+            const newRow = EMPTY_DU46(journalMonth)
+            newRow.kamchilik = taskContext.taskText || ''
+            newRow.linkedReportId = taskContext.reportId
+            newRow.linkedEntryIndex = taskContext.entryIndex
+            newRow.linkedTaskType = taskContext.taskType
+            newRow.createdByRole = userRole as any
+            n.push(newRow)
+          }
+          return n
+        })
+        
+        showMsg("Vazifa matni avtomatik kiritildi", 3000)
+      }
+    }
+  }, [loading, taskContext, entries.length])
 
   useRealtimeSubscription(
     stationId && journalMonth
@@ -401,11 +455,17 @@ export function DU46JournalView({
     const last = entries[lastIdx]
     
     // Boshlandi bosilgan bo'lsa o'chirib bo'lmaydi
-    if (last.kamchilikBajarildi) return
+    if (last.kamchilikBajarildi) {
+      showMsg("Boshlandi bosilgan qatorni o'chirib bo'lmaydi", 3000)
+      return
+    }
     
     // Ma'lumot yozilgan bo'lsa, faqat uni yaratgan odamgina o'chira oladi
-    const hasData = last.kamchilik || last.bartarafInfo
-    if (hasData && !isCreator(last)) return
+    const hasData = last.kamchilik || last.bartarafInfo || last.oyKun1 || last.soatMinut1
+    if (hasData && !isCreator(last)) {
+       showMsg("Faqat yozuv kiritgan xodim o'chira oladi", 3000)
+       return
+    }
 
     const newEntries = entries.slice(0, -1)
     saveEntries(newEntries, entries, { deletedIndex: lastIdx })
@@ -528,7 +588,16 @@ export function DU46JournalView({
       const isEdit = approvalChainModal?.isEdit
       setApprovalChainModal(null)
       showMsg(isEdit ? 'Tasdiqlash zanjiri yangilandi!' : 'Boshlandi belgilandi!')
-      if (!isEdit) onAccepted?.()
+      
+      // taskContext bo'lsa, uni Jarayonda (In Progress) ga o'tkazamiz
+      if (!isEdit && e.linkedReportId && e.linkedTaskType) {
+        import('@/lib/supabase-db').then(db => {
+          db.updateReportEntryInProgress(e.linkedReportId!, e.linkedEntryIndex!, e.linkedTaskType!)
+        }).catch(err => console.error("In progress error:", err))
+        onAccepted?.(false, true)
+      } else if (!isEdit) {
+        onAccepted?.(true, false)
+      }
       
       await saveEntries(updated, prev)
     } catch { /* */ }
@@ -606,38 +675,14 @@ export function DU46JournalView({
     try {
       await saveEntries(updated, prev)
       showMsg('Tasdiqlandi!')
-    } catch { /* */ }
-  }
 
-  // ══════════════════════════════════════════════════════════════════════════════
-  // DISPETCHERGA YUBORISH / QABUL QILISH
-  // ══════════════════════════════════════════════════════════════════════════════
-
-  const handleDispetchergaYuborish = async () => {
-    const prev = [...entries]
-    const updated = entries.map(e => {
-      if (!e.yuborildi && (e.kamchilik || e.bartarafInfo) && e.kamchilikBBTasdiqladi && e.bartarafBBTasdiqladi) {
-        return { ...e, yuborildi: true, dispetcherQabulQildi: false }
+      // Agar BB (Navbatchi) 12-ustunni tasdiqlasa, task ni "Bajarildi" qilamiz
+      if (isBB && e.linkedReportId && e.linkedTaskType) {
+        import('@/lib/supabase-db').then(db => {
+          db.markReportEntryDoneFromJournal(e.linkedReportId!, e.linkedEntryIndex!, e.linkedTaskType!, userName)
+        }).catch(err => console.error("Mark done error:", err))
       }
-      return e
-    })
-    try {
-      await saveEntries(updated, prev)
-      showMsg('Yuborildi!')
-    } catch { /* */ }
-  }
-
-  const handleDispetcherQabulQilish = async () => {
-    const prev = [...entries]
-    const updated = entries.map(e =>
-      e.yuborildi && !e.dispetcherQabulQildi
-        ? { ...e, dispetcherQabulQildi: true, dispetcherImzo: userName }
-        : e
-    )
-    try {
-      await saveEntries(updated, prev)
-      showMsg('Qabul qilindi!')
-      onAccepted?.()
+      // Agar "Bajarildi" bosilsa (Tugadi emas, tasdiqlansa) onAccepted() chaqirilmaydi, chunki user modalni o'zi yopadi.
     } catch { /* */ }
   }
 
@@ -730,11 +775,6 @@ export function DU46JournalView({
   // ── COMPUTED VALUES ───────────────────────────────────────────────────────────
 
   const hasAnyEntry = entries.some(e => e.kamchilik || e.bartarafInfo)
-  // Dispetcherga yuborish uchun tayyor qatorlar (ikkala ustun ham tasdiqlangan, hali yuborilmagan)
-  const tasdiqlanganCount = entries.filter(
-    e => !e.yuborildi && (e.kamchilik || e.bartarafInfo) && isCol3Finished(e) && isCol12Finished(e)
-  ).length
-  const kutilayotganCount = entries.filter(e => e.yuborildi && !e.dispetcherQabulQildi).length
 
   // ── RENDER ────────────────────────────────────────────────────────────────────
 
