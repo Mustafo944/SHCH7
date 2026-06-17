@@ -703,7 +703,7 @@ export default function DispatcherPage() {
                             userRole="dispatcher"
                             journalMonth={activeJournalMonth}
                             onClose={() => { setActiveJournalMonth(''); setActiveJournalType(null); setSelectedReportType(null) }}
-                            onAccepted={mutateJournalSummary}
+                            onAccepted={() => mutateJournalSummary()}
                           />
                         )}
                         {selectedReportType === 'jurnallar' && activeJournalType === 'shu2' && activeJournalMonth && (
@@ -714,7 +714,7 @@ export default function DispatcherPage() {
                             userRole="dispatcher"
                             journalMonth={activeJournalMonth}
                             onClose={() => { setActiveJournalMonth(''); setActiveJournalType(null); setSelectedReportType(null) }}
-                            onAccepted={mutateJournalSummary}
+                            onAccepted={() => mutateJournalSummary()}
                           />
                         )}
                         {selectedReportType === 'jurnallar' && activeJournalType === 'alsn' && activeJournalMonth && (
