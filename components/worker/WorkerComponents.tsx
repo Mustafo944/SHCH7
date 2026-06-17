@@ -265,60 +265,66 @@ const MemoizedJournalRow = React.memo(({
                formattedLateDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
             }
 
-            if (e.adImzosi) {
-              return (
-                <div className="flex flex-col items-center gap-1">
-                  <span className={`inline-flex items-center gap-1 whitespace-pre-wrap rounded-md px-2 py-1 text-[10px] font-bold border ${isLate ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                    <CheckCircle2 size={12} /> {e.adImzosi}
-                  </span>
-                  {isLate && formattedLateDate && (
-                    <span className="text-[9px] font-bold text-orange-500">{formattedLateDate} da bajarildi</span>
-                  )}
-                </div>
-              )
-            }
+            const hasHaftalik = !!e.haftalikJadval && !e.doneHaftalik
+            const hasYillik = !!e.yillikJadval && !e.doneYillik
+            const hasYangi = !!e.yangiIshlar && !e.doneYangi
+            const hasKmo = !!e.kmoBartaraf && !e.doneKmo
+            const hasMajburiy = !!e.majburiyOzgarish && !e.doneMajburiy
+
+            const needsAction = hasHaftalik || hasYillik || hasYangi || hasKmo || hasMajburiy
+            const isInProgressRow = (hasHaftalik && e.inProgressHaftalik) ||
+                                    (hasYillik && e.inProgressYillik) ||
+                                    (hasYangi && e.inProgressYangi) ||
+                                    (hasKmo && e.inProgressKmo) ||
+                                    (hasMajburiy && e.inProgressMajburiy)
+
+            const adNode = e.adImzosi ? (
+              <div className={`flex flex-col items-center gap-1 ${needsAction || isInProgressRow ? 'mb-2' : ''}`}>
+                <span className={`inline-flex items-center gap-1 whitespace-pre-wrap rounded-md px-2 py-1 text-[10px] font-bold border ${isLate ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                  <CheckCircle2 size={12} /> {e.adImzosi}
+                </span>
+                {isLate && formattedLateDate && (
+                  <span className="text-[9px] font-bold text-orange-500">{formattedLateDate} da bajarildi</span>
+                )}
+              </div>
+            ) : null;
 
             if (isConfirmed) {
-              const hasHaftalik = !!e.haftalikJadval && !e.doneHaftalik
-              const hasYillik = !!e.yillikJadval && !e.doneYillik
-              const hasYangi = !!e.yangiIshlar && !e.doneYangi
-              const hasKmo = !!e.kmoBartaraf && !e.doneKmo
-              const hasMajburiy = !!e.majburiyOzgarish && !e.doneMajburiy
-
-              const isInProgressRow = (hasHaftalik && e.inProgressHaftalik) ||
-                                      (hasYillik && e.inProgressYillik) ||
-                                      (hasYangi && e.inProgressYangi) ||
-                                      (hasKmo && e.inProgressKmo) ||
-                                      (hasMajburiy && e.inProgressMajburiy)
-
               if (isInProgressRow) {
                 return (
-                  <button
-                    onClick={() => handleBajarishClick(i)}
-                    disabled={submitting}
-                    className="rounded-lg bg-amber-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-amber-600 transition-all active:scale-95 disabled:opacity-50 animate-pulse"
-                  >
-                    Jarayonda
-                  </button>
+                  <div className="flex flex-col items-center">
+                    {adNode}
+                    <button
+                      onClick={() => handleBajarishClick(i)}
+                      disabled={submitting}
+                      className="rounded-lg bg-amber-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-amber-600 transition-all active:scale-95 disabled:opacity-50 animate-pulse"
+                    >
+                      Jarayonda
+                    </button>
+                  </div>
                 )
               }
-
-              const needsAction = hasHaftalik || hasYillik || hasYangi || hasKmo || hasMajburiy
 
               if (needsAction) {
                 return (
-                  <button
-                    onClick={() => handleBajarishClick(i)}
-                    disabled={submitting}
-                    className="rounded-lg bg-purple-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-purple-600 transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    Bajarish
-                  </button>
+                  <div className="flex flex-col items-center">
+                    {adNode}
+                    <button
+                      onClick={() => handleBajarishClick(i)}
+                      disabled={submitting}
+                      className="rounded-lg bg-purple-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-purple-600 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      Bajarish
+                    </button>
+                  </div>
                 )
               }
-              return null
+              
+              if (e.adImzosi) return adNode;
+              return null;
             }
 
+            if (e.adImzosi) return adNode;
             return <span className="text-[10px] text-slate-300 italic">Kutilmoqda...</span>
         })()}
       </td>
@@ -474,20 +480,10 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       }
     }
 
-    // Hamma mavjud ishlar bajarilganligini tekshiramiz
-    const needsHaftalik = !!entry.haftalikJadval && !entry.doneHaftalik
-    const needsYillik = !!entry.yillikJadval && !entry.doneYillik
-    const needsYangi = !!entry.yangiIshlar && !entry.doneYangi
-    const needsKmo = !!entry.kmoBartaraf && !entry.doneKmo
-    const needsMajburiy = !!entry.majburiyOzgarish && !entry.doneMajburiy
-
-    const allDone = !needsHaftalik && !needsYillik && !needsYangi && !needsKmo && !needsMajburiy
-
-    if (allDone) {
-      entry.bajarildiShn = session.fullName
-      entry.bajarildiImzo = session.fullName
-      entry.adImzosi = session.fullName
-    }
+    // Har safar ish bajarilganda, Shn imzosi yangilanadi va AD imzosi o'chiriladi (dispetcher qayta tasdiqlashi uchun)
+    entry.bajarildiShn = session.fullName
+    entry.bajarildiImzo = session.fullName
+    entry.adImzosi = ''
 
     setEntries(newEntries)
     setCompletionIdx(null)
