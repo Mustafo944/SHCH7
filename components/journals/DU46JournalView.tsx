@@ -1185,33 +1185,9 @@ export function DU46JournalView({
                 </button>
               )}
 
-              {/* Bug #8 fix: Dispetcherga yuborish tugmasi — BB uchun, tayyor qatorlar bo'lsa ko'rinadi */}
-              {isBB && tasdiqlanganCount > 0 && !isMonthInPast(journalMonth) && (
-                <button
-                  onClick={handleDispetchergaYuborish}
-                  className="ml-auto flex items-center gap-2 rounded-xl bg-purple-500 px-4 py-2.5 text-xs font-black text-white hover:bg-purple-600 transition-all shadow-lg shadow-purple-500/20 active:scale-95 border border-transparent"
-                >
-                  <CheckCircle2 size={14} strokeWidth={3} />
-                  <span className="uppercase tracking-widest">Dispetcherga yuborish ({tasdiqlanganCount})</span>
-                </button>
-              )}
             </div>
           )
         })()}
-
-        {/* Dispetcher uchun qabul qilish tugmasi */}
-        {isDispatcher && kutilayotganCount > 0 && (
-          <div className="mt-6">
-            <button
-              onClick={handleDispetcherQabulQilish}
-              className="flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-3 text-sm font-black text-white hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
-            >
-              <CheckCircle2 size={16} strokeWidth={3} />
-              <span>Qabul qilish ({kutilayotganCount} ta yozuv)</span>
-            </button>
-          </div>
-        )}
-
 
       </div>
 
