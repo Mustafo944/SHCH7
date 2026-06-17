@@ -237,7 +237,6 @@ export function DU46JournalView({
           if (emptyIndex !== -1) {
             n[emptyIndex] = {
               ...n[emptyIndex],
-              kamchilik: taskContext.taskText || '',
               linkedReportId: taskContext.reportId,
               linkedEntryIndex: taskContext.entryIndex,
               linkedTaskType: taskContext.taskType,
@@ -246,7 +245,6 @@ export function DU46JournalView({
           } else {
             // Append a new row if no empty rows
             const newRow = EMPTY_DU46(journalMonth)
-            newRow.kamchilik = taskContext.taskText || ''
             newRow.linkedReportId = taskContext.reportId
             newRow.linkedEntryIndex = taskContext.entryIndex
             newRow.linkedTaskType = taskContext.taskType
@@ -864,7 +862,7 @@ export function DU46JournalView({
                 const hasRightToFix = isExactCreator || (e.approvalChain && e.approvalChain.includes(userRole))
 
                 const hasNoCreator = !e.createdByRole && !e.kamchilik && !e.oyKun1 && !e.soatMinut1
-                const canWriteCol3 = isCurrentMonth && !isCol3Finished(e) && (iAmRoleCreator || hasNoCreator) && !isDispatcher
+                const canWriteCol3 = isCurrentMonth && !e.kamchilikBajarildi && !isDispatcher
 
                 // Bug #5 fix: o'tgan oylar uchun 12-ustun ham yopiq bo'lishi kerak
                 const canWriteCol12 = isCurrentMonth && !isCol12Finished(e) && isCol3Finished(e) && !isDispatcher && hasRightToFix
