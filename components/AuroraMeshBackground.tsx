@@ -6,11 +6,17 @@
  */
 export function AuroraMeshBackground() {
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-      <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#ff7eb3] blur-[120px] opacity-30 mix-blend-multiply animate-pulse-slow"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-[#8e44ad] blur-[120px] opacity-30 mix-blend-multiply"></div>
-      <div className="absolute top-[20%] right-[20%] w-[40%] h-[40%] rounded-full bg-[#4facfe] blur-[100px] opacity-20 mix-blend-multiply"></div>
-      <div className="absolute bottom-[20%] left-[20%] w-[50%] h-[50%] rounded-full bg-[#00f2fe] blur-[100px] opacity-20 mix-blend-multiply"></div>
-    </div>
+    <div 
+      className="absolute inset-0 z-0 overflow-hidden pointer-events-none"
+      style={{
+        background: `
+          radial-gradient(circle at 10% 10%, rgba(255, 126, 179, 0.25) 0%, transparent 50%),
+          radial-gradient(circle at 90% 90%, rgba(142, 68, 173, 0.25) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(79, 172, 254, 0.15) 0%, transparent 40%),
+          radial-gradient(circle at 20% 80%, rgba(0, 242, 254, 0.15) 0%, transparent 40%)
+        `,
+        backgroundColor: 'var(--bg-primary)'
+      }}
+    />
   )
 }

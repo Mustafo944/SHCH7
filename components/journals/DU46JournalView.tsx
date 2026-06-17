@@ -197,7 +197,9 @@ export function DU46JournalView({
     } catch (err) {
       console.error('Journal yuklash xatosi:', err)
     } finally {
-      if (!isSilent) setLoading(false)
+      if (!isSilent) {
+        setTimeout(() => setLoading(false), 50)
+      }
     }
   }, [stationId, journalMonth])
 

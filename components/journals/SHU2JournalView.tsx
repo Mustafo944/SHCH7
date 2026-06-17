@@ -151,7 +151,9 @@ export function SHU2JournalView({
     } catch (err) {
       console.error('❌ SHU-2 journal yuklash xatosi:', err)
     } finally {
-      if (!isSilent) setLoading(false)
+      if (!isSilent) {
+        setTimeout(() => setLoading(false), 50)
+      }
     }
   }, [stationId, journalMonth])
 
