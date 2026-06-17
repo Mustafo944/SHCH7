@@ -273,8 +273,7 @@ export function DU46JournalView({
     !!stationId && !!journalMonth
   )
 
-  // ── Yordamchi: qaysi rol yaratgan ─────────────────────────────────────────────
-  const getCreator = (e: DU46Entry): 'worker' | 'bekat_boshlighi' | 'yul_ustasi' | 'ech_xodimi' => e.createdByRole || 'worker'
+  const getCreator = (e: DU46Entry): string => e.createdByRole || 'worker'
 
   /** Joriy foydalanuvchi qatorni yaratgani (yozuvchi)mi?
    * Bug #4 fix: bekat_navbatchisi faqat tasdiqlovchi — creator emas.
@@ -284,7 +283,8 @@ export function DU46JournalView({
     const creator = getCreator(e)
     if (creator === 'yul_ustasi') return isYulUstasi
     if (creator === 'ech_xodimi') return isEchXodimi
-    if (creator === 'bekat_boshlighi') return isBB // isBB o'z ichiga bekat_navbatchisini ham oladi
+    if (creator === 'bekat_boshlighi' || creator === 'bekat_navbatchisi') return isBB
+    if (['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(creator)) return isWorker
     return creator === 'worker' && isWorker
   }
 
