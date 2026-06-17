@@ -146,6 +146,19 @@ const MemoizedJournalRow = React.memo(({
   handleBajarishClick: (index: number) => void;
   submitting: boolean;
 }) => {
+  const tasksCount = [!!e.haftalikJadval, !!e.yillikJadval, !!e.yangiIshlar, !!e.kmoBartaraf, !!e.majburiyOzgarish].filter(Boolean).length;
+  const doneCount = [e.doneHaftalik, e.doneYillik, e.doneYangi, e.doneKmo, e.doneMajburiy].filter(Boolean).length;
+  const isPartiallyDone = doneCount > 0 && doneCount < tasksCount;
+  
+  const isInProgressRow = (!!e.haftalikJadval && !e.doneHaftalik && e.inProgressHaftalik) ||
+                          (!!e.yillikJadval && !e.doneYillik && e.inProgressYillik) ||
+                          (!!e.yangiIshlar && !e.doneYangi && e.inProgressYangi) ||
+                          (!!e.kmoBartaraf && !e.doneKmo && e.inProgressKmo) ||
+                          (!!e.majburiyOzgarish && !e.doneMajburiy && e.inProgressMajburiy);
+
+  const showJarayonda = isInProgressRow || isPartiallyDone;
+  const needsAction = tasksCount > 0 && doneCount < tasksCount;
+
   return (
     <tr className="group border-b border-slate-100 hover:bg-slate-50 transition-colors">
       <td className="border-r border-slate-100 p-1 align-top">
@@ -167,6 +180,11 @@ const MemoizedJournalRow = React.memo(({
           {e.doneHaftalik && (
             <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateHaftalik ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
               <CheckCircle2 size={12} />
+            </div>
+          )}
+          {!e.doneHaftalik && !!e.haftalikJadval && showJarayonda && (
+            <div className="absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm bg-orange-400" title="Kutilmoqda">
+              <Clock size={12} />
             </div>
           )}
         </div>
@@ -193,6 +211,11 @@ const MemoizedJournalRow = React.memo(({
               <CheckCircle2 size={12} />
             </div>
           )}
+          {!e.doneYillik && !!e.yillikJadval && showJarayonda && (
+            <div className="absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm bg-orange-400" title="Kutilmoqda">
+              <Clock size={12} />
+            </div>
+          )}
         </div>
         {(!e.adImzosi && !isConfirmed && canEditPlan) && (
           <button
@@ -217,6 +240,11 @@ const MemoizedJournalRow = React.memo(({
               <CheckCircle2 size={12} />
             </div>
           )}
+          {!e.doneYangi && !!e.yangiIshlar && showJarayonda && (
+            <div className="absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm bg-orange-400" title="Kutilmoqda">
+              <Clock size={12} />
+            </div>
+          )}
         </div>
       </td>
       <td className="relative border-r border-slate-100 p-1 align-top">
@@ -232,6 +260,11 @@ const MemoizedJournalRow = React.memo(({
               <CheckCircle2 size={12} />
             </div>
           )}
+          {!e.doneKmo && !!e.kmoBartaraf && showJarayonda && (
+            <div className="absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm bg-orange-400" title="Kutilmoqda">
+              <Clock size={12} />
+            </div>
+          )}
         </div>
       </td>
       <td className="relative border-r border-slate-100 p-1 align-top">
@@ -245,6 +278,11 @@ const MemoizedJournalRow = React.memo(({
           {e.doneMajburiy && (
             <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateMajburiy ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
               <CheckCircle2 size={12} />
+            </div>
+          )}
+          {!e.doneMajburiy && !!e.majburiyOzgarish && showJarayonda && (
+            <div className="absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm bg-orange-400" title="Kutilmoqda">
+              <Clock size={12} />
             </div>
           )}
         </div>
@@ -265,21 +303,8 @@ const MemoizedJournalRow = React.memo(({
                formattedLateDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
             }
 
-            const hasHaftalik = !!e.haftalikJadval && !e.doneHaftalik
-            const hasYillik = !!e.yillikJadval && !e.doneYillik
-            const hasYangi = !!e.yangiIshlar && !e.doneYangi
-            const hasKmo = !!e.kmoBartaraf && !e.doneKmo
-            const hasMajburiy = !!e.majburiyOzgarish && !e.doneMajburiy
-
-            const needsAction = hasHaftalik || hasYillik || hasYangi || hasKmo || hasMajburiy
-            const isInProgressRow = (hasHaftalik && e.inProgressHaftalik) ||
-                                    (hasYillik && e.inProgressYillik) ||
-                                    (hasYangi && e.inProgressYangi) ||
-                                    (hasKmo && e.inProgressKmo) ||
-                                    (hasMajburiy && e.inProgressMajburiy)
-
             const adNode = e.adImzosi ? (
-              <div className={`flex flex-col items-center gap-1 ${needsAction || isInProgressRow ? 'mb-2' : ''}`}>
+              <div className="flex flex-col items-center gap-1">
                 <span className={`inline-flex items-center gap-1 whitespace-pre-wrap rounded-md px-2 py-1 text-[10px] font-bold border ${isLate ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
                   <CheckCircle2 size={12} /> {e.adImzosi}
                 </span>
@@ -290,10 +315,9 @@ const MemoizedJournalRow = React.memo(({
             ) : null;
 
             if (isConfirmed) {
-              if (isInProgressRow) {
-                return (
-                  <div className="flex flex-col items-center">
-                    {adNode}
+              if (needsAction) {
+                if (showJarayonda) {
+                  return (
                     <button
                       onClick={() => handleBajarishClick(i)}
                       disabled={submitting}
@@ -301,22 +325,17 @@ const MemoizedJournalRow = React.memo(({
                     >
                       Jarayonda
                     </button>
-                  </div>
-                )
-              }
+                  )
+                }
 
-              if (needsAction) {
                 return (
-                  <div className="flex flex-col items-center">
-                    {adNode}
-                    <button
-                      onClick={() => handleBajarishClick(i)}
-                      disabled={submitting}
-                      className="rounded-lg bg-purple-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-purple-600 transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      Bajarish
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleBajarishClick(i)}
+                    disabled={submitting}
+                    className="rounded-lg bg-purple-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-purple-600 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    Bajarish
+                  </button>
                 )
               }
               
@@ -480,10 +499,18 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       }
     }
 
-    // Har safar ish bajarilganda, Shn imzosi yangilanadi va AD imzosi o'chiriladi (dispetcher qayta tasdiqlashi uchun)
+    const tasksCount = [!!entry.haftalikJadval, !!entry.yillikJadval, !!entry.yangiIshlar, !!entry.kmoBartaraf, !!entry.majburiyOzgarish].filter(Boolean).length;
+    const doneCount = [entry.doneHaftalik, entry.doneYillik, entry.doneYangi, entry.doneKmo, entry.doneMajburiy].filter(Boolean).length;
+    const allDone = tasksCount > 0 && doneCount === tasksCount;
+
     entry.bajarildiShn = session.fullName
     entry.bajarildiImzo = session.fullName
-    entry.adImzosi = ''
+    
+    if (allDone) {
+      entry.adImzosi = session.fullName
+    } else {
+      entry.adImzosi = ''
+    }
 
     setEntries(newEntries)
     setCompletionIdx(null)
