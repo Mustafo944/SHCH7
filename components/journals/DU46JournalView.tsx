@@ -237,40 +237,70 @@ export function DU46JournalView({
       
       return null
     } else {
-      // 12-ustun:
-      // Qoida: 3-ustunda kimlar qatnashgan bo'lsa (yozuvchi + zanjir), 12-ustunda ham shu rollar qatnashishi kerak.
-      // Ulardan "Tugadi" deb yozgan odam olib tashlanadi (chunki u o'zi bajardi).
-      // Bug #3 fix: bekat_boshlighi yaratgan qatorlarda 12-ustun uchun DSP talab qilinmasligi kerak.
+      // ═══════════════════════════════════════════════════════════════════
+      // 12-USTUN TASDIQLASH MANTIQI
+      // ═══════════════════════════════════════════════════════════════════
+      //
+      // Qoidalar:
+      // 1) 3-ustunda kim qatnashgan bo'lsa (creator + chain), 12-ustunda ham shu rollar
+      //    "Tugadi" tugmasini bosishi va tasdiqlashi mumkin.
+      // 2) Kim "Tugadi" bosgan bo'lsa — o'sha rol pastdan qaytib tasdiqlamaydi.
+      // 3) Qolgan rollar chain tartibida tasdiqlaydi.
+      // 4) Eng OXIRIDA doim BEKAT NAVBATCHISI tasdiqlaydi
+      //    (agar BB o'zi Tugadi bosmagan bo'lsa).
+      // ═══════════════════════════════════════════════════════════════════
 
       const creatorRole = getCreator(e)
-      const col3Participants = new Set<string>()
+      const tugadiRole = e.bartarafByRole || creatorRole  // haqiqiy rol: 'katta_elektromexanik'
+      const tugadiName = e.bartarafImzo || ''              // ism: 'Olimov Olim'
+      const creatorName = e.kamchilikImzo || ''             // 3-ustunni boshlagan ism
 
-      if (creatorRole !== 'bekat_boshlighi') {
-        col3Participants.add(creatorRole)
+      // "Tugadi" bosgan odam = creator mi? (ism orqali aniqlash, chunki createdByRole='worker' ga map qilingan)
+      const creatorIsTugadiPresser =
+        creatorRole === tugadiRole ||
+        (creatorName !== '' && tugadiName !== '' && creatorName === tugadiName)
+
+      // Chain a'zo = Tugadi bosgan odam mi? (exact match — chain haqiqiy rollarni saqlaydi)
+      const isChainMemberTugadi = (role: string): boolean => role === tugadiRole
+
+      // Col12 uchun tasdiqlash kerak bo'lgan rollar ro'yxatini tuzamiz (tartib saqlanadi)
+      const requiredApprovers: string[] = []
+
+      // Creator (agar BB emas va Tugadi bosmagan bo'lsa)
+      if (creatorRole !== 'bekat_boshlighi' && !creatorIsTugadiPresser) {
+        requiredApprovers.push(creatorRole)
       }
-      chain.forEach(r => col3Participants.add(r))
 
-      const writerRole = e.bartarafByRole || getCreator(e)
+      // Chain a'zolari (Tugadi bosgan roldan boshqalari)
+      chain.forEach(r => {
+        if (!isChainMemberTugadi(r) && !requiredApprovers.includes(r)) {
+          requiredApprovers.push(r)
+        }
+      })
 
-      const requiredChainFor12 = Array.from(col3Participants).filter(r => r !== writerRole)
+      // Worker guruhi rollarini moslashtirish uchun yordamchi
+      const workerGroupRoles = ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik']
 
-      const nextRequiredRole = requiredChainFor12.find(r => !approvals.some(a => {
-        if (r === 'worker' && ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(a.role)) return true
-        return a.role === r
-      }))
+      // Hali tasdiqlamagan keyingi rolni topamiz
+      const nextRequired = requiredApprovers.find(r => {
+        return !approvals.some(a => {
+          // 'worker' sifatida saqlangan creator uchun — worker guruhidagi har qanday rol mos keladi
+          if (workerGroupRoles.includes(r) && workerGroupRoles.includes(a.role)) return true
+          return a.role === r
+        })
+      })
 
-      if (nextRequiredRole) return nextRequiredRole
+      if (nextRequired) return nextRequired
 
-      // Bug #3: agar col3Participants bo'sh bo'lsa (BB yaratgan, hech kim qo'shilmagan)
-      // yoki writerRole BB bo'lsa — DSP talab qilinmaydi, 3-ustundagi kabi mantiq.
-      const allParticipantsWriters = col3Participants.size === 0 || Array.from(col3Participants).every(r => r === writerRole)
-      if (allParticipantsWriters) return null
-
-      if (!e.bartarafBBTasdiqladi) return 'DSP'
+      // Barcha chain ishtirokchilari tasdiqladi — endi BB tasdiqlaydi
+      // Agar BB o'zi "Tugadi" bosgan bo'lsa — BB qayta tasdiqlamaydi
+      const bbRoles = ['bekat_boshlighi', 'bekat_navbatchisi']
+      if (!bbRoles.includes(tugadiRole) && !e.bartarafBBTasdiqladi) return 'DSP'
 
       return null
     }
   }
+
 
   const isFinalApprover = (e: DU46Entry, col: 3 | 12): boolean => {
     const nextRole = getNextApproverRole(e, col)
@@ -310,18 +340,9 @@ export function DU46JournalView({
     const nextRole = getNextApproverRole(e, col)
     if (!nextRole) return false
     if (nextRole === 'DSP') return isBB
-    if (nextRole === 'worker') {
-      // Agar 12-ustun bo'lsa va joriy foydalanuvchi "Tugadi" ni bosgan bo'lsa — tasdiqlay olmaydi
-      if (col === 12 && e.bartarafByRole) {
-        const tugadiBosganRol = e.bartarafByRole
-        const workerRoles = ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik']
-        const iAmTheTugadiUser = workerRoles.includes(tugadiBosganRol) && isWorker
-        if (iAmTheTugadiUser) return false
-      }
-      return isWorker
-    }
-    // Agar 12-ustun bo'lsa va joriy rol "Tugadi" bosgan rol bilan bir xil bo'lsa — tasdiqlay olmaydi
+    // Xavfsizlik: 12-ustunda "Tugadi" bosgan odam hech qachon tasdiqlay olmaydi
     if (col === 12 && e.bartarafByRole === userRole) return false
+    if (nextRole === 'worker') return isWorker
     return userRole === nextRole
   }
 
