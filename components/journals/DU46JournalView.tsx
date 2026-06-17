@@ -395,16 +395,25 @@ export function DU46JournalView({
 
   const removeRow = () => {
     if (entries.length <= 1) return
-    const last = entries[entries.length - 1]
-    if (last.kamchilik || last.bartarafInfo || last.yuborildi) return
-    setEntries(entries.slice(0, -1))
+    const lastIdx = entries.length - 1
+    const last = entries[lastIdx]
+    
+    // Boshlandi bosilgan bo'lsa o'chirib bo'lmaydi
+    if (last.kamchilikBajarildi) return
+    
+    // Ma'lumot yozilgan bo'lsa, faqat uni yaratgan odamgina o'chira oladi
+    const hasData = last.kamchilik || last.bartarafInfo
+    if (hasData && !isCreator(last)) return
+
+    const newEntries = entries.slice(0, -1)
+    saveEntries(newEntries, entries, { deletedIndex: lastIdx })
   }
 
   // ── Saqlash (optimistik & xavfsiz) ─────────────────────────────────────────────
   // Bug #6 fix: rollback uchun snapshot olamiz; allEntries snapshot ni closure'dan emas, useRef dan olamiz.
   const allEntriesRef = useCallback(() => allEntries, [allEntries])
 
-  const saveEntries = async (updated: DU46Entry[], prev: DU46Entry[]) => {
+  const saveEntries = async (updated: DU46Entry[], prev: DU46Entry[], options?: { deletedIndex?: number }) => {
     setEntries(updated)
     const prevAllEntries = allEntriesRef()
 
@@ -415,6 +424,11 @@ export function DU46JournalView({
 
       // 2. DB dagi joriy oydagi qatorlarni ajratish
       const dbMonthEntries = latestAllEntries.filter(e => e.journalMonth === journalMonth)
+
+      // Agar qator qasddan o'chirilgan bo'lsa, uni DB'dagi ro'yxatdan olib tashlaymiz
+      if (options?.deletedIndex !== undefined && options.deletedIndex < dbMonthEntries.length) {
+        dbMonthEntries.splice(options.deletedIndex, 1)
+      }
 
       // 3. Mahalliy va DB dagi qatorlarni birlashtirish
       const mergedMonthEntries = [...updated]
