@@ -110,7 +110,8 @@ export function AlsnKodJournalView({
     row.bajarildiAt = new Date().toISOString()
     n[idx] = row
     setEntries(n)
-    handleSave(n, true).then(() => { if (onAccepted) onAccepted() })
+    if (onAccepted) onAccepted()
+    handleSave(n, true)
   }
 
   const addRow = () => { if (!isWorker) return; const n = [...entries, EMPTY_ALSN_KOD()]; setEntries(n); }

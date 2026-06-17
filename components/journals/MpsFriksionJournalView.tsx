@@ -114,8 +114,8 @@ export function MpsFriksionJournalView({
     row.bajarildiAt = new Date().toISOString()
     n[idx] = row
     setEntries(n)
-    // Optimistic UI - avval ko'rsatamiz, keyin saqlaymiz (silent)
-    handleSave(n, true).then((success) => { if (success && onAccepted) onAccepted() })
+    if (onAccepted) onAccepted()
+    handleSave(n, true)
   }
 
   const addRow = () => { if (!isWorker) return; const n = [...entries, EMPTY_MPS_FRIKSION()]; setEntries(n); }

@@ -130,9 +130,8 @@ export function YerlatgichJournalView({
     row.bajarildiAt = new Date().toISOString()
     n[idx] = row
     setEntries(n)
-    handleSave(n, true).then(() => {
-      if (onAccepted) onAccepted()
-    })
+    if (onAccepted) onAccepted()
+    handleSave(n, true)
   }
 
   const addRow = () => {

@@ -233,15 +233,19 @@ export function SHU2JournalView({
       const newAllEntries = [...otherMonths, ...updatedWithMonth]
       setAllEntries(newAllEntries)
 
-      await upsertJournal(stationId, 'shu2', newAllEntries, userName)
-      setMsg('Tasdiqlandi!')
       onAccepted?.()
+      setMsg('Tasdiqlandi!')
       setTimeout(() => setMsg(null), 2000)
+
+      upsertJournal(stationId, 'shu2', newAllEntries, userName).catch(err => {
+        console.error('❌ SHU-2 Tasdiqlash xatosi:', err)
+        setEntries(prev)
+        setMsg(err instanceof Error ? err.message : 'Xatolik')
+        setTimeout(() => setMsg(null), 3000)
+      })
     } catch (err) {
-      console.error('❌ SHU-2 Tasdiqlash xatosi:', err)
+      console.error('❌ SHU-2 Local state xatosi:', err)
       setEntries(prev)
-      setMsg(err instanceof Error ? err.message : 'Xatolik')
-      setTimeout(() => setMsg(null), 3000)
     }
   }
 

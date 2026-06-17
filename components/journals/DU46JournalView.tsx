@@ -574,10 +574,9 @@ export function DU46JournalView({
       bartarafImzo: userName,
       bartarafByRole: userRole,
     }
-    saveEntries(updated, prev).then(() => {
-      showMsg('Bajarildi belgilandi!')
-      onAccepted?.()
-    }).catch(() => {})
+    if (onAccepted) onAccepted()
+    showMsg('Bajarildi belgilandi!')
+    saveEntries(updated, prev).catch(() => {})
   }
 
   const handleBartarafTasdiqlash = async (i: number) => {
