@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight, AlertTriangle, FileText } from 'lucide-react'
+import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight, AlertTriangle, FileText, ChevronRight } from 'lucide-react'
 import { getGlobalGraphics, getSchemasByStation, upsertReport, updateReportEntries } from '@/lib/supabase-db'
 import type { User, WorkReport, ReportEntry, StationSchema } from '@/types'
 import { supabase } from '@/lib/supabase'
@@ -1497,29 +1497,33 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session
 
               {supportedRequired.map(name => {
                 const isDone = visitedJournals.has(name)
+                const isJournalInProgress = name === 'DU-46' ? isInProgress : false
+
                 return (
                   <button
                     key={name}
                     onClick={() => setActiveJournal(SUPPORTED_JOURNALS[name])}
                     className={`w-full flex items-center justify-between rounded-2xl border p-5 transition-all active:scale-[0.98] ${isDone
                       ? 'border-emerald-200 bg-emerald-50/80'
-                      : isInProgress
+                      : isJournalInProgress
                         ? 'border-amber-200 bg-amber-50/80'
                         : 'border-purple-200 bg-purple-50/50 hover:bg-purple-100 hover:border-purple-300'
                       }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isDone ? 'bg-emerald-100 text-emerald-600' : isInProgress ? 'bg-amber-100 text-amber-600' : 'bg-purple-100 text-purple-600'}`}>
-                        {isDone ? <CheckCircle2 size={20} /> : <BookOpen size={20} />}
+                    <div className="flex items-center gap-4">
+                      <div className={`flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl ${isDone ? 'bg-emerald-100 text-emerald-600' : isJournalInProgress ? 'bg-amber-100 text-amber-500' : 'bg-white text-purple-600 shadow-sm'}`}>
+                        {isDone ? <CheckCircle2 size={24} /> : <BookOpen size={24} />}
                       </div>
-                      <div className="text-left">
-                        <span className="text-sm font-black text-slate-900">{JOURNAL_DISPLAY_NAMES[name] || name}</span>
-                        <p className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: isDone ? '#059669' : isInProgress ? '#d97706' : '#0284c7' }}>
-                          {isDone ? 'Yozuv kiritildi' : isInProgress ? 'Jarayonda' : 'Yozuv kiritish →'}
-                        </p>
+                      <div className="text-left flex flex-col">
+                        <span className="font-black text-slate-900 text-sm sm:text-base">{name} jurnali</span>
+                        <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${isDone ? 'text-emerald-500' : isJournalInProgress ? 'text-amber-500' : 'text-purple-600'}`}>
+                          {isJournalInProgress ? 'Jarayonda' : isDone ? 'Bajarildi' : 'Bajarish kerak'}
+                        </span>
                       </div>
                     </div>
-                    {isDone && <CheckCircle2 size={20} className="text-emerald-500" />}
+                    <div className="text-slate-300">
+                      {isDone ? <CheckCircle2 size={20} className="text-emerald-500" /> : <ChevronRight size={20} />}
+                    </div>
                   </button>
                 )
               })}
