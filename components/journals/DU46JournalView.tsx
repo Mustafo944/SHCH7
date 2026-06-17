@@ -578,7 +578,10 @@ export function DU46JournalView({
         kamchilikImzo: userName,
         approvalChain: chain,
         approvalsCol3: [],
-        approvalsCol12: []
+        approvalsCol12: [],
+        linkedReportId: e.linkedReportId || taskContext?.reportId,
+        linkedTaskType: e.linkedTaskType || taskContext?.taskType,
+        linkedEntryIndex: e.linkedEntryIndex ?? taskContext?.entryIndex,
       }
     }
     
@@ -588,9 +591,13 @@ export function DU46JournalView({
       showMsg(isEdit ? 'Tasdiqlash zanjiri yangilandi!' : 'Boshlandi belgilandi!')
       
       // taskContext bo'lsa, uni Jarayonda (In Progress) ga o'tkazamiz
-      if (!isEdit && e.linkedReportId && e.linkedTaskType) {
+      const activeReportId = e.linkedReportId || taskContext?.reportId;
+      const activeTaskType = e.linkedTaskType || taskContext?.taskType;
+      const activeEntryIndex = e.linkedEntryIndex ?? taskContext?.entryIndex;
+
+      if (!isEdit && activeReportId && activeTaskType && activeEntryIndex !== undefined) {
         import('@/lib/supabase-db').then(db => {
-          db.updateReportEntryInProgress(e.linkedReportId!, e.linkedEntryIndex!, e.linkedTaskType!)
+          db.updateReportEntryInProgress(activeReportId, activeEntryIndex, activeTaskType)
         }).catch(err => console.error("In progress error:", err))
         onAccepted?.(false, true)
       } else if (!isEdit) {
