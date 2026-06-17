@@ -321,7 +321,7 @@ const MemoizedJournalRow = React.memo(({
               }
               
               if (e.adImzosi) return adNode;
-              return null;
+              return <span className="text-[10px] text-slate-300 italic">Kutilmoqda...</span>;
             }
 
             if (e.adImzosi) return adNode;
