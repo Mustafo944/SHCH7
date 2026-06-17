@@ -12,8 +12,15 @@ export function getCurrentJournalMonth(): string {
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
 }
 
+// Bug #9 fix: string taqqoslash o'rniga sana asosida to'g'ri taqqoslash
 export function isMonthInPast(month: string): boolean {
-  return month < getCurrentJournalMonth()
+  const current = getCurrentJournalMonth()
+  if (!month || !current) return false
+  const [mYear, mMonth] = month.split('-').map(Number)
+  const [cYear, cMonth] = current.split('-').map(Number)
+  if (isNaN(mYear) || isNaN(mMonth) || isNaN(cYear) || isNaN(cMonth)) return false
+  if (mYear !== cYear) return mYear < cYear
+  return mMonth < cMonth
 }
 
 export function getJournalMonthLabel(month: string): string {

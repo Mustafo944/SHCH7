@@ -51,7 +51,7 @@ const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) 
 // EMPTY ENTRY FACTORY
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const EMPTY_DU46 = (): DU46Entry => ({
+const EMPTY_DU46 = (month?: string): DU46Entry => ({
   nomber: '',
   oyKun1: '', soatMinut1: '', kamchilik: '',
   oyKun2: '', soatMinut2: '', xabarUsuli: '',
@@ -65,6 +65,8 @@ const EMPTY_DU46 = (): DU46Entry => ({
   bartarafBBTasdiqladi: false, bartarafBBTasdiqladiAt: '', bartarafBBImzo: '', bartarafBBVaqt: '',
   // Umumiy
   yuborildi: false,
+  // Bug #16 fix: journalMonth ni boshdan belgilash
+  journalMonth: month,
 })
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -88,7 +90,7 @@ export function DU46JournalView({
   onClose: () => void
   onAccepted?: () => void
 }) {
-  const [entries, setEntries] = useState<DU46Entry[]>([EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46()])
+  const [entries, setEntries] = useState<DU46Entry[]>(() => Array.from({ length: 5 }, () => EMPTY_DU46(journalMonth)))
   const [allEntries, setAllEntries] = useState<DU46Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<string | null>(null)
@@ -132,14 +134,19 @@ export function DU46JournalView({
         const loadedAllEntries = j.entries as DU46Entry[]
         setAllEntries(loadedAllEntries)
 
-        const monthEntries = loadedAllEntries.filter(e => e.journalMonth === journalMonth)
+        // Bug #11 fix: eski qatorlarda journalMonth bo'lmasligi mumkin (migratsiyadan oldin saqlangan).
+        // Bunday qatorlarni joriy tanlangan oy uchun ko'rsatamiz (backward compatibility).
+        const monthEntries = loadedAllEntries.filter(
+          e => e.journalMonth === journalMonth || (!e.journalMonth && !loadedAllEntries.some(x => x.journalMonth))
+        )
 
         if (monthEntries.length > 0) {
           const allSubmitted = monthEntries.every(e => e.yuborildi)
           setEntries(prev => {
             const merged = [...monthEntries]
             if (allSubmitted) {
-              merged.push(EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46())
+              // Bug #16 fix: yangi bo'sh qatorlarga joriy oy beriladi
+              merged.push(EMPTY_DU46(journalMonth), EMPTY_DU46(journalMonth), EMPTY_DU46(journalMonth))
             }
             for (let i = 0; i < Math.max(merged.length, prev.length); i++) {
               const dbRow = merged[i]
@@ -149,7 +156,6 @@ export function DU46JournalView({
               } else if (dbRow && localRow) {
                 // Live (realtime) yangilanishlar barcha foydalanuvchilarda bir xil ko'rinishi uchun
                 // doim ma'lumotlar bazasidan kelgan eng so'nggi holatni olamiz.
-                // Shunda boshqa foydalanuvchi kiritgan o'zgarish darhol ekranda paydo bo'ladi.
                 merged[i] = dbRow
               }
             }
@@ -159,7 +165,8 @@ export function DU46JournalView({
           setEntries(prev => {
             const hasLocalEdits = prev.some(p => p.kamchilik || p.oyKun1 || p.bartarafInfo)
             if (hasLocalEdits && prev.length > 0) return prev
-            return [EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46()]
+            // Bug #16 fix: bo'sh qatorlarga joriy oy beriladi
+            return Array.from({ length: 5 }, () => EMPTY_DU46(journalMonth))
           })
         }
       } else {
@@ -167,7 +174,8 @@ export function DU46JournalView({
         setEntries(prev => {
           const hasLocalEdits = prev.some(p => p.kamchilik || p.oyKun1 || p.bartarafInfo)
           if (hasLocalEdits && prev.length > 0) return prev
-          return [EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46(), EMPTY_DU46()]
+          // Bug #16 fix: bo'sh qatorlarga joriy oy beriladi
+          return Array.from({ length: 5 }, () => EMPTY_DU46(journalMonth))
         })
       }
     } catch (err) {
@@ -198,12 +206,16 @@ export function DU46JournalView({
   // ── Yordamchi: qaysi rol yaratgan ─────────────────────────────────────────────
   const getCreator = (e: DU46Entry): 'worker' | 'bekat_boshlighi' | 'yul_ustasi' | 'ech_xodimi' => e.createdByRole || 'worker'
 
-  /** Joriy foydalanuvchi qatorni yaratgani (yozuvchi)mi? */
+  /** Joriy foydalanuvchi qatorni yaratgani (yozuvchi)mi?
+   * Bug #4 fix: bekat_navbatchisi faqat tasdiqlovchi — creator emas.
+   * Creator aniqlash uchun userRole ni to'g'ridan-to'g'ri tekshiramiz.
+   */
   const isCreator = (e: DU46Entry): boolean => {
     const creator = getCreator(e)
     if (creator === 'yul_ustasi') return isYulUstasi
     if (creator === 'ech_xodimi') return isEchXodimi
-    return (creator === 'worker' && isWorker) || (creator === 'bekat_boshlighi' && isBB)
+    if (creator === 'bekat_boshlighi') return userRole === 'bekat_boshlighi'
+    return creator === 'worker' && isWorker
   }
 
   // ── Yangi Dinamik Tasdiqlash Mantiqi ──
@@ -228,29 +240,34 @@ export function DU46JournalView({
       // 12-ustun:
       // Qoida: 3-ustunda kimlar qatnashgan bo'lsa (yozuvchi + zanjir), 12-ustunda ham shu rollar qatnashishi kerak.
       // Ulardan "Tugadi" deb yozgan odam olib tashlanadi (chunki u o'zi bajardi).
-      
+      // Bug #3 fix: bekat_boshlighi yaratgan qatorlarda 12-ustun uchun DSP talab qilinmasligi kerak.
+
       const creatorRole = getCreator(e)
       const col3Participants = new Set<string>()
-      
+
       if (creatorRole !== 'bekat_boshlighi') {
         col3Participants.add(creatorRole)
       }
       chain.forEach(r => col3Participants.add(r))
 
       const writerRole = e.bartarafByRole || getCreator(e)
-      
+
       const requiredChainFor12 = Array.from(col3Participants).filter(r => r !== writerRole)
-      
+
       const nextRequiredRole = requiredChainFor12.find(r => !approvals.some(a => {
         if (r === 'worker' && ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(a.role)) return true
         return a.role === r
       }))
-      
+
       if (nextRequiredRole) return nextRequiredRole
-      
-      const isBBTasdiqladi = e.bartarafBBTasdiqladi
-      if (!isBBTasdiqladi) return 'DSP'
-      
+
+      // Bug #3: agar col3Participants bo'sh bo'lsa (BB yaratgan, hech kim qo'shilmagan)
+      // yoki writerRole BB bo'lsa — DSP talab qilinmaydi, 3-ustundagi kabi mantiq.
+      const allParticipantsWriters = col3Participants.size === 0 || Array.from(col3Participants).every(r => r === writerRole)
+      if (allParticipantsWriters) return null
+
+      if (!e.bartarafBBTasdiqladi) return 'DSP'
+
       return null
     }
   }
@@ -313,19 +330,21 @@ export function DU46JournalView({
     const n = [...entries]
     n[i] = { ...n[i], [field]: val }
 
-    // Birinchi marta yozayotganda createdByRole ni belgilaymiz
-    if (!n[i].createdByRole && (field === 'kamchilik' || field === 'oyKun1' || field === 'soatMinut1')) {
+    // Bug #17 fix: createdByRole ni istalgan maydon o'zgarganda belgilaymiz (faqat 3 ta maydon emas)
+    if (!n[i].createdByRole) {
       if (isYulUstasi) n[i].createdByRole = 'yul_ustasi'
       else if (isEchXodimi) n[i].createdByRole = 'ech_xodimi'
       else if (isElektromexanik) n[i].createdByRole = 'worker'
-      else if (isBB) n[i].createdByRole = 'bekat_boshlighi'
+      else if (userRole === 'bekat_boshlighi') n[i].createdByRole = 'bekat_boshlighi'
+      // Bug #4 fix: bekat_navbatchisi creator bo'la olmaydi
     }
 
     setEntries(n)
   }
 
   // ── Qator boshqaruvi ─────────────────────────────────────────────────────────
-  const addRow = () => { if (isCurrentMonth) setEntries([...entries, EMPTY_DU46()]) }
+  // Bug #16 fix: yangi qatorlarga journalMonth ni uzatamiz
+  const addRow = () => { if (isCurrentMonth) setEntries([...entries, EMPTY_DU46(journalMonth)]) }
 
   const removeRow = () => {
     if (entries.length <= 1) return
@@ -335,8 +354,12 @@ export function DU46JournalView({
   }
 
   // ── Saqlash (optimistik & xavfsiz) ─────────────────────────────────────────────
+  // Bug #6 fix: rollback uchun snapshot olamiz; allEntries snapshot ni closure'dan emas, useRef dan olamiz.
+  const allEntriesRef = useCallback(() => allEntries, [allEntries])
+
   const saveEntries = async (updated: DU46Entry[], prev: DU46Entry[]) => {
     setEntries(updated)
+    const prevAllEntries = allEntriesRef()
 
     try {
       // 1. Bazadagi eng so'nggi holatni olish (Concurrency himoyasi)
@@ -345,30 +368,50 @@ export function DU46JournalView({
 
       // 2. DB dagi joriy oydagi qatorlarni ajratish
       const dbMonthEntries = latestAllEntries.filter(e => e.journalMonth === journalMonth)
-      
+
       // 3. Mahalliy va DB dagi qatorlarni birlashtirish
       const mergedMonthEntries = [...updated]
       for (let i = 0; i < Math.max(mergedMonthEntries.length, dbMonthEntries.length); i++) {
         const local = mergedMonthEntries[i]
         const db = dbMonthEntries[i]
-        
+
         if (!local && db) {
           // Boshqa foydalanuvchi yangi qator qo'shgan
           mergedMonthEntries.push(db)
         } else if (local && db) {
-          // Ikkalasida ham bor. Tasdiqlashlarni yo'qotmaslik uchun DB dagi tasdiqlarni saqlab qolamiz
+          // Bug #7 fix: approvalsCol3/12 ham himoyalanadi — DB'da ko'proq imzo bo'lsa saqlanadi
+          const mergeApprovals = (
+            localList: typeof local.approvalsCol3,
+            dbList: typeof db.approvalsCol3
+          ) => {
+            if (!dbList || dbList.length === 0) return localList || []
+            if (!localList || localList.length === 0) return dbList
+            return dbList.length >= localList.length ? dbList : localList
+          }
+
+          let merged = { ...local }
+
+          // Tasdiqlash holatlarini DB'dan himoyalab olamiz (false→true yo'nalishda)
           if (!local.kamchilikBajarildi && db.kamchilikBajarildi) {
-            mergedMonthEntries[i] = { ...local, kamchilikBajarildi: db.kamchilikBajarildi, kamchilikBajarildiAt: db.kamchilikBajarildiAt, kamchilikImzo: db.kamchilikImzo, createdByRole: db.createdByRole }
+            merged = { ...merged, kamchilikBajarildi: db.kamchilikBajarildi, kamchilikBajarildiAt: db.kamchilikBajarildiAt, kamchilikImzo: db.kamchilikImzo, createdByRole: db.createdByRole }
           }
           if (!local.bartarafBajarildi && db.bartarafBajarildi) {
-            mergedMonthEntries[i] = { ...mergedMonthEntries[i], bartarafBajarildi: db.bartarafBajarildi, bartarafBajarildiAt: db.bartarafBajarildiAt, bartarafImzo: db.bartarafImzo }
+            merged = { ...merged, bartarafBajarildi: db.bartarafBajarildi, bartarafBajarildiAt: db.bartarafBajarildiAt, bartarafImzo: db.bartarafImzo, bartarafByRole: db.bartarafByRole }
           }
           if (!local.kamchilikBBTasdiqladi && db.kamchilikBBTasdiqladi) {
-            mergedMonthEntries[i] = { ...mergedMonthEntries[i], kamchilikBBTasdiqladi: db.kamchilikBBTasdiqladi, kamchilikBBTasdiqladiAt: db.kamchilikBBTasdiqladiAt, kamchilikBBImzo: db.kamchilikBBImzo, kamchilikBBVaqt: db.kamchilikBBVaqt }
+            merged = { ...merged, kamchilikBBTasdiqladi: db.kamchilikBBTasdiqladi, kamchilikBBTasdiqladiAt: db.kamchilikBBTasdiqladiAt, kamchilikBBImzo: db.kamchilikBBImzo, kamchilikBBVaqt: db.kamchilikBBVaqt }
           }
           if (!local.bartarafBBTasdiqladi && db.bartarafBBTasdiqladi) {
-            mergedMonthEntries[i] = { ...mergedMonthEntries[i], bartarafBBTasdiqladi: db.bartarafBBTasdiqladi, bartarafBBTasdiqladiAt: db.bartarafBBTasdiqladiAt, bartarafBBImzo: db.bartarafBBImzo, bartarafBBVaqt: db.bartarafBBVaqt }
+            merged = { ...merged, bartarafBBTasdiqladi: db.bartarafBBTasdiqladi, bartarafBBTasdiqladiAt: db.bartarafBBTasdiqladiAt, bartarafBBImzo: db.bartarafBBImzo, bartarafBBVaqt: db.bartarafBBVaqt }
           }
+          // Bug #7: imzolar massivini birlashtirish
+          merged = {
+            ...merged,
+            approvalsCol3: mergeApprovals(local.approvalsCol3, db.approvalsCol3),
+            approvalsCol12: mergeApprovals(local.approvalsCol12, db.approvalsCol12),
+          }
+
+          mergedMonthEntries[i] = merged
         }
       }
 
@@ -382,10 +425,11 @@ export function DU46JournalView({
 
       await upsertJournal(stationId, 'du46', newAllEntries, userName)
     } catch (err) {
+      // Bug #6 fix: snapshot'dan to'g'ri rollback
       console.error('Saqlash xatosi:', err)
       setEntries(prev)
-      setAllEntries(allEntries)
-      showMsg(err instanceof Error ? err.message : 'Xatolik', 3000)
+      setAllEntries(prevAllEntries)
+      showMsg(err instanceof Error ? err.message : 'Saqlashda xatolik yuz berdi', 3000)
       throw err
     }
   }
@@ -430,21 +474,25 @@ export function DU46JournalView({
   const handleKamchilikTasdiqlash = async (i: number) => {
     const prev = [...entries]
     const updated = [...entries]
-    const e = updated[i]
+    // Bug #1 fix: e ni joriy entries state'dan olamiz (stale closure muammosidan himoya)
+    const e = entries[i]
     const nextRole = getNextApproverRole(e, 3)
+
     if (isBB) {
+      // Bug #1 fix: kamchilikBBVaqt ni e'dan spread qilib olamiz (u update() orqali state'ga yozilgan)
       updated[i] = {
         ...e,
         kamchilikBBTasdiqladi: true,
         kamchilikBBTasdiqladiAt: new Date().toISOString(),
         kamchilikBBImzo: userName,
+        kamchilikBBVaqt: e.kamchilikBBVaqt, // explicit — chapdan qolib ketmasligi uchun
       }
     } else if (nextRole) {
       const newApprovals = [...(e.approvalsCol3 || [])]
       newApprovals.push({ role: nextRole, signedBy: userName, signedAt: new Date().toISOString() })
       updated[i] = { ...e, approvalsCol3: newApprovals }
     }
-    
+
     try {
       await saveEntries(updated, prev)
       showMsg('Tasdiqlandi!')
@@ -474,21 +522,25 @@ export function DU46JournalView({
   const handleBartarafTasdiqlash = async (i: number) => {
     const prev = [...entries]
     const updated = [...entries]
-    const e = updated[i]
+    // Bug #2 fix: e ni joriy entries state'dan olamiz
+    const e = entries[i]
     const nextRole = getNextApproverRole(e, 12)
+
     if (isBB) {
+      // Bug #2 fix: bartarafBBVaqt ni e'dan explicit yozamiz
       updated[i] = {
         ...e,
         bartarafBBTasdiqladi: true,
         bartarafBBTasdiqladiAt: new Date().toISOString(),
         bartarafBBImzo: userName,
+        bartarafBBVaqt: e.bartarafBBVaqt, // explicit — chapdan qolib ketmasligi uchun
       }
     } else if (nextRole) {
       const newApprovals = [...(e.approvalsCol12 || [])]
       newApprovals.push({ role: nextRole, signedBy: userName, signedAt: new Date().toISOString() })
       updated[i] = { ...e, approvalsCol12: newApprovals }
     }
-    
+
     try {
       await saveEntries(updated, prev)
       showMsg('Tasdiqlandi!')
@@ -616,7 +668,10 @@ export function DU46JournalView({
   // ── COMPUTED VALUES ───────────────────────────────────────────────────────────
 
   const hasAnyEntry = entries.some(e => e.kamchilik || e.bartarafInfo)
-  const tasdiqlanganCount = entries.filter(e => !e.yuborildi && (e.kamchilik || e.bartarafInfo) && e.kamchilikBBTasdiqladi && e.bartarafBBTasdiqladi).length
+  // Dispetcherga yuborish uchun tayyor qatorlar (ikkala ustun ham tasdiqlangan, hali yuborilmagan)
+  const tasdiqlanganCount = entries.filter(
+    e => !e.yuborildi && (e.kamchilik || e.bartarafInfo) && isCol3Finished(e) && isCol12Finished(e)
+  ).length
   const kutilayotganCount = entries.filter(e => e.yuborildi && !e.dispetcherQabulQildi).length
 
   // ── RENDER ────────────────────────────────────────────────────────────────────
@@ -637,7 +692,14 @@ export function DU46JournalView({
               Faqat ko&apos;rish (o&apos;tgan oy)
             </span>
           )}
-          {msg && <span className={`text-xs font-bold px-3 py-1 rounded-full border ${msg.includes('!') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>{msg}</span>}
+          {/* Bug #13 fix: xatolik xabarlari qizil, muvaffaqiyat xabarlari yashil */}
+          {msg && (
+            <span className={`text-xs font-bold px-3 py-1 rounded-full border transition-all ${
+              msg.toLowerCase().includes('xato') || msg.toLowerCase().includes('error')
+                ? 'bg-red-50 text-red-600 border-red-100'
+                : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+            }`}>{msg}</span>
+          )}
         </div>
       </div>
 
@@ -702,7 +764,8 @@ export function DU46JournalView({
                 const hasNoCreator = !e.createdByRole && !e.kamchilik && !e.oyKun1 && !e.soatMinut1
                 const canWriteCol3 = isCurrentMonth && !isCol3Finished(e) && (iAmRoleCreator || hasNoCreator) && !isDispatcher
 
-                const canWriteCol12 = !isCol12Finished(e) && isCol3Finished(e) && !isDispatcher && hasRightToFix
+                // Bug #5 fix: o'tgan oylar uchun 12-ustun ham yopiq bo'lishi kerak
+                const canWriteCol12 = isCurrentMonth && !isCol12Finished(e) && isCol3Finished(e) && !isDispatcher && hasRightToFix
 
                 const canWriteMiddle = isCurrentMonth && !isDispatcher && !isCol12Finished(e) && (hasRightToFix || hasNoCreator)
 
@@ -1043,7 +1106,7 @@ export function DU46JournalView({
           const lastHasData = last.kamchilik || last.bartarafInfo
           const canRemove = entries.length > 1 && !lastHasData && !isMonthInPast(journalMonth)
           return (
-            <div className="mt-6 flex items-center gap-3">
+            <div className="mt-6 flex flex-wrap items-center gap-3">
               {!isMonthInPast(journalMonth) && (
                 <button onClick={addRow} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm active:scale-95">
                   <Plus size={14} strokeWidth={3} /> <span className="uppercase tracking-widest">Qator qo&apos;shish</span>
@@ -1058,9 +1121,34 @@ export function DU46JournalView({
                   <Trash2 size={14} strokeWidth={3} /> <span className="uppercase tracking-widest">Qator o&apos;chirish</span>
                 </button>
               )}
+
+              {/* Bug #8 fix: Dispetcherga yuborish tugmasi — BB uchun, tayyor qatorlar bo'lsa ko'rinadi */}
+              {isBB && tasdiqlanganCount > 0 && !isMonthInPast(journalMonth) && (
+                <button
+                  onClick={handleDispetchergaYuborish}
+                  className="ml-auto flex items-center gap-2 rounded-xl bg-purple-500 px-4 py-2.5 text-xs font-black text-white hover:bg-purple-600 transition-all shadow-lg shadow-purple-500/20 active:scale-95 border border-transparent"
+                >
+                  <CheckCircle2 size={14} strokeWidth={3} />
+                  <span className="uppercase tracking-widest">Dispetcherga yuborish ({tasdiqlanganCount})</span>
+                </button>
+              )}
             </div>
           )
         })()}
+
+        {/* Dispetcher uchun qabul qilish tugmasi */}
+        {isDispatcher && kutilayotganCount > 0 && (
+          <div className="mt-6">
+            <button
+              onClick={handleDispetcherQabulQilish}
+              className="flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-3 text-sm font-black text-white hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+            >
+              <CheckCircle2 size={16} strokeWidth={3} />
+              <span>Qabul qilish ({kutilayotganCount} ta yozuv)</span>
+            </button>
+          </div>
+        )}
+
 
       </div>
 

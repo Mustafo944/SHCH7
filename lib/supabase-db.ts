@@ -767,11 +767,18 @@ export async function getJournal(
     .select(JOURNAL_COLUMNS)
     .eq('station_id', stationId)
     .eq('journal_type', journalType)
-    .single()
+    .maybeSingle() // Bug #14 fix: .single() o'rniga .maybeSingle() ishlatamiz
+    // .single() hech narsa topilmasa ham xato beradi (PGRST116).
+    // .maybeSingle() esa hech narsa topilmasa null qaytaradi, xato bermaydi.
 
-  if (error || !data) return null
+  if (error) {
+    console.error('getJournal xatosi:', error.message)
+    return null
+  }
+  if (!data) return null
   return mapDbJournal(data as DbJournalRow)
 }
+
 
 export async function getPendingJournalCounts(
   stationId: string,

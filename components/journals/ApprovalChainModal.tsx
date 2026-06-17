@@ -11,6 +11,7 @@ export interface ApprovalChainModalProps {
 const AVAILABLE_ROLES = [
   { id: 'katta_elektromexanik', label: 'Katta elektromexanik' },
   { id: 'elektromexanik', label: 'Elektromexanik' },
+  { id: 'worker', label: 'Elektromontyor' },
   { id: 'bekat_boshlighi', label: 'Bekat boshlig\'i' },
   { id: 'yul_ustasi', label: 'Yo\'l ustasi' },
   { id: 'ech_xodimi', label: 'ECH xodimi' },
@@ -42,11 +43,16 @@ export function ApprovalChainModal({ initialChain, isEdit, creatorRole, onCancel
             const idx = chain.indexOf(r.id)
             const isSelected = idx !== -1
 
+            // Bug #10 fix: bir turdagi rollar bir-birini chiqarib tashlaydi
+            // (elektromexanik, katta_elektromexanik va worker bitta guruh)
+            const WORKER_GROUP = ['worker', 'elektromexanik', 'katta_elektromexanik']
+            const isCreatorInWorkerGroup = WORKER_GROUP.includes(creatorRole)
+            const isRoleInWorkerGroup = WORKER_GROUP.includes(r.id)
+
             let isDisabled = false
             if (creatorRole === r.id) isDisabled = true // O'zining roli
-            // EM bo'lsa Katta EM ni o'chiradi va aksincha
-            if (creatorRole === 'elektromexanik' && r.id === 'katta_elektromexanik') isDisabled = true
-            if (creatorRole === 'katta_elektromexanik' && r.id === 'elektromexanik') isDisabled = true
+            // Xodim guruhidagi rol creator bo'lsa, boshqa xodim guruh rollarini o'chiramiz
+            if (isCreatorInWorkerGroup && isRoleInWorkerGroup && creatorRole !== r.id) isDisabled = true
 
             return (
               <button
