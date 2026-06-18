@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 // jsPDF va autoTable faqat handleDownloadPDF ichida dynamic import() orqali yuklanadi (~400KB bundle tejash)
 import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, type ParsedTaskItem } from '@/lib/reja-data'
 import { MONTHS } from '@/lib/constants'
+import { useToast } from '@/lib/hooks/useToast'
 import dynamic from 'next/dynamic'
 
 // JournalView komponentlari lazy load qilinadi (~145KB bundle tejash)
@@ -1015,9 +1016,10 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
   sababli: WorkerTaskItem[]
   onClose: () => void
   onTaskClick?: (task: WorkerTaskItem) => void
-  onTasksUpdated?: () => void
+  onTasksUpdated?: () => Promise<void> | void
   stationName?: string
 }) {
+  const toast = useToast()
   const [promptMode, setPromptMode] = useState<boolean>(false)
   const [promptTask, setPromptTask] = useState<WorkerTaskItem | null>(null)
   const [promptReason, setPromptReason] = useState<string>('')
