@@ -177,7 +177,10 @@ export default function DispatcherPage() {
       const isPending = !r.confirmedAt && !r.rejectedAt && r.entries.some(e =>
         (e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish) && !e.adImzosi
       )
-      const hasPendingDaily = r.entries.some(e => e.bajarildiShn && !e.adImzosi)
+      const hasPendingDaily = r.entries.some(e => 
+        (e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish || e.bajarildiShn) &&
+        e.bajarildiShn && !e.adImzosi
+      )
       if (isPending || hasPendingDaily) {
         counts[r.stationId] = (counts[r.stationId] || 0) + 1
       }

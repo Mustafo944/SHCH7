@@ -47,7 +47,12 @@ export function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow, onR
   const isRejected = !!report.rejectedAt
   const isPlanPending = !report.confirmedAt && !isRejected
   const isAccepted = !!report.confirmedAt
-  const pendingDailyCount = (report.entries || []).filter(e => e.bajarildiShn && !e.adImzosi).length
+  
+  // Faqat jadvallari bor yoki bajarilgan ishlar bor qatorlarni hisobga olamiz (bo'sh qatorlardagi tasodifiy bajarildi larni inkor etish uchun)
+  const validEntries = (report.entries || []).filter((e: ReportEntry) => 
+    e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish || e.bajarildiShn
+  )
+  const pendingDailyCount = validEntries.filter((e: ReportEntry) => e.bajarildiShn && !e.adImzosi).length
 
   // Status belgisi va rangi
   const statusIcon = isRejected
@@ -108,14 +113,14 @@ export function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow, onR
             <span className="text-xs text-slate-400">Ishchi: <span className="font-bold text-slate-600">{report.workerName}</span></span>
 
             <div className="flex gap-2">
-              {/* Qabul qilish tugmasi — faqat kutilmoqda yoki rad qilingan bo'lsa */}
-              {(isPlanPending || isRejected) && (
+              {/* Qabul qilish tugmasi — kutilmoqda, rad qilingan YOKI tasdiqlanmagan ishlar bo'lsa */}
+              {(isPlanPending || isRejected || pendingDailyCount > 0) && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onConfirm() }}
                   className="flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95"
                 >
                   <CheckCircle2 size={14} />
-                  Qabul Qilish
+                  {isPlanPending || isRejected ? 'Rejani Qabul Qilish' : 'Ishlarni Tasdiqlash'}
                 </button>
               )}
 
@@ -242,7 +247,7 @@ export function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow, onR
                   </tr>
                 </thead>
                 <tbody>
-                  {(report.entries || []).filter(e => e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish).map((e, idx) => {
+                  {(report.entries || []).filter(e => e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish || e.bajarildiShn).map((e, idx) => {
                     return (
                       <tr key={idx} className="border-b border-slate-100 hover:bg-white transition-colors">
                         <td className="border-r border-slate-200 p-2 text-center font-bold text-slate-400">{e.ragat}</td>
