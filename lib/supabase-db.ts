@@ -1002,7 +1002,12 @@ export async function getPendingJournalCounts(
                   chain.forEach(r => col3Participants.add(r))
                   
                   const writerRole = e.bartarafByRole || getCreator(e)
-                  col3Participants.delete(writerRole)
+                  const workerRoles = ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik']
+                  if (workerRoles.includes(writerRole)) {
+                    workerRoles.forEach(wr => col3Participants.delete(wr))
+                  } else {
+                    col3Participants.delete(writerRole)
+                  }
                   
                   if (col3Participants.has(userRoleToCheck) || (['elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(userRoleToCheck) && col3Participants.has('worker'))) {
                     isParticipant = true
