@@ -610,7 +610,7 @@ export default function DispatcherPage() {
                       <div className="min-h-[400px]">
                         {selectedReportType === 'oylik' && (
                           <ReportList
-                            reports={allReports.filter(r => r.stationId === selectedStation)}
+                            reports={allReports.filter(r => r.stationId === selectedStation && !r.rejectedAt)}
                             onConfirm={handleConfirmReport}
                             onConfirmRow={handleConfirmEntry}
                             onReject={handleRejectReport}
