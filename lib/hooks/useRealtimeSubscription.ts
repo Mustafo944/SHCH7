@@ -58,7 +58,7 @@ export function useRealtimeSubscription(
           (payload) => {
             const latestCfg = configsRef.current.find(c => c.channelName === cfg.channelName && c.table === cfg.table)
             if (latestCfg) {
-              // Debounce event by 500ms to prevent UI freezing on mass updates
+              // Debounce event by 300ms to prevent UI freezing on mass updates
               const timeoutKey = `${cfg.channelName}_${cfg.table}`
               if (timeoutsRef.current[timeoutKey]) {
                 clearTimeout(timeoutsRef.current[timeoutKey])
@@ -66,7 +66,7 @@ export function useRealtimeSubscription(
               timeoutsRef.current[timeoutKey] = setTimeout(() => {
                 latestCfg.onEvent(payload)
                 delete timeoutsRef.current[timeoutKey]
-              }, 1000)
+              }, 300)
             }
           }
         )

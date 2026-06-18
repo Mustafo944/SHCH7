@@ -370,6 +370,8 @@ export async function upsertReport(
     year: report.year,
     entries: report.entries,
     submitted_at: new Date().toISOString(),
+    rejected_at: null, // Qayta yuborilganda rad etish statusini tozalash
+    rejected_by: null,
   };
   if (report.id) payload.id = report.id;
 
