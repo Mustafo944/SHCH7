@@ -1052,19 +1052,29 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
     if (!task.reportId) return
     setIsUpdating(true)
     try {
-      const { data: report } = await supabase.from('work_reports').select('entries').eq('id', task.reportId).single()
+      const { data: report, error: fetchErr } = await supabase.from('work_reports').select('entries').eq('id', task.reportId).single()
+      if (fetchErr) throw fetchErr
       if (!report) return
 
       const newEntries = [...report.entries]
       const entryIndex = newEntries.findIndex((e: ReportEntry) => e.ragat === task.entry.ragat)
-      if (entryIndex === -1) return
+      if (entryIndex === -1) {
+        toast.error('Topilmadi: ' + task.entry.ragat)
+        return
+      }
 
       updateFn(newEntries[entryIndex])
 
-      await supabase.from('work_reports').update({ entries: newEntries }).eq('id', task.reportId)
-      onTasksUpdated?.()
-    } catch (err) {
+      const { error: updateErr } = await supabase.from('work_reports').update({ entries: newEntries }).eq('id', task.reportId)
+      if (updateErr) throw updateErr
+      
+      if (onTasksUpdated) {
+        await onTasksUpdated()
+      }
+      toast.success('Sabab saqlandi')
+    } catch (err: any) {
       console.error('Update failed:', err)
+      toast.error('Xatolik: ' + err.message)
     } finally {
       setIsUpdating(false)
       setPromptMode(false)
