@@ -5,11 +5,17 @@ import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, Bo
 import { getGlobalGraphics, getSchemasByStation, upsertReport, updateReportEntries } from '@/lib/supabase-db'
 import type { User, WorkReport, ReportEntry, StationSchema } from '@/types'
 import { supabase } from '@/lib/supabase'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+// jsPDF va autoTable faqat handleDownloadPDF ichida dynamic import() orqali yuklanadi (~400KB bundle tejash)
 import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, type ParsedTaskItem } from '@/lib/reja-data'
 import { MONTHS } from '@/lib/constants'
-import { DU46JournalView, SHU2JournalView, YerlatgichJournalView, AlsnKodJournalView, MpsFriksionJournalView } from '@/components/JournalView'
+import dynamic from 'next/dynamic'
+
+// JournalView komponentlari lazy load qilinadi (~145KB bundle tejash)
+const DU46JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DU46JournalView), { ssr: false })
+const SHU2JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.SHU2JournalView), { ssr: false })
+const YerlatgichJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.YerlatgichJournalView), { ssr: false })
+const AlsnKodJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
+const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
 
 const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck, lang }: any) => {
   const [val, setVal] = useState(value)
@@ -1078,7 +1084,9 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
   }
 
 
-  const downloadPDF = () => {
+  const downloadPDF = async () => {
+    const { jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
     const doc = new jsPDF()
     
     // Roboto shriftini qoshamiz (yoki shunchaki standart shrift ishlatamiz)

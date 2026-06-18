@@ -26,7 +26,12 @@ const ALSNJournalView = dynamic(() => import('@/components/JournalView').then(mo
 const YerlatgichJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.YerlatgichJournalView), { ssr: false })
 const AlsnKodJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
 const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
-import { BigActionCard, HeaderCard, JournalForm, WorkerGraphicsView, WorkerSchemasView, WorkerTasksModal } from '@/components/worker/WorkerComponents'
+import { BigActionCard, HeaderCard } from '@/components/worker/WorkerComponents'
+// Og'ir komponentlar lazy load qilinadi (~85KB bundle tejash)
+const JournalForm = dynamic(() => import('@/components/worker/WorkerComponents').then(mod => mod.JournalForm), { ssr: false })
+const WorkerGraphicsView = dynamic(() => import('@/components/worker/WorkerComponents').then(mod => mod.WorkerGraphicsView), { ssr: false })
+const WorkerSchemasView = dynamic(() => import('@/components/worker/WorkerComponents').then(mod => mod.WorkerSchemasView), { ssr: false })
+const WorkerTasksModal = dynamic(() => import('@/components/worker/WorkerComponents').then(mod => mod.WorkerTasksModal), { ssr: false })
 import IncidentsView from '@/components/worker/IncidentsView'
 import { LibraryView } from '@/components/library/LibraryView'
 import {

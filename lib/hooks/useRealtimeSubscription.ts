@@ -66,7 +66,7 @@ export function useRealtimeSubscription(
               timeoutsRef.current[timeoutKey] = setTimeout(() => {
                 latestCfg.onEvent(payload)
                 delete timeoutsRef.current[timeoutKey]
-              }, 100)
+              }, 1000)
             }
           }
         )

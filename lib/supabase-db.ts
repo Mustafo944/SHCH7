@@ -581,9 +581,11 @@ export async function updateReportEntries(
 }
 
 export async function getStationPendingCount(): Promise<Record<string, number>> {
+  // Optimizatsiya: entries massivini yuklamaymiz — faqat station_id va id olamiz
+  // confirmed_at IS NULL filtri serverda ishlaydi, client'da faqat hisoblaymiz
   const { data, error } = await supabase
     .from('work_reports')
-    .select('station_id, entries, confirmed_at')
+    .select('station_id, id')
     .is('confirmed_at', null)
     .neq('week_label', 'Draft Oylik Reja');
 
@@ -591,16 +593,8 @@ export async function getStationPendingCount(): Promise<Record<string, number>> 
 
   const counts: Record<string, number> = {};
 
-  for (const r of data as Array<{ station_id: string; entries: ReportEntry[] }>) {
-    const hasPending = r.entries.some(
-      (e: ReportEntry) =>
-        (e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish) &&
-        !e.adImzosi
-    );
-
-    if (hasPending) {
-      counts[r.station_id] = (counts[r.station_id] || 0) + 1;
-    }
+  for (const r of data as Array<{ station_id: string; id: string }>) {
+    counts[r.station_id] = (counts[r.station_id] || 0) + 1;
   }
 
   return counts;
@@ -907,11 +901,22 @@ export async function getJournal(
 }
 
 
+// ── PENDING JOURNAL COUNTS CACHE ──────────────────────────────────────
+// Takroriy so'rovlarni oldini olish uchun 5 soniyalik kesh
+const _pendingJournalCache = new Map<string, { data: { du46: number; shu2: number }; ts: number }>()
+const PENDING_CACHE_TTL = 5000 // 5 soniya
+
 export async function getPendingJournalCounts(
   stationId: string,
   role: string,
   position?: string
 ): Promise<{ du46: number; shu2: number }> {
+  const cacheKey = `${stationId}_${role}_${position || ''}`
+  const cached = _pendingJournalCache.get(cacheKey)
+  if (cached && Date.now() - cached.ts < PENDING_CACHE_TTL) {
+    return cached.data
+  }
+
   try {
     const { data, error } = await supabase
       .from('station_journals')
@@ -1032,7 +1037,9 @@ export async function getPendingJournalCounts(
         }
       }
     }
-    return { du46, shu2 }
+    const result = { du46, shu2 }
+    _pendingJournalCache.set(cacheKey, { data: result, ts: Date.now() })
+    return result
   } catch (err) {
     return { du46: 0, shu2: 0 }
   }
