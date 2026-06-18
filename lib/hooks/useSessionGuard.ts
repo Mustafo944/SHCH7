@@ -59,14 +59,14 @@ export function useSessionGuard(expectedRole: Role | Role[]) {
     return () => { cancelled = true }
   }, [router])
 
-  const handleSignOut = useCallback(() => {
-    // 1. Server tomoniga so'rovni kutingizsiz yuborish (fon rejimida ishlaydi)
-    fetch('/api/auth/signout', { method: 'POST', keepalive: true }).catch(() => {})
+  const handleSignOut = useCallback(async () => {
+    // 1. Server tomoniga so'rovni yuborish va cookie tozalanishini kutish
+    await fetch('/api/auth/signout', { method: 'POST' }).catch(() => {})
     
-    // 2. Client tomonida lokal ma'lumotlarni tozalash (sinxrron)
-    signOut().catch(() => {})
+    // 2. Client tomonida lokal ma'lumotlarni tozalash
+    await signOut().catch(() => {})
     
-    // 3. Darhol sahifani qayta yuklash
+    // 3. Darhol sahifani qayta yuklash (cookie toza bo'lgani uchun to'g'ridan-to'g'ri login page ga tushadi)
     window.location.href = '/'
   }, [])
 
