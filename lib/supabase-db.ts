@@ -1013,8 +1013,8 @@ export async function getPendingJournalCounts(
                 if (isParticipant) {
                   if (!approvals.some(a => {
                     if (userRoleToCheck === a.role) return true
-                    if (['elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(userRoleToCheck) && a.role === 'worker') return true
-                    if (['elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(a.role) && userRoleToCheck === 'worker') return true
+                    const workerRoles = ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik']
+                    if (workerRoles.includes(userRoleToCheck) && workerRoles.includes(a.role)) return true
                     return false
                   })) return true
                 }
