@@ -310,10 +310,13 @@ const MemoizedJournalRow = React.memo(({
                formattedLateDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
             }
 
-            const adNode = e.adImzosi ? (
+            const allTasksDone = tasksCount > 0 && doneCount === tasksCount;
+            const effectiveAdImzosi = e.adImzosi || (allTasksDone ? (e.bajarildiImzo || e.bajarildiShn) : '');
+
+            const adNode = effectiveAdImzosi ? (
               <div className="flex flex-col items-center gap-1">
                 <span className={`inline-flex items-center gap-1 whitespace-pre-wrap rounded-md px-2 py-1 text-[10px] font-bold border ${isLate ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                  <CheckCircle2 size={12} /> {e.adImzosi}
+                  <CheckCircle2 size={12} /> {effectiveAdImzosi}
                 </span>
                 {isLate && formattedLateDate && (
                   <span className="text-[9px] font-bold text-orange-500">{formattedLateDate} da bajarildi</span>
@@ -346,11 +349,11 @@ const MemoizedJournalRow = React.memo(({
                 )
               }
               
-              if (e.adImzosi) return adNode;
+              if (effectiveAdImzosi) return adNode;
               return <span className="text-[10px] text-slate-300 italic">Kutilmoqda...</span>;
             }
 
-            if (e.adImzosi) return adNode;
+            if (effectiveAdImzosi) return adNode;
             return <span className="text-[10px] text-slate-300 italic">Kutilmoqda...</span>
         })()}
       </td>
