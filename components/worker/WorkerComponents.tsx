@@ -513,7 +513,12 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     entry.bajarildiShn = session.fullName
     entry.bajarildiImzo = session.fullName
 
-    // AD imzosi dispatcher sahifasida qo'yiladi, shuning uchun bu yerda o'zgartirmaymiz.
+    // Vaqtincha: Bajarildi bosganda dispetcher imzosini bajargan odamniki sifatida ko'rsatish
+    if (allDone) {
+      entry.adImzosi = session.fullName
+    } else {
+      entry.adImzosi = ''
+    }
 
     newEntries[idx] = entry
 
