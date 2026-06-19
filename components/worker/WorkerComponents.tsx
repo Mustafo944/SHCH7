@@ -484,7 +484,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     if (!reportId) return
     const oldEntries = entries.map(e => ({ ...e }))
     const newEntries = [...entries]
-    const entry = newEntries[idx]
+    const entry = { ...newEntries[idx] }
 
     // Agar taskType berilgan bo'lsa, faqat o'shani bajaramiz
     if (taskType === 'haftalik') entry.doneHaftalik = true
@@ -512,12 +512,10 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 
     entry.bajarildiShn = session.fullName
     entry.bajarildiImzo = session.fullName
-    
-    if (allDone) {
-      entry.adImzosi = session.fullName
-    } else {
-      entry.adImzosi = ''
-    }
+
+    // AD imzosi dispatcher sahifasida qo'yiladi, shuning uchun bu yerda o'zgartirmaymiz.
+
+    newEntries[idx] = entry
 
     setEntries(newEntries)
     setCompletionIdx(null)
