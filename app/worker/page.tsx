@@ -352,16 +352,16 @@ export default function WorkerPage() {
               {/* Profile & Stats Card */}
               <div className="rounded-[24px] bg-white/50 backdrop-blur-xl p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80">
                 <div className="mb-4 text-center sm:text-left">
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-900">{session?.fullName}</h2>
+                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900">{session?.fullName}</h2>
                   <div className="mt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3">
-                    <span className="text-[10px] sm:text-xs font-black text-purple-600 uppercase tracking-widest">
+                    <span className="text-xs sm:text-sm font-black text-purple-600 uppercase tracking-widest">
                       {session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : session?.role === 'elektromexanik' ? 'Elektromexanik' : session?.role === 'elektromontyor' ? 'Elektromontyor' : "Katta Elektromexanik"}
                     </span>
                     {stationName && stationName !== '...' && (
                       <>
                         <div className="h-1.5 w-1.5 rounded-full bg-slate-300" />
-                        <div className="flex items-center gap-1.5 rounded-xl bg-slate-50 px-3 py-1.5 border border-slate-100 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500">
-                          <MapIcon size={12} className="text-slate-400" />
+                        <div className="flex items-center gap-1.5 rounded-xl bg-slate-50 px-3 py-1.5 border border-slate-100 text-[11px] sm:text-xs font-black uppercase tracking-widest text-slate-500">
+                          <MapIcon size={14} className="text-slate-400" />
                           {stationName} BEKATI
                         </div>
                       </>
@@ -384,9 +384,9 @@ export default function WorkerPage() {
                       )}
                     </div>
                     <div>
-                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-blue-600">BUGUNGI ISHLAR RO'YXATI</p>
-                      <p className="text-xl sm:text-2xl font-black text-blue-600 mt-0.5 mb-0.5">{bugunReja.length}</p>
-                      <p className="text-[10px] sm:text-[11px] font-medium text-blue-700/70">
+                      <p className="text-[11px] sm:text-xs font-black uppercase tracking-widest text-blue-600">BUGUNGI ISHLAR RO'YXATI</p>
+                      <p className="text-3xl sm:text-4xl font-black text-blue-600 mt-1 mb-1">{bugunReja.length}</p>
+                      <p className="text-xs sm:text-[13px] font-medium text-blue-700/70">
                         {bugunReja.length > 0 ? `${bugunReja.length} ta bugungi ishlar ro'yxati. ${bugunReja.filter(b => b.done).length} ta ish bajarilgan` : "Bugun uchun ish yo'q"}
                       </p>
                     </div>
@@ -401,9 +401,9 @@ export default function WorkerPage() {
                       <AlertTriangle size={26} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-red-600">Bajarilmagan ishlar</p>
-                      <p className="text-xl sm:text-2xl font-black text-red-600 mt-0.5 mb-0.5">{qolibKetgan.length}</p>
-                      <p className="text-[10px] sm:text-[11px] font-medium text-red-700/70">
+                      <p className="text-[11px] sm:text-xs font-black uppercase tracking-widest text-red-600">Bajarilmagan ishlar</p>
+                      <p className="text-3xl sm:text-4xl font-black text-red-600 mt-1 mb-1">{qolibKetgan.length}</p>
+                      <p className="text-xs sm:text-[13px] font-medium text-red-700/70">
                         {qolibKetgan.length > 0 ? "Izoxsiz bajarilmagan ishlar" : "Barcha ishlar o'z vaqtida bajarilgan"}
                       </p>
                     </div>
@@ -418,9 +418,9 @@ export default function WorkerPage() {
                       <BookOpen size={26} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-orange-600">Sababli bajarilmagan</p>
-                      <p className="text-xl sm:text-2xl font-black text-orange-600 mt-0.5 mb-0.5">{sababliBajarilmagan.length}</p>
-                      <p className="text-[10px] sm:text-[11px] font-medium text-orange-700/70">
+                      <p className="text-[11px] sm:text-xs font-black uppercase tracking-widest text-orange-600">Sababli bajarilmagan</p>
+                      <p className="text-3xl sm:text-4xl font-black text-orange-600 mt-1 mb-1">{sababliBajarilmagan.length}</p>
+                      <p className="text-xs sm:text-[13px] font-medium text-orange-700/70">
                         {sababliBajarilmagan.length > 0 ? "Sabab ko'rsatilgan ishlar arxiv" : "Bunday ishlar yo'q"}
                       </p>
                     </div>
@@ -432,7 +432,7 @@ export default function WorkerPage() {
               <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-1">
                 <BigActionCard
                   title="Hisobot To'ldirish"
-                  desc="Sizda bajarilmagan ishlar bor! Ularni tasdiqlang."
+                  desc="Oylik ish reja to'ldirish va bajarish"
                   icon={<FileText size={24} strokeWidth={2} />}
                   onClick={() => setView('selectMonth')}
                   badge={missedTasksCount}

@@ -97,8 +97,8 @@ export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badg
         {icon}
       </div>
 
-      <h3 className="relative z-10 text-[15px] sm:text-lg font-black text-slate-800 tracking-tight group-hover:text-indigo-900">{title}</h3>
-      <p className="relative z-10 mt-1 text-[11px] sm:text-sm text-slate-600 leading-relaxed font-medium line-clamp-2 pr-6">
+      <h3 className="relative z-10 text-[17px] sm:text-xl font-black text-slate-800 tracking-tight group-hover:text-indigo-900">{title}</h3>
+      <p className="relative z-10 mt-1 text-[13px] sm:text-[15px] text-slate-600 leading-relaxed font-bold line-clamp-2 pr-6">
         {desc}
       </p>
 
