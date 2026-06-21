@@ -72,10 +72,26 @@ body {
   min-height: 100vh;
 }
 
-/* Keraksiz joylarda caret (|) chiqmasligi uchun */
-:not(input):not(textarea):not([contenteditable="true"]) {
+/* Faqat bosilmaydigan elementlarda caret va selection o'chiriladi */
+:not(input):not(textarea):not([contenteditable="true"]):not(select) {
   caret-color: transparent !important;
   user-select: none;
+}
+
+/* Input va textarea: fokus (kursor) aniq ko'rinsin */
+input:focus,
+textarea:focus {
+  outline: 2px solid #7c3aed !important;
+  outline-offset: 1px !important;
+  caret-color: #7c3aed !important;
+  background-color: #fff !important;
+}
+
+/* ReadOnly inputlarda fokus effekti bo'lmasin */
+input:read-only:focus,
+textarea:read-only:focus {
+  outline: none !important;
+  background-color: inherit !important;
 }
 
 /* ===== Custom Scrollbar ===== */

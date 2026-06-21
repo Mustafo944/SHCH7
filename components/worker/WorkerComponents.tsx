@@ -21,7 +21,7 @@ const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').
 const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck, lang }: any) => {
   const [val, setVal] = useState(value)
   useEffect(() => setVal(value), [value])
-  
+
   useEffect(() => {
     if (val !== value) {
       const timer = setTimeout(() => onChange(val), 50)
@@ -80,8 +80,8 @@ export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badg
   const theme = colorStyles[color] || colorStyles.purple
 
   return (
-    <button 
-      onClick={onClick} 
+    <button
+      onClick={onClick}
       className="group relative flex flex-col items-start p-6 bg-white/30 backdrop-blur-[40px] rounded-[32px] border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.07)] transition-all hover:bg-white/40 hover:shadow-[0_8px_32px_rgba(31,38,135,0.15)] hover:border-white/80 hover:-translate-y-1 active:scale-[0.98] text-left w-full h-full min-h-[140px] overflow-hidden"
     >
       {/* Glossy reflection line */}
@@ -134,15 +134,15 @@ export function HeaderCard({ title, subtitle, status, statusColor }: { title: st
   )
 }
 
-const MemoizedJournalRow = React.memo(({ 
-  e, 
-  i, 
-  isConfirmed, 
-  canEditPlan, 
-  updateEntry, 
-  openSelectModal, 
-  handleBajarishClick, 
-  submitting 
+const MemoizedJournalRow = React.memo(({
+  e,
+  i,
+  isConfirmed,
+  canEditPlan,
+  updateEntry,
+  openSelectModal,
+  handleBajarishClick,
+  submitting
 }: {
   e: ReportEntry;
   i: number;
@@ -156,12 +156,12 @@ const MemoizedJournalRow = React.memo(({
   const tasksCount = [!!e.haftalikJadval, !!e.yillikJadval, !!e.yangiIshlar, !!e.kmoBartaraf, !!e.majburiyOzgarish].filter(Boolean).length;
   const doneCount = [e.doneHaftalik, e.doneYillik, e.doneYangi, e.doneKmo, e.doneMajburiy].filter(Boolean).length;
   const isPartiallyDone = doneCount > 0 && doneCount < tasksCount;
-  
+
   const isInProgressRow = (!!e.haftalikJadval && !e.doneHaftalik && e.inProgressHaftalik) ||
-                          (!!e.yillikJadval && !e.doneYillik && e.inProgressYillik) ||
-                          (!!e.yangiIshlar && !e.doneYangi && e.inProgressYangi) ||
-                          (!!e.kmoBartaraf && !e.doneKmo && e.inProgressKmo) ||
-                          (!!e.majburiyOzgarish && !e.doneMajburiy && e.inProgressMajburiy);
+    (!!e.yillikJadval && !e.doneYillik && e.inProgressYillik) ||
+    (!!e.yangiIshlar && !e.doneYangi && e.inProgressYangi) ||
+    (!!e.kmoBartaraf && !e.doneKmo && e.inProgressKmo) ||
+    (!!e.majburiyOzgarish && !e.doneMajburiy && e.inProgressMajburiy);
 
   const showJarayonda = isInProgressRow || isPartiallyDone;
   const needsAction = tasksCount > 0 && doneCount < tasksCount;
@@ -302,59 +302,59 @@ const MemoizedJournalRow = React.memo(({
       </td>
       <td className="p-2 text-center align-middle">
         {(() => {
-            const isLate = !!(e.completedAfterMissedDateHaftalik || e.completedAfterMissedDateYillik || e.completedAfterMissedDateYangi || e.completedAfterMissedDateKmo || e.completedAfterMissedDateMajburiy)
-            const lateDateStr = e.completedAfterMissedDateHaftalik || e.completedAfterMissedDateYillik || e.completedAfterMissedDateYangi || e.completedAfterMissedDateKmo || e.completedAfterMissedDateMajburiy
-            let formattedLateDate = ''
-            if (lateDateStr) {
-               const d = new Date(lateDateStr)
-               formattedLateDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
-            }
+          const isLate = !!(e.completedAfterMissedDateHaftalik || e.completedAfterMissedDateYillik || e.completedAfterMissedDateYangi || e.completedAfterMissedDateKmo || e.completedAfterMissedDateMajburiy)
+          const lateDateStr = e.completedAfterMissedDateHaftalik || e.completedAfterMissedDateYillik || e.completedAfterMissedDateYangi || e.completedAfterMissedDateKmo || e.completedAfterMissedDateMajburiy
+          let formattedLateDate = ''
+          if (lateDateStr) {
+            const d = new Date(lateDateStr)
+            formattedLateDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
+          }
 
-            const allTasksDone = tasksCount > 0 && doneCount === tasksCount;
-            const effectiveAdImzosi = e.adImzosi || (allTasksDone ? (e.bajarildiImzo || e.bajarildiShn) : '');
+          const allTasksDone = tasksCount > 0 && doneCount === tasksCount;
+          const effectiveAdImzosi = e.adImzosi || (allTasksDone ? (e.bajarildiImzo || e.bajarildiShn) : '');
 
-            const adNode = effectiveAdImzosi ? (
-              <div className="flex flex-col items-center gap-1">
-                <span className={`inline-flex items-center gap-1 whitespace-pre-wrap rounded-md px-2 py-1 text-[10px] font-bold border ${isLate ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                  <CheckCircle2 size={12} /> {effectiveAdImzosi}
-                </span>
-                {isLate && formattedLateDate && (
-                  <span className="text-[9px] font-bold text-orange-500">{formattedLateDate} da bajarildi</span>
-                )}
-              </div>
-            ) : null;
+          const adNode = effectiveAdImzosi ? (
+            <div className="flex flex-col items-center gap-1">
+              <span className={`inline-flex items-center gap-1 whitespace-pre-wrap rounded-md px-2 py-1 text-[10px] font-bold border ${isLate ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                <CheckCircle2 size={12} /> {effectiveAdImzosi}
+              </span>
+              {isLate && formattedLateDate && (
+                <span className="text-[9px] font-bold text-orange-500">{formattedLateDate} da bajarildi</span>
+              )}
+            </div>
+          ) : null;
 
-            if (isConfirmed) {
-              if (needsAction) {
-                if (showJarayonda) {
-                  return (
-                    <button
-                      onClick={() => handleBajarishClick(i)}
-                      disabled={submitting}
-                      className="rounded-lg bg-amber-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-amber-600 transition-all active:scale-95 disabled:opacity-50 animate-pulse"
-                    >
-                      Jarayonda
-                    </button>
-                  )
-                }
-
+          if (isConfirmed) {
+            if (needsAction) {
+              if (showJarayonda) {
                 return (
                   <button
                     onClick={() => handleBajarishClick(i)}
                     disabled={submitting}
-                    className="rounded-lg bg-purple-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-purple-600 transition-all active:scale-95 disabled:opacity-50"
+                    className="rounded-lg bg-amber-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-amber-600 transition-all active:scale-95 disabled:opacity-50 animate-pulse"
                   >
-                    Bajarish
+                    Jarayonda
                   </button>
                 )
               }
-              
-              if (effectiveAdImzosi) return adNode;
-              return <span className="text-[10px] text-slate-300 italic">Kutilmoqda...</span>;
+
+              return (
+                <button
+                  onClick={() => handleBajarishClick(i)}
+                  disabled={submitting}
+                  className="rounded-lg bg-purple-500 px-3 py-1.5 text-[10px] font-black text-white shadow-sm hover:bg-purple-600 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  Bajarish
+                </button>
+              )
             }
 
             if (effectiveAdImzosi) return adNode;
-            return <span className="text-[10px] text-slate-300 italic">Kutilmoqda...</span>
+            return <span className="text-[10px] text-slate-300 italic">Kutilmoqda...</span>;
+          }
+
+          if (effectiveAdImzosi) return adNode;
+          return <span className="text-[10px] text-slate-300 italic">Kutilmoqda...</span>
         })()}
       </td>
     </tr>
@@ -420,7 +420,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     if (last.adImzosi) return
     setEntries(entries.slice(0, -1))
   }
-  
+
   const openSelectModal = useCallback((idx: number, type: '4-haftalik' | 'yillik') => {
     setModalIdx(idx)
     setModalType(type)
@@ -447,14 +447,14 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       try {
         await upsertReport({
           id: reportId || undefined,
-          workerId: draftReport?.workerId || session.id, 
-          workerName: draftReport?.workerName || session.fullName, 
-          workerPhone: draftReport?.workerPhone || session.phone || '', 
-          stationId, 
-          stationName, 
-          entries, 
-          month: monthStr, 
-          year: String(new Date().getFullYear()), 
+          workerId: draftReport?.workerId || session.id,
+          workerName: draftReport?.workerName || session.fullName,
+          workerPhone: draftReport?.workerPhone || session.phone || '',
+          stationId,
+          stationName,
+          entries,
+          month: monthStr,
+          year: String(new Date().getFullYear()),
           weekLabel: 'Oylik Reja'
         })
         onSubmit()
@@ -589,10 +589,10 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 
   return (
     <div className="space-y-6 animate-fade-up">
-      <HeaderCard 
-        title="Jurnal To'ldirish" 
-        subtitle={`${MONTHS[month]} · ${stationName}`} 
-        status={headerError || ""} 
+      <HeaderCard
+        title="Jurnal To'ldirish"
+        subtitle={`${MONTHS[month]} · ${stationName}`}
+        status={headerError || ""}
         statusColor={headerError ? "error" : "default"}
       />
       {/* Rad qilingan reja banneri */}
@@ -758,7 +758,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 
                           const newEntries = [...entries]
                           const row = { ...newEntries[modalIdx] }
-                          
+
                           if (modalType === '4-haftalik') {
                             row.haftalikJadval = text
                             if (task.jurnal) row.jurnalHaftalik = task.jurnal
@@ -766,7 +766,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                             row.yillikJadval = text
                             if (task.jurnal) row.jurnalYillik = task.jurnal
                           }
-                          
+
                           newEntries[modalIdx] = row
                           setEntries(newEntries)
 
@@ -783,11 +783,11 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                               workerId: draftReport?.workerId || session.id,
                               workerName: draftReport?.workerName || session.fullName,
                               workerPhone: draftReport?.workerPhone || session.phone || '',
-                              stationId, 
-                              stationName, 
-                              entries: newEntries, 
-                              month: monthStr, 
-                              year: String(new Date().getFullYear()), 
+                              stationId,
+                              stationName,
+                              entries: newEntries,
+                              month: monthStr,
+                              year: String(new Date().getFullYear()),
                               weekLabel: 'Draft Oylik Reja'
                             })
                           } catch (e) {
@@ -1013,7 +1013,7 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
   )
 }
 
-type WorkerTaskItem = { reportId: string, entry: ReportEntry, month: string, taskText?: string, type: 'haftalik'|'yillik'|'yangi'|'kmo'|'majburiy', reason?: string, completedDate?: string, done?: boolean }
+type WorkerTaskItem = { reportId: string, entry: ReportEntry, month: string, taskText?: string, type: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy', reason?: string, completedDate?: string, done?: boolean }
 
 export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskClick, onTasksUpdated, stationName }: {
   type: 'bugunBajarilgan' | 'qolibKetgan' | 'sababliBajarilmagan'
@@ -1075,7 +1075,7 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
 
       const { error: updateErr } = await supabase.from('work_reports').update({ entries: newEntries }).eq('id', task.reportId)
       if (updateErr) throw updateErr
-      
+
       if (onTasksUpdated) {
         await onTasksUpdated()
       }
@@ -1096,8 +1096,8 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
     updateTaskInDb(promptTask, (entry) => {
       const field = `missedReason${promptTask.type.charAt(0).toUpperCase() + promptTask.type.slice(1)}` as keyof ReportEntry
       const dateField = `missedReasonDate${promptTask.type.charAt(0).toUpperCase() + promptTask.type.slice(1)}` as keyof ReportEntry
-      ;(entry as unknown as Record<string, string>)[field] = promptReason.trim()
-      ;(entry as unknown as Record<string, string>)[dateField] = new Date().toISOString()
+        ; (entry as unknown as Record<string, string>)[field] = promptReason.trim()
+        ; (entry as unknown as Record<string, string>)[dateField] = new Date().toISOString()
     })
   }
 
@@ -1106,13 +1106,13 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
     const { jsPDF } = await import('jspdf')
     const { default: autoTable } = await import('jspdf-autotable')
     const doc = new jsPDF()
-    
+
     // Roboto shriftini qoshamiz (yoki shunchaki standart shrift ishlatamiz)
     doc.setFont("helvetica", "normal")
-    
+
     doc.setFontSize(14)
     doc.text(`Sababli bajarilmagan ishlar - ${stationName || 'Barcha bekatlar'}`, 14, 20)
-    
+
     doc.setFontSize(10)
     doc.text(`Sana: ${todayFormatted}`, 14, 28)
 
@@ -1122,9 +1122,9 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
         const [yyyy, mm] = t.month.split('-')
         dateFormatted = `${String(t.entry.ragat.trim()).padStart(2, '0')}.${mm}.${yyyy}`
       }
-      
+
       const status = t.completedDate ? 'Bajarilgan ✅' : 'Bajarilmagan ❌'
-      
+
       return [
         i + 1,
         dateFormatted ? String(dateFormatted) : '',
@@ -1155,7 +1155,7 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all">
       <div className="flex h-[80vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
-        
+
         {/* HEADER */}
         <div className={`flex items-center justify-between border-b px-8 py-6 ${headerColor}`}>
           <div>
@@ -1232,17 +1232,17 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
                 if (type === 'bugunBajarilgan') { statusColor = 'text-blue-600'; statusBg = 'bg-blue-50 border-blue-100' }
                 if (type === 'qolibKetgan') { statusColor = 'text-red-600'; statusBg = 'bg-red-50 border-red-100' }
                 if (type === 'sababliBajarilmagan') { statusColor = 'text-orange-600'; statusBg = 'bg-orange-50 border-orange-100' }
-                
+
                 const isCompletedAfter = !!task.completedDate
                 const isClickable = !!onTaskClick && type === 'bugunBajarilgan'
 
                 return (
-                  <div 
-                    key={ti} 
+                  <div
+                    key={ti}
                     className={`group/item flex flex-col sm:flex-row gap-4 border-b border-slate-100 last:border-0 px-6 py-5 transition-all ${isClickable ? 'cursor-pointer hover:bg-blue-50/30 active:scale-[0.99]' : 'hover:bg-slate-50/50'}`}
                     onClick={() => { if (isClickable) onTaskClick(task) }}
                   >
-                    
+
                     {/* SANA */}
                     <div className={`inline-flex flex-col items-center justify-center shrink-0 rounded-2xl p-3 border shadow-sm w-24 h-24 ${isCompletedAfter ? 'bg-emerald-50 border-emerald-100' : statusBg}`}>
                       <span className={`text-[9px] font-black uppercase tracking-widest text-center ${isCompletedAfter ? 'text-emerald-500' : statusColor}`}>
@@ -1264,7 +1264,7 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
                           </div>
                         )}
                       </div>
-                      
+
                       {/* Agar sabab bo'lsa */}
                       {task.reason && (
                         <div className="mt-3 p-3 bg-orange-50/50 rounded-xl border border-orange-100/50">
@@ -1286,13 +1286,13 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
                     <div className="flex sm:flex-col justify-end sm:justify-start gap-2 shrink-0">
                       {type === 'qolibKetgan' && (
                         <div className="flex flex-col gap-2">
-                          <button 
+                          <button
                             onClick={(e) => { e.stopPropagation(); setPromptTask(task); setPromptMode(true); setPromptReason('') }}
                             className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-red-100 hover:bg-red-200 text-red-700 text-[11px] font-black uppercase transition-colors"
                           >
                             <FileText size={14} /> Bajarilmaganligi sababi
                           </button>
-                          <button 
+                          <button
                             onClick={(e) => { e.stopPropagation(); if (onTaskClick) onTaskClick(task) }}
                             className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white shadow-sm shadow-purple-500/20 text-[11px] font-black uppercase transition-colors"
                           >
@@ -1303,7 +1303,7 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
 
                       {type === 'sababliBajarilmagan' && !isCompletedAfter && (
                         <div className="flex flex-col gap-2">
-                          <button 
+                          <button
                             onClick={(e) => { e.stopPropagation(); if (onTaskClick) onTaskClick(task) }}
                             className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white shadow-sm shadow-purple-500/20 text-[11px] font-black uppercase transition-colors"
                           >
@@ -1315,7 +1315,7 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
                     {isClickable && (
                       <div className="flex shrink-0 items-center justify-center pl-2 sm:pl-4 opacity-0 group-hover/item:opacity-100 transition-opacity">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600 shadow-sm group-hover/item:bg-blue-500 group-hover/item:text-white transition-colors">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
                         </div>
                       </div>
                     )}
@@ -1447,13 +1447,13 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session
   if (activeJournal === 'du46') {
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-        <DU46JournalView 
-          stationId={stationId} 
-          stationName={stationName} 
-          userName={session.fullName} 
-          userRole={session.position || 'worker'} 
-          journalMonth={journalMonth} 
-          onClose={() => handleJournalClose('DU-46', false)} 
+        <DU46JournalView
+          stationId={stationId}
+          stationName={stationName}
+          userName={session.fullName}
+          userRole={session.position || 'worker'}
+          journalMonth={journalMonth}
+          onClose={() => handleJournalClose('DU-46', false)}
           onAccepted={(isDone, isInProgress) => handleJournalClose('DU-46', isDone, isInProgress)}
           taskContext={{
             reportId: reportId,
@@ -1633,16 +1633,15 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session
                   }
                 }}
                 disabled={!isInProgress && !allDone}
-                className={`flex-1 rounded-xl px-6 py-3 text-sm font-black text-white shadow-lg transition-all active:scale-95 ${
-                  isInProgress 
+                className={`flex-1 rounded-xl px-6 py-3 text-sm font-black text-white shadow-lg transition-all active:scale-95 ${isInProgress
                     ? 'bg-amber-500 shadow-amber-500/20 hover:bg-amber-600'
                     : (!allDone ? 'bg-slate-300 shadow-none cursor-not-allowed text-slate-500' : 'bg-emerald-500 shadow-emerald-500/20 hover:bg-emerald-600')
-                }`}
+                  }`}
               >
-                {isInProgress 
+                {isInProgress
                   ? 'Kutish (Yopish)'
-                  : allDone 
-                    ? 'Bajarildi — Saqlash' 
+                  : allDone
+                    ? 'Bajarildi — Saqlash'
                     : 'Avval jurnallarga yozuv kiriting'}
               </button>
             </div>
