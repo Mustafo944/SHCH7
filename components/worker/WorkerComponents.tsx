@@ -102,7 +102,7 @@ export function BigActionCard({ title, desc, icon, onClick, color = 'cyan', badg
         {desc}
       </p>
 
-      <div className="absolute bottom-6 right-6 flex h-10 w-10 items-center justify-center rounded-full bg-white/50 text-indigo-400 transition-all group-hover:bg-indigo-500 group-hover:text-white border border-white/60 shadow-sm z-10 shrink-0">
+      <div className="absolute bottom-6 right-6 flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-400 transition-all duration-300 group-hover:bg-indigo-500 group-hover:text-white group-hover:shadow-md z-10 shrink-0">
         <ArrowRight size={18} strokeWidth={2.5} className="group-hover:translate-x-1 transition-transform duration-300" />
       </div>
     </button>
@@ -664,7 +664,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
             </div>
           )}
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-4 flex flex-wrap justify-center gap-4">
             {(() => {
               const dayTasks: { title: string, content: string, done: boolean, type: string, isLate: boolean, originalIndex: number }[] = [];
               entries.forEach((e, originalIndex) => {
@@ -687,7 +687,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
               }
 
               return dayTasks.map((t, idx) => (
-                <div key={idx} className="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white/80 p-6 shadow-sm backdrop-blur-sm transition-all hover:border-purple-200 hover:shadow-md flex flex-col h-full animate-fade-up" style={{ animationDelay: `${idx * 100}ms` }}>
+                <div key={idx} className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] max-w-[400px] group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white/80 p-6 shadow-sm backdrop-blur-sm transition-all hover:border-purple-200 hover:shadow-md flex flex-col animate-fade-up" style={{ animationDelay: `${idx * 100}ms` }}>
                   <div className="mb-4 flex items-center justify-between">
                     <span className="rounded-lg bg-purple-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-purple-600 border border-purple-100">{t.title}</span>
                     {t.done ? (
@@ -700,7 +700,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                       </span>
                     )}
                   </div>
-                  <p className="flex-1 whitespace-pre-wrap text-[13px] font-bold text-slate-700 leading-relaxed">{t.content}</p>
+                  <p className="flex-1 whitespace-pre-wrap text-[13px] font-bold text-slate-700 leading-relaxed text-center">{t.content}</p>
                   
                   {isConfirmed && !t.done && (
                     <button
@@ -805,7 +805,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       {formMessage && (
         <div className={`rounded-2xl border p-4 text-center text-sm font-bold backdrop-blur-sm ${formMessage.type === 'success' ? 'border-emerald-200/60 bg-emerald-50/80 text-emerald-600' : 'border-red-200/60 bg-red-50/80 text-red-600'}`}>{formMessage.text}</div>
       )}
-      <div className="flex gap-2 sm:gap-4 items-stretch">
+      <div className="flex gap-2 sm:gap-4 items-stretch justify-center max-w-2xl mx-auto">
         <button onClick={handleDownloadPDF}
           className="rounded-xl sm:rounded-2xl border border-slate-200/60 bg-white/80 px-2 sm:px-6 py-2.5 sm:py-5 text-[10px] sm:text-base font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition flex items-center justify-center gap-1 sm:gap-2 shadow-sm backdrop-blur-sm whitespace-nowrap min-w-[70px]">
           <Download className="w-3.5 h-3.5 sm:w-6 sm:h-6" /> <span className="hidden sm:inline">Yuklab olish</span><span className="sm:hidden">Yuklash</span>
@@ -1365,7 +1365,7 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
                 return (
                   <div
                     key={ti}
-                    className={`group/item flex flex-col sm:flex-row gap-4 border-b border-slate-100 last:border-0 px-6 py-5 transition-all ${isClickable ? 'cursor-pointer hover:bg-blue-50/30 active:scale-[0.99]' : 'hover:bg-slate-50/50'}`}
+                    className={`group/item flex flex-col sm:flex-row items-center text-center sm:items-start sm:text-left gap-4 border-b border-slate-100 last:border-0 px-6 py-5 transition-all ${isClickable ? 'cursor-pointer hover:bg-blue-50/30 active:scale-[0.99]' : 'hover:bg-slate-50/50'}`}
                     onClick={() => { if (isClickable) onTaskClick(task) }}
                   >
 
@@ -1381,8 +1381,8 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
 
                     {/* MA'LUMOT */}
                     <div className="flex-1 min-w-0 py-1">
-                      <div className="flex items-start justify-between gap-4">
-                        <p className="text-[12px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">{text}</p>
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
+                        <p className="text-[14px] sm:text-[15px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">{text}</p>
                         {task.done && type === 'bugunBajarilgan' && (
                           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 rounded-lg shrink-0">
                             <CheckCircle2 size={16} className="text-emerald-600" />
@@ -1439,9 +1439,9 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
                       )}
                     </div>
                     {isClickable && (
-                      <div className="flex shrink-0 items-center justify-center pl-2 sm:pl-4 opacity-0 group-hover/item:opacity-100 transition-opacity">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600 shadow-sm group-hover/item:bg-blue-500 group-hover/item:text-white transition-colors">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                      <div className="flex shrink-0 items-center justify-center pl-2 sm:pl-4 transition-opacity">
+                        <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm hover:bg-blue-600 transition-colors">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
                         </div>
                       </div>
                     )}
