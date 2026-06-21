@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { CheckCircle2, Clock, FileText, ChevronRight, Download, XCircle, AlertTriangle } from 'lucide-react'
+import { CheckCircle2, Clock, ChevronRight, Download, XCircle, AlertTriangle } from 'lucide-react'
 import { WorkReport, ReportEntry } from '@/types'
 import { EmptyState } from './ui'
 
@@ -52,24 +52,19 @@ export function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow, onR
   const validEntries = (report.entries || []).filter((e: ReportEntry) => 
     e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish || e.bajarildiShn
   )
-  const pendingDailyCount = validEntries.filter((e: ReportEntry) => e.bajarildiShn && !e.adImzosi).length
 
   // Status belgisi va rangi
   const statusIcon = isRejected
     ? <XCircle size={24} />
     : isPlanPending
       ? <Clock size={24} />
-      : pendingDailyCount > 0
-        ? <FileText size={24} />
-        : <CheckCircle2 size={24} />
+      : <CheckCircle2 size={24} />
 
   const iconBg = isRejected
     ? 'bg-red-50 text-red-500'
     : isPlanPending
       ? 'bg-amber-50 text-amber-600'
-      : pendingDailyCount > 0
-        ? 'bg-sky-50 text-sky-600'
-        : 'bg-emerald-50 text-emerald-600'
+      : 'bg-emerald-50 text-emerald-600'
 
   return (
     <div className={`premium-card overflow-hidden transition-all duration-300 ${expanded ? 'shadow-xl ring-1 ring-sky-400/20' : 'hover:bg-white/80 shadow-sm'} ${isRejected ? 'ring-1 ring-red-200/60' : ''}`}>
@@ -95,12 +90,7 @@ export function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow, onR
             </span>
           )}
           {isPlanPending && <span className="badge-warning badge rounded-lg px-3 py-1 text-[10px] font-black">REJA KUTILMOQDA</span>}
-          {isAccepted && pendingDailyCount > 0 && (
-            <span className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-1 text-[10px] font-black text-sky-600">
-              {pendingDailyCount} ta tasdiqlash
-            </span>
-          )}
-          {isAccepted && pendingDailyCount === 0 && (
+          {isAccepted && (
             <span className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1 text-[10px] font-black text-emerald-600">✓ QABUL QILINGAN</span>
           )}
           <ChevronRight className={`text-slate-300 transition-transform duration-200 ${expanded ? 'rotate-90 text-sky-500' : ''}`} />
@@ -113,14 +103,14 @@ export function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow, onR
             <span className="text-xs text-slate-400">Ishchi: <span className="font-bold text-slate-600">{report.workerName}</span></span>
 
             <div className="flex gap-2">
-              {/* Qabul qilish tugmasi — kutilmoqda, rad qilingan YOKI tasdiqlanmagan ishlar bo'lsa */}
-              {(isPlanPending || isRejected || pendingDailyCount > 0) && (
+              {/* Qabul qilish tugmasi — faqat kutilmoqda yoki rad qilingan holatda */}
+              {(isPlanPending || isRejected) && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onConfirm() }}
                   className="flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95"
                 >
                   <CheckCircle2 size={14} />
-                  {isPlanPending || isRejected ? 'Rejani Qabul Qilish' : 'Ishlarni Tasdiqlash'}
+                  Rejani Qabul Qilish
                 </button>
               )}
 

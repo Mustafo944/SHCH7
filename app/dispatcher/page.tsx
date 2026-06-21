@@ -170,18 +170,15 @@ export default function DispatcherPage() {
 
   useRealtimeSubscription(realtimeConfigs, realtimeConfigs.length > 0)
 
-  // Calculated pending counts
+  // Calculated pending counts — faqat oylik reja tasdiqlashi kutilayotganlarni hisoblaydi
+  // Tasdiqlangan rejadagi kunlik ishlar qayta tasdiqlanmaydi
   const pendingCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     allReports.forEach(r => {
       const isPending = !r.confirmedAt && !r.rejectedAt && r.entries.some(e =>
-        (e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish) && !e.adImzosi
+        e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish
       )
-      const hasPendingDaily = r.entries.some(e => 
-        (e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish || e.bajarildiShn) &&
-        e.bajarildiShn && !e.adImzosi
-      )
-      if (isPending || hasPendingDaily) {
+      if (isPending) {
         counts[r.stationId] = (counts[r.stationId] || 0) + 1
       }
     })

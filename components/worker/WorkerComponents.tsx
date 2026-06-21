@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight, AlertTriangle, FileText, ChevronRight } from 'lucide-react'
+import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight, AlertTriangle, FileText, ChevronRight, LayoutGrid, List, Calendar } from 'lucide-react'
 import { getGlobalGraphics, getSchemasByStation, upsertReport, updateReportEntries } from '@/lib/supabase-db'
 import type { User, WorkReport, ReportEntry, StationSchema } from '@/types'
 import { supabase } from '@/lib/supabase'
@@ -389,25 +389,32 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   const monthStr = `${new Date().getFullYear()}-${String(month + 1).padStart(2, '0')}`
   const draftReport = useMemo(() => reports.find(r => r.month === monthStr && r.stationId === stationId), [reports, monthStr, stationId])
   const canEditPlan = session.position === 'katta_elektromexanik'
-
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>(canEditPlan ? 'table' : 'cards')
+  const [selectedDay, setSelectedDay] = useState<number>(new Date().getDate() || 1)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   useEffect(() => {
     const draft = draftReport
     if (draft) {
-      setEntries(draft.entries)
+      if (!hasUnsavedChanges) {
+        setEntries(draft.entries)
+      }
       setIsConfirmed(!!draft.confirmedAt)
       setIsRejected(!!draft.rejectedAt)
       setRejectedBy(draft.rejectedBy || null)
       setReportId(draft.id)
     } else {
-      setEntries(Array.from({ length: TOTAL_ROWS }, (_, i) => ({
-        ragat: String(i + 1), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: ''
-      })))
+      if (!hasUnsavedChanges) {
+        setEntries(Array.from({ length: TOTAL_ROWS }, (_, i) => ({
+          ragat: String(i + 1), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: ''
+        })))
+      }
       setIsConfirmed(false)
       setIsRejected(false)
       setRejectedBy(null)
       setReportId(null)
     }
-  }, [draftReport])
+  }, [draftReport, hasUnsavedChanges])
 
   const addRow = () => {
     setEntries([...entries, {
@@ -430,6 +437,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   }, [])
 
   const updateEntry = useCallback((index: number, field: keyof ReportEntry, value: string) => {
+    setHasUnsavedChanges(true)
     setEntries(prev => {
       const n = [...prev]
       n[index] = { ...n[index], [field]: value }
@@ -455,8 +463,12 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           entries,
           month: monthStr,
           year: String(new Date().getFullYear()),
-          weekLabel: 'Oylik Reja'
+          weekLabel: 'Draft Oylik Reja'
         })
+        setFormMessage({ type: 'success', text: 'Muvaffaqiyatli yuborildi!' })
+        setTimeout(() => setFormMessage(null), 3000)
+        setHasUnsavedChanges(false)
+        setSubmitting(false)
         onSubmit()
         return
       } catch (err: unknown) {
@@ -516,12 +528,9 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     entry.bajarildiShn = session.fullName
     entry.bajarildiImzo = session.fullName
 
-    // Vaqtincha: Bajarildi bosganda dispetcher imzosini bajargan odamniki sifatida ko'rsatish
-    if (allDone) {
-      entry.adImzosi = session.fullName
-    } else {
-      entry.adImzosi = ''
-    }
+    // Har bir vazifa bajarilganda adImzosi avtomatik to'ldiriladi
+    // Dispetcher faqat oylik rejani bir marta tasdiqlaydi, kunlik ishlarni alohida tasdiqlamaydi
+    entry.adImzosi = session.fullName
 
     newEntries[idx] = entry
 
@@ -533,6 +542,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       await updateReportEntries(reportId, newEntries)
       setFormMessage({ type: 'success', text: 'Muvaffaqiyatli saqlandi!' })
       setTimeout(() => setFormMessage(null), 3000)
+      setHasUnsavedChanges(false)
     } catch (err: unknown) {
       // Rollback: eski holatga qaytarish
       setEntries(oldEntries)
@@ -595,9 +605,122 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
         status={headerError || ""}
         statusColor={headerError ? "error" : "default"}
       />
+      {/* View Mode Toggler */}
+      <div className="flex items-center gap-2 bg-white/60 backdrop-blur-md p-1.5 rounded-2xl shadow-sm border border-slate-200/60 w-fit mx-auto sm:mx-0 mt-4 mb-2">
+        <button 
+          onClick={() => setViewMode('cards')} 
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${viewMode === 'cards' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-500 hover:bg-slate-100'}`}
+        >
+          <LayoutGrid size={16} /> Kunlik
+        </button>
+        <button 
+          onClick={() => setViewMode('table')} 
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${viewMode === 'table' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-500 hover:bg-slate-100'}`}
+        >
+          <List size={16} /> Jadval
+        </button>
+      </div>
+
+      {viewMode === 'cards' && (
+        <div className="mt-4 animate-fade-up">
+          <div className="flex items-center justify-between bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/60 p-2 shadow-sm max-w-[280px] mx-auto mb-6">
+            <button 
+              onClick={() => setSelectedDay(Math.max(1, selectedDay - 1))} 
+              className="p-3 bg-white hover:bg-purple-50 text-slate-500 hover:text-purple-600 rounded-xl transition-all disabled:opacity-30 disabled:hover:bg-transparent shadow-sm border border-slate-100" 
+              disabled={selectedDay === 1}
+            >
+              <ChevronLeft size={20} />
+            </button>
+            
+            <button 
+              onClick={() => setIsCalendarOpen(!isCalendarOpen)} 
+              className="flex-1 flex items-center justify-center gap-2 font-black text-slate-800 text-lg hover:text-purple-600 transition-colors"
+            >
+              <Calendar size={18} className="text-purple-500" />
+              {selectedDay} - {MONTHS[month]}
+            </button>
+
+            <button 
+              onClick={() => setSelectedDay(Math.min(new Date(new Date().getFullYear(), month + 1, 0).getDate(), selectedDay + 1))} 
+              className="p-3 bg-white hover:bg-purple-50 text-slate-500 hover:text-purple-600 rounded-xl transition-all disabled:opacity-30 disabled:hover:bg-transparent shadow-sm border border-slate-100" 
+              disabled={selectedDay === new Date(new Date().getFullYear(), month + 1, 0).getDate()}
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+
+          {isCalendarOpen && (
+            <div className="grid grid-cols-7 gap-2 p-4 bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/60 shadow-lg max-w-xs mx-auto mb-6 animate-scale-in">
+              {Array.from({ length: new Date(new Date().getFullYear(), month + 1, 0).getDate() }, (_, i) => i + 1).map(day => (
+                <button 
+                  key={day} 
+                  onClick={() => { setSelectedDay(day); setIsCalendarOpen(false); }}
+                  className={`aspect-square flex flex-col items-center justify-center rounded-xl transition-all ${selectedDay === day ? 'bg-purple-600 text-white shadow-md shadow-purple-500/30 scale-105' : 'bg-slate-50/80 text-slate-600 hover:bg-purple-100 hover:text-purple-700 border border-slate-100'}`}
+                >
+                  <span className={`text-[8px] font-black uppercase tracking-widest opacity-60`}>KUN</span>
+                  <span className={`text-sm font-black`}>{day}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {(() => {
+              const dayTasks: { title: string, content: string, done: boolean, type: string, isLate: boolean, originalIndex: number }[] = [];
+              entries.forEach((e, originalIndex) => {
+                if (parseInt(e.ragat) === selectedDay) {
+                  if (e.haftalikJadval) dayTasks.push({ title: '4-haftalik jadval', content: e.haftalikJadval, done: !!e.doneHaftalik, type: 'haftalik', isLate: !!e.completedAfterMissedDateHaftalik, originalIndex });
+                  if (e.yillikJadval) dayTasks.push({ title: 'Yillik jadval', content: e.yillikJadval, done: !!e.doneYillik, type: 'yillik', isLate: !!e.completedAfterMissedDateYillik, originalIndex });
+                  if (e.yangiIshlar) dayTasks.push({ title: 'Yangi ishlar', content: e.yangiIshlar, done: !!e.doneYangi, type: 'yangi', isLate: !!e.completedAfterMissedDateYangi, originalIndex });
+                  if (e.kmoBartaraf) dayTasks.push({ title: 'KMO bartaraf', content: e.kmoBartaraf, done: !!e.doneKmo, type: 'kmo', isLate: !!e.completedAfterMissedDateKmo, originalIndex });
+                  if (e.majburiyOzgarish) dayTasks.push({ title: 'Majburiy o\'zgartirish', content: e.majburiyOzgarish, done: !!e.doneMajburiy, type: 'majburiy', isLate: !!e.completedAfterMissedDateMajburiy, originalIndex });
+                }
+              });
+
+              if (dayTasks.length === 0) {
+                return (
+                  <div className="col-span-full rounded-3xl border border-dashed border-slate-200 bg-slate-50/50 p-12 text-center animate-fade-up">
+                    <Calendar className="mx-auto h-12 w-12 text-slate-300 mb-4" />
+                    <h4 className="text-lg font-black text-slate-500">Ushbu kun uchun reja kiritilmagan</h4>
+                  </div>
+                );
+              }
+
+              return dayTasks.map((t, idx) => (
+                <div key={idx} className="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white/80 p-6 shadow-sm backdrop-blur-sm transition-all hover:border-purple-200 hover:shadow-md flex flex-col h-full animate-fade-up" style={{ animationDelay: `${idx * 100}ms` }}>
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="rounded-lg bg-purple-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-purple-600 border border-purple-100">{t.title}</span>
+                    {t.done ? (
+                      <span className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold border ${t.isLate ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                        <CheckCircle2 size={12} /> Bajarildi
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500 border border-slate-200">
+                        <Clock size={12} /> Kutilmoqda
+                      </span>
+                    )}
+                  </div>
+                  <p className="flex-1 whitespace-pre-wrap text-[13px] font-bold text-slate-700 leading-relaxed">{t.content}</p>
+                  
+                  {isConfirmed && !t.done && (
+                    <button
+                      onClick={() => handleBajarishClick(t.originalIndex)}
+                      disabled={submitting}
+                      className="mt-6 w-full rounded-xl bg-purple-500 px-4 py-3 text-xs font-black uppercase tracking-widest text-white shadow-md shadow-purple-500/20 transition-all hover:bg-purple-600 active:scale-95 disabled:opacity-50"
+                    >
+                      Bajarish
+                    </button>
+                  )}
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+      )}
+
       {/* Rad qilingan reja banneri */}
       {isRejected && canEditPlan && (
-        <div className="flex items-start gap-4 rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm">
+        <div className="flex items-start gap-4 rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm mt-6">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-500">
             <AlertTriangle size={20} />
           </div>
@@ -610,72 +733,75 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           </div>
         </div>
       )}
-      <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm relative shadow-sm">
-        <div className="sm:hidden absolute top-0 right-0 bg-purple-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
-          O'ngga suring →
-        </div>
-        <div className="overflow-x-auto overflow-y-hidden">
-          <table style={{ minWidth: "1200px" }} className="w-full border-collapse text-left text-[11px] text-slate-700">
-            <thead className="border-b-2 border-purple-500/30 bg-slate-50 font-bold text-slate-600">
-              <tr>
-                <th rowSpan={2} className="w-10 border-r border-slate-200 p-2 text-center">№</th>
-                <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-2 text-center">
-                  4-haftalik jadval
-                  <br />
-                  <span className="text-[9px] font-normal text-slate-400">(oynada tanlash)</span>
-                </th>
-                <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-2 text-center">
-                  Yillik jadval bo'yicha
-                  <br />
-                  <span className="text-[9px] font-normal text-slate-400">(oynada tanlash)</span>
-                </th>
-                <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-2">Yangi ishlar ro'yxati</th>
-                <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-2">O'tkazilgan KMO va bartaraf etilgan kamchiliklar</th>
-                <th rowSpan={2} className="w-[13%] border-r border-slate-200 p-2">Rejaga kiritilgan majburiy o'zgartirishlar</th>
-                <th colSpan={2} className="border-r border-slate-200 bg-slate-50 p-2 text-center">Bajarilgan ishlar</th>
-                <th rowSpan={2} className="w-[8%] bg-amber-50 p-2 text-center text-amber-700">AD imzosi</th>
-              </tr>
-              <tr className="bg-slate-100/50">
-                <th className="border-r border-t border-slate-200 p-2 text-center font-bold text-purple-600">Shn</th>
-                <th className="border-r border-t border-slate-200 p-2 text-center font-bold text-purple-600">Imzo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((e, i) => (
-                <MemoizedJournalRow
-                  key={i}
-                  e={e}
-                  i={i}
-                  isConfirmed={isConfirmed}
-                  canEditPlan={canEditPlan}
-                  updateEntry={updateEntry}
-                  openSelectModal={openSelectModal}
-                  handleBajarishClick={handleBajarishClick}
-                  submitting={submitting}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {(!isConfirmed && canEditPlan) && (
-          <div className="flex items-center gap-3 border-t border-slate-200/60 bg-slate-50/50 p-4">
-            <button
-              onClick={addRow}
-              className="flex items-center gap-2 rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-700 shadow-sm backdrop-blur-sm transition hover:bg-slate-100"
-            >
-              <Plus size={14} />
-              Qator qo'shish
-            </button>
-            <button
-              onClick={removeRow}
-              className="flex items-center gap-2 rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-400 backdrop-blur-sm transition hover:border-red-200 hover:text-red-500"
-            >
-              <X size={14} />
-              Qator o'chirish
-            </button>
+
+      {viewMode === 'table' && (
+        <div className="mb-6 mt-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm relative shadow-sm animate-fade-up">
+          <div className="sm:hidden absolute top-0 right-0 bg-purple-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
+            O'ngga suring →
           </div>
-        )}
-      </div>
+          <div className="overflow-x-auto overflow-y-hidden">
+            <table style={{ minWidth: "1200px" }} className="w-full border-collapse text-left text-[11px] text-slate-700">
+              <thead className="border-b-2 border-purple-500/30 bg-slate-50 font-bold text-slate-600">
+                <tr>
+                  <th rowSpan={2} className="w-10 border-r border-slate-200 p-2 text-center">№</th>
+                  <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-2 text-center">
+                    4-haftalik jadval
+                    <br />
+                    <span className="text-[9px] font-normal text-slate-400">(oynada tanlash)</span>
+                  </th>
+                  <th rowSpan={2} className="w-[18%] border-r border-slate-200 p-2 text-center">
+                    Yillik jadval bo'yicha
+                    <br />
+                    <span className="text-[9px] font-normal text-slate-400">(oynada tanlash)</span>
+                  </th>
+                  <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-2">Yangi ishlar ro'yxati</th>
+                  <th rowSpan={2} className="w-[14%] border-r border-slate-200 p-2">O'tkazilgan KMO va bartaraf etilgan kamchiliklar</th>
+                  <th rowSpan={2} className="w-[13%] border-r border-slate-200 p-2">Rejaga kiritilgan majburiy o'zgartirishlar</th>
+                  <th colSpan={2} className="border-r border-slate-200 bg-slate-50 p-2 text-center">Bajarilgan ishlar</th>
+                  <th rowSpan={2} className="w-[8%] bg-amber-50 p-2 text-center text-amber-700">AD imzosi</th>
+                </tr>
+                <tr className="bg-slate-100/50">
+                  <th className="border-r border-t border-slate-200 p-2 text-center font-bold text-purple-600">Shn</th>
+                  <th className="border-r border-t border-slate-200 p-2 text-center font-bold text-purple-600">Imzo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((e, i) => (
+                  <MemoizedJournalRow
+                    key={i}
+                    e={e}
+                    i={i}
+                    isConfirmed={isConfirmed}
+                    canEditPlan={canEditPlan}
+                    updateEntry={updateEntry}
+                    openSelectModal={openSelectModal}
+                    handleBajarishClick={handleBajarishClick}
+                    submitting={submitting}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {(!isConfirmed && canEditPlan) && (
+            <div className="flex items-center gap-3 border-t border-slate-200/60 bg-slate-50/50 p-4">
+              <button
+                onClick={addRow}
+                className="flex items-center gap-2 rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-700 shadow-sm backdrop-blur-sm transition hover:bg-slate-100"
+              >
+                <Plus size={14} />
+                Qator qo'shish
+              </button>
+              <button
+                onClick={removeRow}
+                className="flex items-center gap-2 rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-400 backdrop-blur-sm transition hover:border-red-200 hover:text-red-500"
+              >
+                <X size={14} />
+                Qator o'chirish
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       {formMessage && (
         <div className={`rounded-2xl border p-4 text-center text-sm font-bold backdrop-blur-sm ${formMessage.type === 'success' ? 'border-emerald-200/60 bg-emerald-50/80 text-emerald-600' : 'border-red-200/60 bg-red-50/80 text-red-600'}`}>{formMessage.text}</div>
       )}
