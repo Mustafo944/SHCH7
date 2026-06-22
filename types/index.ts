@@ -267,15 +267,28 @@ export interface MpsFriksionEntry {
   journalMonth?: string
 }
 
+// Dizel generatorlarini ishlashini nazorat qilish jurnali (NSH-01 18.3.1)
+export interface DgaNazoratEntry {
+  sana: string              // Kun
+  rejali: string            // Rejali / Rejadan tashqari
+  ishlaganVaqt: string      // DGA Ishlagan vaqti
+  yoqilgiSarfi: string      // Diz Yoqilg'i Sarfi (M.S)
+  yoqilgiIstemoli: string   // Yonilg'i istemoli L
+  imzo: string              // Imzo — bajarildi tugmasi
+  bajarildi?: boolean
+  bajarildiAt?: string
+  journalMonth?: string
+}
+
 // Jurnal turi
-export type JournalType = 'du46' | 'shu2' | 'boshqa' | 'alsn' | 'yerlatgich' | 'alsnKod' | 'mpsFriksion'
+export type JournalType = 'du46' | 'shu2' | 'boshqa' | 'alsn' | 'yerlatgich' | 'alsnKod' | 'mpsFriksion' | 'dgaNazorat'
 
 // Jurnal hujjati
 export interface StationJournal {
   id: string
   stationId: string
   journalType: JournalType
-  entries: DU46Entry[] | SHU2Entry[] | ALSNEntry[] | YerlatgichEntry[] | AlsnKodEntry[] | MpsFriksionEntry[]
+  entries: DU46Entry[] | SHU2Entry[] | ALSNEntry[] | YerlatgichEntry[] | AlsnKodEntry[] | MpsFriksionEntry[] | DgaNazoratEntry[]
   updatedAt: string
   updatedBy: string
 }

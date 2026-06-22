@@ -22,10 +22,12 @@ import {
   uploadGlobalGraphicFile,
   deleteGlobalGraphicFile,
   getDispatcherJournalSummary,
+  mapDbReport,
+  type DbWorkReportRow
 } from '@/lib/supabase-db'
 import { useSessionGuard, useToast, useRealtimeSubscription, useHardwareBack } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
-import type { User, Role, JournalType, ReportEntry } from '@/types'
+import type { User, Role, JournalType, ReportEntry, WorkReport } from '@/types'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import { JournalSelectModal, JournalMonthSelectModal } from '@/components/JournalView'
 import dynamic from 'next/dynamic'
@@ -153,7 +155,28 @@ export default function DispatcherPage() {
       {
         channelName: 'dispatcher_work_reports',
         table: 'work_reports',
-        onEvent: () => mutateReports()
+        onEvent: (payload: any) => {
+          if (payload.new && Object.keys(payload.new).length > 0) {
+            const updatedReport = mapDbReport(payload.new as DbWorkReportRow)
+            mutateReports((prev: WorkReport[] | undefined) => {
+              if (!prev) return [updatedReport]
+              const idx = prev.findIndex(r => r.id === updatedReport.id)
+              if (idx > -1) {
+                const newReports = [...prev]
+                newReports[idx] = updatedReport
+                return newReports
+              }
+              return [updatedReport, ...prev]
+            }, { revalidate: false })
+          } else if (payload.eventType === 'DELETE') {
+            mutateReports((prev: WorkReport[] | undefined) => {
+              if (!prev) return []
+              return prev.filter(r => r.id !== payload.old.id)
+            }, { revalidate: false })
+          } else {
+            mutateReports()
+          }
+        }
       },
       {
         channelName: 'dispatcher_incidents',

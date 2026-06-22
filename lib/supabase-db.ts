@@ -29,23 +29,23 @@ interface DbUserRow {
   created_at: string;
 }
 
-interface DbWorkReportRow {
+export type DbWorkReportRow = {
   id: string;
   worker_id: string;
   worker_name: string;
-  worker_phone: string | null;
+  worker_phone: string;
   station_id: string;
   station_name: string;
   week_label: string;
   month: string;
   year: string;
-  entries: ReportEntry[];
+  entries: any;
   submitted_at: string;
-  confirmed_at: string | null;
-  confirmed_by: string | null;
-  rejected_at: string | null;
-  rejected_by: string | null;
-}
+  confirmed_at?: string;
+  confirmed_by?: string;
+  rejected_at?: string;
+  rejected_by?: string;
+};
 
 interface DbIncidentRow {
   id: string;
@@ -274,7 +274,7 @@ export async function deleteWorker(id: string): Promise<void> {
 
 // Work Reports
 
-function mapDbReport(row: DbWorkReportRow): WorkReport {
+export function mapDbReport(row: DbWorkReportRow): WorkReport {
   return {
     id: row.id,
     workerId: row.worker_id,
@@ -285,7 +285,7 @@ function mapDbReport(row: DbWorkReportRow): WorkReport {
     weekLabel: row.week_label,
     month: row.month,
     year: row.year,
-    entries: row.entries || [],
+    entries: row.entries as ReportEntry[],
     submittedAt: row.submitted_at,
     confirmedAt: row.confirmed_at || null,
     confirmedBy: row.confirmed_by || null,

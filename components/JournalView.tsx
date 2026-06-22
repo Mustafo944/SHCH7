@@ -5,6 +5,7 @@ export {
   AlsnKodJournalView,
   MpsFriksionJournalView,
   YerlatgichJournalView,
+  DgaNazoratJournalView,
   JournalSelectModal,
   JournalMonthSelectModal,
   TaskSelectModal,

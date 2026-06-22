@@ -201,6 +201,7 @@ export function MpsFriksionJournalView({
               {entries.map((e, i) => {
                 const isPast = isMonthInPast(journalMonth)
                 const dis = !isWorker || isPast || !!e.imzo
+                const isRowValid = e.sana?.trim() && e.strRaqami?.trim() && e.normalTokPlus?.trim() && e.normalTokMinus?.trim() && e.friksionTokPlus?.trim() && e.friksionTokMinus?.trim()
                 const ic = "w-full border-0 bg-transparent p-2 text-center focus:ring-2 focus:ring-inset focus:ring-purple-500 disabled:opacity-60 disabled:bg-slate-50 transition-all font-medium text-slate-700"
                 return (
                   <tr key={i} className="hover:bg-slate-50/50 transition-colors">
@@ -217,8 +218,8 @@ export function MpsFriksionJournalView({
                       ) : isWorker && !isMonthInPast(journalMonth) ? (
                         <button 
                           onClick={() => handleBajarildi(i)} 
-                          disabled={!e.sana}
-                          className={`w-full min-h-[36px] bg-slate-50 text-[10px] font-bold transition-colors ${!e.sana ? 'text-slate-300 cursor-not-allowed' : 'text-slate-400 hover:bg-emerald-50 hover:text-emerald-600'}`}
+                          disabled={!isRowValid}
+                          className={`w-full min-h-[36px] bg-slate-50 text-[10px] font-bold transition-colors ${!isRowValid ? 'text-slate-300 cursor-not-allowed' : 'text-slate-400 hover:bg-emerald-50 hover:text-emerald-600'}`}
                         >
                           Bajarildi
                         </button>

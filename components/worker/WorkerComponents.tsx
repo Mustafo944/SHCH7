@@ -17,6 +17,7 @@ const SHU2JournalView = dynamic(() => import('@/components/JournalView').then(mo
 const YerlatgichJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.YerlatgichJournalView), { ssr: false })
 const AlsnKodJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
 const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
+const DgaNazoratJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DgaNazoratJournalView), { ssr: false })
 
 const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck, lang }: any) => {
   const [val, setVal] = useState(value)
@@ -445,6 +446,31 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     })
   }, [])
 
+  // Debounced auto-save
+  useEffect(() => {
+    if (!hasUnsavedChanges || submitting) return;
+    const timeoutId = setTimeout(async () => {
+      try {
+        await upsertReport({
+          id: reportId || undefined,
+          workerId: draftReport?.workerId || session.id,
+          workerName: draftReport?.workerName || session.fullName,
+          workerPhone: draftReport?.workerPhone || session.phone || '',
+          stationId,
+          stationName,
+          entries,
+          month: monthStr,
+          year: String(new Date().getFullYear()),
+          weekLabel: 'Draft Oylik Reja'
+        });
+        setHasUnsavedChanges(false);
+      } catch (e) {
+        console.error('Auto-save failed:', e);
+      }
+    }, 1500);
+    return () => clearTimeout(timeoutId);
+  }, [entries, hasUnsavedChanges, submitting, reportId, draftReport, session, stationId, stationName, monthStr]);
+
 
 
   async function handleSubmit() {
@@ -872,6 +898,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                       task.manba.toLowerCase().includes(modalSearch.toLowerCase()) ||
                       task.raqam.toLowerCase().includes(modalSearch.toLowerCase())
                     )
+                    .slice(0, 100)
                     .map((task: ParsedTaskItem, ti: number) => (
                       <button
                         key={ti}
@@ -895,30 +922,13 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 
                           newEntries[modalIdx] = row
                           setEntries(newEntries)
+                          setHasUnsavedChanges(true)
 
                           // Modal yopilishini ozgina kechiktiramiz (UI qotmasligi uchun)
                           setTimeout(() => {
                             setModalOpen(false)
                             setSelectedBolim(null)
                           }, 10)
-
-                          // Avtomatik saqlash
-                          try {
-                            await upsertReport({
-                              id: reportId || undefined,
-                              workerId: draftReport?.workerId || session.id,
-                              workerName: draftReport?.workerName || session.fullName,
-                              workerPhone: draftReport?.workerPhone || session.phone || '',
-                              stationId,
-                              stationName,
-                              entries: newEntries,
-                              month: monthStr,
-                              year: String(new Date().getFullYear()),
-                              weekLabel: 'Draft Oylik Reja'
-                            })
-                          } catch (e) {
-                            console.error('Auto-save failed:', e)
-                          }
                         }}
                         className="w-full rounded-xl border border-slate-200/60 bg-white/80 p-3 text-left backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-md hover:bg-purple-50/30 group"
                       >
@@ -1457,12 +1467,13 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
 }
 
 // ===== ISHNI BAJARISH MODALI =====
-const SUPPORTED_JOURNALS: Record<string, 'du46' | 'shu2' | 'yerlatgich' | 'alsnKod' | 'mpsFriksion'> = {
+const SUPPORTED_JOURNALS: Record<string, 'du46' | 'shu2' | 'yerlatgich' | 'alsnKod' | 'mpsFriksion' | 'dgaNazorat'> = {
   'SHU-2': 'shu2',
   'DU-46': 'du46',
   'yerlatgich': 'yerlatgich',
   'alsnKod': 'alsnKod',
   'mpsFriksion': 'mpsFriksion',
+  'dgaNazorat': 'dgaNazorat',
 }
 
 const JOURNAL_DISPLAY_NAMES: Record<string, string> = {
@@ -1471,6 +1482,7 @@ const JOURNAL_DISPLAY_NAMES: Record<string, string> = {
   'yerlatgich': 'Yerlatgich xabarlagichi jurnali (NSH-01 17.1.8)',
   'alsnKod': 'ALSN kodlarini o\'lchash',
   'mpsFriksion': 'MPS elektrodvigatellarni friksion tokini o\'lchash',
+  'dgaNazorat': 'Dizel generatorlari ishlashini nazorat qilish jurnali',
 }
 
 function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session, stationId, stationName, journalMonth, onComplete, onClose }: {
@@ -1484,7 +1496,7 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session
   onComplete: (taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy') => void
   onClose: () => void
 }) {
-  const [activeJournal, setActiveJournal] = useState<'du46' | 'shu2' | 'yerlatgich' | 'alsnKod' | 'mpsFriksion' | null>(null)
+  const [activeJournal, setActiveJournal] = useState<'du46' | 'shu2' | 'yerlatgich' | 'alsnKod' | 'mpsFriksion' | 'dgaNazorat' | null>(null)
   const [visitedJournals, setVisitedJournals] = useState<Set<string>>(new Set())
   const [selectedTaskType, setSelectedTaskType] = useState<'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy' | null>(null)
   const [localProgress, setLocalProgress] = useState<Record<string, boolean>>({})
@@ -1634,6 +1646,14 @@ function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
         <MpsFriksionJournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" journalMonth={journalMonth} onClose={() => handleJournalClose('mpsFriksion', false)} onAccepted={() => handleJournalClose('mpsFriksion', true)} />
+      </div>,
+      document.body
+    )
+  }
+  if (activeJournal === 'dgaNazorat') {
+    return createPortal(
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
+        <DgaNazoratJournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" journalMonth={journalMonth} onClose={() => handleJournalClose('dgaNazorat', false)} onAccepted={() => handleJournalClose('dgaNazorat', true)} />
       </div>,
       document.body
     )

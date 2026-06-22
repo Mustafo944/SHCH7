@@ -16,7 +16,7 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
   const [selStation, setSelStation] = useState<string | null>(null)
   const [selYear, setSelYear] = useState('2026')
   const [selMonth, setSelMonth] = useState<number | null>(null)
-  const [archiveTab, setArchiveTab] = useState<'hisobot' | 'du46' | 'shu2'>('hisobot')
+  const [archiveTab, setArchiveTab] = useState<'hisobot' | 'du46' | 'shu2' | 'dgaNazorat'>('hisobot')
   const [viewJournal, setViewJournal] = useState<StationJournal | null>(null)
 
   const [stationJournals, setStationJournals] = useState<StationJournal[]>([])
@@ -41,6 +41,10 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
 
   const shu2Archive = selStation && selMonth !== null
     ? stationJournals.filter(j => j.journalType === 'shu2' && j.updatedAt.startsWith(`${selYear}-${String(selMonth + 1).padStart(2, '0')}`))
+    : []
+
+  const dgaArchive = selStation && selMonth !== null
+    ? stationJournals.filter(j => j.journalType === 'dgaNazorat' && j.updatedAt.startsWith(`${selYear}-${String(selMonth + 1).padStart(2, '0')}`))
     : []
 
   const selStationName = stations.find((s: Station) => s.id === selStation)?.name || ''
@@ -74,7 +78,8 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
                     const hasReport = allReports.some((r) => r.stationId === selStation && r.month === `${selYear}-${String(i + 1).padStart(2, '0')}`)
                     const hasDU46 = stationJournals.some(j => j.journalType === 'du46' && j.updatedAt.startsWith(`${selYear}-${String(i + 1).padStart(2, '0')}`))
                     const hasSHU2 = stationJournals.some(j => j.journalType === 'shu2' && j.updatedAt.startsWith(`${selYear}-${String(i + 1).padStart(2, '0')}`))
-                    const hasAny = hasReport || hasDU46 || hasSHU2
+                    const hasDGA = stationJournals.some(j => j.journalType === 'dgaNazorat' && j.updatedAt.startsWith(`${selYear}-${String(i + 1).padStart(2, '0')}`))
+                    const hasAny = hasReport || hasDU46 || hasSHU2 || hasDGA
                     return (
                       <button key={i} onClick={() => setSelMonth(i)} className={`rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${selMonth === i ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xl' : hasAny ? 'bg-amber-50 border border-amber-100 text-amber-600 hover:bg-amber-100' : 'bg-slate-50 border border-slate-100 text-slate-300 hover:bg-slate-100'}`}>{m}</button>
                     )
@@ -93,6 +98,9 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
                     </button>
                     <button onClick={() => setArchiveTab('shu2')} className={`rounded-full px-3 py-2 sm:px-5 sm:py-2.5 text-[9px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all whitespace-nowrap shrink-0 ${archiveTab === 'shu2' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'}`}>
                       <span className="flex items-center gap-1.5 sm:gap-2"><BookOpen size={14} className="shrink-0" /> SHU-2</span>
+                    </button>
+                    <button onClick={() => setArchiveTab('dgaNazorat')} className={`rounded-full px-3 py-2 sm:px-5 sm:py-2.5 text-[9px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all whitespace-nowrap shrink-0 ${archiveTab === 'dgaNazorat' ? 'bg-orange-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'}`}>
+                      <span className="flex items-center gap-1.5 sm:gap-2"><BookOpen size={14} className="shrink-0" /> DGA</span>
                     </button>
                   </div>
 
@@ -152,6 +160,29 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
                       }
                     </div>
                   )}
+
+                  {archiveTab === 'dgaNazorat' && (
+                    <div className="space-y-4">
+                      {dgaArchive.length === 0
+                        ? <div className="premium-card flex h-48 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Bu oy uchun DGA jurnali yo'q</div>
+                        : dgaArchive.map((j) => (
+                          <button
+                            key={j.id}
+                            onClick={() => setViewJournal(j)}
+                            className="w-full text-left premium-card p-6 hover:ring-2 hover:ring-orange-400/30 transition-all group"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-black text-slate-900">DGA Jurnali</h4>
+                                <p className="text-xs text-slate-400">{selStationName}</p>
+                              </div>
+                              <span className="text-sm font-bold text-orange-600 group-hover:translate-x-1 transition-transform">Ko'rish →</span>
+                            </div>
+                          </button>
+                        ))
+                      }
+                    </div>
+                  )}
                 </>
               )}
 
@@ -176,6 +207,11 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
               journalMonth={viewJournal.updatedAt.slice(0,7)}
               onClose={() => setViewJournal(null)}
             />
+          ) : viewJournal.journalType === 'dgaNazorat' ? (
+            <div className="flex items-center justify-center h-full p-8 text-center text-slate-400 font-bold uppercase tracking-widest">
+              Ushbu jurnal hozircha dispetcher rejimida to'liq ko'rinmaydi. Lekin arxivda mavjud!
+              <button onClick={() => setViewJournal(null)} className="ml-4 rounded bg-slate-200 px-4 py-2 text-slate-700">Yopish</button>
+            </div>
           ) : (
             <SHU2JournalView
               stationId={viewJournal.stationId}

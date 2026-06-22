@@ -10,7 +10,9 @@ import {
   getReportsByStations,
   getIncidents,
   getReadIncidentIds,
-  getPendingJournalCounts
+  getPendingJournalCounts,
+  mapDbReport,
+  type DbWorkReportRow
 } from '@/lib/supabase-db'
 import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription, useHardwareBack } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
@@ -26,6 +28,7 @@ const ALSNJournalView = dynamic(() => import('@/components/JournalView').then(mo
 const YerlatgichJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.YerlatgichJournalView), { ssr: false })
 const AlsnKodJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
 const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
+const DgaNazoratJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DgaNazoratJournalView), { ssr: false })
 import { BigActionCard, HeaderCard } from '@/components/worker/WorkerComponents'
 // Og'ir komponentlar lazy load qilinadi (~85KB bundle tejash)
 const JournalForm = dynamic(() => import('@/components/worker/WorkerComponents').then(mod => mod.JournalForm), { ssr: false })
@@ -52,7 +55,7 @@ import {
 export default function WorkerPage() {
   const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'])
   const toast = useToast()
-  const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'journal' | 'viewReport' | 'incidents' | 'sxemalar' | 'grafiklar' | 'kutubxona' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'boshqaJurnallar' | 'alsn' | 'alsnMonthSelect' | 'yerlatgich' | 'yerlatgichMonthSelect' | 'alsnKod' | 'alsnKodMonthSelect' | 'mpsFriksion' | 'mpsFriksionMonthSelect'>('home')
+  const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'journal' | 'viewReport' | 'incidents' | 'sxemalar' | 'grafiklar' | 'kutubxona' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'boshqaJurnallar' | 'alsn' | 'alsnMonthSelect' | 'yerlatgich' | 'yerlatgichMonthSelect' | 'alsnKod' | 'alsnKodMonthSelect' | 'mpsFriksion' | 'mpsFriksionMonthSelect' | 'dgaNazorat' | 'dgaNazoratMonthSelect'>('home')
 
   const [reports, setReports] = useState<WorkReport[]>([])
   const [incidents, setIncidents] = useState<Incident[]>([])
@@ -166,9 +169,25 @@ export default function WorkerPage() {
           channelName: `worker_reports_${session.id}`,
           table: 'work_reports',
           // Removed worker_id filter so workers receive updates for reports made by other workers at their stations (like Katta Elektromexanik)
-          onEvent: () => {
-            console.log("🚀 Realtime: Hisobot holati o'zgardi!")
-            loadWorkReports(session.stationIds || [])
+          onEvent: (payload: any) => {
+            console.log("🚀 Realtime: Hisobot holati o'zgardi (Delta update)!", payload)
+            if (payload.new && Object.keys(payload.new).length > 0) {
+              const updatedReport = mapDbReport(payload.new as DbWorkReportRow)
+              setReports(prev => {
+                const idx = prev.findIndex(r => r.id === updatedReport.id)
+                if (idx > -1) {
+                  const newReports = [...prev]
+                  newReports[idx] = updatedReport
+                  return newReports
+                } else {
+                  return [updatedReport, ...prev]
+                }
+              })
+            } else if (payload.eventType === 'DELETE') {
+              setReports(prev => prev.filter(r => r.id !== payload.old.id))
+            } else {
+              loadWorkReports(session.stationIds || [])
+            }
           }
         },
         {
@@ -651,7 +670,7 @@ export default function WorkerPage() {
           {view === 'boshqaJurnallar' && (
             <div className="space-y-6 animate-fade-up">
               <HeaderCard title="Boshqa jurnallar" subtitle={stationName} />
-              <div className="grid gap-4 max-w-lg mx-auto">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full">
                 <button
                   onClick={() => setView('alsnMonthSelect')}
                   className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
@@ -698,6 +717,18 @@ export default function WorkerPage() {
                   <div>
                     <h4 className="text-lg font-black text-slate-900 tracking-tight">MPS elektrodvigatellarni friksion tokini o&apos;lchash</h4>
                     <p className="mt-1 text-xs text-slate-500 leading-relaxed">MPS turidagi elektrodvigatellarni friksion tokini o&apos;lchash jurnali (NSH-01 9.1.4)</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setView('dgaNazoratMonthSelect')}
+                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-amber-400 hover:shadow-xl hover:shadow-amber-500/5 active:scale-95"
+                >
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 transition-all group-hover:bg-white border border-transparent group-hover:border-amber-100 shadow-sm">
+                    <BookOpen size={28} />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900 tracking-tight">DGA ishlashini nazorat qilish</h4>
+                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">Dizel generatorlarini ishlashini nazorat qilish jurnali (NSH-01 18.3.1)</p>
                   </div>
                 </button>
               </div>
@@ -790,6 +821,29 @@ export default function WorkerPage() {
 
           {view === 'mpsFriksion' && (
             <MpsFriksionJournalView
+              stationId={activeStationId}
+              stationName={stationName}
+              userName={session?.fullName || ''}
+              userRole="worker"
+              journalMonth={selectedJournalMonth}
+              onClose={() => setView('home')}
+            />
+          )}
+
+          {view === 'dgaNazoratMonthSelect' && (
+            <JournalMonthSelectModal
+              journalType={'dgaNazorat'}
+              userRole="worker"
+              onSelect={(monthKey) => {
+                setSelectedJournalMonth(monthKey)
+                setView('dgaNazorat')
+              }}
+              onClose={() => setView('boshqaJurnallar')}
+            />
+          )}
+
+          {view === 'dgaNazorat' && (
+            <DgaNazoratJournalView
               stationId={activeStationId}
               stationName={stationName}
               userName={session?.fullName || ''}
