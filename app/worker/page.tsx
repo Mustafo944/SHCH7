@@ -172,15 +172,33 @@ export default function WorkerPage() {
           onEvent: (payload: any) => {
             console.log("🚀 Realtime: Hisobot holati o'zgardi (Delta update)!", payload)
             if (payload.new && Object.keys(payload.new).length > 0) {
-              const updatedReport = mapDbReport(payload.new as DbWorkReportRow)
               setReports(prev => {
-                const idx = prev.findIndex(r => r.id === updatedReport.id)
+                const idx = prev.findIndex(r => r.id === payload.new.id)
                 if (idx > -1) {
                   const newReports = [...prev]
-                  newReports[idx] = updatedReport
+                  const oldReport = newReports[idx]
+                  const mergedRow: any = {
+                    id: oldReport.id,
+                    worker_id: oldReport.workerId,
+                    worker_name: oldReport.workerName,
+                    worker_phone: oldReport.workerPhone,
+                    station_id: oldReport.stationId,
+                    station_name: oldReport.stationName,
+                    week_label: oldReport.weekLabel,
+                    month: oldReport.month,
+                    year: oldReport.year,
+                    entries: oldReport.entries,
+                    submitted_at: oldReport.submittedAt,
+                    confirmed_at: oldReport.confirmedAt,
+                    confirmed_by: oldReport.confirmedBy,
+                    rejected_at: oldReport.rejectedAt,
+                    rejected_by: oldReport.rejectedBy,
+                    ...payload.new
+                  }
+                  newReports[idx] = mapDbReport(mergedRow as DbWorkReportRow)
                   return newReports
                 } else {
-                  return [updatedReport, ...prev]
+                  return [mapDbReport(payload.new as DbWorkReportRow), ...prev]
                 }
               })
             } else if (payload.eventType === 'DELETE') {

@@ -157,16 +157,36 @@ export default function DispatcherPage() {
         table: 'work_reports',
         onEvent: (payload: any) => {
           if (payload.new && Object.keys(payload.new).length > 0) {
-            const updatedReport = mapDbReport(payload.new as DbWorkReportRow)
             mutateReports((prev: WorkReport[] | undefined) => {
-              if (!prev) return [updatedReport]
-              const idx = prev.findIndex(r => r.id === updatedReport.id)
+              if (!prev) return prev;
+              const idx = prev.findIndex(r => r.id === payload.new.id)
               if (idx > -1) {
                 const newReports = [...prev]
-                newReports[idx] = updatedReport
+                const oldReport = newReports[idx]
+                // Merge the existing DB row properties with the payload
+                const mergedRow: any = {
+                  id: oldReport.id,
+                  worker_id: oldReport.workerId,
+                  worker_name: oldReport.workerName,
+                  worker_phone: oldReport.workerPhone,
+                  station_id: oldReport.stationId,
+                  station_name: oldReport.stationName,
+                  week_label: oldReport.weekLabel,
+                  month: oldReport.month,
+                  year: oldReport.year,
+                  entries: oldReport.entries,
+                  submitted_at: oldReport.submittedAt,
+                  confirmed_at: oldReport.confirmedAt,
+                  confirmed_by: oldReport.confirmedBy,
+                  rejected_at: oldReport.rejectedAt,
+                  rejected_by: oldReport.rejectedBy,
+                  ...payload.new
+                }
+                newReports[idx] = mapDbReport(mergedRow as DbWorkReportRow)
                 return newReports
               }
-              return [updatedReport, ...prev]
+              // If it's a completely new insert
+              return [mapDbReport(payload.new as DbWorkReportRow), ...prev]
             }, { revalidate: false })
           } else if (payload.eventType === 'DELETE') {
             mutateReports((prev: WorkReport[] | undefined) => {

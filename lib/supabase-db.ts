@@ -285,7 +285,7 @@ export function mapDbReport(row: DbWorkReportRow): WorkReport {
     weekLabel: row.week_label,
     month: row.month,
     year: row.year,
-    entries: row.entries as ReportEntry[],
+    entries: (row.entries || []) as ReportEntry[],
     submittedAt: row.submitted_at,
     confirmedAt: row.confirmed_at || null,
     confirmedBy: row.confirmed_by || null,
