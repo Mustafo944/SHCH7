@@ -298,7 +298,6 @@ export async function getAllReports(): Promise<WorkReport[]> {
   const { data, error } = await supabase
     .from('work_reports')
     .select(WORK_REPORT_COLUMNS)
-    .neq('week_label', 'Draft Oylik Reja')
     .order('submitted_at', { ascending: false });
 
   if (error || !data) return [];
@@ -321,7 +320,6 @@ export async function getReportsByStation(stationId: string): Promise<WorkReport
     .from('work_reports')
     .select(WORK_REPORT_COLUMNS)
     .eq('station_id', stationId)
-    .neq('week_label', 'Draft Oylik Reja')
     .order('month', { ascending: false });
 
   if (error || !data) return [];
@@ -588,8 +586,7 @@ export async function getStationPendingCount(): Promise<Record<string, number>> 
   const { data, error } = await supabase
     .from('work_reports')
     .select('station_id, id')
-    .is('confirmed_at', null)
-    .neq('week_label', 'Draft Oylik Reja');
+    .is('confirmed_at', null);
 
   if (error || !data) return {};
 
