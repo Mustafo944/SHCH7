@@ -142,6 +142,7 @@ const MemoizedJournalRow = React.memo(({
   canEditPlan,
   updateEntry,
   openSelectModal,
+  openNavbatdanTashqariModal,
   handleBajarishClick,
   submitting
 }: {
@@ -151,6 +152,7 @@ const MemoizedJournalRow = React.memo(({
   canEditPlan: boolean;
   updateEntry: (index: number, field: keyof ReportEntry, value: string) => void;
   openSelectModal: (index: number, type: '4-haftalik' | 'yillik') => void;
+  openNavbatdanTashqariModal: (index: number) => void;
   handleBajarishClick: (index: number) => void;
   submitting: boolean;
 }) => {
@@ -262,6 +264,15 @@ const MemoizedJournalRow = React.memo(({
             <div className="absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm bg-orange-400" title="Kutilmoqda">
               <Clock size={12} />
             </div>
+          )}
+          {(e.isNavbatdanTashqari && !e.doneYangi && canEditPlan) && (
+            <button
+              type="button"
+              onClick={() => openNavbatdanTashqariModal(i)}
+              className="absolute bottom-2 right-2 rounded bg-amber-100 p-1 text-amber-600 shadow-sm transition hover:bg-amber-600 hover:text-white"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
+            </button>
           )}
         </div>
       </td>
@@ -441,32 +452,37 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 
   // Navbatdan tashqari ish qo'shish (tasdiqlangan rejaga ham qo'shish mumkin)
   const [navbatdanTashqariModalDay, setNavbatdanTashqariModalDay] = useState<number | null>(null)
+  const [navbatdanTashqariModalIndex, setNavbatdanTashqariModalIndex] = useState<number | null>(null)
   const [navbatdanTashqariText, setNavbatdanTashqariText] = useState('')
 
-  const addNavbatdanTashqari = async (day: number, text: string) => {
+  const addNavbatdanTashqari = async (day: number | null, text: string) => {
     if (!text.trim() || !reportId) return
     
-    // Shu kunning mavjud entry'siga yangiIshlar ustuniga qo'shamiz yoki yangi entry yaratamiz
-    const existingIdx = entries.findIndex(e => parseInt(e.ragat) === day)
     const newEntries = [...entries]
     
-    if (existingIdx !== -1 && !newEntries[existingIdx].yangiIshlar) {
-      // Mavjud entry'da yangiIshlar bo'sh — unga yozamiz
-      newEntries[existingIdx] = { ...newEntries[existingIdx], yangiIshlar: text, isNavbatdanTashqari: true }
-    } else {
-      // Yangi entry yaratamiz
-      newEntries.push({
-        ragat: String(day),
-        haftalikJadval: '', yillikJadval: '',
-        yangiIshlar: text,
-        kmoBartaraf: '', majburiyOzgarish: '',
-        bajarildiShn: '', bajarildiImzo: '', adImzosi: '',
-        isNavbatdanTashqari: true,
-      })
+    if (navbatdanTashqariModalIndex !== null) {
+      // Mavjud qatorni yangilaymiz
+      newEntries[navbatdanTashqariModalIndex] = { ...newEntries[navbatdanTashqariModalIndex], yangiIshlar: text }
+    } else if (day !== null) {
+      // Shu kunning mavjud entry'siga yangiIshlar ustuniga qo'shamiz yoki yangi entry yaratamiz
+      const existingIdx = entries.findIndex(e => parseInt(e.ragat) === day)
+      if (existingIdx !== -1 && !newEntries[existingIdx].yangiIshlar) {
+        newEntries[existingIdx] = { ...newEntries[existingIdx], yangiIshlar: text, isNavbatdanTashqari: true }
+      } else {
+        newEntries.push({
+          ragat: String(day),
+          haftalikJadval: '', yillikJadval: '',
+          yangiIshlar: text,
+          kmoBartaraf: '', majburiyOzgarish: '',
+          bajarildiShn: '', bajarildiImzo: '', adImzosi: '',
+          isNavbatdanTashqari: true,
+        })
+      }
     }
     
     setEntries(newEntries)
     setNavbatdanTashqariModalDay(null)
+    setNavbatdanTashqariModalIndex(null)
     setNavbatdanTashqariText('')
     
     // Darhol saqlash
@@ -488,6 +504,14 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     setSelectedBolim(null)
     setModalOpen(true)
   }, [])
+
+  const openNavbatdanTashqariModal = useCallback((idx: number) => {
+    const day = parseInt(entries[idx].ragat);
+    if (!isNaN(day)) {
+      setNavbatdanTashqariModalDay(day);
+      setNavbatdanTashqariModalIndex(idx);
+    }
+  }, [entries])
 
   const updateEntry = useCallback((index: number, field: keyof ReportEntry, value: string) => {
     setHasUnsavedChanges(true)
@@ -890,6 +914,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                     canEditPlan={canEditPlan}
                     updateEntry={updateEntry}
                     openSelectModal={openSelectModal}
+                    openNavbatdanTashqariModal={openNavbatdanTashqariModal}
                     handleBajarishClick={handleBajarishClick}
                     submitting={submitting}
                   />
@@ -1097,12 +1122,17 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">Tasdiqlangan grafiklardan tanlash</label>
                 <button
                   onClick={() => {
-                    const newIdx = entries.length;
-                    setEntries(prev => [...prev, {
-                      ragat: String(navbatdanTashqariModalDay), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: '', isNavbatdanTashqari: true
-                    }]);
+                    let targetIdx = navbatdanTashqariModalIndex;
+                    if (targetIdx === null) {
+                      targetIdx = entries.length;
+                      setEntries(prev => [...prev, {
+                        ragat: String(navbatdanTashqariModalDay), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: '', isNavbatdanTashqari: true
+                      }]);
+                    }
                     setNavbatdanTashqariModalDay(null);
-                    setTimeout(() => openSelectModal(newIdx, '4-haftalik'), 0);
+                    setNavbatdanTashqariModalIndex(null);
+                    const finalIdx = targetIdx;
+                    setTimeout(() => openSelectModal(finalIdx, '4-haftalik'), 0);
                   }}
                   className="w-full flex items-center justify-between rounded-2xl border border-purple-200 bg-purple-50 p-4 transition-all hover:border-purple-300 hover:bg-purple-100 active:scale-[0.98] group"
                 >
@@ -1111,12 +1141,17 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                 </button>
                 <button
                   onClick={() => {
-                    const newIdx = entries.length;
-                    setEntries(prev => [...prev, {
-                      ragat: String(navbatdanTashqariModalDay), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: '', isNavbatdanTashqari: true
-                    }]);
+                    let targetIdx = navbatdanTashqariModalIndex;
+                    if (targetIdx === null) {
+                      targetIdx = entries.length;
+                      setEntries(prev => [...prev, {
+                        ragat: String(navbatdanTashqariModalDay), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: '', isNavbatdanTashqari: true
+                      }]);
+                    }
                     setNavbatdanTashqariModalDay(null);
-                    setTimeout(() => openSelectModal(newIdx, 'yillik'), 0);
+                    setNavbatdanTashqariModalIndex(null);
+                    const finalIdx = targetIdx;
+                    setTimeout(() => openSelectModal(finalIdx, 'yillik'), 0);
                   }}
                   className="w-full flex items-center justify-between rounded-2xl border border-blue-200 bg-blue-50 p-4 transition-all hover:border-blue-300 hover:bg-blue-100 active:scale-[0.98] group"
                 >
