@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight, AlertTriangle, FileText, ChevronRight, LayoutGrid, List, Calendar } from 'lucide-react'
+import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight, AlertTriangle, FileText, ChevronRight, LayoutGrid, List, Calendar, Trash2 } from 'lucide-react'
 import { getGlobalGraphics, getSchemasByStation, upsertReport, updateReportEntries } from '@/lib/supabase-db'
 import type { User, WorkReport, ReportEntry, StationSchema } from '@/types'
 import { supabase } from '@/lib/supabase'
@@ -25,7 +25,7 @@ const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck,
 
   useEffect(() => {
     if (val !== value) {
-      const timer = setTimeout(() => onChange(val), 50)
+      const timer = setTimeout(() => onChange(val), 500)
       return () => clearTimeout(timer)
     }
   }, [val, value, onChange])
@@ -50,7 +50,7 @@ const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) 
 
   useEffect(() => {
     if (val !== value) {
-      const timer = setTimeout(() => onChange(val), 50)
+      const timer = setTimeout(() => onChange(val), 500)
       return () => clearTimeout(timer)
     }
   }, [val, value, onChange])
@@ -143,6 +143,7 @@ const MemoizedJournalRow = React.memo(({
   updateEntry,
   openSelectModal,
   handleBajarishClick,
+  handleDeleteTask,
   submitting
 }: {
   e: ReportEntry;
@@ -152,6 +153,7 @@ const MemoizedJournalRow = React.memo(({
   updateEntry: (index: number, field: keyof ReportEntry, value: string) => void;
   openSelectModal: (index: number, type: '4-haftalik' | 'yillik') => void;
   handleBajarishClick: (index: number) => void;
+  handleDeleteTask: (index: number, type: string) => void;
   submitting: boolean;
 }) => {
   const tasksCount = [!!e.haftalikJadval, !!e.yillikJadval, !!e.yangiIshlar, !!e.kmoBartaraf, !!e.majburiyOzgarish].filter(Boolean).length;
@@ -243,8 +245,18 @@ const MemoizedJournalRow = React.memo(({
       <td className="relative border-r border-slate-100 p-1 align-top">
         <div className="relative h-full">
           {e.isNavbatdanTashqari && (
-            <div className="mb-1 flex justify-center">
+            <div className="mb-1 flex items-center justify-center gap-1">
               <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[8px] font-black uppercase text-amber-600 border border-amber-200 shadow-sm whitespace-nowrap">⚡ Navbatdan tashqari</span>
+              {!e.doneYangi && (
+                <button
+                  onClick={() => handleDeleteTask(i, 'yangi')}
+                  disabled={submitting}
+                  className="p-0.5 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded border border-red-100 transition-colors disabled:opacity-50"
+                  title="O'chirish"
+                >
+                  <Trash2 size={10} />
+                </button>
+              )}
             </div>
           )}
           <LocalTextarea
@@ -598,6 +610,46 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     setCompletionIdx(idx)
   }, [month])
 
+  const handleDeleteTask = useCallback(async (idx: number, taskType: string) => {
+    if (!confirm('Siz rostdan ham ushbu ishni o\'chirmoqchimisiz?')) return
+
+    const newEntries = [...entries]
+    const entry = { ...newEntries[idx] }
+
+    if (taskType === 'haftalik') entry.haftalikJadval = ''
+    if (taskType === 'yillik') entry.yillikJadval = ''
+    if (taskType === 'yangi') entry.yangiIshlar = ''
+    if (taskType === 'kmo') entry.kmoBartaraf = ''
+    if (taskType === 'majburiy') entry.majburiyOzgarish = ''
+
+    const tasksCount = [!!entry.haftalikJadval, !!entry.yillikJadval, !!entry.yangiIshlar, !!entry.kmoBartaraf, !!entry.majburiyOzgarish].filter(Boolean).length
+
+    if (tasksCount === 0 && entry.isNavbatdanTashqari) {
+      // Barcha ishlar o'chib ketsa va bu qo'shimcha qator bo'lsa, qatorni butunlay olib tashlaymiz
+      if (newEntries.length > 31) { // As TOTAL_ROWS is likely 31 or something similar. Let's just splice if it's the last entry.
+        // Actually it's safer to just set isNavbatdanTashqari = false and keep the row if we are not sure it's an extra row.
+        entry.isNavbatdanTashqari = false
+        newEntries[idx] = entry
+      } else {
+        entry.isNavbatdanTashqari = false
+        newEntries[idx] = entry
+      }
+    } else {
+      newEntries[idx] = entry
+    }
+
+    setEntries(newEntries)
+    setHasUnsavedChanges(true)
+
+    if (reportId && !submitting) {
+      try {
+        await updateReportEntries(reportId, newEntries)
+      } catch (err) {
+        console.error("O'chirishda xatolik:", err)
+      }
+    }
+  }, [entries, reportId, submitting])
+
   const confirmBajarildi = async (idx: number, taskType?: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy') => {
     if (!reportId) return
     const oldEntries = entries.map(e => ({ ...e }))
@@ -793,15 +845,27 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                 <div key={idx} className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] max-w-[400px] group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white/80 p-6 shadow-sm backdrop-blur-sm transition-all hover:border-purple-200 hover:shadow-md flex flex-col animate-fade-up" style={{ animationDelay: `${idx * 100}ms` }}>
                   <div className="mb-4 flex items-center justify-between">
                     <span className={`rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest border ${t.isNavbatdanTashqari ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>{t.isNavbatdanTashqari ? '⚡ Navbatdan tashqari' : t.title}</span>
-                    {t.done ? (
-                      <span className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold border ${t.isLate ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                        <CheckCircle2 size={12} /> Bajarildi
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500 border border-slate-200">
-                        <Clock size={12} /> Kutilmoqda
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {t.isNavbatdanTashqari && !t.done && (
+                        <button
+                          onClick={() => handleDeleteTask(t.originalIndex, t.type)}
+                          disabled={submitting}
+                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                          title="O'chirish"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                      {t.done ? (
+                        <span className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold border ${t.isLate ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                          <CheckCircle2 size={12} /> Bajarildi
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500 border border-slate-200">
+                          <Clock size={12} /> Kutilmoqda
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <p className="flex-1 whitespace-pre-wrap text-[13px] font-bold text-slate-700 leading-relaxed text-center">{t.content}</p>
                   
@@ -849,7 +913,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       )}
 
       {viewMode === 'table' && (
-        <div className="mb-6 mt-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-sm relative shadow-sm animate-fade-up">
+        <div className="mb-6 mt-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white relative shadow-sm animate-fade-up">
           <div className="sm:hidden absolute top-0 right-0 bg-purple-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
             O'ngga suring →
           </div>
@@ -890,6 +954,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                     updateEntry={updateEntry}
                     openSelectModal={openSelectModal}
                     handleBajarishClick={handleBajarishClick}
+                    handleDeleteTask={handleDeleteTask}
                     submitting={submitting}
                   />
                 ))}
@@ -1011,7 +1076,10 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                           const newEntries = [...entries]
                           const row = { ...newEntries[modalIdx] }
 
-                          if (modalType === '4-haftalik') {
+                          if (row.isNavbatdanTashqari) {
+                            row.yangiIshlar = text
+                            if (task.jurnal) row.jurnalYangi = task.jurnal
+                          } else if (modalType === '4-haftalik') {
                             row.haftalikJadval = text
                             if (task.jurnal) row.jurnalHaftalik = task.jurnal
                           } else {
@@ -1566,7 +1634,14 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
                     {/* MA'LUMOT */}
                     <div className="flex-1 min-w-0 py-1">
                       <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
-                        <p className="text-[14px] sm:text-[15px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">{text}</p>
+                        <div>
+                          <p className="text-[14px] sm:text-[15px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">{text}</p>
+                          {task.entry.isNavbatdanTashqari && (
+                            <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 bg-amber-50 rounded-md border border-amber-200">
+                              <span className="text-[10px] font-black uppercase text-amber-600 tracking-widest">⚡ Navbatdan tashqari</span>
+                            </div>
+                          )}
+                        </div>
                         {task.done && type === 'bugunBajarilgan' && (
                           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 rounded-lg shrink-0">
                             <CheckCircle2 size={16} className="text-emerald-600" />
