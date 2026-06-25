@@ -539,6 +539,9 @@ export default function WorkerPage() {
               reports={reports}
               onSubmit={() => { refreshData(session!.id, session!.stationIds || []); setView('home') }}
               onCancel={() => setView('home')}
+              onReportUpdated={(reportId, newEntries) => {
+                setReports(prev => prev.map(r => r.id === reportId ? { ...r, entries: newEntries } : r))
+              }}
             />
           )}
 

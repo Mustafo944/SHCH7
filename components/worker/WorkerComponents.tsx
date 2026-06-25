@@ -406,7 +406,7 @@ const MemoizedJournalRow = React.memo(({
 })
 MemoizedJournalRow.displayName = 'MemoizedJournalRow'
 
-export function JournalForm({ session, stationId, stationName, month, reports, onSubmit, onCancel }: { session: User, stationId: string, stationName: string, month: number, reports: WorkReport[], onSubmit: () => void, onCancel: () => void }) {
+export function JournalForm({ session, stationId, stationName, month, reports, onSubmit, onCancel, onReportUpdated }: { session: User, stationId: string, stationName: string, month: number, reports: WorkReport[], onSubmit: () => void, onCancel: () => void, onReportUpdated?: (reportId: string, entries: ReportEntry[]) => void }) {
   const [entries, setEntries] = useState<ReportEntry[]>(Array.from({ length: TOTAL_ROWS }, (_, i) => ({
     ragat: String(i + 1), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: ''
   })))
@@ -712,7 +712,16 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       await updateReportEntries(reportId, newEntries)
       setFormMessage({ type: 'success', text: 'Muvaffaqiyatli saqlandi!' })
       setTimeout(() => setFormMessage(null), 3000)
-      setHasUnsavedChanges(false)
+      
+      // Update the parent's state synchronously so there's no flicker
+      if (onReportUpdated) {
+        onReportUpdated(reportId, newEntries)
+      }
+      
+      // We do NOT setHasUnsavedChanges(false) here. 
+      // If we do, the useEffect might pull stale data if the parent hasn't re-fetched yet.
+      // But now that we call onReportUpdated, the parent updates immediately!
+      // Even so, keeping hasUnsavedChanges true is safe and prevents any flicker.
     } catch (err: unknown) {
       // Rollback: eski holatga qaytarish
       setEntries(oldEntries)
