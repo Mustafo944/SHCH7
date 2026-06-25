@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight, AlertTriangle, FileText, ChevronRight, LayoutGrid, List, Calendar, Trash2 } from 'lucide-react'
+import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight, AlertTriangle, FileText, ChevronRight, LayoutGrid, List, Calendar } from 'lucide-react'
 import { getGlobalGraphics, getSchemasByStation, upsertReport, updateReportEntries } from '@/lib/supabase-db'
 import type { User, WorkReport, ReportEntry, StationSchema } from '@/types'
 import { supabase } from '@/lib/supabase'
@@ -143,7 +143,6 @@ const MemoizedJournalRow = React.memo(({
   updateEntry,
   openSelectModal,
   handleBajarishClick,
-  handleDeleteTask,
   submitting
 }: {
   e: ReportEntry;
@@ -153,7 +152,6 @@ const MemoizedJournalRow = React.memo(({
   updateEntry: (index: number, field: keyof ReportEntry, value: string) => void;
   openSelectModal: (index: number, type: '4-haftalik' | 'yillik') => void;
   handleBajarishClick: (index: number) => void;
-  handleDeleteTask: (index: number, type: string) => void;
   submitting: boolean;
 }) => {
   const tasksCount = [!!e.haftalikJadval, !!e.yillikJadval, !!e.yangiIshlar, !!e.kmoBartaraf, !!e.majburiyOzgarish].filter(Boolean).length;
@@ -247,23 +245,13 @@ const MemoizedJournalRow = React.memo(({
           {e.isNavbatdanTashqari && (
             <div className="mb-1 flex items-center justify-center gap-1">
               <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[8px] font-black uppercase text-amber-600 border border-amber-200 shadow-sm whitespace-nowrap">⚡ Navbatdan tashqari</span>
-              {!e.doneYangi && (
-                <button
-                  onClick={() => handleDeleteTask(i, 'yangi')}
-                  disabled={submitting}
-                  className="p-0.5 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded border border-red-100 transition-colors disabled:opacity-50"
-                  title="O'chirish"
-                >
-                  <Trash2 size={10} />
-                </button>
-              )}
             </div>
           )}
           <LocalTextarea
             value={e.yangiIshlar}
-            readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+            readOnly={!!e.adImzosi || (!e.isNavbatdanTashqari && isConfirmed) || (!e.isNavbatdanTashqari && !canEditPlan) || (e.isNavbatdanTashqari && e.doneYangi)}
             onChange={(val: string) => updateEntry(i, 'yangiIshlar', val)}
-            className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || (!e.isNavbatdanTashqari && isConfirmed) || (!e.isNavbatdanTashqari && !canEditPlan) || (e.isNavbatdanTashqari && e.doneYangi)) ? 'opacity-50 cursor-not-allowed' : ''}`}
           />
           {e.doneYangi && (
             <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateYangi ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
@@ -607,49 +595,6 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       return
     }
 
-    setCompletionIdx(idx)
-  }, [month])
-
-  const handleDeleteTask = useCallback(async (idx: number, taskType: string) => {
-    if (!confirm('Siz rostdan ham ushbu ishni o\'chirmoqchimisiz?')) return
-
-    const newEntries = [...entries]
-    const entry = { ...newEntries[idx] }
-
-    if (taskType === 'haftalik') entry.haftalikJadval = ''
-    if (taskType === 'yillik') entry.yillikJadval = ''
-    if (taskType === 'yangi') entry.yangiIshlar = ''
-    if (taskType === 'kmo') entry.kmoBartaraf = ''
-    if (taskType === 'majburiy') entry.majburiyOzgarish = ''
-
-    const tasksCount = [!!entry.haftalikJadval, !!entry.yillikJadval, !!entry.yangiIshlar, !!entry.kmoBartaraf, !!entry.majburiyOzgarish].filter(Boolean).length
-
-    if (tasksCount === 0 && entry.isNavbatdanTashqari) {
-      // Barcha ishlar o'chib ketsa va bu qo'shimcha qator bo'lsa, qatorni butunlay olib tashlaymiz
-      if (newEntries.length > 31) { // As TOTAL_ROWS is likely 31 or something similar. Let's just splice if it's the last entry.
-        // Actually it's safer to just set isNavbatdanTashqari = false and keep the row if we are not sure it's an extra row.
-        entry.isNavbatdanTashqari = false
-        newEntries[idx] = entry
-      } else {
-        entry.isNavbatdanTashqari = false
-        newEntries[idx] = entry
-      }
-    } else {
-      newEntries[idx] = entry
-    }
-
-    setEntries(newEntries)
-    setHasUnsavedChanges(true)
-
-    if (reportId && !submitting) {
-      try {
-        await updateReportEntries(reportId, newEntries)
-      } catch (err) {
-        console.error("O'chirishda xatolik:", err)
-      }
-    }
-  }, [entries, reportId, submitting])
-
   const confirmBajarildi = async (idx: number, taskType?: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy') => {
     if (!reportId) return
     const oldEntries = entries.map(e => ({ ...e }))
@@ -846,16 +791,6 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                   <div className="mb-4 flex items-center justify-between">
                     <span className={`rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest border ${t.isNavbatdanTashqari ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>{t.isNavbatdanTashqari ? '⚡ Navbatdan tashqari' : t.title}</span>
                     <div className="flex items-center gap-2">
-                      {t.isNavbatdanTashqari && !t.done && (
-                        <button
-                          onClick={() => handleDeleteTask(t.originalIndex, t.type)}
-                          disabled={submitting}
-                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                          title="O'chirish"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
                       {t.done ? (
                         <span className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold border ${t.isLate ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
                           <CheckCircle2 size={12} /> Bajarildi
