@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight, AlertTriangle, FileText, ChevronRight, LayoutGrid, List, Calendar } from 'lucide-react'
+import { Download, X, CheckCircle2, Clock, Map as MapIcon, Plus, ChevronLeft, BookOpen, ArrowRight, AlertTriangle, FileText, ChevronRight, LayoutGrid, List, Calendar, Trash2 } from 'lucide-react'
 import { getGlobalGraphics, getSchemasByStation, upsertReport, updateReportEntries } from '@/lib/supabase-db'
 import type { User, WorkReport, ReportEntry, StationSchema } from '@/types'
 import { supabase } from '@/lib/supabase'
@@ -143,6 +143,7 @@ const MemoizedJournalRow = React.memo(({
   updateEntry,
   openSelectModal,
   openNavbatdanTashqariModal,
+  handleDeleteNavbatdanTashqari,
   handleBajarishClick,
   submitting
 }: {
@@ -153,6 +154,7 @@ const MemoizedJournalRow = React.memo(({
   updateEntry: (index: number, field: keyof ReportEntry, value: string) => void;
   openSelectModal: (index: number, type: '4-haftalik' | 'yillik') => void;
   openNavbatdanTashqariModal: (index: number) => void;
+  handleDeleteNavbatdanTashqari: (index: number) => void;
   handleBajarishClick: (index: number) => void;
   submitting: boolean;
 }) => {
@@ -266,13 +268,26 @@ const MemoizedJournalRow = React.memo(({
             </div>
           )}
           {(e.isNavbatdanTashqari && !e.doneYangi) && (
-            <button
-              type="button"
-              onClick={() => openNavbatdanTashqariModal(i)}
-              className="absolute bottom-2 right-2 rounded bg-amber-100 p-1 text-amber-600 shadow-sm transition hover:bg-amber-600 hover:text-white"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => openNavbatdanTashqariModal(i)}
+                className="absolute bottom-2 right-2 rounded bg-amber-100 p-1 text-amber-600 shadow-sm transition hover:bg-amber-600 hover:text-white"
+                title="Qayta tanlash"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
+              </button>
+              {(!e.yangiIshlar || !e.yangiIshlar.trim()) && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteNavbatdanTashqari(i)}
+                  className="absolute bottom-2 right-8 rounded bg-red-100 p-1 text-red-600 shadow-sm transition hover:bg-red-600 hover:text-white"
+                  title="Qatorni o'chirish"
+                >
+                  <Trash2 size={12} strokeWidth={2.5} />
+                </button>
+              )}
+            </>
           )}
         </div>
       </td>
@@ -512,6 +527,25 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       setNavbatdanTashqariModalIndex(idx);
     }
   }, [entries])
+
+  const handleDeleteNavbatdanTashqari = useCallback((idx: number) => {
+    if (!confirm('Haqiqatan ham ushbu navbatdan tashqari ishni butunlay o\'chirmoqchimisiz?')) return;
+    setHasUnsavedChanges(true)
+    setEntries(prev => {
+      const newEntries = [...prev]
+      const entry = newEntries[idx]
+      
+      // Agar bu qator faqat navbatdan tashqari ish uchun qo'shilgan bo'lsa (boshqa vazifalar yo'q bo'lsa)
+      if (!entry.haftalikJadval && !entry.yillikJadval && !entry.kmoBartaraf && !entry.majburiyOzgarish) {
+        // Qatorni butunlay o'chiramiz
+        newEntries.splice(idx, 1)
+      } else {
+        // Aks holda faqat navbatdan tashqari ish belgisini tozalaymiz
+        newEntries[idx] = { ...entry, yangiIshlar: '', isNavbatdanTashqari: false }
+      }
+      return newEntries
+    })
+  }, [])
 
   const updateEntry = useCallback((index: number, field: keyof ReportEntry, value: string) => {
     setHasUnsavedChanges(true)
@@ -918,6 +952,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                     updateEntry={updateEntry}
                     openSelectModal={openSelectModal}
                     openNavbatdanTashqariModal={openNavbatdanTashqariModal}
+                    handleDeleteNavbatdanTashqari={handleDeleteNavbatdanTashqari}
                     handleBajarishClick={handleBajarishClick}
                     submitting={submitting}
                   />
