@@ -237,6 +237,11 @@ const MemoizedJournalRow = React.memo(({
       </td>
       <td className="relative border-r border-slate-100 p-1 align-top">
         <div className="relative h-full">
+          {e.isNavbatdanTashqari && (
+            <div className="mb-1 flex justify-center">
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[8px] font-black uppercase text-amber-600 border border-amber-200 shadow-sm whitespace-nowrap">⚡ Navbatdan tashqari</span>
+            </div>
+          )}
           <LocalTextarea
             value={e.yangiIshlar}
             readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
@@ -427,6 +432,48 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     const last = entries[entries.length - 1]
     if (last.adImzosi) return
     setEntries(entries.slice(0, -1))
+  }
+
+  // Navbatdan tashqari ish qo'shish (tasdiqlangan rejaga ham qo'shish mumkin)
+  const [navbatdanTashqariModalDay, setNavbatdanTashqariModalDay] = useState<number | null>(null)
+  const [navbatdanTashqariText, setNavbatdanTashqariText] = useState('')
+
+  const addNavbatdanTashqari = async (day: number, text: string) => {
+    if (!text.trim() || !reportId) return
+    
+    // Shu kunning mavjud entry'siga yangiIshlar ustuniga qo'shamiz yoki yangi entry yaratamiz
+    const existingIdx = entries.findIndex(e => parseInt(e.ragat) === day)
+    const newEntries = [...entries]
+    
+    if (existingIdx !== -1 && !newEntries[existingIdx].yangiIshlar) {
+      // Mavjud entry'da yangiIshlar bo'sh — unga yozamiz
+      newEntries[existingIdx] = { ...newEntries[existingIdx], yangiIshlar: text, isNavbatdanTashqari: true }
+    } else {
+      // Yangi entry yaratamiz
+      newEntries.push({
+        ragat: String(day),
+        haftalikJadval: '', yillikJadval: '',
+        yangiIshlar: text,
+        kmoBartaraf: '', majburiyOzgarish: '',
+        bajarildiShn: '', bajarildiImzo: '', adImzosi: '',
+        isNavbatdanTashqari: true,
+      })
+    }
+    
+    setEntries(newEntries)
+    setNavbatdanTashqariModalDay(null)
+    setNavbatdanTashqariText('')
+    
+    // Darhol saqlash
+    try {
+      await updateReportEntries(reportId, newEntries)
+      setFormMessage({ type: 'success', text: 'Navbatdan tashqari ish qo\'shildi!' })
+      setTimeout(() => setFormMessage(null), 3000)
+    } catch (err) {
+      console.error('Navbatdan tashqari saqlash xatosi:', err)
+      setFormMessage({ type: 'error', text: 'Saqlashda xatolik' })
+      setTimeout(() => setFormMessage(null), 3000)
+    }
   }
 
   const openSelectModal = useCallback((idx: number, type: '4-haftalik' | 'yillik') => {
@@ -717,12 +764,12 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 
           <div className="mt-4 flex flex-wrap justify-center gap-4">
             {(() => {
-              const dayTasks: { title: string, content: string, done: boolean, type: string, isLate: boolean, originalIndex: number }[] = [];
+              const dayTasks: { title: string, content: string, done: boolean, type: string, isLate: boolean, originalIndex: number, isNavbatdanTashqari?: boolean }[] = [];
               entries.forEach((e, originalIndex) => {
                 if (parseInt(e.ragat) === selectedDay) {
                   if (e.haftalikJadval) dayTasks.push({ title: '4-haftalik jadval', content: e.haftalikJadval, done: !!e.doneHaftalik, type: 'haftalik', isLate: !!e.completedAfterMissedDateHaftalik, originalIndex });
                   if (e.yillikJadval) dayTasks.push({ title: 'Yillik jadval', content: e.yillikJadval, done: !!e.doneYillik, type: 'yillik', isLate: !!e.completedAfterMissedDateYillik, originalIndex });
-                  if (e.yangiIshlar) dayTasks.push({ title: 'Yangi ishlar', content: e.yangiIshlar, done: !!e.doneYangi, type: 'yangi', isLate: !!e.completedAfterMissedDateYangi, originalIndex });
+                  if (e.yangiIshlar) dayTasks.push({ title: 'Yangi ishlar', content: e.yangiIshlar, done: !!e.doneYangi, type: 'yangi', isLate: !!e.completedAfterMissedDateYangi, originalIndex, isNavbatdanTashqari: !!e.isNavbatdanTashqari });
                   if (e.kmoBartaraf) dayTasks.push({ title: 'KMO bartaraf', content: e.kmoBartaraf, done: !!e.doneKmo, type: 'kmo', isLate: !!e.completedAfterMissedDateKmo, originalIndex });
                   if (e.majburiyOzgarish) dayTasks.push({ title: 'Majburiy o\'zgartirish', content: e.majburiyOzgarish, done: !!e.doneMajburiy, type: 'majburiy', isLate: !!e.completedAfterMissedDateMajburiy, originalIndex });
                 }
@@ -740,7 +787,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
               return dayTasks.map((t, idx) => (
                 <div key={idx} className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] max-w-[400px] group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white/80 p-6 shadow-sm backdrop-blur-sm transition-all hover:border-purple-200 hover:shadow-md flex flex-col animate-fade-up" style={{ animationDelay: `${idx * 100}ms` }}>
                   <div className="mb-4 flex items-center justify-between">
-                    <span className="rounded-lg bg-purple-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-purple-600 border border-purple-100">{t.title}</span>
+                    <span className={`rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest border ${t.isNavbatdanTashqari ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>{t.isNavbatdanTashqari ? '⚡ Navbatdan tashqari' : t.title}</span>
                     {t.done ? (
                       <span className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold border ${t.isLate ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
                         <CheckCircle2 size={12} /> Bajarildi
@@ -765,6 +812,17 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                 </div>
               ));
             })()}
+
+            {/* Navbatdan tashqari ish qo'shish tugmasi */}
+            {isConfirmed && (
+              <button
+                onClick={() => { setNavbatdanTashqariModalDay(selectedDay); setNavbatdanTashqariText(''); }}
+                className="w-full mt-4 flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/50 px-6 py-4 text-sm font-black text-amber-600 uppercase tracking-widest transition-all hover:border-amber-400 hover:bg-amber-100/50 active:scale-[0.99] group"
+              >
+                <Plus size={18} strokeWidth={3} className="transition-transform group-hover:rotate-90" />
+                Navbatdan tashqari ish qo&apos;shish
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -848,6 +906,17 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
               >
                 <X size={14} />
                 Qator o'chirish
+              </button>
+            </div>
+          )}
+          {isConfirmed && (
+            <div className="flex items-center justify-center border-t border-slate-200/60 bg-slate-50/50 p-4">
+              <button
+                onClick={() => { setNavbatdanTashqariModalDay(new Date().getDate()); setNavbatdanTashqariText(''); }}
+                className="flex items-center gap-2 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/50 px-6 py-2.5 text-xs font-black text-amber-600 uppercase tracking-widest shadow-sm backdrop-blur-sm transition hover:border-amber-400 hover:bg-amber-100/50 active:scale-95"
+              >
+                <Plus size={14} strokeWidth={3} />
+                Navbatdan tashqari ish qo'shish
               </button>
             </div>
           )}
@@ -1002,6 +1071,38 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           onClose={() => setCompletionIdx(null)}
         />
       )}
+
+      {navbatdanTashqariModalDay !== null && typeof document !== 'undefined' ? createPortal(
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all">
+          <div className="relative flex w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in">
+            <div className="flex items-center justify-between border-b border-slate-200/60 px-6 py-4 bg-slate-50/80">
+              <div>
+                <h3 className="text-base font-black text-slate-900 tracking-tight">Navbatdan tashqari ish</h3>
+                <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">{navbatdanTashqariModalDay}-{MONTHS[month]} uchun</p>
+              </div>
+              <button onClick={() => setNavbatdanTashqariModalDay(null)} className="rounded-xl border border-slate-200/60 bg-white p-2 text-slate-400 hover:text-slate-900 transition-all shadow-sm"><X size={18} /></button>
+            </div>
+            <div className="p-6">
+              <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-widest">Bajarilgan ish tafsiloti</label>
+              <textarea
+                value={navbatdanTashqariText}
+                onChange={e => setNavbatdanTashqariText(e.target.value)}
+                placeholder="Bajarilgan ishni kiriting..."
+                rows={4}
+                className="w-full rounded-2xl border border-slate-200/60 bg-slate-50/50 p-4 text-sm font-medium text-slate-900 outline-none transition-all focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-500/10 resize-none"
+              />
+              <button
+                onClick={() => addNavbatdanTashqari(navbatdanTashqariModalDay, navbatdanTashqariText)}
+                disabled={!navbatdanTashqariText.trim()}
+                className="mt-6 w-full rounded-2xl bg-amber-500 px-4 py-4 text-xs font-black uppercase tracking-widest text-white shadow-md shadow-amber-500/20 transition-all hover:bg-amber-600 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
+              >
+                Qo'shish va Saqlash
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      ) : null}
     </div>
   )
 }

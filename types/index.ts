@@ -73,6 +73,9 @@ export interface ReportEntry {
   completedAfterMissedDateKmo?: string;
   completedAfterMissedDateMajburiy?: string;
 
+  // Navbatdan tashqari ish belgisi
+  isNavbatdanTashqari?: boolean;
+
   bajarildiShn: string;
   bajarildiImzo: string;
   adImzosi: string;
