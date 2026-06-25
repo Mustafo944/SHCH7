@@ -265,7 +265,7 @@ const MemoizedJournalRow = React.memo(({
               <Clock size={12} />
             </div>
           )}
-          {(e.isNavbatdanTashqari && !e.doneYangi && canEditPlan) && (
+          {(e.isNavbatdanTashqari && !e.doneYangi) && (
             <button
               type="button"
               onClick={() => openNavbatdanTashqariModal(i)}
@@ -564,7 +564,10 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           year: String(new Date().getFullYear()),
           weekLabel: 'Draft Oylik Reja'
         });
-        setHasUnsavedChanges(false);
+        // We do NOT setHasUnsavedChanges(false) here because if the parent 
+        // hasn't re-fetched yet, draftReport will contain the OLD data.
+        // If we set it to false, the other useEffect will overwrite the user's 
+        // current text with the old text!
       } catch (e) {
         console.error('Auto-save failed:', e);
       }
