@@ -693,12 +693,14 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     const doneCount = [entry.doneHaftalik, entry.doneYillik, entry.doneYangi, entry.doneKmo, entry.doneMajburiy].filter(Boolean).length;
     const allDone = tasksCount > 0 && doneCount === tasksCount;
 
-    entry.bajarildiShn = session.fullName
-    entry.bajarildiImzo = session.fullName
+    const planOwnerName = draftReport?.workerName || session.fullName;
+    entry.bajarildiShn = planOwnerName
+    entry.bajarildiImzo = planOwnerName
 
     // Har bir vazifa bajarilganda adImzosi avtomatik to'ldiriladi
     // Dispetcher faqat oylik rejani bir marta tasdiqlaydi, kunlik ishlarni alohida tasdiqlamaydi
-    entry.adImzosi = session.fullName
+    // AD imzoda doim bajargan elektromexanik yoki katta elektromexanik familiyasi bo'lishi kerak
+    entry.adImzosi = planOwnerName
 
     newEntries[idx] = entry
 

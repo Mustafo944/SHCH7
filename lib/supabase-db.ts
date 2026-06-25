@@ -512,11 +512,12 @@ export async function markReportEntryDoneFromJournal(
 
   // Set the overall "Bajarildi" flag if we are checking
   entry.bajarilganSana = new Date().toISOString();
-  // workerName parametridan kelgan ism aslida Navbatchi/BB ni ismi,
-  // ShN ni ismi esa report.worker_name dan olinadi
+  // workerName parametridan kelgan ism aslida Navbatchi/BB ni ismi (Jurnalda qoladi),
+  // Oylik ish rejada esa (Bajaruvchi va AD imzosi ustunlarida) 
+  // doim bajargan elektromexanik (report.worker_name) familiyasi bo'lishi kerak
   entry.bajarildiShn = current.worker_name || 'ShN';
   entry.bajarildiImzo = current.worker_name || 'ShN';
-  entry.adImzosi = workerName;
+  entry.adImzosi = current.worker_name || 'ShN';
 
   await supabase
     .from('work_reports')
