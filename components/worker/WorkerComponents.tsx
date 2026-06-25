@@ -594,6 +594,8 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       setTimeout(() => setHeaderError(null), 3000)
       return
     }
+    setCompletionIdx(idx)
+  }, [month])
 
   const confirmBajarildi = async (idx: number, taskType?: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy') => {
     if (!reportId) return
@@ -889,7 +891,6 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                     updateEntry={updateEntry}
                     openSelectModal={openSelectModal}
                     handleBajarishClick={handleBajarishClick}
-                    handleDeleteTask={handleDeleteTask}
                     submitting={submitting}
                   />
                 ))}
