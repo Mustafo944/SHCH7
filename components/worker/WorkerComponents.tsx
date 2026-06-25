@@ -177,8 +177,8 @@ const MemoizedJournalRow = React.memo(({
           className={`w-full rounded bg-transparent text-center font-bold text-purple-600 outline-none focus:bg-white ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-40' : ''}`}
         />
         {e.isNavbatdanTashqari && (
-          <div className="absolute top-0 left-0 -ml-2 -mt-2">
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 text-[10px] font-black text-amber-600 border border-amber-200 shadow-sm" title="Navbatdan tashqari">⚡</span>
+          <div className="absolute top-1 left-1">
+            <span className="flex h-3 w-3 items-center justify-center rounded-full bg-amber-100 text-[8px] font-black text-amber-600 border border-amber-200 shadow-sm" title="Navbatdan tashqari">⚡</span>
           </div>
         )}
       </td>
