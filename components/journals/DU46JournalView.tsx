@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
 import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
 import type { DU46Entry } from '@/types'
-import { Plus, Trash2, CheckCircle2, Download, ChevronLeft, LayoutGrid, Table2, ArrowDown, Clock, FileText, AlertTriangle } from 'lucide-react'
+import { Plus, Trash2, CheckCircle2, Download, ChevronLeft } from 'lucide-react'
 import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel } from './helpers'
 import { TaskSelectModal, DateInput, TimeInput } from './JournalSelectModal'
 import { ApprovalChainModal } from './ApprovalChainModal'
@@ -118,9 +118,6 @@ export function DU46JournalView({
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<string | null>(null)
   const [taskModalIdx, setTaskModalIdx] = useState<number | null>(null)
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
-  const lastRowRef = useRef<HTMLDivElement>(null)
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   // Tasdiqlash zanjirini tanlash modali
   const [approvalChainModal, setApprovalChainModal] = useState<{ index: number, isEdit: boolean, currentChain: string[] } | null>(null)
@@ -452,15 +449,7 @@ export function DU46JournalView({
 
   // ── Qator boshqaruvi ─────────────────────────────────────────────────────────
   // Bug #16 fix: yangi qatorlarga journalMonth ni uzatamiz
-  const addRow = () => {
-    if (isCurrentMonth) {
-      setEntries([...entries, EMPTY_DU46(journalMonth)])
-      // Auto-scroll to new row
-      setTimeout(() => {
-        lastRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }, 100)
-    }
-  }
+  const addRow = () => { if (isCurrentMonth) setEntries([...entries, EMPTY_DU46(journalMonth)]) }
 
   const removeRow = () => {
     if (entries.length <= 1) return
@@ -822,26 +811,11 @@ export function DU46JournalView({
                 : 'bg-emerald-50 text-emerald-600 border-emerald-100'
             }`}>{msg}</span>
           )}
-          {/* Ko'rinish o'zgartirish */}
-          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-100 p-0.5 shadow-inner">
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'cards' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <LayoutGrid size={12} /> Kartalar
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'table' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <Table2 size={12} /> Jadval
-            </button>
-          </div>
         </div>
       </div>
 
       {/* --- Content --- */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-auto p-4 sm:p-6">
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
         {/* Orqaga */}
         <button onClick={onClose} className="mb-4 flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm ring-1 ring-slate-200/60 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98]">
           <ChevronLeft size={18} />
@@ -862,344 +836,7 @@ export function DU46JournalView({
           </button>
         </div>
 
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* KARTOCHKA KO'RINISHI                                              */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {viewMode === 'cards' && (
-          <div className="space-y-4">
-            {/* Yangi yozuv tugmasi */}
-            {isEditor && isCurrentMonth && (
-              <button
-                onClick={addRow}
-                className="w-full flex items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50/50 px-6 py-5 text-sm font-black text-purple-600 uppercase tracking-widest transition-all hover:border-purple-400 hover:bg-purple-100/50 active:scale-[0.99] group"
-              >
-                <Plus size={20} strokeWidth={3} className="transition-transform group-hover:rotate-90" />
-                Yangi yozuv qo&apos;shish
-              </button>
-            )}
-
-            {/* Kartochkalar */}
-            {entries.map((e, i) => {
-              const iAmRoleCreator = isCreator(e)
-              const isExactCreator = e.kamchilikImzo ? e.kamchilikImzo === userName : iAmRoleCreator
-              const hasRightToFix = isExactCreator || (e.approvalChain && e.approvalChain.includes(userRole))
-              const hasNoCreator = !e.createdByRole && !e.kamchilik && !e.oyKun1 && !e.soatMinut1
-              const canWriteCol3 = isCurrentMonth && !e.kamchilikBajarildi && !isDispatcher
-              const canWriteCol12 = isCurrentMonth && !isCol12Finished(e) && isCol3Finished(e) && !isDispatcher && hasRightToFix
-              const canWriteMiddle = isCurrentMonth && !isDispatcher && !isCol12Finished(e) && (hasRightToFix || hasNoCreator)
-
-              const isEmpty = !e.kamchilik && !e.bartarafInfo && !e.oyKun1 && !e.soatMinut1 && !e.kamchilikBajarildi
-              const col3Done = isCol3Finished(e)
-              const col12Done = isCol12Finished(e)
-
-              // Holat rangi
-              let statusColor = 'border-slate-200 bg-white'
-              let statusBadge = null as React.ReactNode
-              if (col12Done) {
-                statusColor = 'border-emerald-200 bg-emerald-50/30'
-                statusBadge = <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[9px] font-black uppercase text-emerald-700"><CheckCircle2 size={10} /> Barcha ishlar bajarildi</span>
-              } else if (col3Done && e.bartarafBajarildi) {
-                statusColor = 'border-amber-200 bg-amber-50/20'
-                statusBadge = <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[9px] font-black uppercase text-amber-700"><Clock size={10} /> Tasdiqlash kutilmoqda</span>
-              } else if (col3Done) {
-                statusColor = 'border-blue-200 bg-blue-50/20'
-                statusBadge = <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-[9px] font-black uppercase text-blue-700"><FileText size={10} /> 12-ustun kutilmoqda</span>
-              } else if (e.kamchilikBajarildi) {
-                statusColor = 'border-purple-200 bg-purple-50/20'
-                statusBadge = <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-[9px] font-black uppercase text-purple-700"><Clock size={10} /> Tasdiqlash kutilmoqda</span>
-              } else if (e.kamchilik) {
-                statusColor = 'border-orange-200 bg-orange-50/20'
-                statusBadge = <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-[9px] font-black uppercase text-orange-700"><AlertTriangle size={10} /> Boshlandi kutilmoqda</span>
-              }
-
-              return (
-                <div
-                  key={i}
-                  ref={i === entries.length - 1 ? lastRowRef : undefined}
-                  className={`rounded-2xl border-2 shadow-sm transition-all ${statusColor} ${isEmpty ? 'opacity-60 hover:opacity-100' : ''}`}
-                >
-                  {/* Karta Header */}
-                  <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 text-sm font-black text-slate-500">{e.nomber || i + 1}</span>
-                      <div className="flex items-center gap-2">
-                        {e.oyKun1 && <span className="text-xs font-bold text-slate-600">📅 {e.oyKun1}</span>}
-                        {e.soatMinut1 && <span className="text-xs font-bold text-purple-600">🕐 {e.soatMinut1}</span>}
-                      </div>
-                    </div>
-                    {statusBadge}
-                  </div>
-
-                  {/* Karta Tanasi */}
-                  <div className="px-5 py-4 space-y-4">
-                    {/* ── 1-3 Ustun: Sana, Vaqt, Kamchilik ── */}
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Oy/kun (1)</label>
-                          <DateInput value={e.oyKun1 || ''} onChange={val => update(i, 'oyKun1', val)} readOnly={!canWriteCol3} />
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Soat (2)</label>
-                          <TimeInput value={e.soatMinut1 || ''} onChange={val => update(i, 'soatMinut1', val)} readOnly={!canWriteCol3}
-                            className={e.kamchilikBajarildi ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-white border border-slate-200'}
-                          />
-                        </div>
-                        <div className="col-span-2 sm:col-span-1">
-                          <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">№</label>
-                          <LocalInput value={e.nomber || ''} onChange={(val: string) => update(i, 'nomber', val)} readOnly={isDispatcher || !!e.yuborildi} placeholder={String(i + 1)}
-                            className="w-full rounded-xl bg-white border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-purple-400 transition-all"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Kamchilik matni */}
-                      <div>
-                        <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Kamchiliklar bayoni (3)</label>
-                        {isDispatcher ? (
-                          <div className="w-full rounded-xl bg-white border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 min-h-[60px]">
-                            {e.kamchilik || <span className="text-slate-300">—</span>}
-                          </div>
-                        ) : (
-                          <div className="relative group/text">
-                            <LocalTextarea
-                              value={e.kamchilik || ''}
-                              onChange={(val: string) => update(i, 'kamchilik', val)}
-                              readOnly={!canWriteCol3}
-                              rows={3}
-                              spellCheck={false}
-                              lang="uz"
-                              className="w-full resize-y rounded-xl bg-white border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 outline-none transition-all focus:border-purple-400 focus:shadow-md"
-                            />
-                            {canWriteCol3 && (
-                              <button onClick={() => setTaskModalIdx(i)} className="absolute top-2 right-2 p-2 rounded-lg bg-purple-50 text-purple-600 opacity-0 group-hover/text:opacity-100 transition-all hover:bg-purple-600 hover:text-white shadow-sm border border-purple-100">
-                                <Plus size={12} strokeWidth={3} />
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* ── 3-ustun: Boshlandi / Tasdiqlash ── */}
-                    {e.kamchilik && (
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* Boshlandi tugmasi */}
-                        {iAmRoleCreator && !e.kamchilikBajarildi && !isMonthInPast(journalMonth) && (
-                          <button
-                            onClick={() => handleKamchilikBoshlandiClick(i)}
-                            disabled={!e.oyKun1 || !e.soatMinut1}
-                            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${(!e.oyKun1 || !e.soatMinut1) ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'btn-gradient'}`}
-                          >
-                            ▶ Boshlandi
-                          </button>
-                        )}
-
-                        {/* Boshladi imzosi */}
-                        {e.kamchilikBajarildi && (
-                          <div className="flex items-center gap-1.5 relative group/edit">
-                            <div className="flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-600 border border-emerald-100 shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} /> Boshladi: {e.kamchilikImzo}
-                            </div>
-                            {isExactCreator && !isMonthInPast(journalMonth) && !isCol3Finished(e) && (
-                              <button onClick={() => setApprovalChainModal({ index: i, isEdit: true, currentChain: e.approvalChain || [] })}
-                                className="p-1 bg-white/80 rounded shadow-sm text-slate-400 hover:text-purple-600 border border-slate-200" title="Zanjirni tahrirlash">✏️</button>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Chain imzolari */}
-                        {e.approvalsCol3?.map((appr, idx) => (
-                          <div key={idx} className="flex items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-1.5 text-[11px] font-bold text-blue-600 border border-blue-100 shadow-sm">
-                            <CheckCircle2 size={12} strokeWidth={3} /> {appr.role.replace('_', ' ')}: {appr.signedBy}
-                          </div>
-                        ))}
-
-                        {/* BB tasdiqladi */}
-                        {e.kamchilikBBTasdiqladi && (
-                          <div className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-700 border border-amber-100 shadow-sm">
-                            <CheckCircle2 size={12} strokeWidth={3} /> Navbatchi: {e.kamchilikBBImzo}
-                          </div>
-                        )}
-
-                        {/* Tasdiqlash tugmasi */}
-                        {canIApprove(e, 3) && !isMonthInPast(journalMonth) && (() => {
-                          const isFinal = isFinalApprover(e, 3)
-                          const canConfirm = !isFinal || !!e.kamchilikBBVaqt
-                          return (
-                            <div className="flex items-center gap-2">
-                              {isFinal && (
-                                <TimeInput value={e.kamchilikBBVaqt || ''} onChange={val => update(i, 'kamchilikBBVaqt', val)} readOnly={false}
-                                  className="w-24 bg-white shadow-sm border border-slate-200" />
-                              )}
-                              <button onClick={() => handleKamchilikTasdiqlash(i)} disabled={!canConfirm}
-                                className={`rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${!canConfirm ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-amber-500 text-white hover:bg-amber-600 border-transparent'}`}
-                              >Tasdiqlash</button>
-                            </div>
-                          )
-                        })()}
-
-                        {/* Navbat kutilmoqda */}
-                        {!canIApprove(e, 3) && !isMonthInPast(journalMonth) && e.approvalChain?.includes(userRole) && !(e.approvalsCol3 || []).some(a => a.role === userRole) && (
-                          <div className="rounded-xl bg-orange-50 px-3 py-1.5 border border-orange-100 text-[10px] font-black text-orange-600">
-                            ⏳ Avval {getWaitingForRole(e, 3)} tasdiqlashi kerak
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* ── 4-9 Ustunlar: Xabar va kelish vaqtlari ── */}
-                    {(e.kamchilik || e.oyKun2 || e.oyKun3) && (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-purple-50/30 border border-purple-100/50">
-                        <div className="col-span-2 sm:col-span-3">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">Xabar va kelish ma&apos;lumotlari</span>
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Xabar oy/kun (4)</label>
-                          <DateInput value={e.oyKun2 || ''} onChange={val => update(i, 'oyKun2', val)} readOnly={!canWriteMiddle} />
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Xabar soat (5)</label>
-                          <TimeInput value={e.soatMinut2 || ''} onChange={val => update(i, 'soatMinut2', val)} readOnly={!canWriteMiddle} className="bg-white border border-slate-200" />
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Xabar usuli (6)</label>
-                          <LocalInput value={e.xabarUsuli || ''} onChange={(val: string) => update(i, 'xabarUsuli', val)} readOnly={!canWriteMiddle}
-                            className="w-full rounded-xl bg-white border border-slate-200 px-3 py-2 text-sm outline-none focus:border-purple-400 transition-all" />
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Keldi oy/kun (7)</label>
-                          <DateInput value={e.oyKun3 || ''} onChange={val => update(i, 'oyKun3', val)} readOnly={!canWriteMiddle} />
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Keldi soat (8)</label>
-                          <TimeInput value={e.soatMinut3 || ''} onChange={val => update(i, 'soatMinut3', val)} readOnly={!canWriteMiddle} className="bg-white border border-slate-200" />
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Imzo (9)</label>
-                          <LocalInput value={e.dspImzo || ''} onChange={(val: string) => update(i, 'dspImzo', val)} readOnly={!canWriteMiddle}
-                            className="w-full rounded-xl bg-white border border-slate-200 px-3 py-2 text-sm outline-none focus:border-purple-400 transition-all" />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* ── 10-12 Ustunlar: Bartaraf etish ── */}
-                    {(col3Done || e.oyKun4 || e.bartarafInfo) && (
-                      <div className="space-y-3 p-4 rounded-xl bg-amber-50/30 border border-amber-100/50">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-amber-500">Bartaraf etish ma&apos;lumotlari</span>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Oy/kun (10)</label>
-                            <DateInput value={e.oyKun4 || ''} onChange={val => update(i, 'oyKun4', val)} readOnly={!canWriteCol12} />
-                          </div>
-                          <div>
-                            <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Soat (11)</label>
-                            <TimeInput value={e.soatMinut4 || ''} onChange={val => update(i, 'soatMinut4', val)} readOnly={!canWriteCol12}
-                              className={e.bartarafBajarildi ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-white border border-slate-200'}
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Bartaraf tafsiloti (12)</label>
-                          {isDispatcher ? (
-                            <div className="w-full rounded-xl bg-white border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 min-h-[60px]">
-                              {e.bartarafInfo || <span className="text-slate-300">—</span>}
-                            </div>
-                          ) : (
-                            <LocalTextarea
-                              value={e.bartarafInfo || ''}
-                              onChange={(val: string) => update(i, 'bartarafInfo', val)}
-                              readOnly={!canWriteCol12}
-                              rows={3}
-                              spellCheck={false}
-                              lang="uz"
-                              className={`w-full resize-y rounded-xl border px-4 py-3 text-sm font-medium outline-none transition-all ${!canWriteCol12 && !e.bartarafInfo ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : canWriteCol12 ? 'bg-white border-slate-200 focus:border-amber-400 focus:shadow-md text-slate-700' : 'bg-white border-slate-200 text-slate-700 cursor-not-allowed'}`}
-                              placeholder={!isCol3Finished(e) ? '3-ustun tasdiqlanishi kerak...' : ''}
-                            />
-                          )}
-                        </div>
-
-                        {/* 12-ustun: Tugadi / Tasdiqlash */}
-                        <div className="flex flex-wrap items-center gap-2">
-                          {/* Tugadi tugmasi */}
-                          {e.bartarafInfo && hasRightToFix && !e.bartarafBajarildi && !isMonthInPast(journalMonth) && (
-                            <button onClick={() => handleBartarafBajarildiClick(i)}
-                              disabled={!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi}
-                              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${(!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi) ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'btn-gradient'}`}
-                            >Tugadi</button>
-                          )}
-
-                          {/* Tugadi imzosi */}
-                          {e.bartarafBajarildi && (
-                            <div className="flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-600 border border-emerald-100 shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} /> Tugadi: {e.bartarafImzo}
-                            </div>
-                          )}
-
-                          {/* Chain imzolari */}
-                          {e.approvalsCol12?.map((app, idx) => (
-                            <div key={idx} className="flex items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-1.5 text-[11px] font-bold text-blue-700 border border-blue-100 shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} /> {app.role.replace('_', ' ')}: {app.signedBy}
-                            </div>
-                          ))}
-
-                          {/* BB tasdiqladi */}
-                          {e.bartarafBBTasdiqladi && (
-                            <div className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-700 border border-amber-100 shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} /> Navbatchi: {e.bartarafBBImzo}
-                            </div>
-                          )}
-
-                          {/* Tasdiqlash tugmasi */}
-                          {canIApprove(e, 12) && !isMonthInPast(journalMonth) && (() => {
-                            const isFinal = isFinalApprover(e, 12)
-                            const canConfirm = !isFinal || !!e.bartarafBBVaqt
-                            return (
-                              <div className="flex items-center gap-2">
-                                {isFinal && (
-                                  <TimeInput value={e.bartarafBBVaqt || ''} onChange={val => update(i, 'bartarafBBVaqt', val)} readOnly={false}
-                                    className="w-24 bg-white shadow-sm border border-slate-200" />
-                                )}
-                                <button onClick={() => handleBartarafTasdiqlash(i)} disabled={!canConfirm}
-                                  className={`rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${!canConfirm ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-amber-500 text-white hover:bg-amber-600 border-transparent'}`}
-                                >Tasdiqlash</button>
-                              </div>
-                            )
-                          })()}
-
-                          {/* 3-ustun oxirigacha tasdiqlanmagan */}
-                          {e.bartarafInfo && !isCol3Finished(e) && (
-                            <span className="text-[10px] font-black text-red-400 uppercase">3-ustun tasdiqlanmagan</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-
-            {/* Qator o'chirish (kartalar rejimida) */}
-            {isEditor && !isMonthInPast(journalMonth) && entries.length > 1 && (() => {
-              const last = entries[entries.length - 1]
-              const lastHasData = last.kamchilik || last.bartarafInfo
-              const canRemove = !lastHasData
-              return canRemove ? (
-                <button onClick={removeRow}
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-xs font-black text-slate-400 uppercase tracking-widest transition-all hover:text-red-500 hover:border-red-200 hover:bg-red-50 active:scale-[0.99]">
-                  <Trash2 size={14} strokeWidth={3} /> Oxirgi bo&apos;sh qatorni o&apos;chirish
-                </button>
-              ) : null
-            })()}
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* JADVAL KO'RINISHI (eski)                                          */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {viewMode === 'table' && (
-          <>
-            {/* --- Jadval --- */}
+        {/* --- Jadval --- */}
         <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
           <table style={{ minWidth: '1400px' }} className="w-full border-collapse text-[11px] text-slate-700">
             <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-tight text-slate-500 border-b-2 border-slate-200">
@@ -1615,26 +1252,6 @@ export function DU46JournalView({
             </div>
           )
         })()}
-          </>
-        )}
-
-        {/* ═══ FLOATING TUGMA ═══ */}
-        {isEditor && isCurrentMonth && viewMode === 'table' && (
-          <button
-            onClick={() => {
-              const emptyIdx = entries.findIndex(e => !e.kamchilik && !e.bartarafInfo && !e.oyKun1 && !e.soatMinut1)
-              if (emptyIdx !== -1) {
-                const row = document.querySelector(`tr:nth-child(${emptyIdx + 1})`)
-                row?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-              } else {
-                addRow()
-              }
-            }}
-            className="fixed bottom-8 right-8 z-[210] flex items-center gap-2 rounded-2xl bg-purple-600 px-5 py-3.5 text-sm font-black text-white uppercase tracking-widest shadow-2xl shadow-purple-600/30 transition-all hover:bg-purple-700 hover:shadow-purple-600/40 active:scale-95 border-2 border-purple-400"
-          >
-            <ArrowDown size={18} strokeWidth={3} /> Bo&apos;sh joyga
-          </button>
-        )}
 
       </div>
 
