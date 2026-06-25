@@ -423,6 +423,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   const [rejectedBy, setRejectedBy] = useState<string | null>(null)
   const [reportId, setReportId] = useState<string | null>(null)
   const [completionIdx, setCompletionIdx] = useState<number | null>(null)
+  const [deleteConfirmIdx, setDeleteConfirmIdx] = useState<number | null>(null)
   const monthStr = `${new Date().getFullYear()}-${String(month + 1).padStart(2, '0')}`
   const draftReport = useMemo(() => reports.find(r => r.month === monthStr && r.stationId === stationId), [reports, monthStr, stationId])
   const canEditPlan = session.position === 'katta_elektromexanik'
@@ -529,23 +530,27 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   }, [entries])
 
   const handleDeleteNavbatdanTashqari = useCallback((idx: number) => {
-    if (!confirm('Haqiqatan ham ushbu navbatdan tashqari ishni butunlay o\'chirmoqchimisiz?')) return;
+    setDeleteConfirmIdx(idx);
+  }, [])
+
+  const executeDeleteNavbatdanTashqari = useCallback(() => {
+    if (deleteConfirmIdx === null) return;
+    const idx = deleteConfirmIdx;
+    
     setHasUnsavedChanges(true)
     setEntries(prev => {
       const newEntries = [...prev]
       const entry = newEntries[idx]
       
-      // Agar bu qator faqat navbatdan tashqari ish uchun qo'shilgan bo'lsa (boshqa vazifalar yo'q bo'lsa)
       if (!entry.haftalikJadval && !entry.yillikJadval && !entry.kmoBartaraf && !entry.majburiyOzgarish) {
-        // Qatorni butunlay o'chiramiz
         newEntries.splice(idx, 1)
       } else {
-        // Aks holda faqat navbatdan tashqari ish belgisini tozalaymiz
         newEntries[idx] = { ...entry, yangiIshlar: '', isNavbatdanTashqari: false }
       }
       return newEntries
     })
-  }, [])
+    setDeleteConfirmIdx(null);
+  }, [deleteConfirmIdx])
 
   const updateEntry = useCallback((index: number, field: keyof ReportEntry, value: string) => {
     setHasUnsavedChanges(true)
@@ -1221,6 +1226,44 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
                   className="mt-3 w-full rounded-2xl bg-amber-500 px-4 py-4 text-xs font-black uppercase tracking-widest text-white shadow-md shadow-amber-500/20 transition-all hover:bg-amber-600 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
                 >
                   Qo'shish va Saqlash
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      ) : null}
+
+      {deleteConfirmIdx !== null && typeof document !== 'undefined' ? createPortal(
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all">
+          <div className="relative flex w-full max-w-sm flex-col overflow-hidden rounded-3xl border border-red-200/60 bg-white shadow-2xl animate-scale-in">
+            <div className="flex items-center justify-between border-b border-red-100 bg-red-50/80 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-500">
+                  <AlertTriangle size={20} strokeWidth={2.5} />
+                </div>
+                <h3 className="text-base font-black text-red-900 tracking-tight">O'chirishni tasdiqlash</h3>
+              </div>
+              <button onClick={() => setDeleteConfirmIdx(null)} className="rounded-xl border border-red-200/60 bg-white p-2 text-red-400 hover:bg-red-50 hover:text-red-600 transition-all shadow-sm"><X size={18} /></button>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-sm font-medium text-slate-700 text-center leading-relaxed mb-6">
+                Haqiqatan ham ushbu navbatdan tashqari ishni butunlay o'chirmoqchimisiz?
+              </p>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirmIdx(null)}
+                  className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-xs font-black uppercase tracking-widest text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98]"
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  onClick={executeDeleteNavbatdanTashqari}
+                  className="flex-1 rounded-2xl bg-red-500 px-4 py-3.5 text-xs font-black uppercase tracking-widest text-white shadow-md shadow-red-500/20 transition-all hover:bg-red-600 active:scale-[0.98]"
+                >
+                  O'chirish
                 </button>
               </div>
             </div>
