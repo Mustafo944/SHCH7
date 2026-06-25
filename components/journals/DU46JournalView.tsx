@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
 import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
 import type { DU46Entry } from '@/types'
-import { Plus, Trash2, CheckCircle2, Download, ChevronLeft } from 'lucide-react'
+import { Plus, Trash2, CheckCircle2, Download, ChevronLeft, ChevronRight, Calendar, LayoutGrid, List } from 'lucide-react'
 import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel } from './helpers'
 import { TaskSelectModal, DateInput, TimeInput } from './JournalSelectModal'
 import { ApprovalChainModal } from './ApprovalChainModal'
@@ -118,7 +118,8 @@ export function DU46JournalView({
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<string | null>(null)
   const [taskModalIdx, setTaskModalIdx] = useState<number | null>(null)
-  const [dayFilter, setDayFilter] = useState<'today' | 'all'>('today')
+  const [viewMode, setViewMode] = useState<'kunlik' | 'jadval'>('kunlik')
+  const [selectedDateFilter, setSelectedDateFilter] = useState<number>(new Date().getDate())
 
   // Tasdiqlash zanjirini tanlash modali
   const [approvalChainModal, setApprovalChainModal] = useState<{ index: number, isEdit: boolean, currentChain: string[] } | null>(null)
@@ -130,6 +131,9 @@ export function DU46JournalView({
   const selectedYear = jYear || String(today.getFullYear())
   const selectedMonth = jMonth || String(today.getMonth() + 1).padStart(2, '0')
   const journalMonthLabel = getJournalMonthLabel(journalMonth)
+  
+  // Oydagi kunlar soni
+  const daysInMonth = new Date(parseInt(selectedYear), parseInt(selectedMonth), 0).getDate()
 
   // ── Rollar ─────────────────────────────────────────────────────────────────────
   const isYulUstasi = userRole === 'yul_ustasi'
@@ -837,24 +841,46 @@ export function DU46JournalView({
           </button>
         </div>
 
-        {/* ── Kunlik filtr ────────────────────────────────────────────── */}
-        <div className="mb-4 flex items-center gap-2">
-          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-100 p-0.5 shadow-inner">
+        {/* ── KUNLIK / JADVAL ────────────────────────────────────────────── */}
+        <div className="mb-4 flex flex-col items-center gap-4">
+          <div className="flex items-center gap-2 rounded-2xl bg-slate-100/50 p-1.5 shadow-inner border border-slate-200/60 self-start">
             <button
-              onClick={() => setDayFilter('today')}
-              className={`rounded-lg px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${dayFilter === 'today' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              onClick={() => setViewMode('kunlik')}
+              className={`flex items-center gap-2 rounded-xl px-5 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${viewMode === 'kunlik' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-400 hover:text-slate-700 hover:bg-white/50'}`}
             >
-              Bugun ({selectedDay}.{selectedMonth})
+              <LayoutGrid size={14} /> Kunlik
             </button>
             <button
-              onClick={() => setDayFilter('all')}
-              className={`rounded-lg px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${dayFilter === 'all' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              onClick={() => setViewMode('jadval')}
+              className={`flex items-center gap-2 rounded-xl px-5 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${viewMode === 'jadval' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-400 hover:text-slate-700 hover:bg-white/50'}`}
             >
-              Barchasi ({entries.filter(e => e.kamchilik || e.bartarafInfo || e.oyKun1).length})
+              <List size={14} /> Jadval
             </button>
           </div>
-          {dayFilter === 'today' && (
-            <span className="text-[10px] font-bold text-slate-400">Faqat bugungi yozuvlar va bo&apos;sh qatorlar</span>
+
+          {viewMode === 'kunlik' && (
+            <div className="flex justify-center w-full pb-2">
+              <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm animate-fade-in">
+                <button
+                  onClick={() => setSelectedDateFilter(p => Math.max(1, p - 1))}
+                  disabled={selectedDateFilter <= 1}
+                  className="p-2 rounded-xl text-slate-400 hover:bg-purple-50 hover:text-purple-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <div className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-purple-50/50">
+                  <Calendar size={16} className="text-purple-500" />
+                  <span className="text-sm font-black text-slate-700 tracking-tight">{selectedDateFilter} - {journalMonthLabel.split(' ')[0]}</span>
+                </div>
+                <button
+                  onClick={() => setSelectedDateFilter(p => Math.min(daysInMonth, p + 1))}
+                  disabled={selectedDateFilter >= daysInMonth}
+                  className="p-2 rounded-xl text-slate-400 hover:bg-purple-50 hover:text-purple-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+            </div>
           )}
         </div>
 
@@ -890,16 +916,16 @@ export function DU46JournalView({
             </thead>
             <tbody>
               {entries.map((e, i) => {
-                // Kunlik filtr: bugun tanlangan bo'lsa, faqat bugungi sana + bo'sh qatorlarni ko'rsatamiz
+                // Kunlik filtr: agar jadval rejimida bo'lmasa, faqat tanlangan sanadagi qatorlar yoki bo'sh qatorlar ko'rsatiladi
                 const isEmpty = !e.kamchilik && !e.bartarafInfo && !e.oyKun1 && !e.soatMinut1 && !e.kamchilikBajarildi
-                if (dayFilter === 'today' && !isEmpty) {
-                  // oyKun1 formatini tekshirish: "25-06" yoki "25.06" yoki "dd-mm-yyyy" bo'lishi mumkin
-                  const todayStr = `${selectedDay}-${selectedMonth}`
-                  const todayStrDot = `${selectedDay}.${selectedMonth}`
-                  const todayFull = `${selectedDay}-${selectedMonth}-${selectedYear}`
+                if (viewMode === 'kunlik' && !isEmpty) {
+                  const selDayStr = String(selectedDateFilter).padStart(2, '0')
+                  const dStr = `${selDayStr}-${selectedMonth}`
+                  const dStrDot = `${selDayStr}.${selectedMonth}`
+                  const dFull = `${selDayStr}-${selectedMonth}-${selectedYear}`
                   const val = (e.oyKun1 || '').trim()
-                  if (val !== todayStr && val !== todayStrDot && val !== todayFull && val !== `${selectedDay}.${selectedMonth}.${selectedYear}`) {
-                    return null // Bu qator bugungi kun emas — yashirish
+                  if (val !== dStr && val !== dStrDot && val !== dFull && val !== `${selDayStr}.${selectedMonth}.${selectedYear}`) {
+                    return null // Bu qator tanlangan kun emas — yashirish
                   }
                 }
                 const iAmRoleCreator = isCreator(e)
