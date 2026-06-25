@@ -942,17 +942,15 @@ export async function getPendingJournalCounts(
             
             if (col === 3) {
               if (approvals.length < chain.length) return chain[approvals.length]
-              const creator = getCreator(e)
-              if (creator === 'bekat_boshlighi') return null
+              // Bekat boshlig'i ham bekat navbatchisi tomonidan tasdiqlanadi
               if (!e.kamchilikBBTasdiqladi) return 'DSP'
               return null
             } else {
               const creatorRole = getCreator(e)
               const col3Participants = new Set<string>()
               
-              if (creatorRole !== 'bekat_boshlighi') {
-                col3Participants.add(creatorRole)
-              }
+              // Bekat boshlig'i ham zanjirga qo'shiladi
+              col3Participants.add(creatorRole)
               chain.forEach(r => col3Participants.add(r))
 
               const writerRole = e.bartarafByRole || getCreator(e)
@@ -964,7 +962,9 @@ export async function getPendingJournalCounts(
               }))
               
               if (nextRequiredRole) return nextRequiredRole
-              if (!e.bartarafBBTasdiqladi) return 'DSP'
+              // Faqat bekat_navbatchisi o'zi Tugadi bossa, qayta tasdiqlamaydi
+              const writerRoleVal = e.bartarafByRole || getCreator(e)
+              if (writerRoleVal !== 'bekat_navbatchisi' && !e.bartarafBBTasdiqladi) return 'DSP'
               return null
             }
           }

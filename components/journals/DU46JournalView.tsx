@@ -135,7 +135,9 @@ export function DU46JournalView({
   const isEchXodimi = userRole === 'ech_xodimi'
   const isElektromexanik = ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(userRole)
   const isWorker = isElektromexanik || isYulUstasi
-  const isBB = ['bekat_boshlighi', 'bekat_navbatchisi'].includes(userRole)
+  const isBekatBoshlighi = userRole === 'bekat_boshlighi'
+  const isBekatNavbatchisi = userRole === 'bekat_navbatchisi'
+  const isBB = isBekatBoshlighi || isBekatNavbatchisi
   const isDispatcher = userRole === 'dispatcher'
   const isEditor = isWorker || isBB || isEchXodimi
 
@@ -284,7 +286,9 @@ export function DU46JournalView({
     const creator = getCreator(e)
     if (creator === 'yul_ustasi') return isYulUstasi
     if (creator === 'ech_xodimi') return isEchXodimi
-    if (creator === 'bekat_boshlighi' || creator === 'bekat_navbatchisi') return isBB
+    // Bekat boshlig'i va bekat navbatchisi alohida rollar — creator faqat o'zi
+    if (creator === 'bekat_boshlighi') return isBekatBoshlighi
+    if (creator === 'bekat_navbatchisi') return isBekatNavbatchisi
     if (['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(creator)) return isWorker
     return creator === 'worker' && isWorker
   }
@@ -300,9 +304,7 @@ export function DU46JournalView({
     if (col === 3) {
       if (approvals.length < chain.length) return chain[approvals.length]
       
-      const creator = getCreator(e)
-      if (creator === 'bekat_boshlighi') return null
-      
+      // Bekat boshlig'i ham bekat navbatchisi tomonidan tasdiqlanadi
       const isBBTasdiqladi = e.kamchilikBBTasdiqladi
       if (!isBBTasdiqladi) return 'DSP'
       
@@ -337,8 +339,8 @@ export function DU46JournalView({
       // Col12 uchun tasdiqlash kerak bo'lgan rollar ro'yxatini tuzamiz (tartib saqlanadi)
       const requiredApprovers: string[] = []
 
-      // Creator (agar BB emas va Tugadi bosmagan bo'lsa)
-      if (creatorRole !== 'bekat_boshlighi' && !creatorIsTugadiPresser) {
+      // Creator (agar Tugadi bosmagan bo'lsa — bekat_boshlighi ham tasdiqlash zanjirida bo'ladi)
+      if (!creatorIsTugadiPresser) {
         requiredApprovers.push(creatorRole)
       }
 
@@ -363,10 +365,10 @@ export function DU46JournalView({
 
       if (nextRequired) return nextRequired
 
-      // Barcha chain ishtirokchilari tasdiqladi — endi BB tasdiqlaydi
-      // Agar BB o'zi "Tugadi" bosgan bo'lsa — BB qayta tasdiqlamaydi
-      const bbRoles = ['bekat_boshlighi', 'bekat_navbatchisi']
-      if (!bbRoles.includes(tugadiRole) && !e.bartarafBBTasdiqladi) return 'DSP'
+      // Barcha chain ishtirokchilari tasdiqladi — endi bekat navbatchisi tasdiqlaydi
+      // Agar bekat_navbatchisi o'zi "Tugadi" bosgan bo'lsa — qayta tasdiqlamaydi
+      // Bekat boshlig'i Tugadi bossa ham, bekat navbatchisi tasdiqlashi kerak
+      if (tugadiRole !== 'bekat_navbatchisi' && !e.bartarafBBTasdiqladi) return 'DSP'
 
       return null
     }
@@ -410,7 +412,8 @@ export function DU46JournalView({
   const canIApprove = (e: DU46Entry, col: 3 | 12): boolean => {
     const nextRole = getNextApproverRole(e, col)
     if (!nextRole) return false
-    if (nextRole === 'DSP') return isBB
+    // DSP = faqat bekat navbatchisi tasdiqlaydi (bekat boshlig'i emas)
+    if (nextRole === 'DSP') return isBekatNavbatchisi
     // Xavfsizlik: 12-ustunda "Tugadi" bosgan odam hech qachon tasdiqlay olmaydi
     if (col === 12 && e.bartarafByRole === userRole) return false
     if (nextRole === 'worker') return isWorker
@@ -616,8 +619,8 @@ export function DU46JournalView({
     const e = entries[i]
     const nextRole = getNextApproverRole(e, 3)
 
-    if (isBB) {
-      // Bug #1 fix: kamchilikBBVaqt ni e'dan spread qilib olamiz (u update() orqali state'ga yozilgan)
+    if (isBekatNavbatchisi) {
+      // Faqat bekat navbatchisi tasdiqlaydi (bekat boshlig'i emas)
       updated[i] = {
         ...e,
         kamchilikBBTasdiqladi: true,
@@ -663,8 +666,8 @@ export function DU46JournalView({
     const e = entries[i]
     const nextRole = getNextApproverRole(e, 12)
 
-    if (isBB) {
-      // Bug #2 fix: bartarafBBVaqt ni e'dan explicit yozamiz
+    if (isBekatNavbatchisi) {
+      // Faqat bekat navbatchisi tasdiqlaydi (bekat boshlig'i emas)
       updated[i] = {
         ...e,
         bartarafBBTasdiqladi: true,
@@ -682,8 +685,8 @@ export function DU46JournalView({
       await saveEntries(updated, prev)
       showMsg('Tasdiqlandi!')
 
-      // Agar BB (Navbatchi) 12-ustunni tasdiqlasa, task ni "Bajarildi" qilamiz
-      if (isBB && e.linkedReportId && e.linkedTaskType) {
+      // Agar bekat navbatchisi 12-ustunni tasdiqlasa, task ni "Bajarildi" qilamiz
+      if (isBekatNavbatchisi && e.linkedReportId && e.linkedTaskType) {
         import('@/lib/supabase-db').then(db => {
           db.markReportEntryDoneFromJournal(e.linkedReportId!, e.linkedEntryIndex!, e.linkedTaskType!, userName)
         }).catch(err => console.error("Mark done error:", err))
