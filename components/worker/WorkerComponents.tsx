@@ -169,13 +169,18 @@ const MemoizedJournalRow = React.memo(({
 
   return (
     <tr className="group border-b border-slate-100 hover:bg-slate-50 transition-colors">
-      <td className="border-r border-slate-100 p-1 align-top">
+      <td className="border-r border-slate-100 p-1 align-top text-center relative">
         <LocalInput
           value={e.ragat}
           readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
           onChange={(val: string) => updateEntry(i, 'ragat', val)}
           className={`w-full rounded bg-transparent text-center font-bold text-purple-600 outline-none focus:bg-white ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-40' : ''}`}
         />
+        {e.isNavbatdanTashqari && (
+          <div className="absolute top-0 left-0 -ml-2 -mt-2">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 text-[10px] font-black text-amber-600 border border-amber-200 shadow-sm" title="Navbatdan tashqari">⚡</span>
+          </div>
+        )}
       </td>
       <td className="relative border-r border-slate-100 p-1 align-top">
         <div className="relative">
@@ -767,11 +772,11 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
               const dayTasks: { title: string, content: string, done: boolean, type: string, isLate: boolean, originalIndex: number, isNavbatdanTashqari?: boolean }[] = [];
               entries.forEach((e, originalIndex) => {
                 if (parseInt(e.ragat) === selectedDay) {
-                  if (e.haftalikJadval) dayTasks.push({ title: '4-haftalik jadval', content: e.haftalikJadval, done: !!e.doneHaftalik, type: 'haftalik', isLate: !!e.completedAfterMissedDateHaftalik, originalIndex });
-                  if (e.yillikJadval) dayTasks.push({ title: 'Yillik jadval', content: e.yillikJadval, done: !!e.doneYillik, type: 'yillik', isLate: !!e.completedAfterMissedDateYillik, originalIndex });
+                  if (e.haftalikJadval) dayTasks.push({ title: '4-haftalik jadval', content: e.haftalikJadval, done: !!e.doneHaftalik, type: 'haftalik', isLate: !!e.completedAfterMissedDateHaftalik, originalIndex, isNavbatdanTashqari: !!e.isNavbatdanTashqari });
+                  if (e.yillikJadval) dayTasks.push({ title: 'Yillik jadval', content: e.yillikJadval, done: !!e.doneYillik, type: 'yillik', isLate: !!e.completedAfterMissedDateYillik, originalIndex, isNavbatdanTashqari: !!e.isNavbatdanTashqari });
                   if (e.yangiIshlar) dayTasks.push({ title: 'Yangi ishlar', content: e.yangiIshlar, done: !!e.doneYangi, type: 'yangi', isLate: !!e.completedAfterMissedDateYangi, originalIndex, isNavbatdanTashqari: !!e.isNavbatdanTashqari });
-                  if (e.kmoBartaraf) dayTasks.push({ title: 'KMO bartaraf', content: e.kmoBartaraf, done: !!e.doneKmo, type: 'kmo', isLate: !!e.completedAfterMissedDateKmo, originalIndex });
-                  if (e.majburiyOzgarish) dayTasks.push({ title: 'Majburiy o\'zgartirish', content: e.majburiyOzgarish, done: !!e.doneMajburiy, type: 'majburiy', isLate: !!e.completedAfterMissedDateMajburiy, originalIndex });
+                  if (e.kmoBartaraf) dayTasks.push({ title: 'KMO bartaraf', content: e.kmoBartaraf, done: !!e.doneKmo, type: 'kmo', isLate: !!e.completedAfterMissedDateKmo, originalIndex, isNavbatdanTashqari: !!e.isNavbatdanTashqari });
+                  if (e.majburiyOzgarish) dayTasks.push({ title: 'Majburiy o\'zgartirish', content: e.majburiyOzgarish, done: !!e.doneMajburiy, type: 'majburiy', isLate: !!e.completedAfterMissedDateMajburiy, originalIndex, isNavbatdanTashqari: !!e.isNavbatdanTashqari });
                 }
               });
 
@@ -1077,27 +1082,70 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           <div className="relative flex w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-200/60 px-6 py-4 bg-slate-50/80">
               <div>
-                <h3 className="text-base font-black text-slate-900 tracking-tight">Navbatdan tashqari ish</h3>
+                <h3 className="text-base font-black text-slate-900 tracking-tight">Navbatdan tashqari ish qo'shish</h3>
                 <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">{navbatdanTashqariModalDay}-{MONTHS[month]} uchun</p>
               </div>
               <button onClick={() => setNavbatdanTashqariModalDay(null)} className="rounded-xl border border-slate-200/60 bg-white p-2 text-slate-400 hover:text-slate-900 transition-all shadow-sm"><X size={18} /></button>
             </div>
-            <div className="p-6">
-              <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-widest">Bajarilgan ish tafsiloti</label>
-              <textarea
-                value={navbatdanTashqariText}
-                onChange={e => setNavbatdanTashqariText(e.target.value)}
-                placeholder="Bajarilgan ishni kiriting..."
-                rows={4}
-                className="w-full rounded-2xl border border-slate-200/60 bg-slate-50/50 p-4 text-sm font-medium text-slate-900 outline-none transition-all focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-500/10 resize-none"
-              />
-              <button
-                onClick={() => addNavbatdanTashqari(navbatdanTashqariModalDay, navbatdanTashqariText)}
-                disabled={!navbatdanTashqariText.trim()}
-                className="mt-6 w-full rounded-2xl bg-amber-500 px-4 py-4 text-xs font-black uppercase tracking-widest text-white shadow-md shadow-amber-500/20 transition-all hover:bg-amber-600 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
-              >
-                Qo'shish va Saqlash
-              </button>
+            
+            <div className="p-6 space-y-6">
+              <div className="space-y-3">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">Tasdiqlangan grafiklardan tanlash</label>
+                <button
+                  onClick={() => {
+                    const newIdx = entries.length;
+                    setEntries(prev => [...prev, {
+                      ragat: String(navbatdanTashqariModalDay), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: '', isNavbatdanTashqari: true
+                    }]);
+                    setNavbatdanTashqariModalDay(null);
+                    setTimeout(() => openSelectModal(newIdx, '4-haftalik'), 0);
+                  }}
+                  className="w-full flex items-center justify-between rounded-2xl border border-purple-200 bg-purple-50 p-4 transition-all hover:border-purple-300 hover:bg-purple-100 active:scale-[0.98] group"
+                >
+                  <span className="font-bold text-purple-700">4-haftalik jadvaldan tanlash</span>
+                  <ArrowRight size={16} className="text-purple-400 group-hover:text-purple-600 transition-transform group-hover:translate-x-1" />
+                </button>
+                <button
+                  onClick={() => {
+                    const newIdx = entries.length;
+                    setEntries(prev => [...prev, {
+                      ragat: String(navbatdanTashqariModalDay), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: '', isNavbatdanTashqari: true
+                    }]);
+                    setNavbatdanTashqariModalDay(null);
+                    setTimeout(() => openSelectModal(newIdx, 'yillik'), 0);
+                  }}
+                  className="w-full flex items-center justify-between rounded-2xl border border-blue-200 bg-blue-50 p-4 transition-all hover:border-blue-300 hover:bg-blue-100 active:scale-[0.98] group"
+                >
+                  <span className="font-bold text-blue-700">Yillik jadvaldan tanlash</span>
+                  <ArrowRight size={16} className="text-blue-400 group-hover:text-blue-600 transition-transform group-hover:translate-x-1" />
+                </button>
+              </div>
+
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-slate-200"></div>
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-3 text-[10px] font-black uppercase text-slate-400">Yoki qo'lda kiritish</span>
+                </div>
+              </div>
+
+              <div>
+                <textarea
+                  value={navbatdanTashqariText}
+                  onChange={e => setNavbatdanTashqariText(e.target.value)}
+                  placeholder="Yangi ishni kiriting..."
+                  rows={3}
+                  className="w-full rounded-2xl border border-slate-200/60 bg-slate-50/50 p-4 text-sm font-medium text-slate-900 outline-none transition-all focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-500/10 resize-none"
+                />
+                <button
+                  onClick={() => addNavbatdanTashqari(navbatdanTashqariModalDay, navbatdanTashqariText)}
+                  disabled={!navbatdanTashqariText.trim()}
+                  className="mt-3 w-full rounded-2xl bg-amber-500 px-4 py-4 text-xs font-black uppercase tracking-widest text-white shadow-md shadow-amber-500/20 transition-all hover:bg-amber-600 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
+                >
+                  Qo'shish va Saqlash
+                </button>
+              </div>
             </div>
           </div>
         </div>,
