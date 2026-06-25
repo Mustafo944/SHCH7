@@ -103,6 +103,7 @@ export function SHU2JournalView({
   const [msg, setMsg] = useState<string | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [initialDataApplied, setInitialDataApplied] = useState(false)
+  const [dayFilter, setDayFilter] = useState<'today' | 'all'>('today')
 
   const isWorker = ['worker', 'elektromexanik', 'elektromontyor'].includes(userRole)
   const isDispatcher = userRole === 'dispatcher'
@@ -340,6 +341,27 @@ export function SHU2JournalView({
           </button>
         </div>
 
+        {/* ── Kunlik filtr ────────────────────────────────────────────── */}
+        <div className="mb-4 flex items-center gap-2">
+          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-100 p-0.5 shadow-inner">
+            <button
+              onClick={() => setDayFilter('today')}
+              className={`rounded-lg px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${dayFilter === 'today' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Bugun ({selectedDay}.{selectedMonth})
+            </button>
+            <button
+              onClick={() => setDayFilter('all')}
+              className={`rounded-lg px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${dayFilter === 'all' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Barchasi ({entries.filter(e => e.sana || e.yozuv).length})
+            </button>
+          </div>
+          {dayFilter === 'today' && (
+            <span className="text-[10px] font-bold text-slate-400">Faqat bugungi yozuvlar va bo&apos;sh qatorlar</span>
+          )}
+        </div>
+
         <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
           <table className="w-full min-w-[700px] border-collapse text-[12px] text-slate-700">
             <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-tight text-slate-500 border-b-2 border-slate-200">
@@ -352,6 +374,16 @@ export function SHU2JournalView({
             </thead>
             <tbody>
               {entries.map((e, i) => {
+                // Kunlik filtr: bugun tanlangan bo'lsa, faqat bugungi sana + bo'sh qatorlarni ko'rsatamiz
+                const isEmpty = !e.sana && !e.yozuv && !e.tasdiqlandi
+                if (dayFilter === 'today' && !isEmpty) {
+                  const todayDot = `${selectedDay}.${selectedMonth}.${selectedYear}`
+                  const todayShort = `${selectedDay}.${selectedMonth}`
+                  const val = (e.sana || '').trim()
+                  if (val !== todayDot && val !== todayShort) {
+                    return null
+                  }
+                }
                 const dispHidesRow = isDispatcher && !e.yuborildi
                 const displaySana = dispHidesRow ? '' : (e.sana || '')
                 const displayYozuv = dispHidesRow ? '' : (e.yozuv || '')

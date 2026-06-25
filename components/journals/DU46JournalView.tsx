@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
 import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
@@ -118,6 +118,7 @@ export function DU46JournalView({
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<string | null>(null)
   const [taskModalIdx, setTaskModalIdx] = useState<number | null>(null)
+  const [dayFilter, setDayFilter] = useState<'today' | 'all'>('today')
 
   // Tasdiqlash zanjirini tanlash modali
   const [approvalChainModal, setApprovalChainModal] = useState<{ index: number, isEdit: boolean, currentChain: string[] } | null>(null)
@@ -836,6 +837,27 @@ export function DU46JournalView({
           </button>
         </div>
 
+        {/* ── Kunlik filtr ────────────────────────────────────────────── */}
+        <div className="mb-4 flex items-center gap-2">
+          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-100 p-0.5 shadow-inner">
+            <button
+              onClick={() => setDayFilter('today')}
+              className={`rounded-lg px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${dayFilter === 'today' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Bugun ({selectedDay}.{selectedMonth})
+            </button>
+            <button
+              onClick={() => setDayFilter('all')}
+              className={`rounded-lg px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${dayFilter === 'all' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Barchasi ({entries.filter(e => e.kamchilik || e.bartarafInfo || e.oyKun1).length})
+            </button>
+          </div>
+          {dayFilter === 'today' && (
+            <span className="text-[10px] font-bold text-slate-400">Faqat bugungi yozuvlar va bo&apos;sh qatorlar</span>
+          )}
+        </div>
+
         {/* --- Jadval --- */}
         <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
           <table style={{ minWidth: '1400px' }} className="w-full border-collapse text-[11px] text-slate-700">
@@ -868,6 +890,18 @@ export function DU46JournalView({
             </thead>
             <tbody>
               {entries.map((e, i) => {
+                // Kunlik filtr: bugun tanlangan bo'lsa, faqat bugungi sana + bo'sh qatorlarni ko'rsatamiz
+                const isEmpty = !e.kamchilik && !e.bartarafInfo && !e.oyKun1 && !e.soatMinut1 && !e.kamchilikBajarildi
+                if (dayFilter === 'today' && !isEmpty) {
+                  // oyKun1 formatini tekshirish: "25-06" yoki "25.06" yoki "dd-mm-yyyy" bo'lishi mumkin
+                  const todayStr = `${selectedDay}-${selectedMonth}`
+                  const todayStrDot = `${selectedDay}.${selectedMonth}`
+                  const todayFull = `${selectedDay}-${selectedMonth}-${selectedYear}`
+                  const val = (e.oyKun1 || '').trim()
+                  if (val !== todayStr && val !== todayStrDot && val !== todayFull && val !== `${selectedDay}.${selectedMonth}.${selectedYear}`) {
+                    return null // Bu qator bugungi kun emas — yashirish
+                  }
+                }
                 const iAmRoleCreator = isCreator(e)
                 const isExactCreator = e.kamchilikImzo ? e.kamchilikImzo === userName : iAmRoleCreator
                 const hasRightToFix = isExactCreator || (e.approvalChain && e.approvalChain.includes(userRole))
