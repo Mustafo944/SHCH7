@@ -446,6 +446,31 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     })
   }, [])
 
+  const latestData = useRef({ entries, hasUnsavedChanges, reportId, draftReport, session, stationId, stationName, monthStr });
+  useEffect(() => {
+    latestData.current = { entries, hasUnsavedChanges, reportId, draftReport, session, stationId, stationName, monthStr };
+  }, [entries, hasUnsavedChanges, reportId, draftReport, session, stationId, stationName, monthStr]);
+
+  useEffect(() => {
+    return () => {
+      const data = latestData.current;
+      if (data.hasUnsavedChanges) {
+        upsertReport({
+          id: data.reportId || undefined,
+          workerId: data.draftReport?.workerId || data.session.id,
+          workerName: data.draftReport?.workerName || data.session.fullName,
+          workerPhone: data.draftReport?.workerPhone || data.session.phone || '',
+          stationId: data.stationId,
+          stationName: data.stationName,
+          entries: data.entries,
+          month: data.monthStr,
+          year: String(new Date().getFullYear()),
+          weekLabel: 'Draft Oylik Reja'
+        }).catch(e => console.error('Auto-save flush on unmount failed:', e));
+      }
+    };
+  }, []);
+
   // Debounced auto-save
   useEffect(() => {
     if (!hasUnsavedChanges || submitting) return;
