@@ -59,17 +59,24 @@ export async function updateSession(request: NextRequest) {
     return redirectResponse
   }
 
-  // Foydalanuvchining ma'lumotlarini (role) bazadan tortamiz (aniqlik uchun har doim bazadan tekshiriladi)
-  const { data: profile } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  // ── TEZLASHTIRISH: Avval cookie'dagi role'ni tekshiramiz (DB so'rovsiz) ──
+  // Cookie har login/middleware da yangilanadi, shuning uchun ishonchli.
+  // Faqat cookie yo'q bo'lsa DB ga murojaat qilamiz.
+  let userRole = request.cookies.get('user-role')?.value || null
 
-  const userRole = profile?.role
+  if (!userRole) {
+    // Cookie mavjud emas — DB dan olib kelamiz (faqat birinchi marta yoki cookie muddati o'tganda)
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    userRole = profile?.role || null
+  }
 
   if (userRole) {
-    // Role ni cookie ga saqlaymiz, keyingi so'rovlar tez bo'lishi uchun
+    // Role ni cookie ga saqlaymiz (yangilaymiz)
     supabaseResponse.cookies.set('user-role', userRole, { maxAge: 86400, path: '/', sameSite: 'lax', secure: true, httpOnly: false })
   }
 

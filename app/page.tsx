@@ -43,19 +43,33 @@ export default function LoginPage() {
   useEffect(() => {
     let active = true
 
-    async function checkSession() {
-      const session = await getCachedSession()
-      if (active) {
-        if (session) {
+    // ── TEZLASHTIRISH: avval localStorage dan sinxron tekshiramiz ──
+    // Agar user-profile mavjud bo'lsa, foydalanuvchi kirgan — darhol yo'naltiramiz
+    // Agar yo'q bo'lsa, login formani darhol ko'rsatamiz (async kutmasdan)
+    const cachedProfile = safeStorage.getItem('user-profile')
+    if (cachedProfile) {
+      try {
+        const parsed = JSON.parse(cachedProfile)
+        if (parsed?.role) {
           setNavigating(true)
-          router.replace(getRoleHome(session.role))
-        } else {
-          setCheckingSession(false)
+          router.replace(getRoleHome(parsed.role))
+          return // Sinxron topildi — async tekshirish shart emas
         }
-      }
+      } catch { /* corrupt cache, davom etamiz */ }
     }
 
-    checkSession()
+    // Cache yo'q — darhol login formani ko'rsatamiz
+    setCheckingSession(false)
+
+    // Orqa fonda Supabase sessiyani ham tekshiramiz (cookie bilan qayta kirgan bo'lishi mumkin)
+    async function verifySession() {
+      const session = await getCachedSession()
+      if (active && session) {
+        setNavigating(true)
+        router.replace(getRoleHome(session.role))
+      }
+    }
+    verifySession()
 
     return () => { active = false }
   }, [router])

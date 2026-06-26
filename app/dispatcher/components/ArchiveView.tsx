@@ -1,10 +1,44 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { FileText, BookOpen, Download } from 'lucide-react'
-import { WorkReport, Station, StationJournal, DU46Entry, SHU2Entry } from '@/types'
+import { WorkReport, Station, StationJournal, JournalType, DU46Entry, SHU2Entry } from '@/types'
 import { getJournalsByStationId } from '@/lib/supabase-db'
 import { MONTHS } from '@/lib/constants'
 import { ReportCard } from './ReportList'
-import { DU46JournalView, SHU2JournalView } from '@/components/JournalView'
+import {
+  DU46JournalView,
+  SHU2JournalView,
+  ALSNJournalView,
+  AlsnKodJournalView,
+  MpsFriksionJournalView,
+  YerlatgichJournalView,
+  DgaNazoratJournalView,
+} from '@/components/JournalView'
+
+// ─────────────────────────────────────────────────────────────────
+// JOURNAL_META: Har bir jurnal turining nomi, rangi va ikonkasi
+// Yangi jurnal turi qo'shsangiz, faqat shu ro'yxatga qo'shing — UI avtomatik ishlaydi.
+// ─────────────────────────────────────────────────────────────────
+
+interface JournalMeta {
+  label: string
+  color: string        // active tab bg
+  hoverRing: string    // card hover ring
+  textColor: string    // card text
+}
+
+const JOURNAL_META: Record<string, JournalMeta> = {
+  du46:         { label: 'DU-46',         color: 'bg-sky-600',    hoverRing: 'hover:ring-sky-400/30',    textColor: 'text-sky-600' },
+  shu2:         { label: 'SHU-2',         color: 'bg-amber-500',  hoverRing: 'hover:ring-amber-400/30',  textColor: 'text-amber-600' },
+  alsn:         { label: 'ALSN',          color: 'bg-indigo-500', hoverRing: 'hover:ring-indigo-400/30',  textColor: 'text-indigo-600' },
+  yerlatgich:   { label: 'Yerlatgich',    color: 'bg-teal-500',   hoverRing: 'hover:ring-teal-400/30',   textColor: 'text-teal-600' },
+  alsnKod:      { label: 'ALSN Kod',      color: 'bg-violet-500', hoverRing: 'hover:ring-violet-400/30', textColor: 'text-violet-600' },
+  mpsFriksion:  { label: 'MPS Friksion',  color: 'bg-rose-500',   hoverRing: 'hover:ring-rose-400/30',   textColor: 'text-rose-600' },
+  dgaNazorat:   { label: 'DGA Nazorat',   color: 'bg-orange-500', hoverRing: 'hover:ring-orange-400/30', textColor: 'text-orange-600' },
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ARCHIVE VIEW — Asosiy komponent
+// ─────────────────────────────────────────────────────────────────
 
 export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, onReject }: {
   stations: { id: string; name: string }[]
@@ -13,16 +47,18 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
   onConfirmEntry: (reportId: string, idx: number) => void
   onReject: (reportId: string) => void
 }) {
+  // ── State ──────────────────────────────────────────────────────
   const [selStation, setSelStation] = useState<string | null>(null)
   const [selYear, setSelYear] = useState('2026')
   const [selMonth, setSelMonth] = useState<number | null>(null)
-  const [archiveTab, setArchiveTab] = useState<'hisobot' | 'du46' | 'shu2' | 'dgaNazorat'>('hisobot')
+  const [activeTab, setActiveTab] = useState<'oylikReja' | JournalType>('oylikReja')
   const [viewJournal, setViewJournal] = useState<StationJournal | null>(null)
 
   const [stationJournals, setStationJournals] = useState<StationJournal[]>([])
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [journalsLoading, setJournalsLoading] = useState(false)
 
+  // ── Bekat jurnallarini yuklash ─────────────────────────────────
   useEffect(() => {
     if (!selStation) { setStationJournals([]); return }
     setJournalsLoading(true)
@@ -31,83 +67,145 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
       .finally(() => setJournalsLoading(false))
   }, [selStation])
 
-  const archiveReports = selStation && selMonth !== null
-    ? allReports.filter((r) => r.stationId === selStation && r.month === `${selYear}-${String(selMonth + 1).padStart(2, '0')}`)
-    : []
+  // ── Oy uchun kerakli formatlash ─────────────────────────────────
+  const monthKey = selMonth !== null
+    ? `${selYear}-${String(selMonth + 1).padStart(2, '0')}`
+    : null
 
-  const du46Archive = selStation && selMonth !== null
-    ? stationJournals.filter(j => j.journalType === 'du46' && j.updatedAt.startsWith(`${selYear}-${String(selMonth + 1).padStart(2, '0')}`))
-    : []
+  // ── Faqat QABUL QILINGAN hisobotlar (rad etilganlar chiqmaydi) ─
+  const archiveReports = useMemo(() => {
+    if (!selStation || !monthKey) return []
+    return allReports.filter(
+      r => r.stationId === selStation
+        && r.month === monthKey
+        && r.confirmedAt        // qabul qilingan
+        && !r.rejectedAt        // rad etilmagan
+    )
+  }, [selStation, monthKey, allReports])
 
-  const shu2Archive = selStation && selMonth !== null
-    ? stationJournals.filter(j => j.journalType === 'shu2' && j.updatedAt.startsWith(`${selYear}-${String(selMonth + 1).padStart(2, '0')}`))
-    : []
+  // ── Tanlangan oy uchun mavjud jurnal turlari (dinamik tablar) ──
+  const availableJournalTypes = useMemo(() => {
+    if (!selStation || !monthKey) return []
+    const typesSet = new Set<string>()
+    stationJournals.forEach(j => {
+      if (j.updatedAt.startsWith(monthKey)) {
+        typesSet.add(j.journalType)
+      }
+    })
+    // JOURNAL_META tartibiga ko'ra qaytaramiz
+    return Object.keys(JOURNAL_META).filter(t => typesSet.has(t)) as JournalType[]
+  }, [selStation, monthKey, stationJournals])
 
-  const dgaArchive = selStation && selMonth !== null
-    ? stationJournals.filter(j => j.journalType === 'dgaNazorat' && j.updatedAt.startsWith(`${selYear}-${String(selMonth + 1).padStart(2, '0')}`))
-    : []
+  // ── Tanlangan tab uchun jurnallar ──────────────────────────────
+  const activeJournals = useMemo(() => {
+    if (activeTab === 'oylikReja' || !monthKey) return []
+    return stationJournals.filter(
+      j => j.journalType === activeTab && j.updatedAt.startsWith(monthKey)
+    )
+  }, [activeTab, monthKey, stationJournals])
+
+  // ── Oy tugmalarida marker uchun — hech bo'lmasa bitta ma'lumot bormi? ──
+  const hasDataForMonth = (monthIdx: number) => {
+    const mk = `${selYear}-${String(monthIdx + 1).padStart(2, '0')}`
+    const hasReport = allReports.some(
+      r => r.stationId === selStation && r.month === mk && r.confirmedAt && !r.rejectedAt
+    )
+    const hasJournal = stationJournals.some(j => j.updatedAt.startsWith(mk))
+    return hasReport || hasJournal
+  }
 
   const selStationName = stations.find((s: Station) => s.id === selStation)?.name || ''
 
+  // ── Bekat tanlanganda tab ni reset qilamiz ────────────────────
+  const handleStationSelect = (id: string) => {
+    setSelStation(id)
+    setActiveTab('oylikReja')
+    setSelMonth(null)
+  }
+
+  // ── Oy tanlanganda tab ni reset qilamiz ────────────────────────
+  const handleMonthSelect = (idx: number) => {
+    setSelMonth(idx)
+    setActiveTab('oylikReja')
+  }
+
+  // ── RENDER ─────────────────────────────────────────────────────
   return (
     <>
       <div className="grid gap-8 lg:grid-cols-[300px_1fr] animate-fade-up">
+        {/* ─── Chap panel: Bekatlar ro'yxati ─── */}
         <div className="space-y-4">
           <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Arxiv Bekatlari</h3>
           <div className="grid gap-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
             {stations.map((st) => (
-              <button key={st.id} onClick={() => { setSelStation(st.id); setArchiveTab('hisobot') }} className={`premium-card p-4 text-left transition-all duration-200 ${selStation === st.id ? 'bg-amber-50 ring-1 ring-amber-400/30 text-slate-900 shadow-md' : 'hover:bg-white/80 text-slate-500'}`}>
+              <button key={st.id} onClick={() => handleStationSelect(st.id)} className={`premium-card p-4 text-left transition-all duration-200 ${selStation === st.id ? 'bg-amber-50 ring-1 ring-amber-400/30 text-slate-900 shadow-md' : 'hover:bg-white/80 text-slate-500'}`}>
                 <span className="font-bold">{st.name}</span>
               </button>
             ))}
           </div>
         </div>
 
+        {/* ─── O'ng panel: Arxiv kontenti ─── */}
         <div className="min-w-0 space-y-6">
           {selStation ? (
             <>
               <div className="premium-card p-6">
                 <h2 className="text-2xl font-black text-slate-900">{selStationName} Arxiv</h2>
+
+                {/* Yil tanlash */}
                 <div className="mt-6 flex flex-wrap gap-2">
                   {Array.from({ length: Math.max(3, new Date().getFullYear() - 2026 + 3) }, (_, i) => 2026 + i).map(y => (
                     <button key={y} onClick={() => setSelYear(y.toString())} className={`rounded-xl px-6 py-2 text-xs font-black transition-all duration-200 ${selYear === y.toString() ? 'bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{y} yil</button>
                   ))}
                 </div>
+
+                {/* Oy tanlash */}
                 <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-6">
                   {MONTHS.map((m, i) => {
-                    const hasReport = allReports.some((r) => r.stationId === selStation && r.month === `${selYear}-${String(i + 1).padStart(2, '0')}`)
-                    const hasDU46 = stationJournals.some(j => j.journalType === 'du46' && j.updatedAt.startsWith(`${selYear}-${String(i + 1).padStart(2, '0')}`))
-                    const hasSHU2 = stationJournals.some(j => j.journalType === 'shu2' && j.updatedAt.startsWith(`${selYear}-${String(i + 1).padStart(2, '0')}`))
-                    const hasDGA = stationJournals.some(j => j.journalType === 'dgaNazorat' && j.updatedAt.startsWith(`${selYear}-${String(i + 1).padStart(2, '0')}`))
-                    const hasAny = hasReport || hasDU46 || hasSHU2 || hasDGA
+                    const hasAny = hasDataForMonth(i)
                     return (
-                      <button key={i} onClick={() => setSelMonth(i)} className={`rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${selMonth === i ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xl' : hasAny ? 'bg-amber-50 border border-amber-100 text-amber-600 hover:bg-amber-100' : 'bg-slate-50 border border-slate-100 text-slate-300 hover:bg-slate-100'}`}>{m}</button>
+                      <button key={i} onClick={() => handleMonthSelect(i)} className={`rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${selMonth === i ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xl' : hasAny ? 'bg-amber-50 border border-amber-100 text-amber-600 hover:bg-amber-100' : 'bg-slate-50 border border-slate-100 text-slate-300 hover:bg-slate-100'}`}>{m}</button>
                     )
                   })}
                 </div>
               </div>
 
-              {selMonth !== null && (
+              {/* ─── Tablar va kontent ─── */}
+              {selMonth !== null ? (
                 <>
+                  {/* Tab tugmalari */}
                   <div className="flex gap-1 rounded-full bg-white/60 backdrop-blur-sm p-1 sm:p-1.5 shadow-sm border border-white/40 w-fit max-w-full overflow-x-auto custom-scrollbar">
-                    <button onClick={() => setArchiveTab('hisobot')} className={`rounded-full px-3 py-2 sm:px-5 sm:py-2.5 text-[9px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all whitespace-nowrap shrink-0 ${archiveTab === 'hisobot' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'}`}>
-                      <span className="flex items-center gap-1.5 sm:gap-2"><FileText size={14} className="shrink-0" /> Hisobotlar</span>
+                    {/* Oylik ish reja tab */}
+                    <button
+                      onClick={() => setActiveTab('oylikReja')}
+                      className={`rounded-full px-3 py-2 sm:px-5 sm:py-2.5 text-[9px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all whitespace-nowrap shrink-0 ${activeTab === 'oylikReja' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'}`}
+                    >
+                      <span className="flex items-center gap-1.5 sm:gap-2"><FileText size={14} className="shrink-0" /> Oylik ish reja</span>
                     </button>
-                    <button onClick={() => setArchiveTab('du46')} className={`rounded-full px-3 py-2 sm:px-5 sm:py-2.5 text-[9px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all whitespace-nowrap shrink-0 ${archiveTab === 'du46' ? 'bg-sky-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'}`}>
-                      <span className="flex items-center gap-1.5 sm:gap-2"><BookOpen size={14} className="shrink-0" /> DU-46</span>
-                    </button>
-                    <button onClick={() => setArchiveTab('shu2')} className={`rounded-full px-3 py-2 sm:px-5 sm:py-2.5 text-[9px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all whitespace-nowrap shrink-0 ${archiveTab === 'shu2' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'}`}>
-                      <span className="flex items-center gap-1.5 sm:gap-2"><BookOpen size={14} className="shrink-0" /> SHU-2</span>
-                    </button>
-                    <button onClick={() => setArchiveTab('dgaNazorat')} className={`rounded-full px-3 py-2 sm:px-5 sm:py-2.5 text-[9px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all whitespace-nowrap shrink-0 ${archiveTab === 'dgaNazorat' ? 'bg-orange-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'}`}>
-                      <span className="flex items-center gap-1.5 sm:gap-2"><BookOpen size={14} className="shrink-0" /> DGA</span>
-                    </button>
+
+                    {/* Dinamik jurnal tablari — faqat mavjud turlar ko'rinadi */}
+                    {availableJournalTypes.map(jType => {
+                      const meta = JOURNAL_META[jType]
+                      if (!meta) return null
+                      return (
+                        <button
+                          key={jType}
+                          onClick={() => setActiveTab(jType)}
+                          className={`rounded-full px-3 py-2 sm:px-5 sm:py-2.5 text-[9px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all whitespace-nowrap shrink-0 ${activeTab === jType ? `${meta.color} text-white shadow-md` : 'text-slate-500 hover:text-slate-900'}`}
+                        >
+                          <span className="flex items-center gap-1.5 sm:gap-2"><BookOpen size={14} className="shrink-0" /> {meta.label}</span>
+                        </button>
+                      )
+                    })}
                   </div>
 
-                  {archiveTab === 'hisobot' && (
+                  {/* ─── Tab kontenti ─── */}
+
+                  {/* 1. Oylik ish reja */}
+                  {activeTab === 'oylikReja' && (
                     <div className="space-y-4">
                       {archiveReports.length === 0
-                        ? <div className="premium-card flex h-48 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Bu oy uchun hisobot yo'q</div>
+                        ? <div className="premium-card flex h-48 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Bu oy uchun qabul qilingan ish reja yo&apos;q</div>
                         : archiveReports.map((r) => (
                           <ReportCard key={r.id} report={r} onConfirm={() => onConfirm(r.id)} onConfirmRow={(idx: number) => onConfirmEntry(r.id, idx)} onReject={() => onReject(r.id)} />
                         ))
@@ -115,78 +213,34 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
                     </div>
                   )}
 
-                  {archiveTab === 'du46' && (
+                  {/* 2. Jurnal tablari — universal render */}
+                  {activeTab !== 'oylikReja' && (
                     <div className="space-y-4">
-                      {du46Archive.length === 0
-                        ? <div className="premium-card flex h-48 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Bu oy uchun DU-46 jurnali yo'q</div>
-                        : du46Archive.map((j) => (
-                          <button
-                            key={j.id}
-                            onClick={() => setViewJournal(j)}
-                            className="w-full text-left premium-card p-6 hover:ring-2 hover:ring-sky-400/30 transition-all group"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h4 className="font-black text-slate-900">DU-46 Jurnali</h4>
-                                <p className="text-xs text-slate-400">{selStationName}</p>
+                      {activeJournals.length === 0
+                        ? <div className="premium-card flex h-48 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Bu oy uchun {JOURNAL_META[activeTab]?.label || activeTab} jurnali yo&apos;q</div>
+                        : activeJournals.map((j) => {
+                          const meta = JOURNAL_META[j.journalType]
+                          return (
+                            <button
+                              key={j.id}
+                              onClick={() => setViewJournal(j)}
+                              className={`w-full text-left premium-card p-6 ${meta?.hoverRing || ''} hover:ring-2 transition-all group`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-black text-slate-900">{meta?.label || j.journalType} Jurnali</h4>
+                                  <p className="text-xs text-slate-400">{selStationName}</p>
+                                </div>
+                                <span className={`text-sm font-bold ${meta?.textColor || 'text-sky-600'} group-hover:translate-x-1 transition-transform`}>Ko&apos;rish →</span>
                               </div>
-                              <span className="text-sm font-bold text-sky-600 group-hover:translate-x-1 transition-transform">Ko'rish →</span>
-                            </div>
-                          </button>
-                        ))
-                      }
-                    </div>
-                  )}
-
-                  {archiveTab === 'shu2' && (
-                    <div className="space-y-4">
-                      {shu2Archive.length === 0
-                        ? <div className="premium-card flex h-48 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Bu oy uchun SHU-2 jurnali yo'q</div>
-                        : shu2Archive.map((j) => (
-                          <button
-                            key={j.id}
-                            onClick={() => setViewJournal(j)}
-                            className="w-full text-left premium-card p-6 hover:ring-2 hover:ring-amber-400/30 transition-all group"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h4 className="font-black text-slate-900">SHU-2 Jurnali</h4>
-                                <p className="text-xs text-slate-400">{selStationName}</p>
-                              </div>
-                              <span className="text-sm font-bold text-amber-600 group-hover:translate-x-1 transition-transform">Ko'rish →</span>
-                            </div>
-                          </button>
-                        ))
-                      }
-                    </div>
-                  )}
-
-                  {archiveTab === 'dgaNazorat' && (
-                    <div className="space-y-4">
-                      {dgaArchive.length === 0
-                        ? <div className="premium-card flex h-48 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Bu oy uchun DGA jurnali yo'q</div>
-                        : dgaArchive.map((j) => (
-                          <button
-                            key={j.id}
-                            onClick={() => setViewJournal(j)}
-                            className="w-full text-left premium-card p-6 hover:ring-2 hover:ring-orange-400/30 transition-all group"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h4 className="font-black text-slate-900">DGA Jurnali</h4>
-                                <p className="text-xs text-slate-400">{selStationName}</p>
-                              </div>
-                              <span className="text-sm font-bold text-orange-600 group-hover:translate-x-1 transition-transform">Ko'rish →</span>
-                            </div>
-                          </button>
-                        ))
+                            </button>
+                          )
+                        })
                       }
                     </div>
                   )}
                 </>
-              )}
-
-              {selMonth === null && (
+              ) : (
                 <div className="premium-card flex h-64 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Oyni tanlang</div>
               )}
             </>
@@ -196,37 +250,67 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
         </div>
       </div>
 
+      {/* ─── To'liq ekran jurnal ko'rinishi ─── */}
       {viewJournal && (
         <div className="fixed inset-0 z-[500] bg-slate-50">
-          {viewJournal.journalType === 'du46' ? (
-            <DU46JournalView
-              stationId={viewJournal.stationId}
-              stationName={selStationName}
-              userName="Dispetcher"
-              userRole="dispatcher"
-              journalMonth={viewJournal.updatedAt.slice(0,7)}
-              onClose={() => setViewJournal(null)}
-            />
-          ) : viewJournal.journalType === 'dgaNazorat' ? (
-            <div className="flex items-center justify-center h-full p-8 text-center text-slate-400 font-bold uppercase tracking-widest">
-              Ushbu jurnal hozircha dispetcher rejimida to'liq ko'rinmaydi. Lekin arxivda mavjud!
-              <button onClick={() => setViewJournal(null)} className="ml-4 rounded bg-slate-200 px-4 py-2 text-slate-700">Yopish</button>
-            </div>
-          ) : (
-            <SHU2JournalView
-              stationId={viewJournal.stationId}
-              stationName={selStationName}
-              userName="Dispetcher"
-              userRole="dispatcher"
-              journalMonth={viewJournal.updatedAt.slice(0,7)}
-              onClose={() => setViewJournal(null)}
-            />
-          )}
+          <JournalFullView
+            journal={viewJournal}
+            stationName={selStationName}
+            onClose={() => setViewJournal(null)}
+          />
         </div>
       )}
     </>
   )
 }
+
+// ─────────────────────────────────────────────────────────────────
+// JOURNAL FULL VIEW — har qanday jurnal turini to'liq ekranda ochadi
+// ─────────────────────────────────────────────────────────────────
+
+function JournalFullView({ journal, stationName, onClose }: {
+  journal: StationJournal
+  stationName: string
+  onClose: () => void
+}) {
+  const month = journal.updatedAt.slice(0, 7)
+  const commonProps = {
+    stationId: journal.stationId,
+    stationName,
+    userName: 'Dispetcher',
+    userRole: 'dispatcher' as const,
+    journalMonth: month,
+    onClose,
+  }
+
+  switch (journal.journalType) {
+    case 'du46':
+      return <DU46JournalView {...commonProps} />
+    case 'shu2':
+      return <SHU2JournalView {...commonProps} />
+    case 'alsn':
+      return <ALSNJournalView {...commonProps} />
+    case 'yerlatgich':
+      return <YerlatgichJournalView {...commonProps} />
+    case 'alsnKod':
+      return <AlsnKodJournalView {...commonProps} />
+    case 'mpsFriksion':
+      return <MpsFriksionJournalView {...commonProps} />
+    case 'dgaNazorat':
+      return <DgaNazoratJournalView {...commonProps} />
+    default:
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
+          <p className="font-bold uppercase tracking-widest">Bu jurnal turi hozircha qo&apos;llab-quvvatlanmaydi</p>
+          <button onClick={onClose} className="rounded-xl bg-slate-200 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-300 transition-all">Yopish</button>
+        </div>
+      )
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// JOURNAL ARCHIVE CARD — Arxivda jurnal kartochkasi (kengaytiriladigan)
+// ─────────────────────────────────────────────────────────────────
 
 export function JournalArchiveCard({ journal, type, stationName }: {
   journal: StationJournal
@@ -450,14 +534,14 @@ export function JournalArchiveCard({ journal, type, stationName }: {
             </table>
           )}
           {filteredEntries.length === 0 && (
-            <div className="py-12 text-center text-slate-300 font-black uppercase tracking-widest text-xs">Bu oyda ma'lumot yo'q</div>
+            <div className="py-12 text-center text-slate-300 font-black uppercase tracking-widest text-xs">Bu oyda ma&apos;lumot yo&apos;q</div>
           )}
         </div>
       )}
 
       {!expanded && (
         <div className="px-6 py-4 text-center">
-          <p className="text-xs text-slate-400">To'liq ko'rish uchun <span className="font-bold text-sky-600">"Kengaytish"</span> tugmasini bosing</p>
+          <p className="text-xs text-slate-400">To&apos;liq ko&apos;rish uchun <span className="font-bold text-sky-600">&quot;Kengaytish&quot;</span> tugmasini bosing</p>
         </div>
       )}
     </div>

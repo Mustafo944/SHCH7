@@ -358,7 +358,7 @@ export function SHU2JournalView({
               onClick={() => setViewMode('jadval')}
               className={`flex items-center gap-2 rounded-xl px-5 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${viewMode === 'jadval' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-400 hover:text-slate-700 hover:bg-white/50'}`}
             >
-              <List size={14} /> Jadval
+              <List size={14} /> To&apos;liq jadval
             </button>
           </div>
 

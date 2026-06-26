@@ -238,6 +238,14 @@ export function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow, onR
                 </thead>
                 <tbody>
                   {(report.entries || []).filter(e => e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish || e.bajarildiShn).map((e, idx) => {
+                    const isLate = !!(e.completedAfterMissedDateHaftalik || e.completedAfterMissedDateYillik || e.completedAfterMissedDateYangi || e.completedAfterMissedDateKmo || e.completedAfterMissedDateMajburiy)
+                    const lateDateStr = e.completedAfterMissedDateHaftalik || e.completedAfterMissedDateYillik || e.completedAfterMissedDateYangi || e.completedAfterMissedDateKmo || e.completedAfterMissedDateMajburiy
+                    let formattedLateDate = ''
+                    if (lateDateStr) {
+                      const d = new Date(lateDateStr)
+                      formattedLateDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
+                    }
+
                     return (
                       <tr key={idx} className="border-b border-slate-100 hover:bg-white transition-colors">
                         <td className="border-r border-slate-200 p-2 text-center font-bold text-slate-400">{e.ragat}</td>
@@ -250,9 +258,13 @@ export function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow, onR
                         <td className="border-r border-slate-200 p-2 text-center align-middle text-[10px] italic text-slate-500">{e.bajarildiImzo || '—'}</td>
                         <td className="p-2 text-center align-middle">
                           {e.adImzosi ? (
-                            <div className="flex items-center justify-center gap-1 rounded-lg bg-emerald-50 py-1.5 border border-emerald-100 text-emerald-600">
-                              <CheckCircle2 size={10} />
-                              <span className="text-[9px] font-bold">✅ {e.adImzosi}</span>
+                            <div className="flex flex-col items-center gap-1">
+                              <span className={`inline-flex items-center justify-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold border ${isLate ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                                <CheckCircle2 size={12} /> {e.adImzosi}
+                              </span>
+                              {isLate && formattedLateDate && (
+                                <span className="text-[9px] font-bold text-orange-500">{formattedLateDate} da bajarildi</span>
+                              )}
                             </div>
                           ) : (
                             <div className="text-[9px] italic text-slate-300">Kutilmoqda...</div>

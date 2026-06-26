@@ -60,13 +60,16 @@ export function useSessionGuard(expectedRole: Role | Role[]) {
   }, [router])
 
   const handleSignOut = useCallback(async () => {
-    // 1. Server tomoniga so'rovni yuborish va cookie tozalanishini kutish
-    await fetch('/api/auth/signout', { method: 'POST' }).catch(() => {})
-    
-    // 2. Client tomonida lokal ma'lumotlarni tozalash
-    await signOut().catch(() => {})
-    
-    // 3. Darhol sahifani qayta yuklash (cookie toza bo'lgani uchun to'g'ridan-to'g'ri login page ga tushadi)
+    // 1. Darhol state ni tozalaymiz (UI tezkor javob beradi)
+    setSession(null)
+
+    // 2. Server va client tozalashni PARALLEL bajaramiz (ketma-ket emas)
+    await Promise.allSettled([
+      fetch('/api/auth/signout', { method: 'POST' }),
+      signOut(),
+    ])
+
+    // 3. Login sahifasiga o'tamiz
     window.location.href = '/'
   }, [])
 
