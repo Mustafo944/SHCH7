@@ -198,11 +198,10 @@ export function DU46JournalView({
                 // Live (realtime) yangilanishlar barcha foydalanuvchilarda bir xil ko'rinishi uchun
                 // doim ma'lumotlar bazasidan kelgan eng so'nggi holatni olamiz.
                 // Lekin foydalanuvchi joriy sessiyada tahrirlayotgan/qo'shgan qatorlar Kunlik rejimda yo'qolib qolmasligi uchun UI bayroqlarni saqlaymiz:
-                merged[i] = {
-                  ...dbRow,
-                  _isEdited: (localRow as any)._isEdited,
-                  _isNew: (localRow as any)._isNew
-                }
+                const newRow: any = { ...dbRow }
+                newRow._isEdited = (localRow as any)._isEdited
+                newRow._isNew = (localRow as any)._isNew
+                merged[i] = newRow
               }
             }
             // Agar foydalanuvchi lokalda ko'proq qator qo'shgan bo'lsa va unda ma'lumot bo'lsa, ularni saqlab qolamiz
