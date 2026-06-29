@@ -490,7 +490,7 @@ export function DU46JournalView({
       newEntry.oyKun1 = `${selDayStr}-${selectedMonth}-${selectedYear}`;
       
       // Yangi qo'shilgan qator qaysi sana yozilishidan qat'i nazar shu sessiyada ko'rinib turishi uchun
-      ;(newEntry as any)._isNew = true;
+      (newEntry as any)._isNew = true;
 
       startTransition(() => {
         setEntries([...entries, newEntry]);
