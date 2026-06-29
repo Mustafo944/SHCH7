@@ -183,7 +183,7 @@ export interface DU46Entry {
   bartarafBBVaqt: string            // Avtomatik vaqt (soat:daqiqa)
 
   // ── Umumiy ──
-  createdByRole?: 'worker' | 'bekat_boshlighi' | 'yul_ustasi' | 'ech_xodimi'
+  createdByRole?: 'worker' | 'bekat_boshlighi' | 'yul_ustasi' | 'ech_xodimi' | 'bekat_navbatchisi'
   yuborildi: boolean
   dispetcherQabulQildi?: boolean
   dispetcherImzo?: string
