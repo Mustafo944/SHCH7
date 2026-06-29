@@ -87,7 +87,12 @@ export function ApprovalChainModal({ initialChain, isEdit, creatorRole, onCancel
           </button>
           <button
             onClick={() => onSave(chain)}
-            className="flex-1 rounded-xl bg-purple-500 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-purple-500/20 hover:bg-purple-600 transition-all active:scale-95"
+            disabled={creatorRole === 'bekat_navbatchisi' && chain.length === 0}
+            className={`flex-1 rounded-xl px-5 py-3.5 text-sm font-black text-white transition-all active:scale-95 ${
+              creatorRole === 'bekat_navbatchisi' && chain.length === 0
+                ? 'bg-slate-300 shadow-none cursor-not-allowed'
+                : 'bg-purple-500 shadow-lg shadow-purple-500/20 hover:bg-purple-600'
+            }`}
           >
             {isEdit ? 'Saqlash' : 'Boshlash'}
           </button>

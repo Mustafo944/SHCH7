@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef, startTransition } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
 import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
@@ -15,16 +15,22 @@ import { ApprovalChainModal } from './ApprovalChainModal'
 // LOCAL COMPONENTS (PREVENT EXCESSIVE RE-RENDERS)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck, lang }: any) => {
+const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck, lang, placeholder }: any) => {
   const [val, setVal] = useState(value)
+  const onChangeRef = useRef(onChange)
+
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
+
   useEffect(() => setVal(value), [value])
-  
+
   useEffect(() => {
     if (val !== value) {
-      const timer = setTimeout(() => onChange(val), 50)
+      const timer = setTimeout(() => onChangeRef.current(val), 50)
       return () => clearTimeout(timer)
     }
-  }, [val, value, onChange])
+  }, [val, value])
 
   return (
     <textarea
@@ -36,20 +42,27 @@ const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck,
       rows={rows}
       spellCheck={spellCheck}
       lang={lang}
+      placeholder={placeholder}
     />
   )
 }
 
 const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
   const [val, setVal] = useState(value)
+  const onChangeRef = useRef(onChange)
+
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
+
   useEffect(() => setVal(value), [value])
 
   useEffect(() => {
     if (val !== value) {
-      const timer = setTimeout(() => onChange(val), 50)
+      const timer = setTimeout(() => onChangeRef.current(val), 50)
       return () => clearTimeout(timer)
     }
-  }, [val, value, onChange])
+  }, [val, value])
 
   return (
     <input
@@ -131,7 +144,7 @@ export function DU46JournalView({
   const selectedYear = jYear || String(today.getFullYear())
   const selectedMonth = jMonth || String(today.getMonth() + 1).padStart(2, '0')
   const journalMonthLabel = getJournalMonthLabel(journalMonth)
-  
+
   // Oydagi kunlar soni
   const daysInMonth = new Date(parseInt(selectedYear), parseInt(selectedMonth), 0).getDate()
 
@@ -184,7 +197,12 @@ export function DU46JournalView({
               if (dbRow && localRow) {
                 // Live (realtime) yangilanishlar barcha foydalanuvchilarda bir xil ko'rinishi uchun
                 // doim ma'lumotlar bazasidan kelgan eng so'nggi holatni olamiz.
-                merged[i] = dbRow
+                // Lekin foydalanuvchi joriy sessiyada tahrirlayotgan/qo'shgan qatorlar Kunlik rejimda yo'qolib qolmasligi uchun UI bayroqlarni saqlaymiz:
+                merged[i] = {
+                  ...dbRow,
+                  _isEdited: (localRow as any)._isEdited,
+                  _isNew: (localRow as any)._isNew
+                }
               }
             }
             // Agar foydalanuvchi lokalda ko'proq qator qo'shgan bo'lsa va unda ma'lumot bo'lsa, ularni saqlab qolamiz
@@ -192,7 +210,7 @@ export function DU46JournalView({
               for (let i = merged.length; i < prev.length; i++) {
                 const localRow = prev[i];
                 if (localRow.kamchilik || localRow.bartarafInfo) {
-                   merged.push(localRow);
+                  merged.push(localRow);
                 }
               }
             }
@@ -238,7 +256,7 @@ export function DU46JournalView({
       if (!alreadyLinked && taskContext.taskText) {
         // Find first empty row (or create new if all are full)
         const emptyIndex = entries.findIndex(e => !e.kamchilik && !e.oyKun1 && !e.soatMinut1 && !e.bartarafInfo && !e.kamchilikBajarildi)
-        
+
         setEntries(prev => {
           const n = [...prev]
           if (emptyIndex !== -1) {
@@ -260,7 +278,7 @@ export function DU46JournalView({
           }
           return n
         })
-        
+
         showMsg("Vazifa matni avtomatik kiritildi", 3000)
       }
     }
@@ -270,13 +288,13 @@ export function DU46JournalView({
   useRealtimeSubscription(
     stationId && journalMonth
       ? [
-          {
-            channelName: `journal_du46_${userRole}_${stationId}_${journalMonth}`,
-            table: 'station_journals',
-            filter: `station_id=eq.${stationId}`,
-            onEvent: () => loadJournalData(true),
-          },
-        ]
+        {
+          channelName: `journal_du46_${userRole}_${stationId}_${journalMonth}`,
+          table: 'station_journals',
+          filter: `station_id=eq.${stationId}`,
+          onEvent: () => loadJournalData(true),
+        },
+      ]
       : [],
     !!stationId && !!journalMonth
   )
@@ -302,17 +320,20 @@ export function DU46JournalView({
   const getNextApproverRole = (e: DU46Entry, col: 3 | 12): string | null => {
     const isBoshlandi = col === 3 ? e.kamchilikBajarildi : e.bartarafBajarildi
     if (!isBoshlandi) return null
-    
+
     const chain = e.approvalChain || []
     const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
-    
+
     if (col === 3) {
       if (approvals.length < chain.length) return chain[approvals.length]
-      
-      // Bekat boshlig'i ham bekat navbatchisi tomonidan tasdiqlanadi
+
+      const creatorRole = getCreator(e)
+      if (creatorRole === 'bekat_navbatchisi') return null
+
+      // Boshqalar yaratgan bo'lsa bekat navbatchisi tomonidan tasdiqlanadi
       const isBBTasdiqladi = e.kamchilikBBTasdiqladi
       if (!isBBTasdiqladi) return 'DSP'
-      
+
       return null
     } else {
       // ═══════════════════════════════════════════════════════════════════
@@ -345,7 +366,8 @@ export function DU46JournalView({
       const requiredApprovers: string[] = []
 
       // Creator (agar Tugadi bosmagan bo'lsa — bekat_boshlighi ham tasdiqlash zanjirida bo'ladi)
-      if (!creatorIsTugadiPresser) {
+      // Bekat navbatchisi zanjirga oddiy a'zo sifatida kirmaydi, u oxirida alohida 'DSP' sifatida tasdiqlaydi.
+      if (!creatorIsTugadiPresser && creatorRole !== 'bekat_navbatchisi') {
         requiredApprovers.push(creatorRole)
       }
 
@@ -385,7 +407,7 @@ export function DU46JournalView({
     if (!nextRole) return false
     // DSP har doim oxirgi tasdiqlovchi (har ikki ustun uchun ham)
     if (nextRole === 'DSP') return true
-    
+
     // Faqat 3-ustun uchun qo'shimcha tekshiruv:
     // Bekat navbatchisi yozgan bo'lsa va chain'dagi oxirgi xodim tasdiqlash navbatida bo'lsa
     if (col === 3) {
@@ -396,7 +418,7 @@ export function DU46JournalView({
         if (creator === 'bekat_boshlighi') return true
       }
     }
-    
+
     return false
   }
 
@@ -440,38 +462,58 @@ export function DU46JournalView({
   const update = (i: number, field: keyof DU46Entry, val: string) => {
     const n = [...entries]
     n[i] = { ...n[i], [field]: val }
+    
+    // Foydalanuvchi tahrirlayotgan qator Kunlik rejimda sana o'zgargani uchun g'oyib bo'lmasligi uchun belgi qo'yamiz
+    ;(n[i] as any)._isEdited = true;
 
     // Bug #17 fix: createdByRole ni istalgan maydon o'zgarganda belgilaymiz (faqat 3 ta maydon emas)
     if (!n[i].createdByRole) {
       if (isYulUstasi) n[i].createdByRole = 'yul_ustasi'
       else if (isEchXodimi) n[i].createdByRole = 'ech_xodimi'
       else if (isElektromexanik) n[i].createdByRole = 'worker'
-      else if (isBB) n[i].createdByRole = 'bekat_boshlighi' // BB va DSP ham shu rol ostida saqlanadi
+      else if (isBekatNavbatchisi) n[i].createdByRole = 'bekat_navbatchisi'
+      else if (isBekatBoshlighi) n[i].createdByRole = 'bekat_boshlighi'
     }
 
-    setEntries(n)
+    // Heavy render from large list is deferred to keep typing smooth
+    startTransition(() => {
+      setEntries(n)
+    })
   }
 
   // ── Qator boshqaruvi ─────────────────────────────────────────────────────────
   // Bug #16 fix: yangi qatorlarga journalMonth ni uzatamiz
-  const addRow = () => { if (isCurrentMonth) setEntries([...entries, EMPTY_DU46(journalMonth)]) }
+  const addRow = () => {
+    if (isCurrentMonth) {
+      const newEntry = EMPTY_DU46(journalMonth);
+      const selDayStr = String(viewMode === 'kunlik' ? selectedDateFilter : today.getDate()).padStart(2, '0');
+      newEntry.oyKun1 = `${selDayStr}-${selectedMonth}-${selectedYear}`;
+      
+      // Yangi qo'shilgan qator qaysi sana yozilishidan qat'i nazar shu sessiyada ko'rinib turishi uchun
+      ;(newEntry as any)._isNew = true;
+
+      startTransition(() => {
+        setEntries([...entries, newEntry]);
+      })
+    }
+  }
 
   const removeRow = () => {
     if (entries.length <= 1) return
     const lastIdx = entries.length - 1
     const last = entries[lastIdx]
-    
+
     // Boshlandi bosilgan bo'lsa o'chirib bo'lmaydi
     if (last.kamchilikBajarildi) {
       showMsg("Boshlandi bosilgan qatorni o'chirib bo'lmaydi", 3000)
       return
     }
-    
+
     // Ma'lumot yozilgan bo'lsa, faqat uni yaratgan odamgina o'chira oladi
     const hasData = last.kamchilik || last.bartarafInfo || last.oyKun1 || last.soatMinut1
     if (hasData && !isCreator(last)) {
-       showMsg("Faqat yozuv kiritgan xodim o'chira oladi", 3000)
-       return
+      showMsg("Faqat yozuv kiritgan xodim o'chira oladi", 3000)
+      return
     }
 
     const newEntries = entries.slice(0, -1)
@@ -576,7 +618,7 @@ export function DU46JournalView({
     const prev = [...entries]
     const updated = [...entries]
     const e = updated[idx]
-    
+
     if (approvalChainModal?.isEdit) {
       updated[idx] = { ...e, approvalChain: chain }
     } else {
@@ -593,12 +635,12 @@ export function DU46JournalView({
         linkedEntryIndex: e.linkedEntryIndex ?? taskContext?.entryIndex,
       }
     }
-    
+
     try {
       const isEdit = approvalChainModal?.isEdit
       setApprovalChainModal(null)
       showMsg(isEdit ? 'Tasdiqlash zanjiri yangilandi!' : 'Boshlandi belgilandi!')
-      
+
       // taskContext bo'lsa, uni Jarayonda (In Progress) ga o'tkazamiz
       const activeReportId = e.linkedReportId || taskContext?.reportId;
       const activeTaskType = e.linkedTaskType || taskContext?.taskType;
@@ -612,7 +654,7 @@ export function DU46JournalView({
       } else if (!isEdit) {
         onAccepted?.(true, false)
       }
-      
+
       await saveEntries(updated, prev)
     } catch { /* */ }
   }
@@ -661,7 +703,7 @@ export function DU46JournalView({
     }
     if (onAccepted) onAccepted()
     showMsg('Bajarildi belgilandi!')
-    saveEntries(updated, prev).catch(() => {})
+    saveEntries(updated, prev).catch(() => { })
   }
 
   const handleBartarafTasdiqlash = async (i: number) => {
@@ -737,7 +779,7 @@ export function DU46JournalView({
         { content: 'Nosozliklar va buzilishlarning\ntafsiloti', styles: { halign: 'center' } }
       ]
     ]
-    
+
     const tableRows = entries
       .filter(e => e.kamchilik || e.bartarafInfo || e.oyKun1 || e.soatMinut1)
       .map((e, i) => {
@@ -766,7 +808,7 @@ export function DU46JournalView({
       margin: { left: 10, right: 10 },
       headStyles: { fillColor: [8, 23, 40], textColor: [255, 255, 255], fontSize: 5, fontStyle: 'bold', halign: 'center' },
       alternateRowStyles: { fillColor: [240, 248, 255] },
-      columnStyles: { 
+      columnStyles: {
         0: { halign: 'center', cellWidth: 6 },
         1: { halign: 'center', cellWidth: 12 },
         2: { halign: 'center', cellWidth: 12 },
@@ -810,11 +852,10 @@ export function DU46JournalView({
           )}
           {/* Bug #13 fix: xatolik xabarlari qizil, muvaffaqiyat xabarlari yashil */}
           {msg && (
-            <span className={`text-xs font-bold px-3 py-1 rounded-full border transition-all ${
-              msg.toLowerCase().includes('xato') || msg.toLowerCase().includes('error')
+            <span className={`text-xs font-bold px-3 py-1 rounded-full border transition-all ${msg.toLowerCase().includes('xato') || msg.toLowerCase().includes('error')
                 ? 'bg-red-50 text-red-600 border-red-100'
                 : 'bg-emerald-50 text-emerald-600 border-emerald-100'
-            }`}>{msg}</span>
+              }`}>{msg}</span>
           )}
         </div>
       </div>
@@ -920,11 +961,16 @@ export function DU46JournalView({
                 const isEmpty = !e.kamchilik && !e.bartarafInfo && !e.oyKun1 && !e.soatMinut1 && !e.kamchilikBajarildi
                 if (viewMode === 'kunlik' && !isEmpty) {
                   const selDayStr = String(selectedDateFilter).padStart(2, '0')
-                  const dStr = `${selDayStr}-${selectedMonth}`
-                  const dStrDot = `${selDayStr}.${selectedMonth}`
-                  const dFull = `${selDayStr}-${selectedMonth}-${selectedYear}`
                   const val = (e.oyKun1 || '').trim()
-                  if (val !== dStr && val !== dStrDot && val !== dFull && val !== `${selDayStr}.${selectedMonth}.${selectedYear}`) {
+                  const valDay = val.split('-')[0].split('.')[0]
+
+                  // Faqatgina 2 ta raqam to'liq yozilgan bo'lsa va u tanlangan kunga teng bo'lmasa yashiramiz.
+                  // Qoralama (Boshlandi bosilmagan) qatorlarni umuman yashirmaymiz.
+                  // Shuningdek, foydalanuvchi hozir qo'shgan yoki tahrirlayotgan qatorlarni ham yashirmaymiz, toki ishini tugatguncha qator yo'qolmasin.
+                  const isDraft = !e.kamchilikBajarildi
+                  const isSessionActive = (e as any)._isNew || (e as any)._isEdited
+                  
+                  if (!isDraft && !isSessionActive && valDay.length >= 2 && valDay !== selDayStr) {
                     return null // Bu qator tanlangan kun emas — yashirish
                   }
                 }
@@ -936,12 +982,12 @@ export function DU46JournalView({
                 const canWriteCol3 = isCurrentMonth && !e.kamchilikBajarildi && !isDispatcher
 
                 // Bug #5 fix: o'tgan oylar uchun 12-ustun ham yopiq bo'lishi kerak
-                const canWriteCol12 = isCurrentMonth && !isCol12Finished(e) && isCol3Finished(e) && !isDispatcher && hasRightToFix
+                const canWriteCol12 = isCurrentMonth && !isCol12Finished(e) && isCol3Finished(e) && !isDispatcher && hasRightToFix && !isBekatNavbatchisi
 
                 const canWriteMiddle = isCurrentMonth && !isDispatcher && !isCol12Finished(e) && (hasRightToFix || hasNoCreator)
 
                 return (
-                  <tr key={i} className="border-b border-slate-200 hover:bg-blue-50/50 transition-colors animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
+                  <tr key={i} className="border-b border-slate-200 hover:bg-blue-50/50 transition-colors">
                     {/* --- № --- */}
                     <td className="border-r border-slate-200 p-1 text-center bg-slate-50/30">
                       <LocalInput
@@ -996,13 +1042,14 @@ export function DU46JournalView({
                             <LocalTextarea
                               value={e.kamchilik || ''}
                               onChange={(val: string) => update(i, 'kamchilik', val)}
-                              readOnly={!canWriteCol3}
+                              readOnly={!canWriteCol3 || !e.oyKun1 || !e.soatMinut1}
                               rows={3}
                               spellCheck={false}
                               lang="uz"
+                              placeholder={(!e.oyKun1 || !e.soatMinut1) && canWriteCol3 ? "Oldin 1 va 2-ustunlarni to'ldiring" : ""}
                               className="w-full resize-y rounded bg-transparent px-3 py-2 text-[11px] font-medium text-slate-700 outline-none transition-all focus:bg-white focus:shadow-inner"
                             />
-                            {canWriteCol3 && (
+                            {canWriteCol3 && e.oyKun1 && e.soatMinut1 && (
                               <button onClick={() => setTaskModalIdx(i)} className="absolute top-1 right-1 p-1.5 rounded-lg bg-purple-50 text-purple-600 opacity-0 group-hover/text:opacity-100 transition-all hover:bg-purple-600 hover:text-white shadow-sm border border-purple-100">
                                 <Plus size={10} strokeWidth={3} />
                               </button>
@@ -1046,7 +1093,7 @@ export function DU46JournalView({
                           <div key={idx} className="flex flex-col items-center gap-1 w-full">
                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{appr.role.replace('_', ' ')}:</span>
                             <div className="flex items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-1.5 text-[10px] font-bold text-blue-600 border border-blue-100 w-full justify-center shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} /> 
+                              <CheckCircle2 size={12} strokeWidth={3} />
                               <span className="truncate">{appr.signedBy}</span>
                             </div>
                           </div>
@@ -1056,7 +1103,7 @@ export function DU46JournalView({
                           <div className="flex flex-col items-center gap-1 w-full">
                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bekat navbatchisi:</span>
                             <div className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-1.5 text-[10px] font-bold text-amber-700 border border-amber-100 w-full justify-center shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} /> 
+                              <CheckCircle2 size={12} strokeWidth={3} />
                               <span className="truncate">{e.kamchilikBBImzo}</span>
                             </div>
                           </div>
@@ -1171,13 +1218,12 @@ export function DU46JournalView({
                             rows={3}
                             spellCheck={false}
                             lang="uz"
-                            className={`w-full resize-y rounded px-3 py-2 text-[11px] font-medium outline-none transition-all ${
-                              !canWriteCol12 && !e.bartarafInfo
+                            className={`w-full resize-y rounded px-3 py-2 text-[11px] font-medium outline-none transition-all ${!canWriteCol12 && !e.bartarafInfo
                                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                 : canWriteCol12
                                   ? 'bg-transparent focus:bg-white focus:shadow-inner text-slate-700'
                                   : 'bg-transparent text-slate-700 cursor-not-allowed'
-                            }`}
+                              }`}
                             placeholder={!isCol3Finished(e) ? '3-ustun tasdiqlanishi kerak...' : ''}
                           />
                         )}
@@ -1185,7 +1231,7 @@ export function DU46JournalView({
 
                       {/* — Bajarildi / Tasdiqlash zanjiri tugmalari */}
                       <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
-                        {e.bartarafInfo && hasRightToFix && !e.bartarafBajarildi && !isMonthInPast(journalMonth) && (
+                        {e.bartarafInfo && hasRightToFix && !isBekatNavbatchisi && !e.bartarafBajarildi && !isMonthInPast(journalMonth) && (
                           <button
                             onClick={() => handleBartarafBajarildiClick(i)}
                             disabled={!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi}
@@ -1217,7 +1263,7 @@ export function DU46JournalView({
                           <div className="flex flex-col items-center gap-1 w-full">
                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bekat navbatchisi:</span>
                             <div className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-1.5 text-[10px] font-bold text-amber-700 border border-amber-100 w-full justify-center shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} /> 
+                              <CheckCircle2 size={12} strokeWidth={3} />
                               <span className="truncate">{e.bartarafBBImzo}</span>
                             </div>
                           </div>
@@ -1304,7 +1350,7 @@ export function DU46JournalView({
                   className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black transition-all shadow-sm active:scale-95 ${canRemove
                     ? 'border-slate-200 bg-white text-slate-500 hover:text-red-500 hover:border-red-200 hover:bg-red-50'
                     : 'border-slate-100 bg-slate-50/50 text-slate-300 cursor-not-allowed'
-                  }`}>
+                    }`}>
                   <Trash2 size={14} strokeWidth={3} /> <span className="uppercase tracking-widest">Qator o&apos;chirish</span>
                 </button>
               )}

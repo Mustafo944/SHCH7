@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { JournalType } from '@/types'
 import { X, BookOpen, ChevronLeft } from 'lucide-react'
 import { TORT_HAFTALIK_REJA_FLAT, TORT_HAFTALIK_REJA } from '@/lib/reja-data'
@@ -269,15 +269,32 @@ export function DateInput({ value, onChange, readOnly, placeholder = 'kk-oo-yyyy
   readOnly: boolean
   placeholder?: string
 }) {
+  const [val, setVal] = useState(value)
+  const onChangeRef = useRef(onChange)
+
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
+
+  useEffect(() => setVal(value), [value])
+
+  useEffect(() => {
+    if (val !== value) {
+      const timer = setTimeout(() => onChangeRef.current(val), 50)
+      return () => clearTimeout(timer)
+    }
+  }, [val, value])
+
   const handleChange = (raw: string) => {
     if (readOnly) return
-    onChange(formatDateInput(raw))
+    setVal(formatDateInput(raw))
   }
 
   return (
     <input
-      value={value}
+      value={val}
       onChange={ev => handleChange(ev.target.value)}
+      onBlur={() => { if (val !== value) onChange(val) }}
       readOnly={readOnly}
       placeholder={placeholder}
       className="w-full rounded bg-transparent px-1.5 py-3 text-center text-[11px] outline-none transition-all focus:bg-white focus:shadow-inner placeholder:text-slate-300 placeholder:text-[10px]"
@@ -293,15 +310,32 @@ export function TimeInput({ value, onChange, readOnly, className: extraClass = '
   className?: string
   placeholder?: string
 }) {
+  const [val, setVal] = useState(value)
+  const onChangeRef = useRef(onChange)
+
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
+
+  useEffect(() => setVal(value), [value])
+
+  useEffect(() => {
+    if (val !== value) {
+      const timer = setTimeout(() => onChangeRef.current(val), 50)
+      return () => clearTimeout(timer)
+    }
+  }, [val, value])
+
   const handleChange = (raw: string) => {
     if (readOnly) return
-    onChange(formatTimeInput(raw))
+    setVal(formatTimeInput(raw))
   }
 
   return (
     <input
-      value={value}
+      value={val}
       onChange={ev => handleChange(ev.target.value)}
+      onBlur={() => { if (val !== value) onChange(val) }}
       readOnly={readOnly}
       placeholder={placeholder}
       className={`w-full rounded px-1.5 py-3 text-center text-[11px] font-black outline-none transition-all placeholder:text-slate-300 placeholder:text-[10px] placeholder:font-normal ${extraClass}`}
