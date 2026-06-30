@@ -964,12 +964,10 @@ export function DU46JournalView({
                   const valDay = val.split('-')[0].split('.')[0]
 
                   // Faqatgina 2 ta raqam to'liq yozilgan bo'lsa va u tanlangan kunga teng bo'lmasa yashiramiz.
-                  // Qoralama (Boshlandi bosilmagan) qatorlarni umuman yashirmaymiz.
-                  // Shuningdek, foydalanuvchi hozir qo'shgan yoki tahrirlayotgan qatorlarni ham yashirmaymiz, toki ishini tugatguncha qator yo'qolmasin.
-                  const isDraft = !e.kamchilikBajarildi
+                  // Foydalanuvchi hozir qo'shgan yoki tahrirlayotgan qatorlarni yashirmaymiz, toki ishini tugatguncha qator yo'qolmasin.
                   const isSessionActive = (e as any)._isNew || (e as any)._isEdited
                   
-                  if (!isDraft && !isSessionActive && valDay.length >= 2 && valDay !== selDayStr) {
+                  if (!isSessionActive && valDay.length >= 2 && valDay !== selDayStr) {
                     return null // Bu qator tanlangan kun emas — yashirish
                   }
                 }
