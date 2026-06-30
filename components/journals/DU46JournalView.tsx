@@ -565,9 +565,17 @@ export function DU46JournalView({
           // Tasdiqlash holatlarini DB'dan himoyalab olamiz (false→true yo'nalishda)
           if (!local.kamchilikBajarildi && db.kamchilikBajarildi) {
             merged = { ...merged, kamchilikBajarildi: db.kamchilikBajarildi, kamchilikBajarildiAt: db.kamchilikBajarildiAt, kamchilikImzo: db.kamchilikImzo, createdByRole: db.createdByRole }
+            // Stale state (eski ma'lumot) bazadagini o'chirib yubormasligi uchun text maydonlarini ham saqlaymiz:
+            if (!local.oyKun1 && db.oyKun1) merged.oyKun1 = db.oyKun1
+            if (!local.soatMinut1 && db.soatMinut1) merged.soatMinut1 = db.soatMinut1
+            if (!local.kamchilik && db.kamchilik) merged.kamchilik = db.kamchilik
           }
           if (!local.bartarafBajarildi && db.bartarafBajarildi) {
             merged = { ...merged, bartarafBajarildi: db.bartarafBajarildi, bartarafBajarildiAt: db.bartarafBajarildiAt, bartarafImzo: db.bartarafImzo, bartarafByRole: db.bartarafByRole }
+            // 10, 11, 12 ustunlar matnlarini ham saqlab qolamiz:
+            if (!local.oyKun4 && db.oyKun4) merged.oyKun4 = db.oyKun4
+            if (!local.soatMinut4 && db.soatMinut4) merged.soatMinut4 = db.soatMinut4
+            if (!local.bartarafInfo && db.bartarafInfo) merged.bartarafInfo = db.bartarafInfo
           }
           if (!local.kamchilikBBTasdiqladi && db.kamchilikBBTasdiqladi) {
             merged = { ...merged, kamchilikBBTasdiqladi: db.kamchilikBBTasdiqladi, kamchilikBBTasdiqladiAt: db.kamchilikBBTasdiqladiAt, kamchilikBBImzo: db.kamchilikBBImzo, kamchilikBBVaqt: db.kamchilikBBVaqt }
@@ -575,6 +583,15 @@ export function DU46JournalView({
           if (!local.bartarafBBTasdiqladi && db.bartarafBBTasdiqladi) {
             merged = { ...merged, bartarafBBTasdiqladi: db.bartarafBBTasdiqladi, bartarafBBTasdiqladiAt: db.bartarafBBTasdiqladiAt, bartarafBBImzo: db.bartarafBBImzo, bartarafBBVaqt: db.bartarafBBVaqt }
           }
+
+          // Qolgan oraliq matnli maydonlarni ham himoya qilamiz
+          const otherFields: (keyof DU46Entry)[] = ['oyKun2', 'soatMinut2', 'xabarUsuli', 'oyKun3', 'soatMinut3', 'dspImzo', 'nomber']
+          otherFields.forEach(field => {
+            if (!local[field] && db[field]) {
+              merged[field] = db[field] as never
+            }
+          })
+
           // Bug #7: imzolar massivini birlashtirish
           merged = {
             ...merged,
