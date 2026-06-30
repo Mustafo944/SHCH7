@@ -431,38 +431,58 @@ export async function updateReportEntryInProgress(
   entryIndex: number,
   taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy'
 ): Promise<void> {
-  const { data: current, error: fetchError } = await supabase
-    .from('work_reports')
-    .select('entries')
-    .eq('id', reportId)
-    .single();
+  const MAX_RETRIES = 3;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const { data: current, error: fetchError } = await supabase
+      .from('work_reports')
+      .select('entries, submitted_at')
+      .eq('id', reportId)
+      .single();
 
-  if (fetchError || !current) {
-    console.error('Report not found for inProgress update:', fetchError);
-    return;
+    if (fetchError || !current) {
+      console.error('Report not found for inProgress update:', fetchError);
+      return;
+    }
+
+    const entries = [...(current.entries as ReportEntry[])];
+    const entry = entries[entryIndex];
+    if (!entry) return;
+
+    const typeKeyMap: Record<string, keyof ReportEntry> = {
+      haftalik: 'inProgressHaftalik',
+      yillik: 'inProgressYillik',
+      yangi: 'inProgressYangi',
+      kmo: 'inProgressKmo',
+      majburiy: 'inProgressMajburiy'
+    };
+
+    const key = typeKeyMap[taskType];
+    if (key) {
+      (entry as any)[key] = true;
+    }
+
+    // Optimistic locking: faqat submitted_at o'zgarmagan bo'lsa yangilash
+    const { data: updated, error: updateError } = await supabase
+      .from('work_reports')
+      .update({ entries, submitted_at: new Date().toISOString() })
+      .eq('id', reportId)
+      .eq('submitted_at', current.submitted_at)
+      .select('id')
+      .maybeSingle();
+
+    if (updateError) {
+      console.error('Update error:', updateError);
+      return;
+    }
+
+    if (updated) return; // Muvaffaqiyatli yangilandi
+
+    // Agar updated null bo'lsa — boshqa ishchi o'zgartirgan, qayta urinish
+    if (attempt < MAX_RETRIES - 1) {
+      await new Promise(r => setTimeout(r, 100 * (attempt + 1)));
+    }
   }
-
-  const entries = [...(current.entries as ReportEntry[])];
-  const entry = entries[entryIndex];
-  if (!entry) return;
-
-  const typeKeyMap: Record<string, keyof ReportEntry> = {
-    haftalik: 'inProgressHaftalik',
-    yillik: 'inProgressYillik',
-    yangi: 'inProgressYangi',
-    kmo: 'inProgressKmo',
-    majburiy: 'inProgressMajburiy'
-  };
-
-  const key = typeKeyMap[taskType];
-  if (key) {
-    (entry as any)[key] = true;
-  }
-
-  await supabase
-    .from('work_reports')
-    .update({ entries })
-    .eq('id', reportId);
+  console.error('updateReportEntryInProgress: max retries reached for', reportId);
 }
 
 export async function markReportEntryDoneFromJournal(
@@ -471,58 +491,78 @@ export async function markReportEntryDoneFromJournal(
   taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy',
   workerName: string
 ): Promise<void> {
-  const { data: current, error: fetchError } = await supabase
-    .from('work_reports')
-    .select('entries, worker_name')
-    .eq('id', reportId)
-    .single();
+  const MAX_RETRIES = 3;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const { data: current, error: fetchError } = await supabase
+      .from('work_reports')
+      .select('entries, worker_name, submitted_at')
+      .eq('id', reportId)
+      .single();
 
-  if (fetchError || !current) {
-    console.error('Report not found for done update:', fetchError);
-    return;
+    if (fetchError || !current) {
+      console.error('Report not found for done update:', fetchError);
+      return;
+    }
+
+    const entries = [...(current.entries as ReportEntry[])];
+    const entry = entries[entryIndex];
+    if (!entry) return;
+
+    const typeKeyMap: Record<string, keyof ReportEntry> = {
+      haftalik: 'doneHaftalik',
+      yillik: 'doneYillik',
+      yangi: 'doneYangi',
+      kmo: 'doneKmo',
+      majburiy: 'doneMajburiy'
+    };
+
+    const inProgressKeyMap: Record<string, keyof ReportEntry> = {
+      haftalik: 'inProgressHaftalik',
+      yillik: 'inProgressYillik',
+      yangi: 'inProgressYangi',
+      kmo: 'inProgressKmo',
+      majburiy: 'inProgressMajburiy'
+    };
+
+    const key = typeKeyMap[taskType];
+    const inProgKey = inProgressKeyMap[taskType];
+
+    if (key) {
+      (entry as any)[key] = true;
+      (entry as any)[inProgKey] = false; // "Bajarildi" bo'lsa "Jarayonda" olib tashlanadi
+    }
+
+    // Set the overall "Bajarildi" flag if we are checking
+    entry.bajarilganSana = new Date().toISOString();
+    // workerName parametridan kelgan ism aslida Navbatchi/BB ni ismi (Jurnalda qoladi),
+    // Oylik ish rejada esa (Bajaruvchi va AD imzosi ustunlarida) 
+    // doim bajargan elektromexanik (report.worker_name) familiyasi bo'lishi kerak
+    entry.bajarildiShn = current.worker_name || 'ShN';
+    entry.bajarildiImzo = current.worker_name || 'ShN';
+    entry.adImzosi = current.worker_name || 'ShN';
+
+    // Optimistic locking: faqat submitted_at o'zgarmagan bo'lsa yangilash
+    const { data: updated, error: updateError } = await supabase
+      .from('work_reports')
+      .update({ entries, submitted_at: new Date().toISOString() })
+      .eq('id', reportId)
+      .eq('submitted_at', current.submitted_at)
+      .select('id')
+      .maybeSingle();
+
+    if (updateError) {
+      console.error('Update error:', updateError);
+      return;
+    }
+
+    if (updated) return; // Muvaffaqiyatli yangilandi
+
+    // Agar updated null bo'lsa — boshqa ishchi o'zgartirgan, qayta urinish
+    if (attempt < MAX_RETRIES - 1) {
+      await new Promise(r => setTimeout(r, 100 * (attempt + 1)));
+    }
   }
-
-  const entries = [...(current.entries as ReportEntry[])];
-  const entry = entries[entryIndex];
-  if (!entry) return;
-
-  const typeKeyMap: Record<string, keyof ReportEntry> = {
-    haftalik: 'doneHaftalik',
-    yillik: 'doneYillik',
-    yangi: 'doneYangi',
-    kmo: 'doneKmo',
-    majburiy: 'doneMajburiy'
-  };
-
-  const inProgressKeyMap: Record<string, keyof ReportEntry> = {
-    haftalik: 'inProgressHaftalik',
-    yillik: 'inProgressYillik',
-    yangi: 'inProgressYangi',
-    kmo: 'inProgressKmo',
-    majburiy: 'inProgressMajburiy'
-  };
-
-  const key = typeKeyMap[taskType];
-  const inProgKey = inProgressKeyMap[taskType];
-
-  if (key) {
-    (entry as any)[key] = true;
-    (entry as any)[inProgKey] = false; // "Bajarildi" bo'lsa "Jarayonda" olib tashlanadi
-  }
-
-  // Set the overall "Bajarildi" flag if we are checking
-  entry.bajarilganSana = new Date().toISOString();
-  // workerName parametridan kelgan ism aslida Navbatchi/BB ni ismi (Jurnalda qoladi),
-  // Oylik ish rejada esa (Bajaruvchi va AD imzosi ustunlarida) 
-  // doim bajargan elektromexanik (report.worker_name) familiyasi bo'lishi kerak
-  entry.bajarildiShn = current.worker_name || 'ShN';
-  entry.bajarildiImzo = current.worker_name || 'ShN';
-  entry.adImzosi = current.worker_name || 'ShN';
-
-  await supabase
-    .from('work_reports')
-    .update({ entries })
-    .eq('id', reportId);
+  console.error('markReportEntryDoneFromJournal: max retries reached for', reportId);
 }
 
 export async function confirmReportEntry(
@@ -1086,6 +1126,26 @@ export async function getAllJournals(): Promise<StationJournal[]> {
 
 /** Faqat DU-46 va SHU-2 pending countlarini qaytaradi (entries matnisiz) */
 export async function getDispatcherJournalSummary(): Promise<Record<string, { du46: number; shu2: number }>> {
+  const summary: Record<string, { du46: number; shu2: number }> = {}
+
+  // 1. RPC orqali hisoblash (ma'lumotlar bazasida, network payload ni kamaytirish uchun)
+  const { data: rpcData, error: rpcError } = await supabase.rpc('get_dispatcher_journal_summary')
+
+  if (!rpcError && rpcData) {
+    for (const row of rpcData as Array<{ station_id: string; journal_type: string; pending_count: number }>) {
+      const sid = row.station_id
+      if (!summary[sid]) summary[sid] = { du46: 0, shu2: 0 }
+      
+      if (row.journal_type === 'du46') {
+        summary[sid].du46 += row.pending_count || 0
+      } else {
+        summary[sid].shu2 += row.pending_count || 0
+      }
+    }
+    return summary
+  }
+
+  // 2. Agar RPC topilmasa (hali yaratilmagan bo'lsa), eski usulda client-side hisoblash (Fallback)
   const { data, error } = await supabase
     .from('station_journals')
     .select('station_id, journal_type, entries')
@@ -1094,8 +1154,6 @@ export async function getDispatcherJournalSummary(): Promise<Record<string, { du
   if (error) {
     return {}
   }
-
-  const summary: Record<string, { du46: number; shu2: number }> = {}
 
   for (const row of data || []) {
     const sid = row.station_id as string

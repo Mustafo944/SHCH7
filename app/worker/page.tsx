@@ -29,12 +29,12 @@ const YerlatgichJournalView = dynamic(() => import('@/components/JournalView').t
 const AlsnKodJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
 const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
 const DgaNazoratJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DgaNazoratJournalView), { ssr: false })
-import { BigActionCard, HeaderCard } from '@/components/worker/WorkerComponents'
-// Og'ir komponentlar lazy load qilinadi (~85KB bundle tejash)
-const JournalForm = dynamic(() => import('@/components/worker/WorkerComponents').then(mod => mod.JournalForm), { ssr: false })
-const WorkerGraphicsView = dynamic(() => import('@/components/worker/WorkerComponents').then(mod => mod.WorkerGraphicsView), { ssr: false })
-const WorkerSchemasView = dynamic(() => import('@/components/worker/WorkerComponents').then(mod => mod.WorkerSchemasView), { ssr: false })
-const WorkerTasksModal = dynamic(() => import('@/components/worker/WorkerComponents').then(mod => mod.WorkerTasksModal), { ssr: false })
+import { BigActionCard, HeaderCard } from '@/components/worker/BigActionCard'
+// Og'ir komponentlar haqiqiy code splitting bilan lazy load qilinadi
+const JournalForm = dynamic(() => import('@/components/worker/JournalForm').then(mod => mod.JournalForm), { ssr: false })
+const WorkerGraphicsView = dynamic(() => import('@/components/worker/WorkerGraphicsView').then(mod => mod.WorkerGraphicsView), { ssr: false })
+const WorkerSchemasView = dynamic(() => import('@/components/worker/WorkerSchemasView').then(mod => mod.WorkerSchemasView), { ssr: false })
+const WorkerTasksModal = dynamic(() => import('@/components/worker/WorkerTasksModal').then(mod => mod.WorkerTasksModal), { ssr: false })
 import IncidentsView from '@/components/worker/IncidentsView'
 import { LibraryView } from '@/components/library/LibraryView'
 import {
@@ -170,7 +170,6 @@ export default function WorkerPage() {
           table: 'work_reports',
           // Removed worker_id filter so workers receive updates for reports made by other workers at their stations (like Katta Elektromexanik)
           onEvent: (payload: any) => {
-            console.log("🚀 Realtime: Hisobot holati o'zgardi (Delta update)!", payload)
             if (payload.new && Object.keys(payload.new).length > 0) {
               setReports(prev => {
                 const idx = prev.findIndex(r => r.id === payload.new.id)

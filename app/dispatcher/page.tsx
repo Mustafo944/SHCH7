@@ -144,10 +144,10 @@ export default function DispatcherPage() {
     mutateWorkers()
     mutateReports()
     mutateIncidents()
-    mutateGraphics()
     mutateJournalSummary()
     mutateReadIds()
-  }, [mutateWorkers, mutateReports, mutateIncidents, mutateGraphics, mutateJournalSummary, mutateReadIds])
+    // mutateGraphics() — grafik kamdan-kam o'zgaradi, faqat upload/delete da chaqiriladi
+  }, [mutateWorkers, mutateReports, mutateIncidents, mutateJournalSummary, mutateReadIds])
 
   const realtimeConfigs = useMemo(() => {
     if (!session) return []
@@ -230,36 +230,24 @@ export default function DispatcherPage() {
 
 
 
-  // Jurnal pending hisobi (yengil summary'dan)
-  const du46PendingCounts = useMemo(() => {
-    const counts: Record<string, number> = {}
-    Object.entries(journalSummary).forEach(([sid, s]) => {
-      if (s.du46 > 0) counts[sid] = s.du46
-    })
-    return counts
-  }, [journalSummary])
+  // Jurnal pending hisobi — 4 ta useMemo o'rniga 1 ta konsolidatsiya
+  const { du46PendingCounts, shu2PendingCounts, journalPendingCounts, _totalPending } = useMemo(() => {
+    const du46: Record<string, number> = {}
+    const shu2: Record<string, number> = {}
+    const journal: Record<string, number> = {}
 
-  const shu2PendingCounts = useMemo(() => {
-    const counts: Record<string, number> = {}
     Object.entries(journalSummary).forEach(([sid, s]) => {
-      if (s.shu2 > 0) counts[sid] = s.shu2
-    })
-    return counts
-  }, [journalSummary])
-
-  const journalPendingCounts = useMemo(() => {
-    const counts: Record<string, number> = {}
-    Object.entries(journalSummary).forEach(([sid, s]) => {
+      if (s.du46 > 0) du46[sid] = s.du46
+      if (s.shu2 > 0) shu2[sid] = s.shu2
       const total = s.du46 + s.shu2
-      if (total > 0) counts[sid] = total
+      if (total > 0) journal[sid] = total
     })
-    return counts
-  }, [journalSummary])
 
-  const _totalPending = useMemo(() => {
-    return Object.values(pendingCounts).reduce((a, b) => a + b, 0) +
-      Object.values(journalPendingCounts).reduce((a, b) => a + b, 0)
-  }, [pendingCounts, journalPendingCounts])
+    const totalPending = Object.values(pendingCounts).reduce((a, b) => a + b, 0) +
+      Object.values(journal).reduce((a, b) => a + b, 0)
+
+    return { du46PendingCounts: du46, shu2PendingCounts: shu2, journalPendingCounts: journal, _totalPending: totalPending }
+  }, [journalSummary, pendingCounts])
 
   // в”Ђв”Ђв”Ђ BUGUNGI KUNLIK BAJARILGAN / BAJARILMAGAN ISHLAR в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
   const today = new Date()
@@ -853,11 +841,11 @@ export default function DispatcherPage() {
                   existingFile={globalGraphics.find(g => g.schemaType === 'yillik_ish_reja_grafiki')}
                   onUpload={async (file) => {
                     await uploadGlobalGraphicFile(file, 'yillik_ish_reja_grafiki', session?.fullName || '')
-                    refreshData()
+                    mutateGraphics()
                   }}
                   onDelete={async (id) => {
                     await deleteGlobalGraphicFile(id)
-                    refreshData()
+                    mutateGraphics()
                   }}
                 />
                 <DownloadCard
@@ -866,11 +854,11 @@ export default function DispatcherPage() {
                   existingFile={globalGraphics.find(g => g.schemaType === 'haftalik_ish_reja_grafiki')}
                   onUpload={async (file) => {
                     await uploadGlobalGraphicFile(file, 'haftalik_ish_reja_grafiki', session?.fullName || '')
-                    refreshData()
+                    mutateGraphics()
                   }}
                   onDelete={async (id) => {
                     await deleteGlobalGraphicFile(id)
-                    refreshData()
+                    mutateGraphics()
                   }}
                 />
               </div>
