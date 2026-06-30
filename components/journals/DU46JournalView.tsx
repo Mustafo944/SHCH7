@@ -831,6 +831,28 @@ export function DU46JournalView({
 
   const hasAnyEntry = entries.some(e => e.kamchilik || e.bartarafInfo)
 
+  const clearSessionFlags = () => {
+    setEntries(prev => prev.map(e => {
+      if ((e as any)._isNew || (e as any)._isEdited) {
+        const copy = { ...e }
+        delete (copy as any)._isNew
+        delete (copy as any)._isEdited
+        return copy
+      }
+      return e
+    }))
+  }
+
+  const changeViewMode = (mode: 'kunlik' | 'jadval') => {
+    setViewMode(mode)
+    clearSessionFlags()
+  }
+
+  const changeDateFilter = (updater: (prev: number) => number) => {
+    setSelectedDateFilter(updater)
+    clearSessionFlags()
+  }
+
   // ── RENDER ────────────────────────────────────────────────────────────────────
 
   if (loading) return <div className="flex h-64 items-center justify-center text-slate-300 font-bold uppercase tracking-widest">Yuklanmoqda...</div>
@@ -885,13 +907,13 @@ export function DU46JournalView({
         <div className="mb-4 flex flex-col items-center gap-4">
           <div className="flex items-center gap-2 rounded-2xl bg-slate-100/50 p-1.5 shadow-inner border border-slate-200/60 self-start">
             <button
-              onClick={() => setViewMode('kunlik')}
+              onClick={() => changeViewMode('kunlik')}
               className={`flex items-center gap-2 rounded-xl px-5 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${viewMode === 'kunlik' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-400 hover:text-slate-700 hover:bg-white/50'}`}
             >
               <LayoutGrid size={14} /> Kunlik
             </button>
             <button
-              onClick={() => setViewMode('jadval')}
+              onClick={() => changeViewMode('jadval')}
               className={`flex items-center gap-2 rounded-xl px-5 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${viewMode === 'jadval' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-400 hover:text-slate-700 hover:bg-white/50'}`}
             >
               <List size={14} /> To&apos;liq jadval
@@ -902,7 +924,7 @@ export function DU46JournalView({
             <div className="flex justify-center w-full pb-2">
               <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm animate-fade-in">
                 <button
-                  onClick={() => setSelectedDateFilter(p => Math.max(1, p - 1))}
+                  onClick={() => changeDateFilter(p => Math.max(1, p - 1))}
                   disabled={selectedDateFilter <= 1}
                   className="p-2 rounded-xl text-slate-400 hover:bg-purple-50 hover:text-purple-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all"
                 >
@@ -913,7 +935,7 @@ export function DU46JournalView({
                   <span className="text-sm font-black text-slate-700 tracking-tight">{selectedDateFilter} - {journalMonthLabel.split(' ')[0]}</span>
                 </div>
                 <button
-                  onClick={() => setSelectedDateFilter(p => Math.min(daysInMonth, p + 1))}
+                  onClick={() => changeDateFilter(p => Math.min(daysInMonth, p + 1))}
                   disabled={selectedDateFilter >= daysInMonth}
                   className="p-2 rounded-xl text-slate-400 hover:bg-purple-50 hover:text-purple-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all"
                 >
@@ -964,7 +986,7 @@ export function DU46JournalView({
                   const valDay = val.split('-')[0].split('.')[0]
 
                   // Faqatgina 2 ta raqam to'liq yozilgan bo'lsa va u tanlangan kunga teng bo'lmasa yashiramiz.
-                  // Foydalanuvchi hozir qo'shgan yoki tahrirlayotgan qatorlarni yashirmaymiz, toki ishini tugatguncha qator yo'qolmasin.
+                  // Foydalanuvchi hozir qo'shgan yoki tahrirlayotgan qatorlar Kun o'zgartirilganda tozalangan bo'ladi (clearSessionFlags orqali).
                   const isSessionActive = (e as any)._isNew || (e as any)._isEdited
                   
                   if (!isSessionActive && valDay.length >= 2 && valDay !== selDayStr) {
