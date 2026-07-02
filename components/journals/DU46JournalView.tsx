@@ -627,6 +627,11 @@ export function DU46JournalView({
   // ══════════════════════════════════════════════════════════════════════════════
 
   const handleKamchilikBoshlandiClick = (i: number) => {
+    const e = entries[i]
+    if (!e.oyKun1 || !e.soatMinut1 || !e.kamchilik?.trim()) {
+      showMsg("1, 2 va 3-ustunlarni to'ldiring!")
+      return
+    }
     setApprovalChainModal({ index: i, isEdit: false, currentChain: [] })
   }
 
@@ -680,6 +685,12 @@ export function DU46JournalView({
     const updated = [...entries]
     // Bug #1 fix: e ni joriy entries state'dan olamiz (stale closure muammosidan himoya)
     const e = entries[i]
+
+    if (!e.oyKun1 || !e.soatMinut1 || !e.kamchilik?.trim()) {
+      showMsg("1, 2 va 3-ustunlar to'ldirilmagan!")
+      return
+    }
+
     const nextRole = getNextApproverRole(e, 3)
 
     if (isBekatNavbatchisi) {
@@ -710,6 +721,11 @@ export function DU46JournalView({
   const handleBartarafBajarildiClick = (i: number) => {
     const prev = [...entries]
     const updated = [...entries]
+    const e = updated[i]
+    if (!e.oyKun4 || !e.soatMinut4 || !e.bartarafInfo?.trim()) {
+      showMsg("10, 11 va 12-ustunlarni to'ldiring!")
+      return
+    }
     updated[i] = {
       ...updated[i],
       bartarafBajarildi: true,
@@ -727,6 +743,12 @@ export function DU46JournalView({
     const updated = [...entries]
     // Bug #2 fix: e ni joriy entries state'dan olamiz
     const e = entries[i]
+
+    if (!e.oyKun4 || !e.soatMinut4 || !e.bartarafInfo?.trim()) {
+      showMsg("10, 11 va 12-ustunlar to'ldirilmagan!")
+      return
+    }
+
     const nextRole = getNextApproverRole(e, 12)
 
     if (isBekatNavbatchisi) {
@@ -1018,7 +1040,7 @@ export function DU46JournalView({
                 const canWriteCol3 = isCurrentMonth && !e.kamchilikBajarildi && !isDispatcher
 
                 // Bug #5 fix: o'tgan oylar uchun 12-ustun ham yopiq bo'lishi kerak
-                const canWriteCol12 = isCurrentMonth && !isCol12Finished(e) && isCol3Finished(e) && !isDispatcher && hasRightToFix && !isBekatNavbatchisi
+                const canWriteCol12 = isCurrentMonth && !e.bartarafBajarildi && isCol3Finished(e) && !isDispatcher && hasRightToFix && !isBekatNavbatchisi
 
                 const canWriteMiddle = isCurrentMonth && !isDispatcher && !isCol12Finished(e) && (hasRightToFix || hasNoCreator)
 
@@ -1097,7 +1119,7 @@ export function DU46JournalView({
                       {/* — Boshlandi / Tasdiqlash zanjiri tugmalari */}
                       <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
                         {/* 1) Boshlandi tugmasi (faqat yozuvchi ko'radi) */}
-                        {e.kamchilik && iAmRoleCreator && !e.kamchilikBajarildi && !isMonthInPast(journalMonth) && (
+                        {e.kamchilik?.trim() && iAmRoleCreator && !e.kamchilikBajarildi && !isMonthInPast(journalMonth) && (
                           <button
                             onClick={() => handleKamchilikBoshlandiClick(i)}
                             disabled={!e.oyKun1 || !e.soatMinut1}
@@ -1265,9 +1287,8 @@ export function DU46JournalView({
                         )}
                       </div>
 
-                      {/* — Bajarildi / Tasdiqlash zanjiri tugmalari */}
                       <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
-                        {e.bartarafInfo && hasRightToFix && !isBekatNavbatchisi && !e.bartarafBajarildi && !isMonthInPast(journalMonth) && (
+                        {e.bartarafInfo?.trim() && hasRightToFix && !isBekatNavbatchisi && !e.bartarafBajarildi && !isMonthInPast(journalMonth) && (
                           <button
                             onClick={() => handleBartarafBajarildiClick(i)}
                             disabled={!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi}
