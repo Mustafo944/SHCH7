@@ -39,6 +39,7 @@ const ALSNJournalView = dynamic(() => import('@/components/JournalView').then(mo
 const YerlatgichJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.YerlatgichJournalView), { ssr: false })
 const AlsnKodJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
 const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
+const DgaNazoratJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DgaNazoratJournalView), { ssr: false })
 import {
   LogOut,
   Plus,
@@ -712,6 +713,18 @@ export default function DispatcherPage() {
                                     <p className="mt-1 text-xs text-slate-500 leading-relaxed">MPS turidagi elektrodvigatellarni friksion tokini o&apos;lchash jurnali (NSH-01 9.1.4)</p>
                                   </div>
                                 </button>
+                                <button
+                                  onClick={() => { setActiveJournalType('dgaNazorat' as JournalType); }}
+                                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-amber-300 hover:shadow-xl hover:shadow-amber-500/5 active:scale-95"
+                                >
+                                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 transition-all group-hover:bg-white border border-transparent group-hover:border-amber-100 shadow-sm">
+                                    <BookOpen size={28} />
+                                  </div>
+                                  <div>
+                                    <h4 className="text-lg font-black text-slate-900 tracking-tight">Dizel generatorlari (DGA)</h4>
+                                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">Dizel generatorlarini ishlashini nazorat qilish jurnali (NSH-01 18.3.1)</p>
+                                  </div>
+                                </button>
                               </div>
                               <div className="text-center mt-6">
                                 <button onClick={() => setActiveJournalType(null)} className="rounded-2xl bg-white border border-slate-200/60 px-10 py-3 font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition shadow-sm">Orqaga</button>
@@ -780,6 +793,16 @@ export default function DispatcherPage() {
                         )}
                         {selectedReportType === 'jurnallar' && activeJournalType === 'mpsFriksion' && activeJournalMonth && (
                           <MpsFriksionJournalView
+                            stationId={selectedStation}
+                            stationName={stations.find(s => s.id === selectedStation)?.name || ''}
+                            userName={session?.fullName || ''}
+                            userRole="dispatcher"
+                            journalMonth={activeJournalMonth}
+                            onClose={() => { setActiveJournalMonth(''); setActiveJournalType(null); setSelectedReportType(null) }}
+                          />
+                        )}
+                        {selectedReportType === 'jurnallar' && activeJournalType === 'dgaNazorat' && activeJournalMonth && (
+                          <DgaNazoratJournalView
                             stationId={selectedStation}
                             stationName={stations.find(s => s.id === selectedStation)?.name || ''}
                             userName={session?.fullName || ''}

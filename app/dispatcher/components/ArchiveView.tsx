@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { FileText, BookOpen, Download } from 'lucide-react'
 import { WorkReport, Station, StationJournal, JournalType, DU46Entry, SHU2Entry } from '@/types'
 import { getJournalsByStationId } from '@/lib/supabase-db'
@@ -83,26 +83,63 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
     )
   }, [selStation, monthKey, allReports])
 
+  // ── Yordamchi: Yozuv tanlangan oyga tegishlimi? ──
+  const isEntryInMonth = useCallback((e: any, mk: string, updatedAt: string) => {
+    if (e.journalMonth === mk) return true;
+    
+    if (!e.journalMonth) {
+      const dateStr = e.oyKun1 || e.sana;
+      if (dateStr && typeof dateStr === 'string') {
+        const parts = dateStr.split(/[-.]/);
+        // DD-MM-YYYY or DD.MM.YYYY
+        if (parts.length >= 3 && parts[2].length === 4) {
+          const y = parts[2].trim();
+          const m = parts[1].trim();
+          if (`${y}-${m}` === mk) return true;
+        }
+        // YYYY-MM-DD
+        else if (parts.length >= 3 && parts[0].length === 4) {
+          const y = parts[0].trim();
+          const m = parts[1].trim();
+          if (`${y}-${m}` === mk) return true;
+        }
+      }
+      
+      const hasData = e.kamchilik || e.bartarafInfo || e.yozuv || e.ishlaganVaqt || e.rzNomi || e.kuchlanishNomi || e.poezdRaqami;
+      if (!hasData && updatedAt.startsWith(mk)) {
+        return true;
+      }
+    }
+    return false;
+  }, []);
+
   // ── Tanlangan oy uchun mavjud jurnal turlari (dinamik tablar) ──
   const availableJournalTypes = useMemo(() => {
     if (!selStation || !monthKey) return []
     const typesSet = new Set<string>()
     stationJournals.forEach(j => {
-      if (j.updatedAt.startsWith(monthKey)) {
+      const hasMonthEntry = Array.isArray(j.entries) && j.entries.some((e: any) => 
+        isEntryInMonth(e, monthKey, j.updatedAt)
+      );
+      if (hasMonthEntry || (j.updatedAt.startsWith(monthKey) && (!j.entries || j.entries.length === 0))) {
         typesSet.add(j.journalType)
       }
     })
     // JOURNAL_META tartibiga ko'ra qaytaramiz
     return Object.keys(JOURNAL_META).filter(t => typesSet.has(t)) as JournalType[]
-  }, [selStation, monthKey, stationJournals])
+  }, [selStation, monthKey, stationJournals, isEntryInMonth])
 
   // ── Tanlangan tab uchun jurnallar ──────────────────────────────
   const activeJournals = useMemo(() => {
     if (activeTab === 'oylikReja' || !monthKey) return []
-    return stationJournals.filter(
-      j => j.journalType === activeTab && j.updatedAt.startsWith(monthKey)
-    )
-  }, [activeTab, monthKey, stationJournals])
+    return stationJournals.filter(j => {
+      if (j.journalType !== activeTab) return false;
+      const hasMonthEntry = Array.isArray(j.entries) && j.entries.some((e: any) => 
+        isEntryInMonth(e, monthKey, j.updatedAt)
+      );
+      return hasMonthEntry || (j.updatedAt.startsWith(monthKey) && (!j.entries || j.entries.length === 0));
+    })
+  }, [activeTab, monthKey, stationJournals, isEntryInMonth])
 
   // ── Oy tugmalarida marker uchun — hech bo'lmasa bitta ma'lumot bormi? ──
   const hasDataForMonth = (monthIdx: number) => {
@@ -110,7 +147,12 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
     const hasReport = allReports.some(
       r => r.stationId === selStation && r.month === mk && r.confirmedAt && !r.rejectedAt
     )
-    const hasJournal = stationJournals.some(j => j.updatedAt.startsWith(mk))
+    const hasJournal = stationJournals.some(j => {
+      const hasMonthEntry = Array.isArray(j.entries) && j.entries.some((e: any) => 
+        isEntryInMonth(e, mk, j.updatedAt)
+      );
+      return hasMonthEntry || (j.updatedAt.startsWith(mk) && (!j.entries || j.entries.length === 0));
+    })
     return hasReport || hasJournal
   }
 
@@ -256,6 +298,7 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
           <JournalFullView
             journal={viewJournal}
             stationName={selStationName}
+            selectedMonthKey={monthKey || viewJournal.updatedAt.slice(0, 7)}
             onClose={() => setViewJournal(null)}
           />
         </div>
@@ -268,18 +311,18 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
 // JOURNAL FULL VIEW — har qanday jurnal turini to'liq ekranda ochadi
 // ─────────────────────────────────────────────────────────────────
 
-function JournalFullView({ journal, stationName, onClose }: {
+function JournalFullView({ journal, stationName, selectedMonthKey, onClose }: {
   journal: StationJournal
   stationName: string
+  selectedMonthKey: string
   onClose: () => void
 }) {
-  const month = journal.updatedAt.slice(0, 7)
   const commonProps = {
     stationId: journal.stationId,
     stationName,
     userName: 'Dispetcher',
     userRole: 'dispatcher' as const,
-    journalMonth: month,
+    journalMonth: selectedMonthKey,
     onClose,
   }
 
