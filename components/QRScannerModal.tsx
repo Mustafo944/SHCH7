@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { X, CheckCircle2, AlertTriangle, Loader2, Camera } from 'lucide-react';
+import { X, CheckCircle2, AlertTriangle, Loader2, Camera, Flashlight, FlashlightOff } from 'lucide-react';
 
 interface QRScannerModalProps {
   isOpen: boolean;
@@ -10,6 +10,10 @@ interface QRScannerModalProps {
   existingScans?: string[];
 }
 
+// BarcodeDetector brauzerda mavjudligini bir marta aniqlaymiz (SSR-xavfsiz)
+const hasBarcodeDetector = () =>
+  typeof window !== 'undefined' && 'BarcodeDetector' in window;
+
 export function QRScannerModal({
   isOpen,
   onClose,
@@ -19,15 +23,18 @@ export function QRScannerModal({
   existingScans = []
 }: QRScannerModalProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const vfcRef = useRef<number | null>(null);
+  const html5Ref = useRef<any>(null);
   const scanLockRef = useRef(false);
   const mountedRef = useRef(false);
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
 
   // Stabil ref lar
   const expectedPrefixRef = useRef(expectedPrefix);
@@ -38,9 +45,25 @@ export function QRScannerModal({
   useEffect(() => { onScanSuccessRef.current = onScanSuccess; }, [onScanSuccess]);
 
   const stopCamera = useCallback(() => {
-    if (scanTimerRef.current) {
-      clearTimeout(scanTimerRef.current);
-      scanTimerRef.current = null;
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    if (vfcRef.current !== null && videoRef.current && 'cancelVideoFrameCallback' in videoRef.current) {
+      (videoRef.current as any).cancelVideoFrameCallback(vfcRef.current);
+      vfcRef.current = null;
+    }
+    if (html5Ref.current) {
+      const decoder = html5Ref.current;
+      html5Ref.current = null;
+      try {
+        // isScanning bo'lsa to'xtatamiz, keyin tozalaymiz
+        if (decoder.getState && decoder.getState() === 2 /* SCANNING */) {
+          decoder.stop().then(() => { try { decoder.clear(); } catch { /* */ } }).catch(() => { /* */ });
+        } else {
+          try { decoder.clear(); } catch { /* */ }
+        }
+      } catch { /* */ }
     }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
@@ -55,25 +78,39 @@ export function QRScannerModal({
     if (scanLockRef.current) return;
 
     if (expectedPrefixRef.current && !decodedText.startsWith(expectedPrefixRef.current)) {
-      setError('Xato: Bu QR kod boshqa bekat yoki tizimga tegishli.');
-      setTimeout(() => setError(null), 3000);
+      setError('Xato: Bu QR kod boshqa bekat yoki qurilmaga tegishli.');
+      // Noto'g'ri kod — qisqa titrash bilan bildiramiz
+      try { navigator.vibrate?.([60, 40, 60]); } catch { /* */ }
+      setTimeout(() => setError(null), 2500);
       return;
     }
     if (existingScansRef.current.includes(decodedText)) {
       setError('Xato: Siz bu qurilmani oldin skaner qilgansiz!');
-      setTimeout(() => setError(null), 3000);
+      setTimeout(() => setError(null), 2500);
       return;
     }
 
     scanLockRef.current = true;
     setError(null);
     setSuccess("✅ Muvaffaqiyatli o'qildi!");
+    // Muvaffaqiyat — qisqa haptik javob (tez his qilinishi uchun)
+    try { navigator.vibrate?.(120); } catch { /* */ }
     stopCamera();
 
     setTimeout(() => {
       onScanSuccessRef.current(decodedText);
-    }, 800);
+    }, 450);
   }, [stopCamera]);
+
+  const toggleTorch = useCallback(async () => {
+    const track = streamRef.current?.getVideoTracks?.()[0];
+    if (!track) return;
+    try {
+      const next = !torchOn;
+      await track.applyConstraints({ advanced: [{ torch: next }] } as any);
+      setTorchOn(next);
+    } catch { /* qurilma qo'llab-quvvatlamasa jim o'tamiz */ }
+  }, [torchOn]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -83,20 +120,34 @@ export function QRScannerModal({
     setError(null);
     setSuccess(null);
     setIsLoading(true);
+    setTorchOn(false);
+    setTorchSupported(false);
 
-    let barcodeDetector: any = null;
-    const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
+    const useNative = hasBarcodeDetector();
 
-    const startCamera = async () => {
+    // ——— Native BarcodeDetector: kamera + har kadrda aniqlash (eng tez) ———
+    const startNative = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        });
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: 'environment' },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              // Uzluksiz avtofokus — QR ni tez va aniq ushlaydi
+              focusMode: 'continuous',
+              advanced: [{ focusMode: 'continuous' }]
+            } as any,
+            audio: false
+          });
+        } catch {
+          // Qattiq cheklovlar rad etilsa — soddaroq bilan qayta urinamiz
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' },
+            audio: false
+          });
+        }
 
         if (!mountedRef.current) {
           stream.getTracks().forEach(t => t.stop());
@@ -105,25 +156,55 @@ export function QRScannerModal({
 
         streamRef.current = stream;
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
+        // Fonar (torch) qo'llab-quvvatlanishini tekshiramiz
+        try {
+          const track = stream.getVideoTracks()[0];
+          const caps: any = track.getCapabilities?.();
+          if (caps && 'torch' in caps && caps.torch) setTorchSupported(true);
+        } catch { /* */ }
 
+        const video = videoRef.current;
+        if (video) {
+          video.srcObject = stream;
+          await video.play().catch(() => { /* */ });
+        }
         if (mountedRef.current) setIsLoading(false);
 
-        // BarcodeDetector bo'lsa — native, bo'lmasa — html5-qrcode fallback
-        if (hasBarcodeDetector) {
-          try {
-            // @ts-expect-error — BarcodeDetector TypeScript da yo'q
-            barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
-            scanWithBarcodeDetector(barcodeDetector);
-          } catch {
-            scanWithHtml5QrCode();
-          }
-        } else {
-          scanWithHtml5QrCode();
+        let detector: any;
+        try {
+          // @ts-expect-error — BarcodeDetector TypeScript da yo'q
+          detector = new BarcodeDetector({ formats: ['qr_code'] });
+        } catch {
+          // Native detektor ishlamasa — fallback ga o'tamiz
+          startFallback();
+          return;
         }
+
+        const supportsVFC = !!video && 'requestVideoFrameCallback' in video;
+
+        const scheduleNext = () => {
+          if (!mountedRef.current || scanLockRef.current) return;
+          if (supportsVFC && video) {
+            vfcRef.current = (video as any).requestVideoFrameCallback(() => tick());
+          } else {
+            rafRef.current = requestAnimationFrame(() => tick());
+          }
+        };
+
+        const tick = async () => {
+          if (!mountedRef.current || scanLockRef.current || !videoRef.current) return;
+          if (videoRef.current.readyState < 2) { scheduleNext(); return; }
+          try {
+            const barcodes = await detector.detect(videoRef.current);
+            if (barcodes.length > 0 && barcodes[0].rawValue) {
+              handleDetected(barcodes[0].rawValue);
+              return;
+            }
+          } catch { /* kadr o'qib bo'lmadi — keyingisiga o'tamiz */ }
+          scheduleNext();
+        };
+
+        tick();
       } catch {
         if (mountedRef.current) {
           setError("Kameraga ulanib bo'lmadi. Iltimos, brauzer ruxsatlarini tekshiring.");
@@ -132,102 +213,55 @@ export function QRScannerModal({
       }
     };
 
-    // ——— BarcodeDetector (native, tez) ———
-    const scanWithBarcodeDetector = (detector: any) => {
-      const scan = async () => {
-        if (!mountedRef.current || scanLockRef.current || !videoRef.current) return;
-        if (videoRef.current.readyState < 2) {
-          scanTimerRef.current = setTimeout(scan, 100);
-          return;
-        }
-
-        try {
-          const barcodes = await detector.detect(videoRef.current);
-          if (barcodes.length > 0 && barcodes[0].rawValue) {
-            handleDetected(barcodes[0].rawValue);
-            return;
-          }
-        } catch {
-          // ignore
-        }
-
-        if (mountedRef.current && !scanLockRef.current) {
-          scanTimerRef.current = setTimeout(scan, 150);
-        }
-      };
-      scan();
-    };
-
-    // ——— html5-qrcode fallback (canvas → scanFileV2) ———
-    const scanWithHtml5QrCode = async () => {
+    // ——— Fallback: html5-qrcode o'zining optimizatsiyalangan kamera skaneri ———
+    const startFallback = async () => {
       try {
         const { Html5Qrcode } = await import('html5-qrcode');
+        if (!mountedRef.current) return;
 
-        // html5-qrcode uchun yashirin konteyner
-        const tempId = `qr-temp-${Date.now()}`;
-        const tempDiv = document.createElement('div');
-        tempDiv.id = tempId;
-        tempDiv.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;';
-        document.body.appendChild(tempDiv);
+        // Native oqim ishlagan bo'lsa uni to'xtatamiz (html5-qrcode o'zi kamera oladi)
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(t => t.stop());
+          streamRef.current = null;
+        }
+        if (videoRef.current) videoRef.current.srcObject = null;
 
-        const decoder = new Html5Qrcode(tempId);
+        const decoder = new Html5Qrcode('qr-reader-region', { verbose: false } as any);
+        html5Ref.current = decoder;
 
-        const scan = () => {
-          if (!mountedRef.current || scanLockRef.current || !videoRef.current || !canvasRef.current) return;
-          if (videoRef.current.readyState < 2) {
-            scanTimerRef.current = setTimeout(scan, 200);
-            return;
-          }
+        await decoder.start(
+          { facingMode: 'environment' },
+          {
+            fps: 15,
+            qrbox: { width: 240, height: 240 },
+            aspectRatio: 1.333,
+            disableFlip: false
+          },
+          (decodedText: string) => { handleDetected(decodedText); },
+          () => { /* har kadrdagi "topilmadi" xatolari — e'tiborsiz */ }
+        );
 
-          const video = videoRef.current;
-          const canvas = canvasRef.current;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) { scanTimerRef.current = setTimeout(scan, 200); return; }
-
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-          canvas.toBlob(async (blob) => {
-            if (!blob || scanLockRef.current || !mountedRef.current) return;
-            try {
-              const file = new File([blob], 'f.png', { type: 'image/png' });
-              const result = await decoder.scanFileV2(file, false);
-              if (result?.decodedText) {
-                handleDetected(result.decodedText);
-                // Tempdiv ni tozalash
-                try { document.body.removeChild(tempDiv); } catch { /* */ }
-                return;
-              }
-            } catch {
-              // QR topilmadi — keyingi framega o'tish
-            }
-
-            if (mountedRef.current && !scanLockRef.current) {
-              scanTimerRef.current = setTimeout(scan, 250);
-            }
-          }, 'image/png');
-        };
-
-        scan();
+        if (mountedRef.current) setIsLoading(false);
       } catch {
         if (mountedRef.current) {
           setError("QR kod o'qish kutubxonasi yuklanmadi.");
+          setIsLoading(false);
         }
       }
     };
 
-    startCamera();
+    if (useNative) startNative();
+    else startFallback();
 
     return () => {
       mountedRef.current = false;
       stopCamera();
-      // Temp div larni tozalash
-      document.querySelectorAll('[id^="qr-temp-"]').forEach(el => el.remove());
     };
   }, [isOpen, handleDetected, stopCamera]);
 
   if (!isOpen) return null;
+
+  const nativeMode = hasBarcodeDetector();
 
   return (
     <div
@@ -252,7 +286,7 @@ export function QRScannerModal({
         </div>
 
         {/* Kamera oynasi */}
-        <div className="relative bg-black">
+        <div className="relative bg-black" style={{ aspectRatio: '4/3' }}>
           {isLoading && !error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 z-20">
               <Loader2 className="animate-spin text-white mb-3" size={36} />
@@ -260,14 +294,19 @@ export function QRScannerModal({
             </div>
           )}
 
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            autoPlay
-            className="w-full block"
-            style={{ aspectRatio: '4/3', objectFit: 'cover' }}
-          />
+          {/* Native rejim: o'z video elementimiz. Fallback: html5-qrcode konteyneri */}
+          {nativeMode ? (
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              autoPlay
+              className="w-full h-full block"
+              style={{ objectFit: 'cover' }}
+            />
+          ) : (
+            <div id="qr-reader-region" className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover" />
+          )}
 
           {/* Skaner ramkasi */}
           {!isLoading && !error && !success && (
@@ -286,7 +325,16 @@ export function QRScannerModal({
             </div>
           )}
 
-          <canvas ref={canvasRef} className="hidden" />
+          {/* Fonar tugmasi (qo'llab-quvvatlansa) */}
+          {torchSupported && !isLoading && !error && !success && (
+            <button
+              onClick={toggleTorch}
+              className={`absolute bottom-3 right-3 z-20 flex h-11 w-11 items-center justify-center rounded-full shadow-lg transition active:scale-90 ${torchOn ? 'bg-amber-400 text-slate-900' : 'bg-slate-900/60 text-white backdrop-blur-sm'}`}
+              aria-label="Fonar"
+            >
+              {torchOn ? <Flashlight size={20} /> : <FlashlightOff size={20} />}
+            </button>
+          )}
         </div>
 
         {/* Status */}
@@ -303,7 +351,7 @@ export function QRScannerModal({
           )}
           {!error && !success && (
             <p className="text-xs font-bold text-slate-400 text-center uppercase tracking-widest">
-              Kamerani bekatdagi QR kodga qarating
+              Kamerani qurilmadagi QR kodga qarating
             </p>
           )}
         </div>
