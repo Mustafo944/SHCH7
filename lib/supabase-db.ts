@@ -199,7 +199,11 @@ export async function getWorkers(): Promise<User[]> {
     .neq('role', 'dispatcher')
     .order('created_at', { ascending: true });
 
-  if (error || !data) return [];
+  if (error) {
+    if (typeof window !== 'undefined') alert("Supabase Error (getWorkers): " + error.message);
+    return [];
+  }
+  if (!data) return [];
   return (data as DbUserRow[]).map(mapDbUserToUser);
 }
 
@@ -328,7 +332,7 @@ export async function getReportsByStation(stationId: string): Promise<WorkReport
 
 export async function getReportsByStations(stationIds: string[]): Promise<WorkReport[]> {
   if (!stationIds || stationIds.length === 0) return [];
-  
+
   const { data, error } = await supabase
     .from('work_reports')
     .select(WORK_REPORT_COLUMNS)
@@ -929,8 +933,8 @@ export async function getJournal(
     .eq('station_id', stationId)
     .eq('journal_type', journalType)
     .maybeSingle() // Bug #14 fix: .single() o'rniga .maybeSingle() ishlatamiz
-    // .single() hech narsa topilmasa ham xato beradi (PGRST116).
-    // .maybeSingle() esa hech narsa topilmasa null qaytaradi, xato bermaydi.
+  // .single() hech narsa topilmasa ham xato beradi (PGRST116).
+  // .maybeSingle() esa hech narsa topilmasa null qaytaradi, xato bermaydi.
 
   if (error) {
     console.error('getJournal xatosi:', error.message)
@@ -980,7 +984,7 @@ export async function getPendingJournalCounts(
             if (!isBoshlandi) return null
             const chain = e.approvalChain || []
             const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
-            
+
             if (col === 3) {
               if (approvals.length < chain.length) return chain[approvals.length]
               // Bekat boshlig'i ham bekat navbatchisi tomonidan tasdiqlanadi
@@ -989,19 +993,19 @@ export async function getPendingJournalCounts(
             } else {
               const creatorRole = getCreator(e)
               const col3Participants = new Set<string>()
-              
+
               // Bekat boshlig'i ham zanjirga qo'shiladi
               col3Participants.add(creatorRole)
               chain.forEach(r => col3Participants.add(r))
 
               const writerRole = e.bartarafByRole || getCreator(e)
               const requiredChainFor12 = Array.from(col3Participants).filter(r => r !== writerRole)
-              
+
               const nextRequiredRole = requiredChainFor12.find(r => !approvals.some(a => {
                 if (r === 'worker' && ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(a.role)) return true
                 return a.role === r
               }))
-              
+
               if (nextRequiredRole) return nextRequiredRole
               // Faqat bekat_navbatchisi o'zi Tugadi bossa, qayta tasdiqlamaydi
               const writerRoleVal = e.bartarafByRole || getCreator(e)
@@ -1026,10 +1030,10 @@ export async function getPendingJournalCounts(
               const checkCol = (col: 3 | 12) => {
                 const isBoshlandi = col === 3 ? e.kamchilikBajarildi : e.bartarafBajarildi
                 if (!isBoshlandi) return false
-                
+
                 const chain = e.approvalChain || []
                 const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
-                
+
                 let isParticipant = false
                 if (col === 3) {
                   isParticipant = chain.includes(userRoleToCheck) || (userRoleToCheck === 'katta_elektromexanik' && chain.includes('worker'))
@@ -1038,7 +1042,7 @@ export async function getPendingJournalCounts(
                   const col3Participants = new Set<string>()
                   if (creatorRole !== 'bekat_boshlighi') col3Participants.add(creatorRole)
                   chain.forEach(r => col3Participants.add(r))
-                  
+
                   const writerRole = e.bartarafByRole || getCreator(e)
                   const workerRoles = ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik']
                   if (workerRoles.includes(writerRole)) {
@@ -1046,7 +1050,7 @@ export async function getPendingJournalCounts(
                   } else {
                     col3Participants.delete(writerRole)
                   }
-                  
+
                   if (col3Participants.has(userRoleToCheck) || (['elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(userRoleToCheck) && col3Participants.has('worker'))) {
                     isParticipant = true
                   }
@@ -1097,11 +1101,11 @@ export async function upsertJournal(
   updatedBy: string
 ): Promise<StationJournal> {
   const { serverUpsertJournal } = await import('@/app/actions/journal-actions')
-  
+
   const data = await serverUpsertJournal(
-    stationId, 
-    journalType, 
-    entries as unknown as Record<string, unknown>[], 
+    stationId,
+    journalType,
+    entries as unknown as Record<string, unknown>[],
     updatedBy
   )
 
@@ -1135,7 +1139,7 @@ export async function getDispatcherJournalSummary(): Promise<Record<string, { du
     for (const row of rpcData as Array<{ station_id: string; journal_type: string; pending_count: number }>) {
       const sid = row.station_id
       if (!summary[sid]) summary[sid] = { du46: 0, shu2: 0 }
-      
+
       if (row.journal_type === 'du46') {
         summary[sid].du46 += row.pending_count || 0
       } else {
@@ -1299,22 +1303,22 @@ export async function upsertStationEquipments(
 
   const write = existing
     ? supabase
-        .from('station_journals')
-        .update({ entries, updated_at: new Date().toISOString(), updated_by: updatedByName })
-        .eq('id', existing.id)
-        .select('entries, updated_at, updated_by')
-        .single()
+      .from('station_journals')
+      .update({ entries, updated_at: new Date().toISOString(), updated_by: updatedByName })
+      .eq('id', existing.id)
+      .select('entries, updated_at, updated_by')
+      .single()
     : supabase
-        .from('station_journals')
-        .insert({
-          station_id: stationId + '_equipments',
-          journal_type: 'shu2',
-          entries,
-          updated_at: new Date().toISOString(),
-          updated_by: updatedByName
-        })
-        .select('entries, updated_at, updated_by')
-        .single();
+      .from('station_journals')
+      .insert({
+        station_id: stationId + '_equipments',
+        journal_type: 'shu2',
+        entries,
+        updated_at: new Date().toISOString(),
+        updated_by: updatedByName
+      })
+      .select('entries, updated_at, updated_by')
+      .single();
 
   const { data: resultData, error: resultError } = await write;
 

@@ -27,13 +27,13 @@ interface JournalMeta {
 }
 
 const JOURNAL_META: Record<string, JournalMeta> = {
-  du46:         { label: 'DU-46',         color: 'bg-sky-600',    hoverRing: 'hover:ring-sky-400/30',    textColor: 'text-sky-600' },
-  shu2:         { label: 'SHU-2',         color: 'bg-amber-500',  hoverRing: 'hover:ring-amber-400/30',  textColor: 'text-amber-600' },
-  alsn:         { label: 'ALSN',          color: 'bg-indigo-500', hoverRing: 'hover:ring-indigo-400/30',  textColor: 'text-indigo-600' },
-  yerlatgich:   { label: 'Yerlatgich',    color: 'bg-teal-500',   hoverRing: 'hover:ring-teal-400/30',   textColor: 'text-teal-600' },
-  alsnKod:      { label: 'ALSN Kod',      color: 'bg-violet-500', hoverRing: 'hover:ring-violet-400/30', textColor: 'text-violet-600' },
-  mpsFriksion:  { label: 'MPS Friksion',  color: 'bg-rose-500',   hoverRing: 'hover:ring-rose-400/30',   textColor: 'text-rose-600' },
-  dgaNazorat:   { label: 'DGA Nazorat',   color: 'bg-orange-500', hoverRing: 'hover:ring-orange-400/30', textColor: 'text-orange-600' },
+  du46: { label: 'DU-46', color: 'bg-sky-600', hoverRing: 'hover:ring-sky-400/30', textColor: 'text-sky-600' },
+  shu2: { label: 'SHU-2', color: 'bg-amber-500', hoverRing: 'hover:ring-amber-400/30', textColor: 'text-amber-600' },
+  alsn: { label: 'ALSN', color: 'bg-indigo-500', hoverRing: 'hover:ring-indigo-400/30', textColor: 'text-indigo-600' },
+  yerlatgich: { label: 'Yerlatgich', color: 'bg-teal-500', hoverRing: 'hover:ring-teal-400/30', textColor: 'text-teal-600' },
+  alsnKod: { label: 'ALSN Kod', color: 'bg-violet-500', hoverRing: 'hover:ring-violet-400/30', textColor: 'text-violet-600' },
+  mpsFriksion: { label: 'MPS Friksion', color: 'bg-rose-500', hoverRing: 'hover:ring-rose-400/30', textColor: 'text-rose-600' },
+  dgaNazorat: { label: 'DGA Nazorat', color: 'bg-orange-500', hoverRing: 'hover:ring-orange-400/30', textColor: 'text-orange-600' },
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
   // ── Yordamchi: Yozuv tanlangan oyga tegishlimi? ──
   const isEntryInMonth = useCallback((e: any, mk: string, updatedAt: string) => {
     if (e.journalMonth === mk) return true;
-    
+
     if (!e.journalMonth) {
       const dateStr = e.oyKun1 || e.sana;
       if (dateStr && typeof dateStr === 'string') {
@@ -111,7 +111,7 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
           if (`${y}-${m}` === mk) return true;
         }
       }
-      
+
       const hasData = e.kamchilik || e.bartarafInfo || e.yozuv || e.ishlaganVaqt || e.rzNomi || e.kuchlanishNomi || e.poezdRaqami;
       if (!hasData && updatedAt.startsWith(mk)) {
         return true;
@@ -125,7 +125,7 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
     if (!selStation || !monthKey) return []
     const typesSet = new Set<string>()
     stationJournals.forEach(j => {
-      const hasMonthEntry = Array.isArray(j.entries) && j.entries.some((e: any) => 
+      const hasMonthEntry = Array.isArray(j.entries) && j.entries.some((e: any) =>
         isEntryInMonth(e, monthKey, j.updatedAt)
       );
       if (hasMonthEntry || (j.updatedAt.startsWith(monthKey) && (!j.entries || j.entries.length === 0))) {
@@ -141,7 +141,7 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
     if (activeTab === 'oylikReja' || !monthKey) return []
     return stationJournals.filter(j => {
       if (j.journalType !== activeTab) return false;
-      const hasMonthEntry = Array.isArray(j.entries) && j.entries.some((e: any) => 
+      const hasMonthEntry = Array.isArray(j.entries) && j.entries.some((e: any) =>
         isEntryInMonth(e, monthKey, j.updatedAt)
       );
       return hasMonthEntry || (j.updatedAt.startsWith(monthKey) && (!j.entries || j.entries.length === 0));
@@ -155,7 +155,7 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
       r => r.stationId === selStation && r.month === mk && r.confirmedAt && !r.rejectedAt
     )
     const hasJournal = stationJournals.some(j => {
-      const hasMonthEntry = Array.isArray(j.entries) && j.entries.some((e: any) => 
+      const hasMonthEntry = Array.isArray(j.entries) && j.entries.some((e: any) =>
         isEntryInMonth(e, mk, j.updatedAt)
       );
       return hasMonthEntry || (j.updatedAt.startsWith(mk) && (!j.entries || j.entries.length === 0));
@@ -452,7 +452,7 @@ export function JournalArchiveCard({ journal, type, stationName }: {
           margin: { left: 10, right: 10 },
           headStyles: { fillColor: [8, 23, 40], textColor: [255, 255, 255], fontSize: 5, fontStyle: 'bold', halign: 'center' },
           alternateRowStyles: { fillColor: [240, 248, 255] },
-          columnStyles: { 
+          columnStyles: {
             0: { halign: 'center', cellWidth: 6 },
             1: { halign: 'center', cellWidth: 12 },
             2: { halign: 'center', cellWidth: 12 },

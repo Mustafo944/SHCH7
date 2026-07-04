@@ -139,12 +139,16 @@ export default function DispatcherPage() {
 
   const stations = getStations()
 
+  // Kesh topilmasa `undefined` qaytariladi (default qiymat emas!) — aks holda
+  // SWRProvider'dagi revalidateIfStale:false sozlamasi bu bo'sh massivni "haqiqiy
+  // ma'lumot" deb hisoblab, birinchi (keshsiz) ochilishda serverdan hech qachon
+  // yangi ma'lumot so'ramay qo'yadi.
   const getFallback = (key: string, def: any) => {
     if (typeof window !== 'undefined') {
       const cached = safeStorage.getItem(key)
       if (cached) { try { return JSON.parse(cached) } catch { /* ignore */ } }
     }
-    return def
+    return undefined
   }
 
   const { data: workers = [], mutate: mutateWorkers } = useSWR(session ? 'dispatcher_workers' : null, async () => {
