@@ -1209,12 +1209,22 @@ export interface TaskScan {
 }
 
 export async function getTaskScans(stationId: string, taskNsh: string, taskDate: string): Promise<TaskScan[]> {
+  // MUHIM: `task_date` ustuni bazada `date` emas, `timestamptz` bo'lib chiqdi —
+  // u to'liq skaner vaqtini saqlaydi, shu sababli `.eq('task_date', ...)` kun
+  // chegarasidagi skanerni ikki kalendar kunga ham mos keltiradi (kunlik ajratish buziladi).
+  // Buning o'rniga ishonchli `scanned_at` (timestamptz) ustunini MAHALLIY kun
+  // oralig'i bo'yicha filtrlaymiz: [mahalliy yarim tun, keyingi mahalliy yarim tun).
+  const [y, m, d] = taskDate.split('-').map(Number);
+  const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0);     // qurilma mahalliy vaqti bo'yicha kun boshi
+  const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0, 0);   // keyingi kun boshi
+
   const { data, error } = await supabase
     .from('task_scans')
     .select('*')
     .eq('station_id', stringToUuid(stationId))
     .eq('task_nsh', taskNsh)
-    .eq('task_date', taskDate);
+    .gte('scanned_at', dayStart.toISOString())
+    .lt('scanned_at', dayEnd.toISOString());
 
   if (error) {
     console.error('getTaskScans error:', error);

@@ -462,14 +462,13 @@ export default function DispatcherPage() {
   async function handleRejectReport(reportId: string) {
     if (!session) return
     try {
-      await rejectReport(reportId, session.fullName)
+      const res = await rejectReport(reportId, session.fullName)
+      if (!res) throw new Error('Rad etishda xatolik (DB xatosi yoki ruxsat yo\'q)')
       refreshData()
       toast.info('Oylik reja rad qilindi. Katta elektromexanik qayta yuborishi kerak.')
     } catch (err: unknown) {
-      setFormMsg({
-        type: 'err',
-        text: err instanceof Error ? err.message : "Rad etishda xatolik yuz berdi"
-      })
+      console.error(err);
+      toast.error('Xatolik yuz berdi')
     }
   }
 
