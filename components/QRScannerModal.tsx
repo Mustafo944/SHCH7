@@ -29,6 +29,8 @@ export function QRScannerModal({
   const html5Ref = useRef<any>(null);
   const scanLockRef = useRef(false);
   const mountedRef = useRef(false);
+  // Oxirgi rad etilgan kod + vaqti — bir xil noto'g'ri kodni har kadrda takror ishlamaslik uchun
+  const lastRejectRef = useRef<{ text: string; at: number } | null>(null);
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -80,15 +82,22 @@ export function QRScannerModal({
   const handleDetected = useCallback((decodedText: string) => {
     if (scanLockRef.current) return;
 
-    if (expectedPrefixRef.current && !decodedText.startsWith(expectedPrefixRef.current)) {
-      setError('Xato: Bu QR kod boshqa bekat yoki qurilmaga tegishli.');
-      // Noto'g'ri kod — qisqa titrash bilan bildiramiz
+    const wrongPrefix = !!expectedPrefixRef.current && !decodedText.startsWith(expectedPrefixRef.current);
+    const duplicate = existingScansRef.current.includes(decodedText);
+
+    if (wrongPrefix || duplicate) {
+      // Rad etilgan kod — skaner TO'XTAMAYDI, tekshirishda davom etadi.
+      // Bir xil noto'g'ri kod har kadrda takror ishlanmasin (titrash/xato spam bo'lmasin):
+      // shu qiymatni qisqa muddat (1.5s) e'tiborsiz qoldiramiz.
+      const now = Date.now();
+      const last = lastRejectRef.current;
+      if (last && last.text === decodedText && now - last.at < 1500) return;
+      lastRejectRef.current = { text: decodedText, at: now };
+
+      setError(wrongPrefix
+        ? 'Xato: Bu QR kod boshqa bekat yoki qurilmaga tegishli.'
+        : 'Xato: Siz bu qurilmani oldin skaner qilgansiz!');
       try { navigator.vibrate?.([60, 40, 60]); } catch { /* */ }
-      setTimeout(() => setError(null), 2500);
-      return;
-    }
-    if (existingScansRef.current.includes(decodedText)) {
-      setError('Xato: Siz bu qurilmani oldin skaner qilgansiz!');
       setTimeout(() => setError(null), 2500);
       return;
     }
@@ -203,7 +212,9 @@ export function QRScannerModal({
             const barcodes = await detector.detect(videoRef.current);
             if (barcodes.length > 0 && barcodes[0].rawValue) {
               handleDetected(barcodes[0].rawValue);
-              return;
+              // Faqat kod QABUL qilinganda (bloklanganda) to'xtaymiz.
+              // Rad etilgan bo'lsa — tekshirishda davom etamiz.
+              if (scanLockRef.current) return;
             }
           } catch { /* kadr o'qib bo'lmadi — keyingisiga o'tamiz */ }
           scheduleNext();
