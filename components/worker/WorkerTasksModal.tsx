@@ -1,11 +1,22 @@
 /* eslint-disable @next/next/no-img-element */
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, CheckCircle2, BookOpen, FileText, Download, AlertTriangle, ChevronRight } from 'lucide-react'
+import {
+  X, CheckCircle2,
+  BookOpen,
+  ChevronRight,
+  Download,
+  AlertTriangle,
+  FileText,
+  Target
+} from 'lucide-react'
+import { getStationEquipments, getTaskScans, insertTaskScan, type TaskScan } from '@/lib/supabase-db'
 import { supabase } from '@/lib/supabase'
 import type { User, ReportEntry } from '@/types'
 import { useToast } from '@/lib/hooks/useToast'
 import dynamic from 'next/dynamic'
+import { QRScannerModal } from '../QRScannerModal'
+import { buildEquipmentQrValue, stringToUuid } from '@/lib/utils/qr'
 
 // JournalView komponentlari lazy load qilinadi
 const DU46JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DU46JournalView), { ssr: false })
@@ -355,7 +366,7 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
    TaskCompletionModal — ishni bajarish modali (jurnal bilan bog'langan)
    ═══════════════════════════════════════════════════════════════════════ */
 
-export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session, stationId, stationName, journalMonth, onComplete, onClose }: {
+export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session, stationId, stationName, journalMonth, onComplete, onScanProgress, onClose, preloadedStationEq }: {
   entry: ReportEntry
   entryIndex: number
   reportId: string
@@ -364,12 +375,69 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   stationName: string
   journalMonth: string
   onComplete: (taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy') => void
+  onScanProgress?: (scans: any[], taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy') => void
   onClose: () => void
+  preloadedStationEq?: any
 }) {
   const [activeJournal, setActiveJournal] = useState<'du46' | 'shu2' | 'yerlatgich' | 'alsnKod' | 'mpsFriksion' | 'dgaNazorat' | null>(null)
   const [visitedJournals, setVisitedJournals] = useState<Set<string>>(new Set())
   const [selectedTaskType, setSelectedTaskType] = useState<'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy' | null>(null)
   const [localProgress, setLocalProgress] = useState<Record<string, boolean>>({})
+  const [stationEq, setStationEq] = useState<any>(preloadedStationEq || null)
+  const [dbScans, setDbScans] = useState<TaskScan[]>([])
+  const [isScanningDb, setIsScanningDb] = useState(false)
+
+  // Agar tashqaridan berilmagan bo'lsa, o'zi yuklaydi
+  useEffect(() => {
+    if (preloadedStationEq) {
+      setStationEq(preloadedStationEq)
+      return
+    }
+    getStationEquipments(stationId).then((data) => {
+      if (data) setStationEq(data)
+    })
+  }, [stationId, preloadedStationEq])
+
+  const extractJurnal = (text: string): string => {
+    const match = text.match(/Jurnal:\s*(.+)$/m)
+    return match ? match[1].trim() : ''
+  }
+
+  const availableTasks = useMemo(() => {
+    const list: { type: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy', label: string, text: string, journals: string }[] = []
+    if (entry.haftalikJadval && !entry.doneHaftalik) list.push({ type: 'haftalik', label: '4-haftalik jadval', text: entry.haftalikJadval, journals: entry.jurnalHaftalik || extractJurnal(entry.haftalikJadval) })
+    if (entry.yillikJadval && !entry.doneYillik) list.push({ type: 'yillik', label: 'Yillik jadval', text: entry.yillikJadval, journals: entry.jurnalYillik || extractJurnal(entry.yillikJadval) })
+    if (entry.yangiIshlar && !entry.doneYangi) list.push({ type: 'yangi', label: 'Yangi ishlar', text: entry.yangiIshlar, journals: entry.jurnalYangi || extractJurnal(entry.yangiIshlar) })
+    if (entry.kmoBartaraf && !entry.doneKmo) list.push({ type: 'kmo', label: 'KMO bartaraf', text: entry.kmoBartaraf, journals: entry.jurnalKmo || extractJurnal(entry.kmoBartaraf) })
+    if (entry.majburiyOzgarish && !entry.doneMajburiy) list.push({ type: 'majburiy', label: 'Majburiy o\'zgarish', text: entry.majburiyOzgarish, journals: entry.jurnalMajburiy || extractJurnal(entry.majburiyOzgarish) })
+    return list
+  }, [entry])
+
+  // Agar faqat bitta ish bo'lsa, uni avtomatik tanlaymiz
+  useEffect(() => {
+    if (availableTasks.length === 1 && !selectedTaskType) {
+      setSelectedTaskType(availableTasks[0].type)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableTasks.length])
+
+  const currentTask = useMemo(() => availableTasks.find(t => t.type === selectedTaskType), [availableTasks, selectedTaskType])
+
+  const taskTextStr = currentTask?.text || '';
+  useEffect(() => {
+    if (!selectedTaskType || !stationId || !taskTextStr) return;
+    const loadScans = async () => {
+      const match = taskTextStr.match(/^\[([^\]]+)\]/);
+      const taskNshStr = match ? match[1].trim() : 'noma\'lum';
+      const taskDateStr = new Date().toISOString().split('T')[0];
+      const data = await getTaskScans(stationId, taskNshStr, taskDateStr);
+      setDbScans(data);
+    };
+    loadScans();
+    // Har 5 soniyada yangilab turish (boshqa ishchi skaner qilayotgan bo'lsa ko'rinadi)
+    const interval = setInterval(loadScans, 5000);
+    return () => clearInterval(interval);
+  }, [selectedTaskType, stationId, taskTextStr]);
 
   const storageKey = useMemo(() => {
     if (!reportId || _entryIndex === -1 || !selectedTaskType) return null
@@ -391,31 +459,6 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useMemo(loadVisitedJournals, [storageKey])
 
-  const extractJurnal = (text: string): string => {
-    const match = text.match(/Jurnal:\s*(.+)$/m)
-    return match ? match[1].trim() : ''
-  }
-
-  const availableTasks = useMemo(() => {
-    const list: { type: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy', label: string, text: string, journals: string }[] = []
-    if (entry.haftalikJadval && !entry.doneHaftalik) list.push({ type: 'haftalik', label: '4-haftalik jadval', text: entry.haftalikJadval, journals: entry.jurnalHaftalik || extractJurnal(entry.haftalikJadval) })
-    if (entry.yillikJadval && !entry.doneYillik) list.push({ type: 'yillik', label: 'Yillik jadval', text: entry.yillikJadval, journals: entry.jurnalYillik || extractJurnal(entry.yillikJadval) })
-    if (entry.yangiIshlar && !entry.doneYangi) list.push({ type: 'yangi', label: 'Yangi ishlar', text: entry.yangiIshlar, journals: entry.jurnalYangi || extractJurnal(entry.yangiIshlar) })
-    if (entry.kmoBartaraf && !entry.doneKmo) list.push({ type: 'kmo', label: 'KMO bartaraf', text: entry.kmoBartaraf, journals: entry.jurnalKmo || extractJurnal(entry.kmoBartaraf) })
-    if (entry.majburiyOzgarish && !entry.doneMajburiy) list.push({ type: 'majburiy', label: 'Majburiy o\'zgarish', text: entry.majburiyOzgarish, journals: entry.jurnalMajburiy || extractJurnal(entry.majburiyOzgarish) })
-    return list
-  }, [entry])
-
-  // Agar faqat bitta ish bo'lsa, uni avtomatik tanlaymiz
-  useMemo(() => {
-    if (availableTasks.length === 1 && !selectedTaskType) {
-      setSelectedTaskType(availableTasks[0].type)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [availableTasks.length])
-
-  const currentTask = useMemo(() => availableTasks.find(t => t.type === selectedTaskType), [availableTasks, selectedTaskType])
-
   const requiredJournals = useMemo(() => {
     if (!currentTask?.journals) return []
     return currentTask.journals.split(',').map(j => j.trim()).filter(Boolean)
@@ -432,6 +475,76 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   const unsupportedRequired = requiredJournals.filter(j => !(j in SUPPORTED_JOURNALS))
   const allDone = selectedTaskType && (supportedRequired.length === 0 || supportedRequired.every(j => visitedJournals.has(j)))
 
+  const requiresQR = useMemo(() => {
+    if (!selectedTaskType || !stationEq?.taskMappings) return false;
+    const match = currentTask?.text.match(/^\[([^\]]+)\]/);
+    const taskNsh = match ? match[1].trim() : '';
+    if (!taskNsh) return false;
+    return stationEq.taskMappings.some((tm: any) => tm.taskNsh === taskNsh);
+  }, [selectedTaskType, stationEq, currentTask]);
+
+  const targetItems = useMemo(() => {
+    if (!selectedTaskType || !stationEq?.taskMappings) return [];
+    const match = currentTask?.text.match(/^\[([^\]]+)\]/);
+    const taskNsh = match ? match[1].trim() : '';
+    if (!taskNsh) return [];
+    
+    const mapping = stationEq.taskMappings.find((tm: any) => tm.taskNsh === taskNsh);
+    if (!mapping) return [];
+
+    const reqQR = mapping.equipmentType;
+    const categories = stationEq.categories || [];
+    const cat = categories.find((c: any) => c.id === reqQR);
+    return cat?.items || [];
+  }, [selectedTaskType, stationEq, currentTask]);
+
+  const targetScans = targetItems.length;
+
+  const currentScans = useMemo(() => {
+    return dbScans.map(s => s.equipment_name);
+  }, [dbScans]);
+
+  const [scannerListOpen, setScannerListOpen] = useState(false);
+  const [specificScanItem, setSpecificScanItem] = useState<{ id: string, name: string } | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+
+  const handleScanSuccess = async (decodedText: string) => {
+    if (!selectedTaskType || isScanningDb) return;
+    setIsScanningDb(true);
+    try {
+      const match = currentTask?.text.match(/^\[([^\]]+)\]/);
+      const taskNshStr = match ? match[1].trim() : 'noma\'lum';
+      const taskDateStr = new Date().toISOString().split('T')[0];
+
+      const newScan = await insertTaskScan({
+        station_id: stationId,
+        task_nsh: taskNshStr,
+        task_date: taskDateStr,
+        equipment_id: stringToUuid(decodedText),
+        equipment_name: decodedText,
+        scanned_by: session?.fullName || 'Ishchi',
+      });
+
+      const updatedDbScans = [...dbScans, newScan];
+      setDbScans(updatedDbScans);
+
+      const newScansArray = updatedDbScans.map(s => ({
+        equipmentId: s.equipment_name,
+        scannedAt: s.scanned_at || new Date().toISOString(),
+        scannedBy: s.scanned_by
+      }));
+
+      if (onScanProgress) onScanProgress(newScansArray, selectedTaskType);
+
+    } catch (err: any) {
+      console.error('Scan save error:', err);
+    } finally {
+      setIsScanningDb(false);
+      setScannerOpen(false);
+      setSpecificScanItem(null);
+    }
+  };
+
   const handleJournalClose = (journalName: string, isDone = false, isInProgressFlag = false) => {
     if (isDone) {
       setVisitedJournals(prev => {
@@ -439,6 +552,13 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
         if (storageKey) localStorage.setItem(storageKey, JSON.stringify(Array.from(next)))
         return next
       })
+      if (selectedTaskType) {
+        setLocalProgress(prev => {
+          const next = { ...prev }
+          delete next[selectedTaskType]
+          return next
+        })
+      }
     }
     if (isInProgressFlag && selectedTaskType) {
       setLocalProgress(prev => ({ ...prev, [selectedTaskType]: true }))
@@ -577,10 +697,27 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
               ))}
             </div>
 
+            {requiresQR && (
+              <div className="px-8 pb-4 bg-white">
+                <button
+                  onClick={() => setScannerListOpen(true)}
+                  className="w-full rounded-2xl border-2 border-purple-200 bg-purple-50 hover:bg-purple-100 p-4 transition-all flex flex-col items-center justify-center gap-1 group shadow-sm hover:shadow-md"
+                >
+                  <span className="font-black text-purple-700 uppercase tracking-wider text-sm flex items-center gap-2">
+                    <Target size={18} /> Qurilmalarni skanerlash oynasi ({currentScans.length}/{targetScans})
+                  </span>
+                  <p className="text-[10px] text-purple-500 font-bold">
+                    {currentScans.length >= targetScans ? "Barcha qurilmalar skanerlandi" : "Vazifani tugatish uchun barcha qurilmalarni skanerlang"}
+                  </p>
+                </button>
+              </div>
+            )}
+
             <div className="border-t border-slate-100 bg-slate-50/50 px-8 py-5 flex gap-3">
               <button onClick={onClose} className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all shadow-sm">
                 Bekor qilish
               </button>
+
               <button
                 onClick={() => {
                   if (isInProgress) {
@@ -590,22 +727,83 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                     onComplete(selectedTaskType)
                   }
                 }}
-                disabled={!isInProgress && !allDone}
+                disabled={!isInProgress && (!allDone || (requiresQR && currentScans.length < targetScans))}
                 className={`flex-1 rounded-xl px-6 py-3 text-sm font-black text-white shadow-lg transition-all active:scale-95 ${isInProgress
-                    ? 'bg-amber-500 shadow-amber-500/20 hover:bg-amber-600'
-                    : (!allDone ? 'bg-slate-300 shadow-none cursor-not-allowed text-slate-500' : 'bg-emerald-500 shadow-emerald-500/20 hover:bg-emerald-600')
+                  ? 'bg-amber-500 shadow-amber-500/20 hover:bg-amber-600'
+                  : ((!allDone || (requiresQR && currentScans.length < targetScans)) ? 'bg-slate-300 shadow-none cursor-not-allowed text-slate-500' : 'bg-emerald-500 shadow-emerald-500/20 hover:bg-emerald-600')
                   }`}
               >
                 {isInProgress
                   ? 'Kutish (Yopish)'
-                  : allDone
-                    ? 'Bajarildi — Saqlash'
-                    : 'Avval jurnallarga yozuv kiriting'}
+                  : (!allDone
+                    ? 'Avval jurnallarga yozuv kiriting'
+                    : (requiresQR && currentScans.length < targetScans ? 'Avval barcha qurilmalarni skaner qiling' : 'Bajarildi — Saqlash'))}
               </button>
             </div>
           </>
         )}
       </div>
+
+      {scannerListOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(12px)', padding: '16px' }}>
+          <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl animate-scale-in flex flex-col" style={{ maxHeight: '90vh' }}>
+            <div className="border-b border-slate-100 bg-slate-50/80 px-6 py-5 flex items-center justify-between rounded-t-3xl">
+              <div>
+                <h3 className="font-black text-slate-800">Qurilmalar ro'yxati</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Skaner qilingan: {currentScans.length}/{targetScans}</p>
+              </div>
+              <button onClick={() => setScannerListOpen(false)} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 hover:text-slate-900 transition">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-3 flex-1 bg-slate-50/30">
+              {targetItems.map((item: any) => {
+                const expectedQR = buildEquipmentQrValue(stationId, item.id);
+                const scanRecord = dbScans.find((s: any) => s.equipment_name === expectedQR);
+
+                return (
+                  <div key={item.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                    <span className="font-black text-slate-700">{item.name}</span>
+                    {scanRecord ? (
+                      <div className="flex flex-col items-end">
+                        <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
+                          <CheckCircle2 size={14} />
+                          <span className="text-[10px] font-black uppercase tracking-wider">{scanRecord.scanned_by}</span>
+                        </div>
+                        <span className="text-[9px] font-bold text-slate-400 mt-1">
+                          {new Date(scanRecord.scanned_at || Date.now()).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setSpecificScanItem(item);
+                          setScannerOpen(true);
+                        }}
+                        className="bg-purple-100 text-purple-700 hover:bg-purple-200 px-4 py-2 rounded-xl text-xs font-black transition active:scale-95 border border-purple-200"
+                      >
+                        Skanerlash
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {scannerOpen && specificScanItem && (
+        <QRScannerModal
+          isOpen={scannerOpen}
+          onClose={() => { setScannerOpen(false); setSpecificScanItem(null); }}
+          onScanSuccess={handleScanSuccess}
+          expectedPrefix={buildEquipmentQrValue(stationId, specificScanItem.id)}
+          existingScans={currentScans}
+          title={`${specificScanItem.name} ni skanerlang`}
+        />
+      )}
     </div>,
     document.body
   )

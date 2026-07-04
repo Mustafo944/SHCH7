@@ -94,7 +94,7 @@ export function SHU2JournalView({
   userRole: string
   journalMonth?: string
   onClose: () => void
-  onAccepted?: () => void
+  onAccepted?: (isDone?: boolean, isInProgress?: boolean) => void
   initialData?: { text: string; date: string }
 }) {
   const [entries, setEntries] = useState<SHU2Entry[]>(Array.from({ length: 7 }, (_, i) => ({ ...EMPTY_SHU2(), nomber: String(i + 1) })))
@@ -237,7 +237,7 @@ export function SHU2JournalView({
       const newAllEntries = [...otherMonths, ...updatedWithMonth]
       setAllEntries(newAllEntries)
 
-      onAccepted?.()
+      onAccepted?.(true, false)
       setMsg('Tasdiqlandi!')
       setTimeout(() => setMsg(null), 2000)
 
@@ -317,9 +317,14 @@ export function SHU2JournalView({
     <div className="fixed inset-0 z-[200] flex flex-col bg-slate-50">
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur-xl sm:px-8 shadow-sm">
-        <div>
-          <h2 className="text-lg font-black text-slate-900 tracking-tight">SHU-2 Jurnali</h2>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stationName}</p>
+        <div className="flex items-center gap-4">
+          <button onClick={onClose} className="flex items-center justify-center rounded-xl bg-white p-2 text-slate-600 shadow-sm ring-1 ring-slate-200/60 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98]">
+            <ChevronLeft size={20} />
+          </button>
+          <div>
+            <h2 className="text-lg font-black text-slate-900 tracking-tight">SHU-2 Jurnali</h2>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stationName}</p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {msg && <span className={`text-xs font-bold px-3 py-1 rounded-full border ${msg.includes('!') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>{msg}</span>}
@@ -327,10 +332,6 @@ export function SHU2JournalView({
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6">
-        <button onClick={onClose} className="mb-4 flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm ring-1 ring-slate-200/60 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98]">
-          <ChevronLeft size={18} />
-          <span>Orqaga</span>
-        </button>
 
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">

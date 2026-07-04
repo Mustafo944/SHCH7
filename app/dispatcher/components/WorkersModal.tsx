@@ -27,8 +27,8 @@ export function WorkersModal({ workers, stations, onClose, onEdit, onDelete }: {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
-      <div className="premium-card flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden p-0 animate-scale-in">
-        <div className="flex items-center justify-between border-b border-slate-200 px-8 py-6 bg-slate-50/50">
+      <div className="flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] p-0 animate-scale-in bg-white/85 backdrop-blur-3xl border border-white/60 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-white/40 px-8 py-6 bg-white/50">
           <div className="flex items-center gap-4">
             {selectedStationId && (
               <button
@@ -52,7 +52,7 @@ export function WorkersModal({ workers, stations, onClose, onEdit, onDelete }: {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 sm:p-8 custom-scrollbar bg-white">
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 custom-scrollbar bg-transparent">
           {selectedStationId === null ? (
             <div className="grid gap-4 sm:grid-cols-2">
               {stations.map(st => {
@@ -61,7 +61,7 @@ export function WorkersModal({ workers, stations, onClose, onEdit, onDelete }: {
                   <button
                     key={st.id}
                     onClick={() => setSelectedStationId(st.id)}
-                    className="premium-card group flex items-center justify-between p-6 transition-all duration-300 hover:border-purple-300 hover:shadow-xl hover:shadow-purple-500/5 active:scale-[0.98] border-slate-100 bg-slate-50/30"
+                    className="group flex items-center justify-between p-6 rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/5 active:scale-[0.98] border border-white/60 bg-white/70 hover:bg-white/90 hover:border-purple-300/50"
                   >
                     <div className="flex items-center gap-4">
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white border border-slate-100 text-purple-600 shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:bg-purple-50">
@@ -88,7 +88,7 @@ export function WorkersModal({ workers, stations, onClose, onEdit, onDelete }: {
                 </div>
               ) : (
                 workersInStation.map((w) => (
-                  <div key={w.id} className="premium-card flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 transition-all duration-200 hover:shadow-md group border-slate-100">
+                  <div key={w.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl transition-all duration-200 hover:shadow-md group border border-white/60 bg-white/70 hover:bg-white/90">
                     <div className="flex items-center gap-4">
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 text-xl font-black text-white shadow-lg shadow-purple-500/20 transition-transform duration-200 group-hover:scale-110">
                         {w.fullName.charAt(0)}

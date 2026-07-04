@@ -44,7 +44,7 @@ export function AlsnKodJournalView({
   userRole: string
   journalMonth?: string
   onClose: () => void
-  onAccepted?: () => void
+  onAccepted?: (isDone?: boolean, isInProgress?: boolean) => void
 }) {
   const [entries, setEntries] = useState<AlsnKodEntry[]>(Array.from({ length: 5 }, EMPTY_ALSN_KOD))
   const [allEntries, setAllEntries] = useState<AlsnKodEntry[]>([])
@@ -110,7 +110,7 @@ export function AlsnKodJournalView({
     row.bajarildiAt = new Date().toISOString()
     n[idx] = row
     setEntries(n)
-    if (onAccepted) onAccepted()
+    if (onAccepted) onAccepted(true, false)
     handleSave(n, true)
   }
 

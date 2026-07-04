@@ -2,9 +2,9 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Download, X, CheckCircle2, Clock, Plus, ChevronLeft, ChevronRight, ArrowRight, AlertTriangle, LayoutGrid, List, Calendar } from 'lucide-react'
-import { upsertReport, updateReportEntries } from '@/lib/supabase-db'
-import type { User, WorkReport, ReportEntry } from '@/types'
-import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, type ParsedTaskItem } from '@/lib/reja-data'
+import { upsertReport, updateReportEntries, getStationEquipments, updateEquipmentScanHistory } from '@/lib/supabase-db'
+import type { User, WorkReport, ReportEntry, TaskQRMapping } from '@/types'
+import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, taskDisplayKey, type ParsedTaskItem } from '@/lib/reja-data'
 import { MONTHS } from '@/lib/constants'
 import { MemoizedJournalRow } from './MemoizedJournalRow'
 import { HeaderCard } from './BigActionCard'
@@ -20,6 +20,127 @@ const TOTAL_ROWS = 14
    - beforeunload event bilan browser yopilishida saqlash
    ═══════════════════════════════════════════════════════════════════════ */
 
+function TaskSelectionModal({
+  modalOpen,
+  modalType,
+  onClose,
+  onSelect,
+  taskMappings
+}: {
+  modalOpen: boolean;
+  modalType: '4-haftalik' | 'yillik';
+  onClose: () => void;
+  onSelect: (task: ParsedTaskItem, text: string) => void;
+  taskMappings: TaskQRMapping[];
+}) {
+  const [modalSearch, setModalSearch] = useState('');
+  const [selectedBolim, setSelectedBolim] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (modalOpen) {
+      setModalSearch('');
+      setSelectedBolim(null);
+    }
+  }, [modalOpen]);
+
+  if (!modalOpen || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all">
+      <div className="relative flex h-[70vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in">
+        <div className="flex items-center justify-between border-b border-slate-200/60 px-8 py-5 bg-slate-50/80">
+          <h3 className="text-lg font-black text-slate-900 tracking-tight">
+            {modalType === '4-haftalik' ? '4-haftalik jadval' : 'Yillik jadval'} — vazifa tanlash
+          </h3>
+          <button onClick={onClose} className="rounded-xl border border-slate-200/60 bg-white p-2 text-slate-400 hover:text-slate-900 transition-all shadow-sm"><X size={20} /></button>
+        </div>
+        <div className="border-b border-slate-100 px-8 py-4 bg-white">
+          <input value={modalSearch} onChange={e => setModalSearch(e.target.value)} placeholder="Vazifa qidirish..." className="input-premium" />
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar bg-slate-50/30">
+          {selectedBolim === null && !modalSearch ? (
+            <div className="grid grid-cols-1 gap-3">
+              {(modalType === 'yillik' ? YILLIK_REJA : TORT_HAFTALIK_REJA).map((b, idx) => (
+                <button key={idx} onClick={() => setSelectedBolim(idx)} className="flex w-full items-center justify-between rounded-2xl border border-slate-200/60 bg-white/80 p-5 text-left backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-md hover:bg-purple-50/30 group">
+                  <span className="font-bold text-slate-700 group-hover:text-purple-600 transition-colors uppercase tracking-tight text-sm">{b.bolim}</span>
+                  <span className="rounded-lg bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase text-slate-400 border border-slate-200/60">{b.ishlar.length} ta ish</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {selectedBolim !== null && (
+                <div className="mb-4 flex items-center justify-between border-b border-slate-200/60 pb-3">
+                  <button onClick={() => { setSelectedBolim(null); setModalSearch(''); }} className="flex items-center gap-1.5 rounded-lg bg-slate-100/80 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-200 hover:text-slate-700">
+                    <ChevronLeft size={14} /> Ortga ro&apos;yxatga
+                  </button>
+                  <span className="text-xs font-bold text-purple-600 truncate max-w-[200px] text-right">
+                    {(modalType === 'yillik' ? YILLIK_REJA : TORT_HAFTALIK_REJA)[selectedBolim].bolim}
+                  </span>
+                </div>
+              )}
+              {(selectedBolim !== null
+                ? (modalType === 'yillik' ? YILLIK_REJA_FLAT : TORT_HAFTALIK_REJA_FLAT).filter(t => t.bolim === (modalType === 'yillik' ? YILLIK_REJA : TORT_HAFTALIK_REJA)[selectedBolim].bolim)
+                : (modalType === 'yillik' ? YILLIK_REJA_FLAT : TORT_HAFTALIK_REJA_FLAT)
+              )
+                .filter((task: ParsedTaskItem) =>
+                  task.ish.toLowerCase().includes(modalSearch.toLowerCase()) ||
+                  task.davriylik.toLowerCase().includes(modalSearch.toLowerCase()) ||
+                  task.bajaruvchi.toLowerCase().includes(modalSearch.toLowerCase()) ||
+                  task.manba.toLowerCase().includes(modalSearch.toLowerCase()) ||
+                  task.raqam.toLowerCase().includes(modalSearch.toLowerCase())
+                )
+                .slice(0, 100)
+                .map((task: ParsedTaskItem, ti: number) => (
+                  (() => {
+                    const hasQR = taskMappings.some(m => m.taskNsh === taskDisplayKey(task.manba, task.raqam));
+                    return (
+                      <button
+                        key={ti}
+                        onClick={() => {
+                          const text =
+                            `[${taskDisplayKey(task.manba, task.raqam)}] ${task.ish}\n` +
+                            `Davriyligi: ${task.davriylik}\n` +
+                            `Bajaruvchi: ${task.bajaruvchi}` +
+                            (task.jurnal ? `\nJurnal: ${task.jurnal}` : '');
+                          onSelect(task, text);
+                        }}
+                        className={`w-full rounded-xl border p-3 text-left backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-md hover:bg-purple-50/30 group ${hasQR ? 'border-purple-300 bg-purple-50/40' : 'border-slate-200/60 bg-white/80'
+                          }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                            <p className="text-[10px] text-purple-600"><span className="inline-block h-1.5 w-1.5 rounded-full bg-purple-400 mr-0.5" /> {task.bolim}</p>
+                            <p className="text-[10px] text-amber-600/70"><span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 mr-0.5" /> {task.manba} {task.raqam}</p>
+                            <p className="text-[10px] text-slate-400"><Clock size={10} className="inline mr-0.5" /> {task.davriylik}</p>
+                            <p className="text-[10px] text-slate-400"><span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-300 mr-0.5" /> {task.bajaruvchi}</p>
+                          </div>
+                          {hasQR && (
+                            <div className="shrink-0 flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-1 rounded-lg text-[9px] font-black uppercase border border-purple-200">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
+                              QR
+                            </div>
+                          )}
+                        </div>
+                        <p className="mt-2 whitespace-pre-wrap text-xs font-bold text-slate-700 group-hover:text-slate-900">{task.ish}</p>
+                        {task.jurnal && (
+                          <div className="mt-2 inline-block rounded-md bg-purple-50/80 px-2 py-1 text-[9px] uppercase tracking-widest text-purple-600 border border-purple-100/60">
+                            Jurnal: {task.jurnal}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })()
+                ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export function JournalForm({ session, stationId, stationName, month, reports, onSubmit, onCancel, onReportUpdated }: { session: User, stationId: string, stationName: string, month: number, reports: WorkReport[], onSubmit: () => void, onCancel: () => void, onReportUpdated?: (reportId: string, entries: ReportEntry[]) => void }) {
   const [entries, setEntries] = useState<ReportEntry[]>(Array.from({ length: TOTAL_ROWS }, (_, i) => ({
     ragat: String(i + 1), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: ''
@@ -30,8 +151,6 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   const [modalOpen, setModalOpen] = useState(false)
   const [modalType, setModalType] = useState<'4-haftalik' | 'yillik'>('4-haftalik')
   const [modalIdx, setModalIdx] = useState(0)
-  const [modalSearch, setModalSearch] = useState('')
-  const [selectedBolim, setSelectedBolim] = useState<number | null>(null)
   const [isConfirmed, setIsConfirmed] = useState(false)
   const [isRejected, setIsRejected] = useState(false)
   const [rejectedBy, setRejectedBy] = useState<string | null>(null)
@@ -41,10 +160,19 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   const monthStr = `${new Date().getFullYear()}-${String(month + 1).padStart(2, '0')}`
   const draftReport = useMemo(() => reports.find(r => r.month === monthStr && r.stationId === stationId), [reports, monthStr, stationId])
   const canEditPlan = session.position === 'katta_elektromexanik'
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>(canEditPlan ? 'table' : 'cards')
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards')
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDate() || 1)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+
+  // Bekat uskunalari — oldindan yuklanadi (QR tekshirish uchun)
+  const [stationEq, setStationEq] = useState<any>(null)
+  useEffect(() => {
+    getStationEquipments(stationId).then((data) => {
+      if (data) setStationEq(data)
+    })
+  }, [stationId])
+  const stationTaskMappings: TaskQRMapping[] = useMemo(() => stationEq?.taskMappings || [], [stationEq])
 
   useEffect(() => {
     const draft = draftReport
@@ -127,8 +255,6 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   const openSelectModal = useCallback((idx: number, type: '4-haftalik' | 'yillik') => {
     setModalIdx(idx)
     setModalType(type)
-    setModalSearch('')
-    setSelectedBolim(null)
     setModalOpen(true)
   }, [])
 
@@ -315,8 +441,8 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       }
     }
 
-    const tasksCount = [!!entry.haftalikJadval, !!entry.yillikJadval, !!entry.yangiIshlar, !!entry.kmoBartaraf, !!entry.majburiyOzgarish].filter(Boolean).length;
-    const doneCount = [entry.doneHaftalik, entry.doneYillik, entry.doneYangi, entry.doneKmo, entry.doneMajburiy].filter(Boolean).length;
+    const _tasksCount = [!!entry.haftalikJadval, !!entry.yillikJadval, !!entry.yangiIshlar, !!entry.kmoBartaraf, !!entry.majburiyOzgarish].filter(Boolean).length;
+    const _doneCount = [entry.doneHaftalik, entry.doneYillik, entry.doneYangi, entry.doneKmo, entry.doneMajburiy].filter(Boolean).length;
 
     const planOwnerName = draftReport?.workerName || session.fullName;
     entry.bajarildiShn = planOwnerName
@@ -331,6 +457,20 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     setSubmitting(true)
     try {
       await updateReportEntries(reportId, newEntries)
+      
+      let scansToUpdate: any[] = [];
+      if (taskType) {
+        const field = `scans${taskType.charAt(0).toUpperCase() + taskType.slice(1)}` as keyof ReportEntry;
+        const scans = entry[field];
+        if (scans && Array.isArray(scans)) {
+          scansToUpdate = scans.filter(s => typeof s !== 'string');
+        }
+      }
+
+      if (scansToUpdate.length > 0) {
+        await updateEquipmentScanHistory(stationId, scansToUpdate, planOwnerName).catch(console.error);
+      }
+
       setFormMessage({ type: 'success', text: 'Muvaffaqiyatli saqlandi!' })
       setTimeout(() => setFormMessage(null), 3000)
 
@@ -379,7 +519,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 
   if (!canEditPlan && !draftReport) {
     return (
-      <div className="space-y-6 animate-fade-up">
+      <div className="space-y-6">
         <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} />
         <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-12 text-center shadow-sm backdrop-blur-sm">
           <h3 className="text-xl font-black text-slate-900 tracking-tight mb-2">Oylik ish reja hali tuzilmagan</h3>
@@ -391,7 +531,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   }
 
   return (
-    <div className="space-y-6 animate-fade-up">
+    <div className="space-y-6">
       <HeaderCard
         title="Jurnal To'ldirish"
         subtitle={`${MONTHS[month]} · ${stationName}`}
@@ -415,7 +555,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       </div>
 
       {viewMode === 'cards' && (
-        <div className="mt-4 animate-fade-up">
+        <div className="mt-4">
           <div className="flex items-center justify-between bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/60 p-2 shadow-sm max-w-[280px] mx-auto mb-6">
             <button
               onClick={() => setSelectedDay(Math.max(1, selectedDay - 1))}
@@ -480,7 +620,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
               }
 
               return dayTasks.map((t, idx) => (
-                <div key={idx} className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] max-w-[400px] group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white/80 p-6 shadow-sm backdrop-blur-sm transition-all hover:border-purple-200 hover:shadow-md flex flex-col animate-fade-up" style={{ animationDelay: `${idx * 100}ms` }}>
+                <div key={idx} className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] max-w-[400px] group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white/80 p-6 shadow-sm backdrop-blur-sm transition-all hover:border-purple-200 hover:shadow-md flex flex-col">
                   <div className="mb-4 flex items-center justify-between">
                     <span className={`rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest border ${t.isNavbatdanTashqari ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>{t.isNavbatdanTashqari ? '⚡ Navbatdan tashqari' : t.title}</span>
                     <div className="flex items-center gap-2">
@@ -540,12 +680,12 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       )}
 
       {viewMode === 'table' && (
-        <div className="mb-6 mt-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white relative shadow-sm animate-fade-up">
+        <div className="mb-6 mt-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white relative shadow-sm">
           <div className="sm:hidden absolute top-0 right-0 bg-purple-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
             O&apos;ngga suring →
           </div>
           <div className="overflow-x-auto overflow-y-hidden">
-            <table style={{ minWidth: "1200px" }} className="w-full border-collapse text-left text-[11px] text-slate-700">
+            <table style={{ minWidth: "1200px" }} className="w-full table-fixed border-collapse text-left text-[11px] text-slate-700">
               <thead className="border-b-2 border-purple-500/30 bg-slate-50 font-bold text-slate-600">
                 <tr>
                   <th rowSpan={2} className="w-10 border-r border-slate-200 p-2 text-center">№</th>
@@ -628,108 +768,35 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
         </button>
       </div>
 
-      {modalOpen && typeof document !== 'undefined' ? createPortal(
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all">
-          <div className="relative flex h-[70vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in">
-            <div className="flex items-center justify-between border-b border-slate-200/60 px-8 py-5 bg-slate-50/80">
-              <h3 className="text-lg font-black text-slate-900 tracking-tight">
-                {modalType === '4-haftalik' ? '4-haftalik jadval' : 'Yillik jadval'} — vazifa tanlash
-              </h3>
-              <button onClick={() => setModalOpen(false)} className="rounded-xl border border-slate-200/60 bg-white p-2 text-slate-400 hover:text-slate-900 transition-all shadow-sm"><X size={20} /></button>
-            </div>
-            <div className="border-b border-slate-100 px-8 py-4 bg-white">
-              <input value={modalSearch} onChange={e => setModalSearch(e.target.value)} placeholder="Vazifa qidirish..." className="input-premium" />
-            </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar bg-slate-50/30">
-              {selectedBolim === null && !modalSearch ? (
-                <div className="grid grid-cols-1 gap-3">
-                  {(modalType === 'yillik' ? YILLIK_REJA : TORT_HAFTALIK_REJA).map((b, idx) => (
-                    <button key={idx} onClick={() => setSelectedBolim(idx)} className="flex w-full items-center justify-between rounded-2xl border border-slate-200/60 bg-white/80 p-5 text-left backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-md hover:bg-purple-50/30 group">
-                      <span className="font-bold text-slate-700 group-hover:text-purple-600 transition-colors uppercase tracking-tight text-sm">{b.bolim}</span>
-                      <span className="rounded-lg bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase text-slate-400 border border-slate-200/60">{b.ishlar.length} ta ish</span>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {selectedBolim !== null && (
-                    <div className="mb-4 flex items-center justify-between border-b border-slate-200/60 pb-3">
-                      <button onClick={() => { setSelectedBolim(null); setModalSearch(''); }} className="flex items-center gap-1.5 rounded-lg bg-slate-100/80 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-200 hover:text-slate-700">
-                        <ChevronLeft size={14} /> Ortga ro&apos;yxatga
-                      </button>
-                      <span className="text-xs font-bold text-purple-600 truncate max-w-[200px] text-right">
-                        {(modalType === 'yillik' ? YILLIK_REJA : TORT_HAFTALIK_REJA)[selectedBolim].bolim}
-                      </span>
-                    </div>
-                  )}
-                  {(selectedBolim !== null
-                    ? (modalType === 'yillik' ? YILLIK_REJA_FLAT : TORT_HAFTALIK_REJA_FLAT).filter(t => t.bolim === (modalType === 'yillik' ? YILLIK_REJA : TORT_HAFTALIK_REJA)[selectedBolim].bolim)
-                    : (modalType === 'yillik' ? YILLIK_REJA_FLAT : TORT_HAFTALIK_REJA_FLAT)
-                  )
-                    .filter((task: ParsedTaskItem) =>
-                      task.ish.toLowerCase().includes(modalSearch.toLowerCase()) ||
-                      task.davriylik.toLowerCase().includes(modalSearch.toLowerCase()) ||
-                      task.bajaruvchi.toLowerCase().includes(modalSearch.toLowerCase()) ||
-                      task.manba.toLowerCase().includes(modalSearch.toLowerCase()) ||
-                      task.raqam.toLowerCase().includes(modalSearch.toLowerCase())
-                    )
-                    .slice(0, 100)
-                    .map((task: ParsedTaskItem, ti: number) => (
-                      <button
-                        key={ti}
-                        onClick={async () => {
-                          const text =
-                            `[${task.manba}${task.raqam ? ` ${task.raqam}` : ''}] ${task.ish}\n` +
-                            `Davriyligi: ${task.davriylik}\n` +
-                            `Bajaruvchi: ${task.bajaruvchi}` +
-                            (task.jurnal ? `\nJurnal: ${task.jurnal}` : '')
+      <TaskSelectionModal
+        modalOpen={modalOpen}
+        modalType={modalType}
+        onClose={() => setModalOpen(false)}
+        taskMappings={stationTaskMappings}
+        onSelect={(task, text) => {
+          const newEntries = [...entries]
+          const row = { ...newEntries[modalIdx] }
 
-                          const newEntries = [...entries]
-                          const row = { ...newEntries[modalIdx] }
+          if (row.isNavbatdanTashqari) {
+            row.yangiIshlar = text
+            if (task.jurnal) row.jurnalYangi = task.jurnal
+          } else if (modalType === '4-haftalik') {
+            row.haftalikJadval = text
+            if (task.jurnal) row.jurnalHaftalik = task.jurnal
+          } else {
+            row.yillikJadval = text
+            if (task.jurnal) row.jurnalYillik = task.jurnal
+          }
 
-                          if (row.isNavbatdanTashqari) {
-                            row.yangiIshlar = text
-                            if (task.jurnal) row.jurnalYangi = task.jurnal
-                          } else if (modalType === '4-haftalik') {
-                            row.haftalikJadval = text
-                            if (task.jurnal) row.jurnalHaftalik = task.jurnal
-                          } else {
-                            row.yillikJadval = text
-                            if (task.jurnal) row.jurnalYillik = task.jurnal
-                          }
+          newEntries[modalIdx] = row
+          setEntries(newEntries)
+          setHasUnsavedChanges(true)
 
-                          newEntries[modalIdx] = row
-                          setEntries(newEntries)
-                          setHasUnsavedChanges(true)
-
-                          setTimeout(() => {
-                            setModalOpen(false)
-                            setSelectedBolim(null)
-                          }, 10)
-                        }}
-                        className="w-full rounded-xl border border-slate-200/60 bg-white/80 p-3 text-left backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-md hover:bg-purple-50/30 group"
-                      >
-                        <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-                          <p className="text-[10px] text-purple-600"><span className="inline-block h-1.5 w-1.5 rounded-full bg-purple-400 mr-0.5" /> {task.bolim}</p>
-                          <p className="text-[10px] text-amber-600/70"><span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 mr-0.5" /> {task.manba} {task.raqam}</p>
-                          <p className="text-[10px] text-slate-400"><Clock size={10} className="inline mr-0.5" /> {task.davriylik}</p>
-                          <p className="text-[10px] text-slate-400"><span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-300 mr-0.5" /> {task.bajaruvchi}</p>
-                        </div>
-                        <p className="mt-2 whitespace-pre-wrap text-xs font-bold text-slate-700 group-hover:text-slate-900">{task.ish}</p>
-                        {task.jurnal && (
-                          <div className="mt-2 inline-block rounded-md bg-purple-50/80 px-2 py-1 text-[9px] uppercase tracking-widest text-purple-600 border border-purple-100/60">
-                            Jurnal: {task.jurnal}
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>,
-        document.body
-      ) : null}
+          setTimeout(() => {
+            setModalOpen(false)
+          }, 10)
+        }}
+      />
 
       {completionIdx !== null && reportId !== null && (
         <TaskCompletionModal
@@ -741,7 +808,17 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           stationName={stationName}
           journalMonth={monthStr}
           onComplete={(taskType) => confirmBajarildi(completionIdx, taskType)}
+          onScanProgress={(newScans, taskType) => {
+            const newEntries = [...entries];
+            const e = { ...newEntries[completionIdx] };
+            const field = `scans${taskType.charAt(0).toUpperCase() + taskType.slice(1)}` as keyof ReportEntry;
+            (e as any)[field] = newScans;
+            newEntries[completionIdx] = e;
+            setEntries(newEntries);
+            setHasUnsavedChanges(true);
+          }}
           onClose={() => setCompletionIdx(null)}
+          preloadedStationEq={stationEq}
         />
       )}
 

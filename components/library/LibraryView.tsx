@@ -145,8 +145,8 @@ export function LibraryView({ userName, userRole }: LibraryViewProps) {
                   </div>
                 ) : (
                   <>
-                    <h4 className="text-sm font-black text-slate-900 break-words line-clamp-2" title={book.fileName}>{book.fileName}</h4>
-                    <p className="text-[10px] font-bold text-slate-400 mt-1">Yuklagan: Aloqa dispetcheri</p>
+                    <h4 className="text-base font-black text-slate-900 break-words line-clamp-2" title={book.fileName}>{book.fileName}</h4>
+                    <p className="text-xs font-bold text-slate-400 mt-1">Yuklagan: Aloqa dispetcheri</p>
                   </>
                 )}
               </div>
@@ -156,23 +156,23 @@ export function LibraryView({ userName, userRole }: LibraryViewProps) {
               <div className="flex gap-2">
                 <button 
                   onClick={() => setPreview({ url: book.filePath, title: book.fileName, isImg: isImage(book.filePath) })} 
-                  className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 hover:text-purple-600 hover:bg-purple-50 transition-colors shadow-sm"
+                  className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm font-bold text-slate-600 hover:text-purple-600 hover:bg-purple-50 transition-colors shadow-sm"
                 >
-                  <Eye size={16} /> O'qish
+                  <Eye size={18} /> O'qish
                 </button>
                 <a 
                   href={`${book.filePath}?download`} 
                   download 
-                  className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 transition-colors shadow-sm"
+                  className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm font-bold text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 transition-colors shadow-sm"
                 >
-                  <Download size={16} />
+                  <Download size={18} />
                 </a>
               </div>
               
               {isDispatcher && (
                 <div className="flex gap-2">
-                  <button onClick={() => { setEditingId(book.id); setEditingTitle(book.fileName); }} className="rounded-lg bg-slate-50 p-2 text-slate-400 hover:text-sky-600 hover:bg-sky-50 transition-all duration-200"><Edit2 size={16} /></button>
-                  <button onClick={() => setDeleteConfirmId(book.id)} className="rounded-lg bg-slate-50 p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200"><Trash2 size={16} /></button>
+                  <button onClick={() => { setEditingId(book.id); setEditingTitle(book.fileName); }} className="rounded-lg bg-slate-50 p-2 text-slate-400 hover:text-sky-600 hover:bg-sky-50 transition-all duration-200"><Edit2 size={18} /></button>
+                  <button onClick={() => setDeleteConfirmId(book.id)} className="rounded-lg bg-slate-50 p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200"><Trash2 size={18} /></button>
                 </div>
               )}
             </div>

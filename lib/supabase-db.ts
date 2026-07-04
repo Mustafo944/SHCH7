@@ -1186,3 +1186,172 @@ export async function getJournalsByStationId(stationId: string): Promise<Station
 
   return (data || []).map((row: DbJournalRow) => mapDbJournal(row))
 }
+import { EquipmentCategory, StationEquipments, QRScanRecord } from '@/types';
+import { buildEquipmentQrValue, stringToUuid } from '@/lib/utils/qr';
+
+// ==========================================
+// QR Skaner (Task Scans)
+// ==========================================
+
+export interface TaskScan {
+  id: string;
+  station_id: string;
+  task_nsh: string;
+  task_date: string; // YYYY-MM-DD
+  equipment_id: string;
+  equipment_name: string;
+  scanned_by: string;
+  scanned_at: string;
+}
+
+export async function getTaskScans(stationId: string, taskNsh: string, taskDate: string): Promise<TaskScan[]> {
+  const { data, error } = await supabase
+    .from('task_scans')
+    .select('*')
+    .eq('station_id', stringToUuid(stationId))
+    .eq('task_nsh', taskNsh)
+    .eq('task_date', taskDate);
+
+  if (error) {
+    console.error('getTaskScans error:', error);
+    return [];
+  }
+  return data as TaskScan[];
+}
+
+export async function insertTaskScan(scan: Omit<TaskScan, 'id' | 'scanned_at'>): Promise<TaskScan> {
+  const { data, error } = await supabase
+    .from('task_scans')
+    .insert({
+      station_id: stringToUuid(scan.station_id),
+      task_nsh: scan.task_nsh,
+      task_date: scan.task_date,
+      equipment_id: scan.equipment_id,
+      equipment_name: scan.equipment_name,
+      scanned_by: scan.scanned_by,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data as TaskScan;
+}
+
+
+function mapEquipmentsRow(stationId: string, row: { entries: unknown; updated_at: string; updated_by: string | null }): StationEquipments {
+  const entries = row.entries as any[];
+  const taskMappings = entries.find(e => e.type === 'taskMappings')?.items || [];
+
+  let categories: EquipmentCategory[] = [];
+  const categoriesEntry = entries.find(e => e.type === 'categories');
+  if (categoriesEntry) {
+    categories = categoriesEntry.data;
+  } else {
+    // Migration for older formats
+    categories = [
+      { id: 'strelkalar', name: "Strelkali o'tkazgichlar", color: 'blue', items: entries.find(e => e.type === 'strelkalar')?.items || [] },
+      { id: 'machtali', name: "Machtali svetoforlar", color: 'emerald', items: entries.find(e => e.type === 'machtali')?.items || [] },
+      { id: 'pakana', name: "Pakana svetoforlar", color: 'orange', items: entries.find(e => e.type === 'pakana')?.items || [] },
+    ];
+  }
+
+  return {
+    stationId,
+    categories,
+    taskMappings,
+    updatedAt: row.updated_at,
+    updatedByName: row.updated_by || 'Tizim'
+  };
+}
+
+export async function getStationEquipments(stationId: string): Promise<StationEquipments | null> {
+  const { data, error } = await supabase
+    .from('station_journals')
+    .select('entries, updated_at, updated_by')
+    .eq('station_id', stationId + '_equipments')
+    .eq('journal_type', 'shu2')
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return mapEquipmentsRow(stationId, data);
+}
+
+export async function upsertStationEquipments(
+  stationId: string,
+  categories: EquipmentCategory[],
+  taskMappings: any[],
+  updatedByName: string
+): Promise<StationEquipments> {
+
+  const entries = [
+    { type: 'categories', data: categories },
+    { type: 'taskMappings', items: taskMappings }
+  ];
+
+  const { data: existing } = await supabase
+    .from('station_journals')
+    .select('id')
+    .eq('station_id', stationId + '_equipments')
+    .eq('journal_type', 'shu2')
+    .maybeSingle();
+
+  const write = existing
+    ? supabase
+        .from('station_journals')
+        .update({ entries, updated_at: new Date().toISOString(), updated_by: updatedByName })
+        .eq('id', existing.id)
+        .select('entries, updated_at, updated_by')
+        .single()
+    : supabase
+        .from('station_journals')
+        .insert({
+          station_id: stationId + '_equipments',
+          journal_type: 'shu2',
+          entries,
+          updated_at: new Date().toISOString(),
+          updated_by: updatedByName
+        })
+        .select('entries, updated_at, updated_by')
+        .single();
+
+  const { data: resultData, error: resultError } = await write;
+
+  if (resultError || !resultData) {
+    throw new Error(resultError?.message || 'Bekat uskunalarini saqlab bo\'lmadi');
+  }
+
+  return mapEquipmentsRow(stationId, resultData);
+}
+
+export async function updateEquipmentScanHistory(
+  stationId: string,
+  scans: QRScanRecord[],
+  updatedByName: string
+): Promise<StationEquipments | null> {
+  const equipments = await getStationEquipments(stationId);
+  if (!equipments) return null;
+
+  let hasChanges = false;
+  const newCategories = equipments.categories.map(cat => {
+    const newItems = cat.items.map(item => {
+      const expectedQr = buildEquipmentQrValue(stationId, item.id);
+      const matchScan = scans.find(s => s.equipmentId === expectedQr);
+      if (matchScan) {
+        hasChanges = true;
+        return {
+          ...item,
+          lastScannedAt: matchScan.scannedAt,
+          lastScannedBy: matchScan.scannedBy
+        };
+      }
+      return item;
+    });
+    return { ...cat, items: newItems };
+  });
+
+  if (!hasChanges) return equipments;
+
+  return upsertStationEquipments(stationId, newCategories, equipments.taskMappings || [], updatedByName);
+}

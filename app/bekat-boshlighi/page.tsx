@@ -96,9 +96,9 @@ export default function BekatBoshlighiPage() {
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* App Header */}
         <header className="sticky top-0 z-50 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-[1600px] print:hidden">
-          <div className="flex items-center justify-between bg-white/60 backdrop-blur-2xl px-3 sm:px-5 py-2 sm:py-3 rounded-[24px] sm:rounded-[32px] border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+          <div className="flex items-center justify-between bg-white/10 backdrop-blur-xl px-3 sm:px-5 py-2 sm:py-3 rounded-[24px] sm:rounded-[32px] border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-[16px] bg-white/80 p-2 shadow-sm border border-white/80">
+              <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-[16px] bg-white/20 backdrop-blur-md p-2 shadow-sm border border-white/30">
                 <Image src="/uty-logo.png" alt="UTY" fill className="object-contain p-2 drop-shadow-sm" />
               </div>
               <div className="min-w-0 flex flex-col justify-center">
@@ -109,7 +109,7 @@ export default function BekatBoshlighiPage() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">
-              <div className="hidden sm:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/60 border border-white/60 shadow-sm">
+              <div className="hidden sm:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/20 border border-white/30 shadow-sm backdrop-blur-md">
                 <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
                 <span className="text-[11px] font-black text-slate-700 tracking-widest uppercase">{session?.fullName || roleLabel}</span>
               </div>

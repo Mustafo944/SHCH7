@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Download, X, Map as MapIcon } from 'lucide-react'
+import { Download, X, Map as MapIcon, Loader2 } from 'lucide-react'
 import { getSchemasByStation } from '@/lib/supabase-db'
 import type { StationSchema } from '@/types'
 import { HeaderCard } from './BigActionCard'
@@ -11,6 +11,7 @@ import { HeaderCard } from './BigActionCard'
 export function WorkerSchemasView({ stationId, stationName }: { stationId: string, stationName: string }) {
   const [schemas, setSchemasState] = useState<StationSchema[]>([])
   const [preview, setPreview] = useState<string | null>(null)
+  const [loadingSchemaId, setLoadingSchemaId] = useState<string | null>(null)
   const blobUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -21,19 +22,22 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
   }, [stationId])
 
   // Firefox uchun blob URL orqali ko'rsatish
-  const handlePreview = async (filePath: string) => {
+  const handlePreview = async (schema: StationSchema) => {
     try {
+      setLoadingSchemaId(schema.id)
       // Agar oldin blob URL bo'lsa, tozalash
       if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
 
-      const response = await fetch(filePath)
+      const response = await fetch(schema.filePath)
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       blobUrlRef.current = url
       setPreview(url)
     } catch {
       // Fallback: to'g'ridan-to'g'ri URL
-      setPreview(filePath)
+      setPreview(schema.filePath)
+    } finally {
+      setLoadingSchemaId(null)
     }
   }
 
@@ -48,8 +52,21 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
             <h4 className="relative z-10 text-xl font-black text-slate-800 tracking-tight group-hover:text-indigo-900">{s.schemaType}</h4>
             <p className="relative z-10 mt-1 text-[11px] font-bold text-slate-500 uppercase tracking-widest">{s.fileName}</p>
             <div className="relative z-10 mt-8 flex gap-3">
-              <button onClick={() => handlePreview(s.filePath)} className="flex-1 rounded-2xl bg-white/50 border border-white/60 py-4 text-xs font-black uppercase text-indigo-600 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 backdrop-blur-md transition-all active:scale-95 shadow-sm">Ko&apos;rish</button>
-              <a href={s.filePath} download className="rounded-2xl bg-white/50 border border-white/60 p-4 text-indigo-500 hover:bg-slate-900 hover:text-white hover:border-slate-900 backdrop-blur-md transition-all shadow-sm active:scale-95"><Download size={20} /></a>
+              <button 
+                onClick={() => handlePreview(s)} 
+                disabled={loadingSchemaId === s.id}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white/50 border border-white/60 py-4 text-xs font-black uppercase text-indigo-600 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 backdrop-blur-md transition-all disabled:opacity-50 disabled:active:scale-100 active:scale-95 shadow-sm"
+              >
+                {loadingSchemaId === s.id ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Yuklanmoqda...
+                  </>
+                ) : (
+                  "Ko'rish"
+                )}
+              </button>
+              <a href={s.filePath} download className="rounded-2xl bg-white/50 border border-white/60 p-4 text-indigo-500 hover:bg-slate-900 hover:text-white hover:border-slate-900 backdrop-blur-md transition-all shadow-sm active:scale-95 flex items-center justify-center"><Download size={20} /></a>
             </div>
           </div>
         ))}

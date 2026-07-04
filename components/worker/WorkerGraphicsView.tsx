@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Download, X, Map as MapIcon } from 'lucide-react'
+import { Download, X } from 'lucide-react'
 import { getGlobalGraphics } from '@/lib/supabase-db'
 import type { StationSchema } from '@/types'
 import { HeaderCard } from './BigActionCard'

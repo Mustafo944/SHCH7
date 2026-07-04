@@ -89,7 +89,7 @@ export function TodayTasksModal({ type, tasks, onClose }: {
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
-      <div className="flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
+      <div className="flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] bg-white/85 backdrop-blur-3xl border border-white/60 shadow-2xl animate-scale-in">
         
         {/* HEADER */}
         <div className={`flex items-center justify-between border-b px-6 sm:px-8 py-5 sm:py-6 ${headerColor}`}>
@@ -113,7 +113,7 @@ export function TodayTasksModal({ type, tasks, onClose }: {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/30">
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-transparent">
           {tasks.length === 0 ? (
             <div className="flex h-full items-center justify-center p-6">
               <div className="text-center">
@@ -133,19 +133,16 @@ export function TodayTasksModal({ type, tasks, onClose }: {
                 <button
                   key={stationId}
                   onClick={() => setExpandedStation(stationId)}
-                  className={`w-full flex items-center justify-between rounded-2xl border p-4 sm:p-5 transition-all hover:shadow-md active:scale-[0.98] group bg-white border-slate-200 hover:bg-slate-50`}
+                  className={`w-full flex items-center justify-between rounded-2xl border p-4 sm:p-5 transition-all hover:shadow-md active:scale-[0.98] group bg-white/70 border-white/60 hover:bg-white/90`}
                 >
                   <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                    <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl text-sm sm:text-base font-black shadow-sm bg-slate-100 text-slate-600 border border-slate-200 relative`}>
-                      {items.length}
-                      {type === 'bugunReja' && items.length === doneCount && doneCount > 0 && (
-                        <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5 border-2 border-white">
-                          <CheckCircle2 size={12} className="text-white" />
-                        </div>
-                      )}
-                    </div>
                     <div className="text-left min-w-0">
-                      <h4 className="text-sm sm:text-base font-black text-slate-900 truncate">{stationName}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm sm:text-base font-black text-slate-900 truncate">{stationName}</h4>
+                        {type === 'bugunReja' && items.length === doneCount && doneCount > 0 && (
+                          <CheckCircle2 size={16} className="text-emerald-500" />
+                        )}
+                      </div>
                       <p className="text-[10px] sm:text-xs font-bold text-slate-400 truncate">{workerName}</p>
                     </div>
                   </div>
@@ -163,7 +160,7 @@ export function TodayTasksModal({ type, tasks, onClose }: {
             </div>
           ) : (
             <div>
-              <div className={`sticky top-0 z-10 flex items-center gap-3 border-b px-4 sm:px-6 py-3 bg-white/80 backdrop-blur-sm border-slate-200`}>
+              <div className={`sticky top-0 z-10 flex items-center gap-3 border-b px-4 sm:px-6 py-3 bg-white/70 backdrop-blur-md border-white/50`}>
                 <button
                   onClick={() => setExpandedStation(null)}
                   className="flex items-center gap-1.5 rounded-xl bg-white/80 border border-slate-200/60 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-white hover:text-slate-900 transition-all shadow-sm"
@@ -172,9 +169,6 @@ export function TodayTasksModal({ type, tasks, onClose }: {
                   <span className="hidden sm:inline">Bekatlar</span>
                 </button>
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-black bg-slate-100 text-slate-600`}>
-                    {grouped[expandedStation]?.items.length}
-                  </div>
                   <div className="min-w-0">
                     <h4 className="text-sm font-black text-slate-900 truncate">{grouped[expandedStation]?.stationName}</h4>
                     <p className="text-[9px] font-bold text-slate-400 truncate">{grouped[expandedStation]?.workerName}</p>
@@ -194,7 +188,7 @@ export function TodayTasksModal({ type, tasks, onClose }: {
                   const isCompletedAfter = !!task.completedDate
 
                   return (
-                    <div key={ti} className="rounded-xl border p-4 sm:p-5 transition-colors bg-white border-slate-200 hover:bg-slate-50">
+                    <div key={ti} className="rounded-xl border p-4 sm:p-5 transition-colors bg-white/70 border-white/60 hover:bg-white/90">
                       <div className="flex items-center justify-between mb-3">
                         <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-wide border ${isCompletedAfter ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
                           {isCompletedAfter ? <CheckCircle2 size={12} /> : <Clock size={12} />}

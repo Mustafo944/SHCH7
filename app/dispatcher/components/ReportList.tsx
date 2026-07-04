@@ -1,9 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, memo } from 'react'
 import { CheckCircle2, Clock, ChevronRight, Download, XCircle, AlertTriangle } from 'lucide-react'
 import { WorkReport, ReportEntry } from '@/types'
 import { EmptyState } from './ui'
 
-export function ReportList({ reports, onConfirm, onConfirmRow: _onConfirmRow, onReject }: {
+export const ReportList = memo(function ReportList({ reports, onConfirm, onConfirmRow: _onConfirmRow, onReject }: {
   reports: WorkReport[]
   onConfirm: (reportId: string) => void
   onConfirmRow: (reportId: string, idx: number) => void
@@ -23,7 +23,7 @@ export function ReportList({ reports, onConfirm, onConfirmRow: _onConfirmRow, on
       ))}
     </div>
   )
-}
+})
 
 /** NSH ma'lumotini entry matnidan parse qiladi */
 export function _parseNshFromEntry(entry: ReportEntry): string {
@@ -34,7 +34,7 @@ export function _parseNshFromEntry(entry: ReportEntry): string {
   return text || 'Boshqa'
 }
 
-export function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow, onReject }: {
+export const ReportCard = memo(function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow, onReject }: {
   report: WorkReport
   onConfirm: () => void
   onConfirmRow: (idx: number) => void
@@ -49,7 +49,7 @@ export function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow, onR
   const isAccepted = !!report.confirmedAt
   
   // Faqat jadvallari bor yoki bajarilgan ishlar bor qatorlarni hisobga olamiz (bo'sh qatorlardagi tasodifiy bajarildi larni inkor etish uchun)
-  const validEntries = (report.entries || []).filter((e: ReportEntry) => 
+  const _validEntries = (report.entries || []).filter((e: ReportEntry) => 
     e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish || e.bajarildiShn
   )
 
@@ -322,4 +322,4 @@ export function ReportCard({ report, onConfirm, onConfirmRow: _onConfirmRow, onR
       )}
     </div>
   )
-}
+})

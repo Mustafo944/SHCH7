@@ -23,6 +23,50 @@ export interface Station {
   name: string;
 }
 
+export interface StationEquipmentItem {
+  id: string;
+  name: string;
+  lastScannedAt?: string;
+  lastScannedBy?: string;
+}
+
+export interface EquipmentCategory {
+  id: string;
+  name: string;
+  color: string;
+  items: StationEquipmentItem[];
+}
+
+export interface TaskQRMapping {
+  taskNsh: string; // e.g., NSH-01 7.1
+  equipmentType: string;
+}
+
+export interface StationEquipments {
+  stationId: string;
+  categories: EquipmentCategory[];
+  taskMappings?: TaskQRMapping[];
+  updatedAt: string;
+  updatedByName: string;
+}
+
+export interface ParsedTaskItem {
+  bolim: string
+  ish: string
+  davriylik: string
+  bajaruvchi: string
+  jurnal: string
+  nsh: string
+  manba: string
+  raqam: string
+}
+
+export interface QRScanRecord {
+  equipmentId: string;
+  scannedAt: string;
+  scannedBy: string;
+}
+
 export interface ReportEntry {
   ragat: string;
   haftalikJadval: string;
@@ -75,6 +119,27 @@ export interface ReportEntry {
 
   // Navbatdan tashqari ish belgisi
   isNavbatdanTashqari?: boolean;
+
+  // QR Skaner maydonlari
+  requiresQRHaftalik?: boolean;
+  targetScansHaftalik?: number;
+  scansHaftalik?: (string | QRScanRecord)[]; // Skaner qilingan qurilmalar ro'yxati (anti-cheat uchun)
+  
+  requiresQRYillik?: boolean;
+  targetScansYillik?: number;
+  scansYillik?: (string | QRScanRecord)[];
+
+  requiresQRYangi?: boolean;
+  targetScansYangi?: number;
+  scansYangi?: (string | QRScanRecord)[];
+
+  requiresQRKmo?: boolean;
+  targetScansKmo?: number;
+  scansKmo?: (string | QRScanRecord)[];
+
+  requiresQRMajburiy?: boolean;
+  targetScansMajburiy?: number;
+  scansMajburiy?: (string | QRScanRecord)[];
 
   bajarildiShn: string;
   bajarildiImzo: string;

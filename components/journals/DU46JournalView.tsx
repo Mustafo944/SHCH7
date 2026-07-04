@@ -256,11 +256,17 @@ export function DU46JournalView({
         // Find first empty row (or create new if all are full)
         const emptyIndex = entries.findIndex(e => !e.kamchilik && !e.oyKun1 && !e.soatMinut1 && !e.bartarafInfo && !e.kamchilikBajarildi)
 
+        const todayStr = `${String(new Date().getDate()).padStart(2, '0')}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}`
+        const timeStr = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
+
         setEntries(prev => {
           const n = [...prev]
           if (emptyIndex !== -1) {
             n[emptyIndex] = {
               ...n[emptyIndex],
+              kamchilik: taskContext.taskText || '',
+              oyKun1: todayStr,
+              soatMinut1: timeStr,
               linkedReportId: taskContext.reportId,
               linkedEntryIndex: taskContext.entryIndex,
               linkedTaskType: taskContext.taskType,
@@ -269,6 +275,9 @@ export function DU46JournalView({
           } else {
             // Append a new row if no empty rows
             const newRow = EMPTY_DU46(journalMonth)
+            newRow.kamchilik = taskContext.taskText || ''
+            newRow.oyKun1 = todayStr
+            newRow.soatMinut1 = timeStr
             newRow.linkedReportId = taskContext.reportId
             newRow.linkedEntryIndex = taskContext.entryIndex
             newRow.linkedTaskType = taskContext.taskType
@@ -733,7 +742,7 @@ export function DU46JournalView({
       bartarafImzo: userName,
       bartarafByRole: userRole,
     }
-    if (onAccepted) onAccepted()
+    if (onAccepted) onAccepted(true, false)
     showMsg('Bajarildi belgilandi!')
     saveEntries(updated, prev).catch(() => { })
   }
@@ -900,9 +909,15 @@ export function DU46JournalView({
     <div className="fixed inset-0 z-[200] flex flex-col bg-slate-50">
       {/* — Header ——————————————————————————————————————————————————————————————— */}
       <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur-xl sm:px-8 shadow-sm">
-        <div>
-          <h2 className="text-lg font-black text-slate-900 tracking-tight">DU-46 Jurnali</h2>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stationName} · {journalMonthLabel}</p>
+        <div className="flex items-center gap-4">
+          {/* Orqaga */}
+          <button onClick={onClose} className="flex items-center justify-center rounded-xl bg-white p-2 text-slate-600 shadow-sm ring-1 ring-slate-200/60 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98]">
+            <ChevronLeft size={20} />
+          </button>
+          <div>
+            <h2 className="text-lg font-black text-slate-900 tracking-tight">DU-46 Jurnali</h2>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stationName} · {journalMonthLabel}</p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {!isCurrentMonth && !isDispatcher && (
@@ -910,7 +925,6 @@ export function DU46JournalView({
               Faqat ko&apos;rish (o&apos;tgan oy)
             </span>
           )}
-          {/* Bug #13 fix: xatolik xabarlari qizil, muvaffaqiyat xabarlari yashil */}
           {msg && (
             <span className={`text-xs font-bold px-3 py-1 rounded-full border transition-all ${msg.toLowerCase().includes('xato') || msg.toLowerCase().includes('error')
                 ? 'bg-red-50 text-red-600 border-red-100'
@@ -922,11 +936,6 @@ export function DU46JournalView({
 
       {/* --- Content --- */}
       <div className="flex-1 overflow-auto p-4 sm:p-6">
-        {/* Orqaga */}
-        <button onClick={onClose} className="mb-4 flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm ring-1 ring-slate-200/60 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98]">
-          <ChevronLeft size={18} />
-          <span>Orqaga</span>
-        </button>
 
         {/* Sana va Yuklab olish */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -987,7 +996,7 @@ export function DU46JournalView({
 
         {/* --- Jadval --- */}
         <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
-          <table style={{ minWidth: '1400px' }} className="w-full border-collapse text-[11px] text-slate-700">
+          <table className="w-full border-collapse text-[11px] text-slate-700">
             <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-tight text-slate-500 border-b-2 border-slate-200">
               <tr>
                 <th rowSpan={2} className="w-[3%] border-r border-b border-slate-200 p-3 text-center">№</th>

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { User, DgaNazoratEntry } from '@/types'
+import { DgaNazoratEntry } from '@/types'
 import { X, Plus, Trash2, Download } from 'lucide-react'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
 import { getCurrentJournalMonth, isMonthInPast } from './helpers'
@@ -63,7 +63,7 @@ export function DgaNazoratJournalView({
   userRole: string
   journalMonth?: string
   onClose: () => void
-  onAccepted?: () => void
+  onAccepted?: (isDone?: boolean, isInProgress?: boolean) => void
 }) {
   const [entries, setEntries] = useState<DgaNazoratEntry[]>(Array.from({ length: 5 }, EMPTY_ENTRY))
   const [allEntries, setAllEntries] = useState<DgaNazoratEntry[]>([])
@@ -142,7 +142,7 @@ export function DgaNazoratJournalView({
     row.imzo = userName
     newEntries[index] = row
     setEntries(newEntries)
-    if (onAccepted) onAccepted()
+    if (onAccepted) onAccepted(true, false)
     handleSave(newEntries, true)
   }
 

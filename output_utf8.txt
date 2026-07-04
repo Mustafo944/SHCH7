@@ -1,0 +1,205 @@
+﻿Created At: 2026-07-01T12:54:31Z
+Completed At: 2026-07-01T12:54:56Z
+The following changes were made by the multi_replace_file_content tool to: c:\Users\User\Desktop\shch7noviy\app\worker\page.tsx. If relevant, proactively run terminal commands to execute this code for the USER. Don't ask for permission.
+[diff_block_start]
+@@ -32,24 +32,29 @@
+ import { BigActionCard, HeaderCard } from '@/components/worker/BigActionCard'
+
+ // Og'ir komponentlar haqiqiy code splitting bilan lazy load qilinadi
+
+ const JournalForm = dynamic(() => import('@/components/worker/JournalForm').then(mod => mod.JournalForm), { ssr: false })
+
+-const WorkerGraphicsView = dynamic(() => import('@/components/worker/WorkerGraphicsView').then(mod => mod.WorkerGraphicsView), { ssr: false })
+
+-const WorkerSchemasView = dynamic(() => import('@/components/worker/WorkerSchemasView').then(mod => mod.WorkerSchemasView), { ssr: false })
+
+ const WorkerTasksModal = dynamic(() => import('@/components/worker/WorkerTasksModal').then(mod => mod.WorkerTasksModal), { ssr: false })
+
+ import IncidentsView from '@/components/worker/IncidentsView'
+
+ import { LibraryView } from '@/components/library/LibraryView'
+
+-import {
+
++import { 
+
++  LogOut, 
+
++  BookOpen, 
+
++  AlertTriangle, 
+
++  Volume2, 
+
++  VolumeX, 
+
++  CheckCircle2, 
+
++  Menu, 
+
++  Home, 
+
++  ChevronRight, 
+
++  BarChart2, 
+
++  Library,
+
++  MapPin,
+
+   FileText,
+
+   Map as MapIcon,
+
+   ChevronLeft,
+
+-  LogOut,
+
+-  Download,
+
+-  BookOpen,
+
+-  AlertTriangle,
+
+-  Volume2,
+
+-  VolumeX,
+
+-  CheckCircle2
+
++  Download
+
+ } from 'lucide-react'
+
+-
+
++import { WorkerGraphicsView } from '@/components/worker/WorkerGraphicsView'
+
++import { ALSNJournalView as ALSNJournalViewComponent } from '@/components/journals/ALSNJournalView'
+
+ 
+
+ 
+
+ export default function WorkerPage() {
+
+@@ -56,5 +56,6 @@
+   const toast = useToast()
+
+   const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'journal' | 'viewReport' | 'incidents' | 'sxemalar' | 'grafiklar' | 'kutubxona' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'boshqaJurnallar' | 'alsn' | 'alsnMonthSelect' | 'yerlatgich' | 'yerlatgichMonthSelect' | 'alsnKod' | 'alsnKodMonthSelect' | 'mpsFriksion' | 'mpsFriksionMonthSelect' | 'dgaNazorat' | 'dgaNazoratMonthSelect'>('home')
+
++  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+
+ 
+
+   const [reports, setReports] = useState<WorkReport[]>([])
+
+   const [incidents, setIncidents] = useState<Incident[]>([])
+
+@@ -310,14 +310,21 @@
+       <div className="relative z-10 flex min-h-screen flex-col">
+
+         {/* App Header */}
+
+         <header className="sticky top-0 z-50 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-[1600px] print:hidden">
+
+-          <div className="flex items-center justify-between bg-white/60 backdrop-blur-2xl px-3 sm:px-5 py-2 sm:py-3 rounded-[24px] sm:rounded-[32px] border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+
++          <div className="flex w-full items-center justify-between bg-white/60 backdrop-blur-2xl px-3 sm:px-5 py-2 sm:py-3 rounded-[24px] sm:rounded-[32px] border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+
+             <div className="flex items-center gap-3 sm:gap-4">
+
+-              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-[16px] bg-white/80 p-2 shadow-sm border border-white/80">
+
+-                <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain drop-shadow-sm" />
+
++              <button onClick={() => setIsMobileSidebarOpen(true)} className="lg:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-white/80 p-2 shadow-sm border border-white/80 text-slate-600 hover:bg-slate-50 transition-all active:scale-95">
+
++                <Menu size={20} />
+
++              </button>
+
++              {/* UTY Logo */}
+
++              <div className="hidden sm:flex relative h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-[16px] bg-white/80 p-2 shadow-sm border border-white/80">
+
++                <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain p-2 drop-shadow-sm" />
+
+               </div>
+
+               <div className="min-w-0 flex flex-col justify-center">
+
+                 <h1 className="text-[15px] sm:text-[18px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
+
+-                <p className="text-[8px] sm:text-[9.5px] font-black text-purple-600 truncate uppercase tracking-widest mt-1 drop-shadow-sm">SMART CONTROL TIZIMI</p>
+
++                <p className="text-[8px] sm:text-[9.5px] font-black text-purple-600 truncate uppercase tracking-widest mt-1 drop-shadow-sm">
+
++                  <span className="hidden sm:inline">SMART CONTROL TIZIMI</span>
+
++                  <span className="sm:hidden">{stationName && stationName !== '...' ? `${stationName} BEKATI` : 'BEKAT TANLANMAGAN'}</span>
+
++                </p>
+
+                 <p className="text-[10px] font-black text-slate-400 truncate uppercase tracking-tight mt-0.5 sm:hidden">{session?.fullName}</p>
+
+               </div>
+
+             </div>
+
+@@ -324,14 +324,16 @@
+             <div className="flex items-center gap-2 sm:gap-4">
+
+-              {(session?.stationIds?.length || 0) > 1 && view !== 'selectStation' && (
+
+-                <button onClick={() => setView('selectStation')} className="rounded-2xl bg-white/60 border border-white/60 px-4 py-2.5 text-[11px] font-black text-slate-700 uppercase tracking-widest shadow-sm hover:border-purple-200 hover:text-purple-600 transition-all hidden sm:block">Bekatlar</button>
+
+-              )}
+
+-              <div className="hidden sm:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/60 border border-white/60 shadow-sm">
+
++              <div className="hidden sm:flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-white/60 border border-white/60 shadow-sm transition-all hover:bg-white/80">
+
++                <div className="flex items-center justify-center h-5 w-5 rounded-full bg-purple-100 text-purple-600 shadow-[0_0_10px_rgba(147,51,234,0.2)]">
+
++                  <MapPin size={12} strokeWidth={2.5} />
+
++                </div>
+
++                <span className="text-[10px] sm:text-[11px] font-black text-purple-700 tracking-widest uppercase">{stationName && stationName !== '...' ? `${stationName} BEKATI` : 'BEKAT TANLANMAGAN'}</span>
+
++              </div>
+
++              
+
++              <div className="hidden sm:flex items-center gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-white/60 border border-white/60 shadow-sm transition-all hover:bg-white/80">
+
+                 <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
+
+-                <span className="text-[11px] font-black text-slate-700 tracking-widest uppercase">
+
+-                  {session?.position === 'elektromexanik' ? 'Elektromexanik' : session?.position === 'katta_elektromexanik' ? 'Katta elektromexanik' : session?.position === 'elektromontyor' ? 'Elektromontyor' : 'Ishchi'}
+
+-                </span>
+
+-              </div>
+
+-              <button onClick={() => setIsMuted(!isMuted)} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-slate-500 hover:bg-slate-50 hover:text-purple-600 transition-all shadow-sm active:scale-95">
+
++                <span className="text-[10px] sm:text-[11px] font-black text-slate-700 tracking-widest uppercase">{session?.fullName || 'Elektromexanik'}</span>
+
++              </div>
+
++              <button onClick={() => setIsMuted(!isMuted)} className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-slate-500 hover:bg-slate-50 hover:text-purple-600 transition-all shadow-sm active:scale-95">
+
+                 {isMuted ? <VolumeX size={20} strokeWidth={2.5} /> : <Volume2 size={20} strokeWidth={2.5} />}
+
+               </button>
+
+               <button onClick={() => setIsSignOutModalOpen(true)} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-purple-100/50 bg-purple-50/50 text-purple-600 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 hover:scale-105 active:scale-95 transition-all shadow-sm group">
+
+[diff_block_end]
+
+Please note that the above snippet only shows the MODIFIED lines from the last change. It shows up to 3 lines of unchanged lines before and after the modified lines. The actual file contents may have many more lines not shown.
+
+We did our best to apply changes despite some inaccuracies. Double check if the edit applied is what you intended.

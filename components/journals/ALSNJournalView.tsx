@@ -209,9 +209,14 @@ export function ALSNJournalView({
     <div className="fixed inset-0 z-[200] flex flex-col bg-slate-50">
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur-xl sm:px-8 shadow-sm">
-        <div>
-          <h2 className="text-lg font-black text-slate-900 tracking-tight">Poezd radioaloqasi va ALSN</h2>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stationName} · {journalMonthLabel}</p>
+        <div className="flex items-center gap-4">
+          <button onClick={onClose} className="flex items-center justify-center rounded-xl bg-white p-2 text-slate-600 shadow-sm ring-1 ring-slate-200/60 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98]">
+            <ChevronLeft size={20} />
+          </button>
+          <div>
+            <h2 className="text-lg font-black text-slate-900 tracking-tight">Poezd radioaloqasi va ALSN</h2>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{stationName} · {journalMonthLabel}</p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {msg && <span className={`text-xs font-bold px-3 py-1 rounded-full border ${msg.includes('!') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>{msg}</span>}
@@ -219,10 +224,6 @@ export function ALSNJournalView({
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6">
-        <button onClick={onClose} className="mb-4 flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm ring-1 ring-slate-200/60 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98]">
-          <ChevronLeft size={18} />
-          <span>Orqaga</span>
-        </button>
 
         {/* Sarlavha */}
         <div className="mb-4 rounded-2xl border border-blue-200/60 bg-blue-50/50 p-4 shadow-sm">
@@ -245,7 +246,7 @@ export function ALSNJournalView({
 
         {/* Jadval */}
         <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
-          <table style={{ minWidth: '1200px' }} className="w-full border-collapse text-[11px] text-slate-700">
+          <table className="w-full border-collapse text-[11px] text-slate-700">
             <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-tight text-slate-500 border-b-2 border-slate-200">
               <tr>
                 <th className="w-[3%] border-r border-b border-slate-200 p-3 text-center">№</th>

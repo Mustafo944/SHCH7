@@ -2,6 +2,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import Image from 'next/image'
 
 import {
   getStation,
@@ -14,6 +15,7 @@ import {
   mapDbReport,
   type DbWorkReportRow
 } from '@/lib/supabase-db'
+import { safeStorage } from '@/lib/utils/storage'
 import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription, useHardwareBack } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
@@ -29,25 +31,31 @@ const YerlatgichJournalView = dynamic(() => import('@/components/JournalView').t
 const AlsnKodJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
 const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
 const DgaNazoratJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DgaNazoratJournalView), { ssr: false })
-import { BigActionCard, HeaderCard } from '@/components/worker/BigActionCard'
+import { HeaderCard } from '@/components/worker/BigActionCard'
 // Og'ir komponentlar haqiqiy code splitting bilan lazy load qilinadi
-const JournalForm = dynamic(() => import('@/components/worker/JournalForm').then(mod => mod.JournalForm), { ssr: false })
+const JournalForm = dynamic(() => import('@/components/worker/JournalForm').then(mod => mod.JournalForm), { ssr: false, loading: () => <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-md"><div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-purple-500" /></div> })
 const WorkerGraphicsView = dynamic(() => import('@/components/worker/WorkerGraphicsView').then(mod => mod.WorkerGraphicsView), { ssr: false })
 const WorkerSchemasView = dynamic(() => import('@/components/worker/WorkerSchemasView').then(mod => mod.WorkerSchemasView), { ssr: false })
-const WorkerTasksModal = dynamic(() => import('@/components/worker/WorkerTasksModal').then(mod => mod.WorkerTasksModal), { ssr: false })
+const WorkerTasksModal = dynamic(() => import('@/components/worker/WorkerTasksModal').then(mod => mod.WorkerTasksModal), { ssr: false, loading: () => <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-md"><div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-purple-500" /></div> })
 import IncidentsView from '@/components/worker/IncidentsView'
 import { LibraryView } from '@/components/library/LibraryView'
+const StationEquipmentsModal = dynamic(() => import('@/components/StationEquipmentsModal').then(mod => mod.StationEquipmentsModal), { ssr: false, loading: () => <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-md"><div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-blue-500" /></div> })
 import {
   FileText,
   Map as MapIcon,
   ChevronLeft,
   LogOut,
-  Download,
   BookOpen,
   AlertTriangle,
   Volume2,
   VolumeX,
-  CheckCircle2
+  CheckCircle2,
+  Menu,
+  Home,
+  ChevronRight,
+  BarChart2,
+  Library,
+  Server
 } from 'lucide-react'
 
 
@@ -55,7 +63,7 @@ import {
 export default function WorkerPage() {
   const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'])
   const toast = useToast()
-  const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'journal' | 'viewReport' | 'incidents' | 'sxemalar' | 'grafiklar' | 'kutubxona' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'boshqaJurnallar' | 'alsn' | 'alsnMonthSelect' | 'yerlatgich' | 'yerlatgichMonthSelect' | 'alsnKod' | 'alsnKodMonthSelect' | 'mpsFriksion' | 'mpsFriksionMonthSelect' | 'dgaNazorat' | 'dgaNazoratMonthSelect'>('home')
+  const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'journal' | 'viewReport' | 'incidents' | 'sxemalar' | 'grafiklar' | 'kutubxona' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'boshqaJurnallar' | 'alsn' | 'alsnMonthSelect' | 'yerlatgich' | 'yerlatgichMonthSelect' | 'alsnKod' | 'alsnKodMonthSelect' | 'mpsFriksion' | 'mpsFriksionMonthSelect' | 'dgaNazorat' | 'dgaNazoratMonthSelect' | 'qurilmalar'>('home')
 
   const [reports, setReports] = useState<WorkReport[]>([])
   const [incidents, setIncidents] = useState<Incident[]>([])
@@ -69,11 +77,17 @@ export default function WorkerPage() {
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
   const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false)
   const [workerModal, setWorkerModal] = useState<'bugunBajarilgan' | 'qolibKetgan' | 'sababliBajarilmagan' | null>(null)
+  
+  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false)
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
 
-  const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen
+  const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen || isProfileMenuOpen
   const handleHardwareBack = useCallback(() => {
     if (isSignOutModalOpen) {
       setIsSignOutModalOpen(false)
+    } else if (isProfileMenuOpen) {
+      setIsProfileMenuOpen(false)
     } else if (selectedJournalType !== null) {
       setSelectedJournalType(null)
     } else if (workerModal !== null) {
@@ -81,14 +95,23 @@ export default function WorkerPage() {
     } else if (view !== 'home') {
       setView('home')
     }
-  }, [view, workerModal, selectedJournalType, isSignOutModalOpen])
+  }, [view, workerModal, selectedJournalType, isSignOutModalOpen, isProfileMenuOpen])
 
   useHardwareBack(isSubViewActive, handleHardwareBack)
 
   const loadPendingCounts = useCallback(async (sid: string, role: string, position?: string) => {
+    if (typeof window !== 'undefined') {
+      const cached = safeStorage.getItem(`worker_pending_cache_${sid}_${role}`)
+      if (cached) {
+        try { setPendingCounts(JSON.parse(cached)) } catch (e) { /* ignore */ }
+      }
+    }
     try {
       const counts = await getPendingJournalCounts(sid, role, position)
       setPendingCounts(counts)
+      if (typeof window !== 'undefined') {
+        safeStorage.setItem(`worker_pending_cache_${sid}_${role}`, JSON.stringify(counts))
+      }
     } catch {
       toast.error('Pending counts yuklashda xatolik')
     }
@@ -99,6 +122,9 @@ export default function WorkerPage() {
     try {
       const r = await getReportsByStations(stationIds)
       setReports(r)
+      if (typeof window !== 'undefined' && stationIds.length > 0) {
+        safeStorage.setItem(`worker_reports_cache_${stationIds.join('_')}`, JSON.stringify(r))
+      }
     } catch {
       toast.error('Hisobotlarni yuklashda xatolik')
     }
@@ -113,13 +139,32 @@ export default function WorkerPage() {
       ])
       setIncidents(allInc)
       setReadIncidentIds(new Set(readIds))
+      if (typeof window !== 'undefined') {
+        safeStorage.setItem(`worker_incidents_cache_${userId}`, JSON.stringify(allInc))
+        safeStorage.setItem(`worker_read_inc_cache_${userId}`, JSON.stringify(readIds))
+      }
     } catch {
-      // Xatolik bo'lsa, console.warn bilan log
       console.warn('Baxtsiz hodisalarni yuklashda xatolik')
     }
   }, [])
 
   const refreshData = useCallback(async (userId: string, stationIds: string[]) => {
+    // Try to load from cache first
+    if (typeof window !== 'undefined') {
+      const cachedReps = safeStorage.getItem(`worker_reports_cache_${stationIds.join('_')}`)
+      if (cachedReps) {
+        try { setReports(JSON.parse(cachedReps)) } catch (e) { /* ignore */ }
+      }
+      const cachedInc = safeStorage.getItem(`worker_incidents_cache_${userId}`)
+      if (cachedInc) {
+        try { setIncidents(JSON.parse(cachedInc)) } catch (e) { /* ignore */ }
+      }
+      const cachedReads = safeStorage.getItem(`worker_read_inc_cache_${userId}`)
+      if (cachedReads) {
+        try { setReadIncidentIds(new Set(JSON.parse(cachedReads))) } catch (e) { /* ignore */ }
+      }
+    }
+    
     await Promise.all([
       loadWorkReports(stationIds),
       loadIncidents(userId)
@@ -298,7 +343,7 @@ export default function WorkerPage() {
     return { bugunReja: bugun, qolibKetgan: qolib, sababliBajarilmagan: sababli }
   }, [reports, activeStationId])
 
-  const missedTasksCount = qolibKetgan.length
+  const _missedTasksCount = qolibKetgan.length
 
   if (!session || sessionLoading) return <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50"><div className="h-10 w-10 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600" /></div>
 
@@ -306,54 +351,187 @@ export default function WorkerPage() {
   const stationName = station?.name || '...'
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 selection:bg-indigo-500/10">
+    <div className="relative flex h-screen overflow-hidden bg-slate-50 text-slate-900 selection:bg-blue-500/10 font-sans">
       <AuroraMeshBackground />
 
-      <div className="relative z-10 flex min-h-screen flex-col">
-        {/* App Header */}
-        <header className="sticky top-0 z-50 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-[1600px] print:hidden">
-          <div className="flex items-center justify-between bg-white/60 backdrop-blur-2xl px-3 sm:px-5 py-2 sm:py-3 rounded-[24px] sm:rounded-[32px] border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+      {/* Mobile Sidebar Backdrop & Close Button */}
+      {isMobileSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 lg:hidden" 
+          onClick={() => setIsMobileSidebarOpen(false)} 
+        />
+      )}
+
+      {/* Left Sidebar (Desktop & Mobile Drawer) */}
+      <aside className={`bg-white/40 backdrop-blur-md border-r border-white/40 flex flex-col shrink-0 shadow-2xl lg:shadow-sm z-50 lg:z-20 fixed lg:relative inset-y-0 left-0 transform transition-all duration-300 ease-in-out ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 ${isDesktopSidebarCollapsed ? 'w-[260px] lg:w-[88px]' : 'w-[260px]'}`}>
+        
+        {/* Mobile Close Button (attached to right edge of menu) */}
+        <button 
+          onClick={() => setIsMobileSidebarOpen(false)} 
+          className={`lg:hidden absolute top-1/2 -translate-y-1/2 -right-5 h-10 w-10 flex items-center justify-center rounded-full bg-white border border-slate-200 shadow-md text-slate-500 hover:text-blue-600 transition-all z-[60] duration-300 ${isMobileSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        >
+          <ChevronLeft size={20} />
+        </button>
+
+        {/* Desktop Collapse Button */}
+        <button 
+          onClick={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)} 
+          className="hidden lg:flex absolute top-1/2 -translate-y-1/2 -right-5 h-10 w-10 items-center justify-center rounded-full bg-white border border-slate-200 shadow-md text-slate-500 hover:text-blue-600 transition-all z-[60]"
+        >
+          {isDesktopSidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+        </button>
+
+        <div className="shrink-0">
+          {/* Logo */}
+          <div className={`flex items-center ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0 p-6 gap-3' : 'gap-4 p-6'} mb-2 transition-all duration-300 relative`}>
+            <div className="flex h-14 w-14 items-center justify-center shrink-0">
+              <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
+            </div>
+            <div className={`flex flex-col justify-center overflow-hidden transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:w-0 lg:opacity-0 lg:hidden' : 'w-[140px] opacity-100'}`}>
+              <h1 className="text-[15px] font-black uppercase tracking-tight text-[#0050a0] leading-none whitespace-nowrap">O‘ZBEKISTON</h1>
+              <h1 className="text-[15px] font-black uppercase tracking-tight text-[#0050a0] leading-none whitespace-nowrap mt-0.5">TEMIR YO‘LLARI</h1>
+              <p className="text-[9px] font-bold text-slate-500 tracking-[0.15em] mt-1.5 uppercase whitespace-nowrap">SMART CONTROL TIZIMI</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2 px-4 pb-2 mt-2">
+            <button onClick={() => { setView('home'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${view === 'home' || view === 'selectStation' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+              <Home size={18} className="shrink-0" /> 
+              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Bosh sahifa</span>
+            </button>
+            <button onClick={() => { setView('selectMonth'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${view === 'selectMonth' || view === 'viewReport' || view === 'journal' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+              <FileText size={18} className="shrink-0" />
+              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Oylik ish reja</span>
+            </button>
+            <button onClick={() => { setView('journalSelect'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${['journalSelect', 'journalMonthSelect', 'du46', 'shu2', 'boshqaJurnallar', 'alsn', 'yerlatgich', 'alsnKod', 'mpsFriksion', 'dgaNazorat'].includes(view) ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+              <BookOpen size={18} className="shrink-0" />
+              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Ish Jurnallari</span>
+            </button>
+            <button onClick={() => { setView('sxemalar'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${view === 'sxemalar' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+              <MapIcon size={18} className="shrink-0" />
+              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Bekat Sxemalari</span>
+            </button>
+            <button onClick={() => { setView('grafiklar'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${view === 'grafiklar' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+              <BarChart2 size={18} className="shrink-0" />
+              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Grafiklar</span>
+            </button>
+            <button onClick={() => { setView('incidents'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${view === 'incidents' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+              <AlertTriangle size={18} className="shrink-0" />
+              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Baxtsiz hodisalar</span>
+            </button>
+            <button onClick={() => { setView('kutubxona'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${view === 'kutubxona' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+              <Library size={18} className="shrink-0" />
+              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Kutubxona</span>
+            </button>
+            <button onClick={() => { setView('qurilmalar'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${view === 'qurilmalar' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+              <Server size={18} className="shrink-0" />
+              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Bekat qurilmalari</span>
+            </button>
+        </nav>
+
+        {/* Train Image & User Block */}
+        <div className={`relative shrink-0 w-full transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:h-[88px] lg:bg-white/40 lg:border-t lg:border-white/60' : 'h-[220px]'}`}>
+           {/* Image Background */}
+           <div className={`absolute inset-0 pointer-events-none overflow-hidden ${isDesktopSidebarCollapsed ? 'lg:hidden' : ''}`}>
+             <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-white/80 to-transparent z-10" />
+             <img
+               src="/afrosiyob.png"
+               onError={(e) => e.currentTarget.src='/1.png'}
+               alt="Afrosiyob"
+               className="w-full h-full object-cover object-[80%_center] opacity-100"
+             />
+             <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/90 to-transparent z-10" />
+           </div>
+
+           {/* Floating User Card */}
+           <div className={`relative z-20 h-full flex flex-col justify-end px-4 pb-4 ${isDesktopSidebarCollapsed ? 'lg:p-3 lg:justify-center' : ''}`}>
+             
+             <div className="relative w-full mx-auto max-w-[230px]">
+               {/* Dropup Menu */}
+               {isProfileMenuOpen && (
+                 <>
+                   <div className="fixed inset-0 z-30" onClick={() => setIsProfileMenuOpen(false)} />
+                   <div className="absolute bottom-full left-0 right-0 mb-2 z-40 bg-white/90 backdrop-blur-xl border border-white/50 shadow-xl rounded-2xl p-1.5 animate-fade-up origin-bottom">
+                     <button
+                       onClick={() => {
+                         setIsProfileMenuOpen(false);
+                         setIsSignOutModalOpen(true);
+                       }}
+                       className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl hover:bg-red-50 text-red-600 transition-colors font-bold text-sm"
+                     >
+                       <LogOut size={18} />
+                       {!isDesktopSidebarCollapsed && <span>Chiqish</span>}
+                     </button>
+                   </div>
+                 </>
+               )}
+
+               <button 
+                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                 className={`flex items-center rounded-2xl backdrop-blur-md border shadow-lg transition-all duration-300 active:scale-95 text-left w-full ${isDesktopSidebarCollapsed ? 'lg:p-2 lg:justify-center' : 'p-3 gap-3'} ${isProfileMenuOpen ? 'bg-white/60 border-blue-300 ring-4 ring-blue-500/20' : 'bg-white/40 border-white/50 hover:bg-white/50'}`}
+               >
+                 <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-200">
+                   <div className="h-full w-full bg-gradient-to-br from-blue-100/80 to-blue-50/80 flex items-center justify-center text-blue-700 font-bold shadow-inner">
+                       {session?.fullName?.charAt(0) || 'U'}
+                   </div>
+                 </div>
+                 <div className={`flex-1 min-w-0 transition-all duration-300 overflow-hidden ${isDesktopSidebarCollapsed ? 'lg:w-0 lg:opacity-0 lg:hidden' : 'opacity-100 w-auto'}`}>
+                   <p className="truncate text-sm font-bold text-slate-900">{session?.fullName || 'Foydalanuvchi'}</p>
+                   <p className="truncate text-[11px] font-bold text-slate-600 uppercase">
+                      {session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : session?.role === 'elektromexanik' ? 'Elektromexanik' : session?.role === 'elektromontyor' ? 'Elektromontyor' : "Katta Elektromexanik"}
+                   </p>
+                 </div>
+               </button>
+             </div>
+           </div>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="relative flex-1 flex flex-col min-w-0">
+        <header className="sticky top-0 z-30 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-[1600px] print:hidden">
+          <div className="flex w-full items-center justify-between bg-white/10 backdrop-blur-xl px-3 sm:px-5 py-2 sm:py-3 rounded-[24px] sm:rounded-[32px] border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-[16px] bg-white/80 p-2 shadow-sm border border-white/80">
-                <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain drop-shadow-sm" />
+              <button onClick={() => setIsMobileSidebarOpen(true)} className="lg:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-white/20 backdrop-blur-md p-2 shadow-sm border border-white/30 text-slate-600 hover:bg-slate-50 transition-all active:scale-95">
+                <Menu size={20} />
+              </button>
+              {/* UTY Logo */}
+              <div className="hidden sm:flex relative h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-[16px] bg-white/20 backdrop-blur-md p-2 shadow-sm border border-white/30">
+                <Image src="/uty-logo.png" alt="UTY" fill className="object-contain p-2 drop-shadow-sm" />
               </div>
               <div className="min-w-0 flex flex-col justify-center">
                 <h1 className="text-[15px] sm:text-[18px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
-                <p className="text-[8px] sm:text-[9.5px] font-black text-purple-600 truncate uppercase tracking-widest mt-1 drop-shadow-sm">SMART CONTROL TIZIMI</p>
+                {(session?.stationIds?.length || 0) > 1 ? (
+                  <button
+                    onClick={() => setView('selectStation')}
+                    className="text-[8px] sm:text-[9.5px] font-black text-purple-600 truncate uppercase tracking-widest mt-1 drop-shadow-sm text-left hover:underline"
+                  >
+                    {stationName !== '...' ? `${stationName} BEKATI` : 'SMART CONTROL TIZIMI'} · O&apos;zgartirish
+                  </button>
+                ) : (
+                  <p className="text-[8px] sm:text-[9.5px] font-black text-purple-600 truncate uppercase tracking-widest mt-1 drop-shadow-sm">{stationName !== '...' ? `${stationName} BEKATI` : 'SMART CONTROL TIZIMI'}</p>
+                )}
                 <p className="text-[10px] font-black text-slate-400 truncate uppercase tracking-tight mt-0.5 sm:hidden">{session?.fullName}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">
-              {(session?.stationIds?.length || 0) > 1 && view !== 'selectStation' && (
-                <button onClick={() => setView('selectStation')} className="rounded-2xl bg-white/60 border border-white/60 px-4 py-2.5 text-[11px] font-black text-slate-700 uppercase tracking-widest shadow-sm hover:border-purple-200 hover:text-purple-600 transition-all hidden sm:block">Bekatlar</button>
-              )}
-              <div className="hidden sm:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/60 border border-white/60 shadow-sm">
+              <div className="hidden sm:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/20 border border-white/30 shadow-sm backdrop-blur-md">
                 <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
-                <span className="text-[11px] font-black text-slate-700 tracking-widest uppercase">
-                  {session?.position === 'elektromexanik' ? 'Elektromexanik' : session?.position === 'katta_elektromexanik' ? 'Katta elektromexanik' : session?.position === 'elektromontyor' ? 'Elektromontyor' : 'Ishchi'}
-                </span>
+                <span className="text-[11px] font-black text-slate-700 tracking-widest uppercase">{session?.fullName || 'Elektromexanik'}</span>
               </div>
               <button onClick={() => setIsMuted(!isMuted)} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-slate-500 hover:bg-slate-50 hover:text-purple-600 transition-all shadow-sm active:scale-95">
                 {isMuted ? <VolumeX size={20} strokeWidth={2.5} /> : <Volume2 size={20} strokeWidth={2.5} />}
-              </button>
-              <button onClick={() => setIsSignOutModalOpen(true)} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-purple-100/50 bg-purple-50/50 text-purple-600 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 hover:scale-105 active:scale-95 transition-all shadow-sm group">
-                <LogOut size={20} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1600px] p-4 sm:p-4 pb-10">
-          {/* Back button - shown above page content */}
-          {view !== 'home' && view !== 'selectStation' && (
-            <button onClick={() => setView('home')} className="mb-4 flex items-center gap-2 rounded-xl bg-white/80 px-4 py-2.5 text-sm font-medium text-purple-600 shadow-sm ring-1 ring-purple-100 transition-all hover:bg-purple-50 hover:text-purple-800 active:scale-[0.98]">
-              <ChevronLeft size={18} />
-              <span>Orqaga</span>
-            </button>
-          )}
+        <main className="flex-1 overflow-y-auto pt-4 sm:pt-8 px-4 lg:px-8 pb-8 custom-scrollbar">
           {view === 'selectStation' && (
-            <div className="grid gap-6 sm:grid-cols-2 pt-10">
+            <div className="grid gap-6 sm:grid-cols-2 pt-4">
               {session?.stationIds?.length === 0 ? (
                 <div className="col-span-full flex flex-col items-center justify-center rounded-[32px] border border-slate-200 bg-white p-16 text-center shadow-sm">
                   <div className="mb-6 rounded-full bg-amber-50 p-6">
@@ -361,13 +539,6 @@ export default function WorkerPage() {
                   </div>
                   <h3 className="text-xl font-black text-slate-800">Hech qanday bekat biriktirilmagan</h3>
                   <p className="mt-2 text-slate-500">Dispetcher bilan bog&apos;laning va bekatlaringizni so&apos;rang</p>
-                  <button
-                    onClick={() => setIsSignOutModalOpen(true)}
-                    className="mt-8 flex items-center gap-2 rounded-xl bg-rose-50 px-6 py-3 font-bold text-rose-600 transition-all hover:bg-rose-100 active:scale-95 border border-rose-200"
-                  >
-                    <LogOut size={20} />
-                    <span>Tizimdan chiqish</span>
-                  </button>
                 </div>
               ) : (
                 session?.stationIds?.map(sid => (
@@ -382,136 +553,68 @@ export default function WorkerPage() {
           )}
 
           {view === 'home' && (
-            <div className="space-y-4 sm:space-y-4 animate-fade-up">
-
-
-              {/* Profile & Stats Card */}
-              <div className="rounded-[24px] bg-white/50 backdrop-blur-xl p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80">
-                <div className="mb-4 text-center sm:text-left">
-                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900">{session?.fullName}</h2>
-                  <div className="mt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3">
-                    <span className="text-xs sm:text-sm font-black text-purple-600 uppercase tracking-widest">
-                      {session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : session?.role === 'elektromexanik' ? 'Elektromexanik' : session?.role === 'elektromontyor' ? 'Elektromontyor' : "Katta Elektromexanik"}
-                    </span>
-                    {stationName && stationName !== '...' && (
-                      <>
-                        <div className="h-1.5 w-1.5 rounded-full bg-slate-300" />
-                        <div className="flex items-center gap-1.5 rounded-xl bg-slate-50 px-3 py-1.5 border border-slate-100 text-[11px] sm:text-xs font-black uppercase tracking-widest text-slate-500">
-                          <MapIcon size={14} className="text-slate-400" />
-                          {stationName} BEKATI
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid gap-3 lg:grid-cols-3 sm:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-3 sm:grid-cols-2 animate-fade-up">
                   {/* Bugun Bajarilishi Kerak Bo'lgan Ishlar */}
                   <div
                     onClick={() => setWorkerModal('bugunBajarilgan')}
-                    className="cursor-pointer group relative overflow-hidden rounded-[20px] bg-blue-50/50 p-4 sm:p-5 border border-blue-100/60 transition-all hover:bg-blue-50 hover:border-blue-200 hover:shadow-md active:scale-[0.98] flex items-center gap-4"
+                    className="cursor-pointer group relative rounded-3xl bg-white/30 backdrop-blur-md p-6 shadow-sm ring-1 ring-white/20 transition-all hover:bg-white/40 hover:shadow-md hover:ring-white/40 active:scale-95"
                   >
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-blue-100/50 text-blue-500 group-hover:scale-110 transition-transform relative">
-                      <FileText size={26} strokeWidth={2.5} />
-                      {bugunReja.length > 0 && bugunReja.filter(b => b.done).length === bugunReja.length && (
-                        <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5 border-2 border-white">
-                          <CheckCircle2 size={12} className="text-white" />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-[11px] sm:text-xs font-black uppercase tracking-widest text-blue-600">BUGUNGI ISHLAR RO'YXATI</p>
-                      <p className="text-3xl sm:text-4xl font-black text-blue-600 mt-1 mb-1">{bugunReja.length}</p>
-                      <p className="text-xs sm:text-[13px] font-medium text-blue-700/70">
-                        {bugunReja.length > 0 ? `${bugunReja.length} ta bugungi ishlar ro'yxati. ${bugunReja.filter(b => b.done).length} ta ish bajarilgan` : "Bugun uchun ish yo'q"}
-                      </p>
-                    </div>
+                     <div className="flex items-center gap-4">
+                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform relative">
+                         <FileText size={28} strokeWidth={2.5} />
+                         {bugunReja.length > 0 && bugunReja.filter(b => b.done).length === bugunReja.length && (
+                           <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5 border-2 border-white">
+                             <CheckCircle2 size={12} className="text-white" />
+                           </div>
+                         )}
+                       </div>
+                       <div>
+                         <p className="text-xs font-black uppercase tracking-widest text-slate-500">Bugungi ishlar</p>
+                         <p className="text-3xl font-black text-slate-900 mt-1">{bugunReja.length}</p>
+                       </div>
+                     </div>
+                     <p className="mt-4 text-sm font-medium text-slate-500">
+                        {bugunReja.length > 0 ? `${bugunReja.length} ta reja, ${bugunReja.filter(b => b.done).length} ta bajarildi` : "Bugun uchun ish yo'q"}
+                     </p>
                   </div>
 
                   {/* Bajarilmagan Ishlar */}
                   <div
                     onClick={() => setWorkerModal('qolibKetgan')}
-                    className="cursor-pointer group relative overflow-hidden rounded-[20px] bg-red-50/50 p-4 sm:p-5 border border-red-100/60 transition-all hover:bg-red-50 hover:border-red-200 hover:shadow-md active:scale-[0.98] flex items-center gap-4"
+                    className="cursor-pointer group relative rounded-3xl bg-white/30 backdrop-blur-md p-6 shadow-sm ring-1 ring-white/20 transition-all hover:bg-white/40 hover:shadow-md hover:ring-white/40 active:scale-95"
                   >
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-red-100/50 text-red-500 group-hover:scale-110 transition-transform">
-                      <AlertTriangle size={26} strokeWidth={2.5} />
-                    </div>
-                    <div>
-                      <p className="text-[11px] sm:text-xs font-black uppercase tracking-widest text-red-600">Bajarilmagan ishlar</p>
-                      <p className="text-3xl sm:text-4xl font-black text-red-600 mt-1 mb-1">{qolibKetgan.length}</p>
-                      <p className="text-xs sm:text-[13px] font-medium text-red-700/70">
-                        {qolibKetgan.length > 0 ? "Izoxsiz bajarilmagan ishlar" : "Barcha ishlar o'z vaqtida bajarilgan"}
-                      </p>
-                    </div>
+                     <div className="flex items-center gap-4">
+                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-red-50 text-red-600 group-hover:scale-110 transition-transform">
+                         <AlertTriangle size={28} strokeWidth={2.5} />
+                       </div>
+                       <div>
+                         <p className="text-xs font-black uppercase tracking-widest text-slate-500">Bajarilmagan ishlar</p>
+                         <p className="text-3xl font-black text-slate-900 mt-1">{qolibKetgan.length}</p>
+                       </div>
+                     </div>
+                     <p className="mt-4 text-sm font-medium text-slate-500">
+                        {qolibKetgan.length > 0 ? "Izoxsiz qolib ketgan ishlar" : "Barcha ishlar bajarilgan"}
+                     </p>
                   </div>
 
                   {/* Sababli Bajarilmagan Ishlar */}
                   <div
                     onClick={() => setWorkerModal('sababliBajarilmagan')}
-                    className="cursor-pointer group relative overflow-hidden rounded-[20px] bg-orange-50/50 p-4 sm:p-5 border border-orange-100/60 transition-all hover:bg-orange-50 hover:border-orange-200 hover:shadow-md active:scale-[0.98] flex items-center gap-4"
+                    className="cursor-pointer group relative rounded-3xl bg-white/30 backdrop-blur-md p-6 shadow-sm ring-1 ring-white/20 transition-all hover:bg-white/40 hover:shadow-md hover:ring-white/40 active:scale-95"
                   >
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-orange-100/50 text-orange-500 group-hover:scale-110 transition-transform">
-                      <BookOpen size={26} strokeWidth={2.5} />
-                    </div>
-                    <div>
-                      <p className="text-[11px] sm:text-xs font-black uppercase tracking-widest text-orange-600">Sababli bajarilmagan</p>
-                      <p className="text-3xl sm:text-4xl font-black text-orange-600 mt-1 mb-1">{sababliBajarilmagan.length}</p>
-                      <p className="text-xs sm:text-[13px] font-medium text-orange-700/70">
-                        {sababliBajarilmagan.length > 0 ? "Sabab ko'rsatilgan ishlar arxiv" : "Bunday ishlar yo'q"}
-                      </p>
-                    </div>
+                     <div className="flex items-center gap-4">
+                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 group-hover:scale-110 transition-transform">
+                         <BookOpen size={28} strokeWidth={2.5} />
+                       </div>
+                       <div>
+                         <p className="text-xs font-black uppercase tracking-widest text-slate-500">Sababli qoldirilgan</p>
+                         <p className="text-3xl font-black text-slate-900 mt-1">{sababliBajarilmagan.length}</p>
+                       </div>
+                     </div>
+                     <p className="mt-4 text-sm font-medium text-slate-500">
+                        {sababliBajarilmagan.length > 0 ? "Sabab ko'rsatilgan ishlar" : "Bunday ishlar yo'q"}
+                     </p>
                   </div>
-                </div>
-              </div>
-
-              {/* Action Cards */}
-              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-1">
-                <BigActionCard
-                  title="Hisobot To'ldirish"
-                  desc="Oylik ish reja to'ldirish va bajarish"
-                  icon={<FileText size={24} strokeWidth={2} />}
-                  onClick={() => setView('selectMonth')}
-                  badge={missedTasksCount}
-                  color="purple"
-                />
-                <BigActionCard
-                  title="Bekat Sxemalari"
-                  desc="Bir ipli va ikki ipli sxemalarni ko'rish."
-                  icon={<MapIcon size={24} strokeWidth={2} />}
-                  color="blue"
-                  onClick={() => setView('sxemalar')}
-                />
-                <BigActionCard
-                  title="Grafiklar"
-                  desc="Umumiy ish reja grafiklarini ko'rish va yuklab olish."
-                  icon={<Download size={24} strokeWidth={2} />}
-                  color="amber"
-                  onClick={() => setView('grafiklar')}
-                />
-                <BigActionCard
-                  title="Ish Jurnallari"
-                  desc="DU-46 va SHU-2 jurnallarini to'ldirish."
-                  icon={<BookOpen size={24} strokeWidth={2} />}
-                  color="sky"
-                  onClick={() => setView('journalSelect')}
-                  badge={pendingCounts.du46 + pendingCounts.shu2}
-                />
-                <BigActionCard
-                  title="Baxtsiz Hodisalar"
-                  desc="Sodir bo'lgan baxtsiz hodisalar bilan tanishing."
-                  icon={<AlertTriangle size={24} strokeWidth={2} />}
-                  color="amber"
-                  onClick={() => setView('incidents')}
-                  badge={incidents.filter(i => !readIncidentIds.has(i.id)).length}
-                />
-                <BigActionCard
-                  title="Kutubxona"
-                  desc="Qo'llanmalar va kitoblarni o'qish."
-                  icon={<BookOpen size={24} strokeWidth={2} />}
-                  color="purple"
-                  onClick={() => setView('kutubxona')}
-                />
-              </div>
             </div>
           )}
 
@@ -544,24 +647,20 @@ export default function WorkerPage() {
             />
           )}
 
-          {view === 'incidents' && (
-            <div className="animate-fade-up">
-              <IncidentsView
-                incidents={incidents}
-                readIds={readIncidentIds}
-                workerId={session!.id}
-                onRead={async () => {
-                  loadIncidents(session.id)
-                }}
-              />
-            </div>
-          )}
+          <div className={view === 'incidents' ? 'block animate-fade-up' : 'hidden'}>
+            <IncidentsView
+              incidents={incidents}
+              readIds={readIncidentIds}
+              workerId={session!.id}
+              onRead={async () => {
+                loadIncidents(session.id)
+              }}
+            />
+          </div>
 
-          {view === 'kutubxona' && (
-            <div className="animate-fade-up">
-              <LibraryView userName={session?.fullName || ''} userRole={session?.role || ''} />
-            </div>
-          )}
+          <div className={view === 'kutubxona' ? 'block animate-fade-up' : 'hidden'}>
+            <LibraryView userName={session?.fullName || ''} userRole={session?.role || ''} />
+          </div>
 
           {view === 'viewReport' && selectedReport && (
             <div className="animate-fade-up">
@@ -571,7 +670,7 @@ export default function WorkerPage() {
                   O&apos;ngga suring →
                 </div>
                 <div className="overflow-x-auto overflow-y-hidden">
-                  <table style={{ minWidth: "1200px" }} className="w-full border-collapse text-left text-[11px] text-slate-700">
+                  <table style={{ minWidth: "1200px" }} className="w-full table-fixed border-collapse text-left text-[11px] text-slate-700">
                     <thead className="border-b-2 border-purple-500/30 bg-slate-50 font-bold text-slate-600">
                       <tr>
                         <th rowSpan={2} className="w-10 border-r border-slate-200 p-2 text-center">№</th>
@@ -617,12 +716,12 @@ export default function WorkerPage() {
 
 
 
-          {view === 'sxemalar' && (
+          <div className={view === 'sxemalar' ? 'block' : 'hidden'}>
             <WorkerSchemasView stationId={activeStationId} stationName={stationName} />
-          )}
-          {view === 'grafiklar' && (
+          </div>
+          <div className={view === 'grafiklar' ? 'block' : 'hidden'}>
             <WorkerGraphicsView />
-          )}
+          </div>
           {view === 'journalSelect' && (
             <JournalSelectModal
               onSelect={(type) => {
@@ -693,7 +792,7 @@ export default function WorkerPage() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full">
                 <button
                   onClick={() => setView('alsnMonthSelect')}
-                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
+                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/[0.25] backdrop-blur-3xl p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
                 >
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
                     <BookOpen size={28} />
@@ -705,7 +804,7 @@ export default function WorkerPage() {
                 </button>
                 <button
                   onClick={() => setView('yerlatgichMonthSelect')}
-                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-500/5 active:scale-95"
+                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/[0.25] backdrop-blur-3xl p-6 text-left transition-all hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-500/5 active:scale-95"
                 >
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-all group-hover:bg-white border border-transparent group-hover:border-emerald-100 shadow-sm">
                     <BookOpen size={28} />
@@ -717,7 +816,7 @@ export default function WorkerPage() {
                 </button>
                 <button
                   onClick={() => setView('alsnKodMonthSelect')}
-                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
+                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/[0.25] backdrop-blur-3xl p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
                 >
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
                     <BookOpen size={28} />
@@ -729,7 +828,7 @@ export default function WorkerPage() {
                 </button>
                 <button
                   onClick={() => setView('mpsFriksionMonthSelect')}
-                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-violet-300 hover:shadow-xl hover:shadow-violet-500/5 active:scale-95"
+                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/[0.25] backdrop-blur-3xl p-6 text-left transition-all hover:border-violet-300 hover:shadow-xl hover:shadow-violet-500/5 active:scale-95"
                 >
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 transition-all group-hover:bg-white border border-transparent group-hover:border-violet-100 shadow-sm">
                     <BookOpen size={28} />
@@ -741,7 +840,7 @@ export default function WorkerPage() {
                 </button>
                 <button
                   onClick={() => setView('dgaNazoratMonthSelect')}
-                  className="group relative flex items-center gap-5 rounded-[28px] border border-slate-200 bg-white p-6 text-left transition-all hover:border-amber-400 hover:shadow-xl hover:shadow-amber-500/5 active:scale-95"
+                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/[0.25] backdrop-blur-3xl p-6 text-left transition-all hover:border-amber-400 hover:shadow-xl hover:shadow-amber-500/5 active:scale-95"
                 >
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 transition-all group-hover:bg-white border border-transparent group-hover:border-amber-100 shadow-sm">
                     <BookOpen size={28} />
@@ -871,6 +970,22 @@ export default function WorkerPage() {
               journalMonth={selectedJournalMonth}
               onClose={() => setView('home')}
             />
+          )}
+
+          {view === 'qurilmalar' && (
+            activeStationId ? (
+              <StationEquipmentsModal
+                stationId={activeStationId}
+                stationName={stationName}
+                canEdit={session?.role === 'katta_elektromexanik' || session?.position === 'katta_elektromexanik'}
+                userName={session?.fullName || 'Foydalanuvchi'}
+                onClose={() => setView('home')}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-[32px] border border-slate-200 bg-white p-16 text-center shadow-sm">
+                <p className="font-black text-slate-400 uppercase tracking-widest text-sm">Avval bekat tanlang</p>
+              </div>
+            )
           )}
 
           {workerModal && (

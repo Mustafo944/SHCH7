@@ -44,7 +44,7 @@ export function MpsFriksionJournalView({
   userRole: string
   journalMonth?: string
   onClose: () => void
-  onAccepted?: () => void
+  onAccepted?: (isDone?: boolean, isInProgress?: boolean) => void
 }) {
   const [entries, setEntries] = useState<MpsFriksionEntry[]>(Array.from({ length: 5 }, EMPTY_MPS_FRIKSION))
   const [allEntries, setAllEntries] = useState<MpsFriksionEntry[]>([])
@@ -114,7 +114,7 @@ export function MpsFriksionJournalView({
     row.bajarildiAt = new Date().toISOString()
     n[idx] = row
     setEntries(n)
-    if (onAccepted) onAccepted()
+    if (onAccepted) onAccepted(true, false)
     handleSave(n, true)
   }
 

@@ -55,6 +55,15 @@ function parseNsh(nsh: string): { manba: string; raqam: string } {
   return { manba: trimmed, raqam: '' }
 }
 
+// Vazifani ko'rsatish/moslashtirish uchun barqaror kalit.
+// Bu string ReportEntry matnining boshidagi "[manba raqam]" prefiksi bilan bir xil bo'lishi shart
+// (qarang: components/worker/JournalForm.tsx dagi TaskSelectionModal) — shuning uchun
+// taskMappings (QR-uskuna bog'lanishi) ham xom `nsh` maydoni o'rniga shu kalit bilan saqlanadi/qidiriladi.
+// Xom nsh (masalan "ESSO №6.1") emas, aynan shu kalit ("ESSO 6.1") ishlatiladi.
+export function taskDisplayKey(manba: string, raqam: string): string {
+  return `${manba}${raqam ? ` ${raqam}` : ''}`
+}
+
 // Flat versiyalar — barcha ishlar bir qatorda, bolim nomi va parse qilingan nsh bilan
 export const YILLIK_REJA_FLAT: ParsedTaskItem[] = yillikData.flatMap((b: RejaBolimi) =>
   b.ishlar.map(ish => {

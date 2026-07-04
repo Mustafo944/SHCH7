@@ -45,7 +45,7 @@ export function YerlatgichJournalView({
   userRole: string
   journalMonth?: string
   onClose: () => void
-  onAccepted?: () => void
+  onAccepted?: (isDone?: boolean, isInProgress?: boolean) => void
 }) {
   const [entries, setEntries] = useState<YerlatgichEntry[]>(Array.from({ length: 5 }, EMPTY_YERLATGICH))
   const [allEntries, setAllEntries] = useState<YerlatgichEntry[]>([])
@@ -130,7 +130,7 @@ export function YerlatgichJournalView({
     row.bajarildiAt = new Date().toISOString()
     n[idx] = row
     setEntries(n)
-    if (onAccepted) onAccepted()
+    if (onAccepted) onAccepted(true, false)
     handleSave(n, true)
   }
 
