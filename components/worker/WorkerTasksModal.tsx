@@ -16,7 +16,7 @@ import type { User, ReportEntry } from '@/types'
 import { useToast } from '@/lib/hooks/useToast'
 import dynamic from 'next/dynamic'
 import { QRScannerModal } from '../QRScannerModal'
-import { buildEquipmentQrValue, stringToUuid } from '@/lib/utils/qr'
+import { buildEquipmentQrValue, stringToUuid, getLocalDateStr } from '@/lib/utils/qr'
 
 // JournalView komponentlari lazy load qilinadi
 const DU46JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DU46JournalView), { ssr: false })
@@ -429,7 +429,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     const loadScans = async () => {
       const match = taskTextStr.match(/^\[([^\]]+)\]/);
       const taskNshStr = match ? match[1].trim() : 'noma\'lum';
-      const taskDateStr = new Date().toISOString().split('T')[0];
+      const taskDateStr = getLocalDateStr();
       const data = await getTaskScans(stationId, taskNshStr, taskDateStr);
       setDbScans(data);
     };
@@ -514,7 +514,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     try {
       const match = currentTask?.text.match(/^\[([^\]]+)\]/);
       const taskNshStr = match ? match[1].trim() : 'noma\'lum';
-      const taskDateStr = new Date().toISOString().split('T')[0];
+      const taskDateStr = getLocalDateStr();
 
       const newScan = await insertTaskScan({
         station_id: stationId,

@@ -35,6 +35,9 @@ export function QRScannerModal({
   const [isLoading, setIsLoading] = useState(true);
   const [torchOn, setTorchOn] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
+  // Faol dvigatel: native BarcodeDetector yoki html5-qrcode fallback.
+  // Native ishlamay qolsa runtime'da fallback'ga o'tamiz.
+  const [engine, setEngine] = useState<'native' | 'fallback'>(() => hasBarcodeDetector() ? 'native' : 'fallback');
 
   // Stabil ref lar
   const expectedPrefixRef = useRef(expectedPrefix);
@@ -124,6 +127,7 @@ export function QRScannerModal({
     setTorchSupported(false);
 
     const useNative = hasBarcodeDetector();
+    setEngine(useNative ? 'native' : 'fallback');
 
     // ——— Native BarcodeDetector: kamera + har kadrda aniqlash (eng tez) ———
     const startNative = async () => {
@@ -176,6 +180,7 @@ export function QRScannerModal({
           detector = new BarcodeDetector({ formats: ['qr_code'] });
         } catch {
           // Native detektor ishlamasa — fallback ga o'tamiz
+          setEngine('fallback');
           startFallback();
           return;
         }
@@ -261,8 +266,6 @@ export function QRScannerModal({
 
   if (!isOpen) return null;
 
-  const nativeMode = hasBarcodeDetector();
-
   return (
     <div
       className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm"
@@ -294,18 +297,20 @@ export function QRScannerModal({
             </div>
           )}
 
-          {/* Native rejim: o'z video elementimiz. Fallback: html5-qrcode konteyneri */}
-          {nativeMode ? (
+          {/* Fallback konteyneri DOIM mavjud bo'lsin — native ishlamay qolib
+              fallback'ga o'tsa, html5-qrcode shu div'ni topa olishi kerak. */}
+          <div id="qr-reader-region" className="absolute inset-0 [&_video]:w-full [&_video]:h-full [&_video]:object-cover" />
+
+          {/* Native rejim: o'z video elementimiz fallback konteyneri ustida turadi */}
+          {engine === 'native' && (
             <video
               ref={videoRef}
               playsInline
               muted
               autoPlay
-              className="w-full h-full block"
+              className="absolute inset-0 w-full h-full block"
               style={{ objectFit: 'cover' }}
             />
-          ) : (
-            <div id="qr-reader-region" className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover" />
           )}
 
           {/* Skaner ramkasi */}
