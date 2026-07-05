@@ -28,6 +28,16 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
       // Agar oldin blob URL bo'lsa, tozalash
       if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
 
+      // Mobil brauzerlar blob: URL orqali yuklangan PDF'ni iframe ichida ko'rsata
+      // olmaydi — o'rniga "Открыть" tugmasi chiqadi va bosilganda hech narsa
+      // ochilmaydi. Shu sabab mobilda to'g'ridan-to'g'ri fayl manzilidan
+      // foydalanamiz (blob workaround faqat desktop Firefox uchun kerak edi).
+      const isMobile = /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent)
+      if (isMobile) {
+        setPreview(schema.filePath)
+        return
+      }
+
       const response = await fetch(schema.filePath)
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
@@ -75,7 +85,7 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
 
       {preview && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all">
-          <div className="flex h-[calc(100dvh-2rem)] w-full max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in sm:h-[90vh] sm:max-h-[90vh]">
+          <div className="flex h-full w-full flex-col overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in">
             <div className="flex shrink-0 items-center justify-between border-b border-slate-200/60 px-8 py-4 bg-slate-50/80">
               <h3 className="text-lg font-black text-slate-900 tracking-tight">Sxema Ko&apos;rish</h3>
               <button onClick={() => { setPreview(null); if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null } }} className="rounded-xl border border-slate-200/60 bg-white/80 p-2 text-slate-400 hover:text-slate-900 backdrop-blur-sm transition-all shadow-sm"><X size={24} /></button>
