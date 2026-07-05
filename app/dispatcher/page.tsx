@@ -13,7 +13,7 @@ import {
   addWorker,
   updateWorker,
   deleteWorker,
-  getAllReports,
+  getReportsByMonths,
   getIncidents,
   getReadIncidentIds,
   confirmReport,
@@ -159,10 +159,25 @@ export default function DispatcherPage() {
     onSuccess: (data) => safeStorage.setItem('dispatcher_workers_cache', JSON.stringify(data))
   })
   
-  const { data: allReports = [], mutate: mutateReports } = useSWR(session ? 'dispatcher_reports' : null, getAllReports, {
-    fallbackData: getFallback('dispatcher_reports_cache', []),
-    onSuccess: (data) => safeStorage.setItem('dispatcher_reports_cache', JSON.stringify(data))
-  })
+  // Dashboard faqat joriy + o'tgan oy hisobotlarini ishlatadi (pastdagi
+  // aggregatsiyalar shu ikki oy bo'yicha filtrlanadi). Butun bazani tortish
+  // o'rniga faqat shu ikki oyni yuklaymiz — sahifa yillar o'tsa ham tez qoladi.
+  // Arxiv o'z ma'lumotini ArchiveView ichida alohida yuklaydi.
+  const { data: allReports = [], mutate: mutateReports } = useSWR(
+    session ? 'dispatcher_reports_v2' : null,
+    () => {
+      const now = new Date()
+      const cur = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+      const prevIdx = now.getMonth() === 0 ? 11 : now.getMonth() - 1
+      const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
+      const prev = `${prevYear}-${String(prevIdx + 1).padStart(2, '0')}`
+      return getReportsByMonths([cur, prev])
+    },
+    {
+      fallbackData: getFallback('dispatcher_reports_cache_v2', []),
+      onSuccess: (data) => safeStorage.setItem('dispatcher_reports_cache_v2', JSON.stringify(data)),
+    }
+  )
   
   const { data: allIncidents = [], mutate: mutateIncidents } = useSWR(session ? 'dispatcher_incidents' : null, getIncidents, {
     fallbackData: getFallback('dispatcher_incidents_cache', []),
@@ -1009,8 +1024,6 @@ export default function DispatcherPage() {
             {tab === 'arxiv' && (
               <ArchiveView
                 stations={stations}
-                allReports={allReports}
-
                 onConfirm={handleConfirmReport}
                 onConfirmEntry={handleConfirmEntry}
                 onReject={handleRejectReport}

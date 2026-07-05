@@ -197,6 +197,7 @@ export type GrafikTuri =
   | 'haftalik_ish_reja_grafiki'
 
 export interface DU46Entry {
+  _id?: string                 // Barqaror UUID — konflikt merge uchun (server avtomatik beradi)
   nomber: string               // № — qator raqami
   oyKun1: string
   soatMinut1: string
@@ -262,6 +263,7 @@ export interface DU46Entry {
 
 // SHU-2 jurnal yozuvi
 export interface SHU2Entry {
+  _id?: string         // Barqaror UUID — konflikt merge uchun (server avtomatik beradi)
   nomber?: string      // № — tartib raqami (tahrirlanadigan)
   sana: string         // 1 - Sana
   yozuv: string        // 2 - Navbatchilikdagi yozuv va bajarilgan ishlar
@@ -276,6 +278,7 @@ export interface SHU2Entry {
 
 // Poezd radioaloqasi va ALSN ni tekshirish jurnali yozuvi
 export interface ALSNEntry {
+  _id?: string                 // Barqaror UUID — konflikt merge uchun (server avtomatik beradi)
   nomber?: string              // № — tartib raqami
   sana: string                 // Sana
   tekshirilganVaqt: string     // Tekshirilgan vaqt
@@ -294,6 +297,7 @@ export interface ALSNEntry {
 
 // Yerlatgich xabarlagichi yordamida montaj izolyatsiya qarshiligini o'lchash jurnali
 export interface YerlatgichEntry {
+  _id?: string              // Barqaror UUID — konflikt merge uchun (server avtomatik beradi)
   sana: string              // Sana
   kuchlanishNomi: string    // Kuchlanish nomi
   olchanganQiymat: string   // O'lchangan qiymat
@@ -308,6 +312,7 @@ export interface YerlatgichEntry {
 
 // ALSN kodlarini to'g'rilash va tok kuchini o'lchash jurnali (NSH-01 10.4)
 export interface AlsnKodEntry {
+  _id?: string              // Barqaror UUID — konflikt merge uchun (server avtomatik beradi)
   sana: string              // Sana
   rzNomi: string            // R/Z nomi
   rzUzunligi: string        // R/Z uzunligi
@@ -322,6 +327,7 @@ export interface AlsnKodEntry {
 
 // MPS turidagi elektrodvigatellarni friksion tokini o'lchash jurnali (NSH-01 9.1.4)
 export interface MpsFriksionEntry {
+  _id?: string              // Barqaror UUID — konflikt merge uchun (server avtomatik beradi)
   sana: string              // Sana
   strRaqami: string         // Str. №
   normalTokPlus: string     // Normal o'tishdagi tok (+)
@@ -337,6 +343,7 @@ export interface MpsFriksionEntry {
 
 // Dizel generatorlarini ishlashini nazorat qilish jurnali (NSH-01 18.3.1)
 export interface DgaNazoratEntry {
+  _id?: string              // Barqaror UUID — konflikt merge uchun (server avtomatik beradi)
   sana: string              // Kun
   rejali: string            // Rejali / Rejadan tashqari
   ishlaganVaqt: string      // DGA Ishlagan vaqti

@@ -82,7 +82,6 @@ export async function signIn(login: string, password: string): Promise<User | nu
   const user = await getUserProfileById(authData.user.id);
 
   if (user && typeof document !== 'undefined') {
-    document.cookie = `user-role=${user.role}; path=/; max-age=86400; SameSite=Lax; Secure`;
     safeStorage.setItem('user-profile', JSON.stringify(user));
   }
 
@@ -298,11 +297,58 @@ export function mapDbReport(row: DbWorkReportRow): WorkReport {
   };
 }
 
+/**
+ * ⚠️ OG'IR SO'ROV: bazadagi BARCHA hisobotlarni to'liq entries bilan tortadi.
+ * UI sahifalarida ishlatmang! Faqat bir martalik export/migratsiya uchun.
+ * Sahifalar uchun: getReportsByMonths yoki getReportsByStationYear.
+ */
 export async function getAllReports(): Promise<WorkReport[]> {
   const { data, error } = await supabase
     .from('work_reports')
     .select(WORK_REPORT_COLUMNS)
     .order('submitted_at', { ascending: false });
+
+  if (error || !data) return [];
+  return (data as DbWorkReportRow[]).map(mapDbReport);
+}
+
+/**
+ * Berilgan oylar ro'yxati bo'yicha hisobotlar.
+ * Dispatcher dashboard faqat joriy + o'tgan oyni ishlatadi —
+ * butun bazani tortish o'rniga shu funksiyadan foydalanamiz.
+ * @param months — 'YYYY-MM' formatidagi oylar, masalan ['2026-07', '2026-06']
+ */
+export async function getReportsByMonths(months: string[]): Promise<WorkReport[]> {
+  if (!months || months.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('work_reports')
+    .select(WORK_REPORT_COLUMNS)
+    .in('month', months)
+    .order('submitted_at', { ascending: false });
+
+  if (error || !data) return [];
+  return (data as DbWorkReportRow[]).map(mapDbReport);
+}
+
+/**
+ * Bitta bekatning bitta yildagi barcha hisobotlari (arxiv uchun).
+ * 'month' ustuni 'YYYY-MM' formatida saqlanadi, shuning uchun
+ * yil bo'yicha filtrlash uchun 'YYYY-%' pattern ishlatiladi.
+ * Bitta bekat-yil = maksimum ~50 qator — juda yengil so'rov.
+ */
+export async function getReportsByStationYear(
+  stationId: string,
+  year: string
+): Promise<WorkReport[]> {
+  if (!stationId || !year) return [];
+
+  const { data, error } = await supabase
+    .from('work_reports')
+    .select(WORK_REPORT_COLUMNS)
+    .eq('station_id', stationId)
+    .like('month', `${year}-%`)
+    .order('month', { ascending: false });
 
   if (error || !data) return [];
   return (data as DbWorkReportRow[]).map(mapDbReport);
@@ -646,11 +692,16 @@ export async function getStationPendingCount(): Promise<Record<string, number>> 
 
 // Incidents
 
-export async function getIncidents(): Promise<Incident[]> {
+/**
+ * Eng oxirgi hodisalar. Default limit 100 — dispatcher va worker
+ * sahifalari uchun yetarli; eskilari getIncidentsByMonth orqali olinadi.
+ */
+export async function getIncidents(limit = 100): Promise<Incident[]> {
   const { data, error } = await supabase
     .from('incidents')
     .select(INCIDENT_COLUMNS)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(limit);
 
   if (error || !data) return [];
   return (data as DbIncidentRow[]).map(row => ({
@@ -923,6 +974,16 @@ function mapDbJournal(row: DbJournalRow): StationJournal {
   }
 }
 
+// ── OPTIMISTIC LOCKING BAZASI ─────────────────────────────────────────
+// Har bir jurnal oxirgi marta qachon yuklanganini (updated_at) eslab qolamiz.
+// Saqlashda shu qiymat serverga yuboriladi: agar server versiyasi boshqa
+// bo'lsa — konflikt aniqlanadi va yozuvlar merge qilinadi (yo'qolmaydi).
+const _journalBaseUpdatedAt = new Map<string, string | null>()
+
+function journalKey(stationId: string, journalType: JournalType): string {
+  return `${stationId}:${journalType}`
+}
+
 export async function getJournal(
   stationId: string,
   journalType: JournalType
@@ -940,7 +1001,16 @@ export async function getJournal(
     console.error('getJournal xatosi:', error.message)
     return null
   }
-  if (!data) return null
+
+  if (!data) {
+    // Qator hali yo'q — saqlashda INSERT bo'ladi
+    _journalBaseUpdatedAt.set(journalKey(stationId, journalType), null)
+    return null
+  }
+
+  // Optimistic locking uchun bazani eslab qolamiz
+  _journalBaseUpdatedAt.set(journalKey(stationId, journalType), data.updated_at)
+
   return mapDbJournal(data as DbJournalRow)
 }
 
@@ -1100,30 +1170,31 @@ export async function upsertJournal(
   entries: DU46Entry[] | SHU2Entry[] | ALSNEntry[] | YerlatgichEntry[] | AlsnKodEntry[] | MpsFriksionEntry[],
   updatedBy: string
 ): Promise<StationJournal> {
-  const { serverUpsertJournal } = await import('@/app/actions/journal-actions')
+  const { serverSaveJournal } = await import('@/app/actions/journal-actions')
 
-  const data = await serverUpsertJournal(
+  const key = journalKey(stationId, journalType)
+  // Jurnal oxirgi yuklanganda ko'rilgan versiya (yo'q bo'lsa null → INSERT)
+  const baseUpdatedAt = _journalBaseUpdatedAt.get(key) ?? null
+
+  const result = await serverSaveJournal(
     stationId,
     journalType,
     entries as unknown as Record<string, unknown>[],
-    updatedBy
+    updatedBy,
+    baseUpdatedAt
   )
 
-  return mapDbJournal(data as DbJournalRow)
-}
+  // Saqlashdan keyin baza yangi versiyaga ko'chadi
+  _journalBaseUpdatedAt.set(key, result.updated_at)
 
-// Barcha jurnallarni olish (dispetcher uchun)
-export async function getAllJournals(): Promise<StationJournal[]> {
-  const { data, error } = await supabase
-    .from('station_journals')
-    .select(JOURNAL_COLUMNS)
-    .order('updated_at', { ascending: false })
-
-  if (error) {
-    return []
-  }
-
-  return (data || []).map((row: DbJournalRow) => mapDbJournal(row))
+  return mapDbJournal({
+    id: result.id,
+    station_id: result.station_id,
+    journal_type: result.journal_type,
+    entries: result.entries,
+    updated_at: result.updated_at,
+    updated_by: result.updated_by,
+  } as unknown as DbJournalRow)
 }
 
 // ── DISPETCHER UCHUN YENGIL FUNKSIYALAR ──────────────────────────────

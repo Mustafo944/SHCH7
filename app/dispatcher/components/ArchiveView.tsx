@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { FileText, BookOpen, Download } from 'lucide-react'
 import { WorkReport, Station, StationJournal, JournalType, DU46Entry, SHU2Entry } from '@/types'
-import { getJournalsByStationId } from '@/lib/supabase-db'
+import { getJournalsByStationId, getReportsByStationYear } from '@/lib/supabase-db'
 import { MONTHS } from '@/lib/constants'
 import { ReportCard } from './ReportList'
 import {
@@ -40,12 +40,11 @@ const JOURNAL_META: Record<string, JournalMeta> = {
 // ARCHIVE VIEW — Asosiy komponent
 // ─────────────────────────────────────────────────────────────────
 
-export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, onReject }: {
+export function ArchiveView({ stations, onConfirm, onConfirmEntry, onReject }: {
   stations: { id: string; name: string }[]
-  allReports: WorkReport[]
-  onConfirm: (reportId: string) => void
-  onConfirmEntry: (reportId: string, idx: number) => void
-  onReject: (reportId: string) => void
+  onConfirm: (reportId: string) => void | Promise<void>
+  onConfirmEntry: (reportId: string, idx: number) => void | Promise<void>
+  onReject: (reportId: string) => void | Promise<void>
 }) {
   // ── State ──────────────────────────────────────────────────────
   const [selStation, setSelStation] = useState<string | null>(null)
@@ -67,6 +66,28 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
       .finally(() => setJournalsLoading(false))
   }, [selStation])
 
+  // ── Bekat + yil hisobotlari (arxiv o'z ma'lumotini o'zi yuklaydi) ──
+  // Avval butun bazadagi allReports prop orqali kelardi; endi faqat
+  // tanlangan bekatning tanlangan yildagi hisobotlari yuklanadi (~50 qator).
+  const [stationReports, setStationReports] = useState<WorkReport[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [reportsLoading, setReportsLoading] = useState(false)
+
+  const loadStationReports = useCallback(async () => {
+    if (!selStation) { setStationReports([]); return }
+    setReportsLoading(true)
+    try {
+      const reports = await getReportsByStationYear(selStation, selYear)
+      setStationReports(reports)
+    } finally {
+      setReportsLoading(false)
+    }
+  }, [selStation, selYear])
+
+  useEffect(() => {
+    loadStationReports()
+  }, [loadStationReports])
+
   // ── Oy uchun kerakli formatlash ─────────────────────────────────
   const monthKey = selMonth !== null
     ? `${selYear}-${String(selMonth + 1).padStart(2, '0')}`
@@ -82,13 +103,12 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
   // ── Faqat QABUL QILINGAN hisobotlar (rad etilganlar chiqmaydi) ─
   const archiveReports = useMemo(() => {
     if (!selStation || !monthKey) return []
-    return allReports.filter(
-      r => r.stationId === selStation
-        && r.month === monthKey
+    return stationReports.filter(
+      r => r.month === monthKey
         && r.confirmedAt        // qabul qilingan
         && !r.rejectedAt        // rad etilmagan
     )
-  }, [selStation, monthKey, allReports])
+  }, [selStation, monthKey, stationReports])
 
   // ── Yordamchi: Yozuv tanlangan oyga tegishlimi? ──
   const isEntryInMonth = useCallback((e: any, mk: string, updatedAt: string) => {
@@ -151,8 +171,8 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
   // ── Oy tugmalarida marker uchun — hech bo'lmasa bitta ma'lumot bormi? ──
   const hasDataForMonth = (monthIdx: number) => {
     const mk = `${selYear}-${String(monthIdx + 1).padStart(2, '0')}`
-    const hasReport = allReports.some(
-      r => r.stationId === selStation && r.month === mk && r.confirmedAt && !r.rejectedAt
+    const hasReport = stationReports.some(
+      r => r.month === mk && r.confirmedAt && !r.rejectedAt
     )
     const hasJournal = stationJournals.some(j => {
       const hasMonthEntry = Array.isArray(j.entries) && j.entries.some((e: any) =>
@@ -256,7 +276,13 @@ export function ArchiveView({ stations, allReports, onConfirm, onConfirmEntry, o
                       {archiveReports.length === 0
                         ? <div className="premium-card flex h-48 items-center justify-center text-slate-300 text-sm font-black uppercase tracking-widest">Bu oy uchun qabul qilingan ish reja yo&apos;q</div>
                         : archiveReports.map((r) => (
-                          <ReportCard key={r.id} report={r} onConfirm={() => onConfirm(r.id)} onConfirmRow={(idx: number) => onConfirmEntry(r.id, idx)} onReject={() => onReject(r.id)} />
+                          <ReportCard
+                            key={r.id}
+                            report={r}
+                            onConfirm={async () => { await Promise.resolve(onConfirm(r.id)); loadStationReports() }}
+                            onConfirmRow={async (idx: number) => { await Promise.resolve(onConfirmEntry(r.id, idx)); loadStationReports() }}
+                            onReject={async () => { await Promise.resolve(onReject(r.id)); loadStationReports() }}
+                          />
                         ))
                       }
                     </div>

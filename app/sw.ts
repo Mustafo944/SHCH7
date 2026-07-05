@@ -13,6 +13,24 @@ declare const self: ServiceWorkerGlobalScope;
 
 // Maxsus Supabase kesh strategiyalari
 const supabaseCaching: RuntimeCaching[] = [
+  // Jurnallar — tez o'zgaruvchan ma'lumot: kesh muddati atigi 1 soat.
+  // 24 soatlik eski kesh offline'dan qaytgan xodimga eskirgan jurnal
+  // ko'rsatib, keyin saqlashda konfliktlarni ko'paytirardi.
+  {
+    matcher: ({ url }) =>
+      url.origin.includes('supabase.co') &&
+      url.pathname.includes('/rest/v1/station_journals'),
+    handler: new NetworkFirst({
+      cacheName: 'supabase-journals-cache',
+      networkTimeoutSeconds: 5,
+      plugins: [
+        new ExpirationPlugin({
+          maxEntries: 60,
+          maxAgeSeconds: 60 * 60, // 1 soat
+        }),
+      ],
+    }),
+  },
   // Supabase REST API (ma'lumotlar bazasi so'rovlari)
   // NetworkFirst - doim yangi ma'lumot olishga harakat qiladi, 
   // internet yo'q bo'lsa yoki sekin bo'lsa (3 soniyadan ko'p) keshni qaytaradi

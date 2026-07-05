@@ -1,5 +1,30 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+
+// Rol → ruxsat etilgan route'lar
+const PROTECTED_ROUTES: Record<string, string[]> = {
+  '/dispatcher': ['dispatcher'],
+  '/worker': ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'],
+  '/bekat-boshlighi': ['bekat_boshlighi'],
+  '/bekat-navbatchisi': ['bekat_navbatchisi'],
+  '/yul-ustasi': ['yul_ustasi'],
+  '/ech-xodimi': ['ech_xodimi'],
+  '/mehnat-muhofazasi': ['mehnat_muhofazasi'],
+}
+
+// Rol → o'z bosh sahifasi
+const ROLE_HOME: Record<string, string> = {
+  dispatcher: '/dispatcher',
+  worker: '/worker',
+  elektromexanik: '/worker',
+  elektromontyor: '/worker',
+  katta_elektromexanik: '/worker',
+  bekat_boshlighi: '/bekat-boshlighi',
+  bekat_navbatchisi: '/bekat-navbatchisi',
+  yul_ustasi: '/yul-ustasi',
+  ech_xodimi: '/ech-xodimi',
+  mehnat_muhofazasi: '/mehnat-muhofazasi',
+}
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -32,89 +57,60 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
-  const PROTECTED_ROUTES: Record<string, string[]> = {
-    '/dispatcher': ['dispatcher'],
-    '/worker': ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'],
-    '/bekat-boshlighi': ['bekat_boshlighi'],
-    '/bekat-navbatchisi': ['bekat_navbatchisi'],
-    '/yul-ustasi': ['yul_ustasi'],
-    '/ech-xodimi': ['ech_xodimi'],
-  }
 
   const matchedRoute = Object.keys(PROTECTED_ROUTES).find(route =>
     pathname.startsWith(route)
   )
 
-  // Himoyalanmagan sahifa bo'lsa darhol ruxsat beramiz
+  // Himoyalanmagan sahifa — darhol ruxsat
   if (!matchedRoute) return supabaseResponse
 
-  // Agar foydalanuvchi tizimga kirmagan bo'lsa, asosiy sahifaga (login) jo'natamiz
+  // Login qilinmagan — login sahifasiga
   if (!user) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
-    const redirectResponse = NextResponse.redirect(url)
-    supabaseResponse.cookies.getAll().forEach(cookie => {
-      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
-    })
-    return redirectResponse
+    return redirectTo(request, supabaseResponse, '/')
   }
 
-  // ── TEZLASHTIRISH: Avval cookie'dagi role'ni tekshiramiz (DB so'rovsiz) ──
-  // Cookie har login/middleware da yangilanadi, shuning uchun ishonchli.
-  // Faqat cookie yo'q bo'lsa DB ga murojaat qilamiz.
-  let userRole = request.cookies.get('user-role')?.value || null
+  // ── XAVFSIZLIK: Rol HAR DOIM ma'lumotlar bazasidan olinadi. ──
+  // Eski `user-role` cookie mijoz tomonidan soxtalashtirilishi mumkin edi,
+  // shuning uchun unga endi ISHONILMAYDI va u o'chiriladi.
+  // users.id — primary key, bu so'rov indeksli va juda tez (~1-2ms).
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  const userRole = profile?.role || null
+
+  // Eskirgan, ishonchsiz cookie'ni tozalaymiz
+  supabaseResponse.cookies.set('user-role', '', { maxAge: 0, path: '/' })
 
   if (!userRole) {
-    // Cookie mavjud emas — DB dan olib kelamiz (faqat birinchi marta yoki cookie muddati o'tganda)
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    userRole = profile?.role || null
-  }
-
-  if (userRole) {
-    // Role ni cookie ga saqlaymiz (yangilaymiz)
-    supabaseResponse.cookies.set('user-role', userRole, { maxAge: 86400, path: '/', sameSite: 'lax', secure: true, httpOnly: false })
-  }
-
-  if (!userRole) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
-    const redirectResponse = NextResponse.redirect(url)
-    supabaseResponse.cookies.getAll().forEach(cookie => {
-      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
-    })
-    return redirectResponse
+    return redirectTo(request, supabaseResponse, '/')
   }
 
   const allowedRoles = PROTECTED_ROUTES[matchedRoute] || []
 
-  // Agar rolga ruxsat yetarli bo'lmasa, uni o'z sahifasiga qaytaramiz
+  // Rol mos kelmasa — o'z sahifasiga qaytaramiz
   if (!allowedRoles.includes(userRole)) {
-    const ROLE_HOME: Record<string, string> = {
-      dispatcher: '/dispatcher',
-      worker: '/worker',
-      elektromexanik: '/worker',
-      elektromontyor: '/worker',
-      katta_elektromexanik: '/worker',
-      bekat_boshlighi: '/bekat-boshlighi',
-      bekat_navbatchisi: '/bekat-navbatchisi',
-      yul_ustasi: '/yul-ustasi',
-      ech_xodimi: '/ech-xodimi',
-    }
     const correctPath = ROLE_HOME[userRole] || '/'
-    const url = request.nextUrl.clone()
-    url.pathname = correctPath
-    const redirectResponse = NextResponse.redirect(url)
-    // redirect responsega ham cookielarni yopishtirish:
-    supabaseResponse.cookies.getAll().forEach(cookie => {
-      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
-    })
-    return redirectResponse
+    return redirectTo(request, supabaseResponse, correctPath)
   }
 
   return supabaseResponse
+}
+
+/** Redirect yasab, sessiya cookie'larini unga ko'chiradi */
+function redirectTo(
+  request: NextRequest,
+  supabaseResponse: NextResponse,
+  pathname: string
+): NextResponse {
+  const url = request.nextUrl.clone()
+  url.pathname = pathname
+  const redirectResponse = NextResponse.redirect(url)
+  supabaseResponse.cookies.getAll().forEach(cookie => {
+    redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+  })
+  return redirectResponse
 }
