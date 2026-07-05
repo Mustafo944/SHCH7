@@ -283,22 +283,22 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
   if (isPrinting) {
     return (
       <div className="fixed inset-0 z-[10000] bg-white overflow-y-auto">
-        <div className="flex justify-between items-center p-4 border-b border-slate-200 bg-slate-50 print:hidden">
-          <h2 className="text-xl font-bold text-slate-800">{stationName} - QR Kodlarni chop etish</h2>
-          <div className="flex gap-4">
-            <button onClick={() => setIsPrinting(false)} className="px-4 py-2 border rounded-xl text-slate-600 font-bold hover:bg-slate-100">Orqaga</button>
-            <button onClick={() => window.print()} className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 flex items-center gap-2">
+        <div className="flex flex-col gap-3 p-4 border-b border-slate-200 bg-slate-50 print:hidden sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-base font-bold text-slate-800 sm:text-xl">{stationName} - QR Kodlarni chop etish</h2>
+          <div className="flex gap-2 sm:gap-4">
+            <button onClick={() => setIsPrinting(false)} className="flex-1 px-4 py-2 border rounded-xl text-slate-600 font-bold hover:bg-slate-100 sm:flex-none">Orqaga</button>
+            <button onClick={() => window.print()} className="flex flex-1 items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 sm:flex-none sm:px-6">
               <Printer size={18} /> Chop etish
             </button>
           </div>
         </div>
 
         {/* PRINT CONTENT */}
-        <div className="p-8 max-w-5xl mx-auto print:p-8 print:max-w-full">
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-6 print:grid-cols-3 print:gap-16">
+        <div className="p-4 max-w-5xl mx-auto sm:p-8 print:p-8 print:max-w-full">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4 print:grid-cols-3 print:gap-16">
             {categories.map(category => (
               (category.items || []).map(item => (
-                <div key={item.id} className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 rounded-2xl page-break-inside-avoid print:border-4">
+                <div key={item.id} className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 rounded-2xl page-break-inside-avoid sm:p-8 print:p-8 print:border-4">
                   <QRCodeSVG value={buildEquipmentQrValue(stationId, item.id)} size={160} />
                   <span className="mt-4 font-black text-sm text-center">{stationName}</span>
                   <span className="font-black text-xl text-center mt-1">{item.name}</span>

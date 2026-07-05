@@ -62,7 +62,7 @@ import {
 import { StatCard, BigActionCard, WorkerForm, ReportList, SchemasView, ArchiveView, DownloadCard, WorkersModal, TodayTasksModal } from './components'
 import { LibraryView } from '@/components/library/LibraryView'
 import IncidentsView from '@/components/worker/IncidentsView'
-import { StationEquipmentsModal } from '@/components/StationEquipmentsModal'
+const StationEquipmentsModal = dynamic(() => import('@/components/StationEquipmentsModal').then(mod => mod.StationEquipmentsModal), { ssr: false })
 
 type Tab = 'bekatlar' | 'arxiv' | 'grafiklar' | 'baxtsiz_hodisalar' | 'kutubxona'
 
@@ -589,7 +589,9 @@ export default function DispatcherPage() {
            <div className={`absolute inset-0 pointer-events-none overflow-hidden ${isDesktopSidebarCollapsed ? 'lg:hidden' : ''}`}>
              <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-white/80 to-transparent z-10" />
              <img
-               src="/afrosiyob.png"
+               src="/afrosiyob.webp"
+               loading="lazy"
+               decoding="async"
                onError={(e) => e.currentTarget.src='/1.png'}
                alt="Afrosiyob"
                className="w-full h-full object-cover object-[80%_center] opacity-100"

@@ -104,7 +104,7 @@ export default function MehnatMuhofazasiPage() {
            <div className={`absolute inset-0 pointer-events-none overflow-hidden ${isDesktopSidebarCollapsed ? 'lg:hidden' : ''}`}>
              <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-white/80 to-transparent z-10" />
              <Image
-               src="/afrosiyob.png"
+               src="/afrosiyob.webp"
                alt="Afrosiyob"
                fill
                className="object-cover object-[80%_center] opacity-100"

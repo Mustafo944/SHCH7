@@ -135,7 +135,7 @@ export default function LoginPage() {
           {/* ─── CHAP TOMON: Hero illyustratsiya (faqat desktopda) ─── */}
           <div className="hidden md:flex md:w-[45%] relative overflow-hidden rounded-l-[32px] bg-slate-900">
             <img 
-              src="/login2.jpg" 
+              src="/login2.webp"
               onError={(e) => e.currentTarget.src='/login.png'}
               alt="Afrosiyob" 
               className="w-full h-full object-cover object-center" 

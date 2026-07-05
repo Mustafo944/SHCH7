@@ -1,8 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, X, BookOpen, AlertTriangle, Download } from 'lucide-react'
 import { ReportEntry } from '@/types'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
 
 export function TodayTasksModal({ type, tasks, onClose }: {
   type: 'bugunReja' | 'qolibKetgan' | 'sababliBajarilmagan'
@@ -42,7 +40,10 @@ export function TodayTasksModal({ type, tasks, onClose }: {
     titleColor = 'text-orange-900'
   }
 
-  const downloadPDF = () => {
+  const downloadPDF = async () => {
+    // jsPDF faqat tugma bosilganda yuklanadi — asosiy bundle kichrayadi
+    const { default: jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
     const doc = new jsPDF()
     doc.setFont("helvetica", "normal")
     doc.setFontSize(14)
