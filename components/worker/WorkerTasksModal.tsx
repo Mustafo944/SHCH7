@@ -16,7 +16,7 @@ import type { User, ReportEntry } from '@/types'
 import { useToast } from '@/lib/hooks/useToast'
 import dynamic from 'next/dynamic'
 import { QRScannerModal } from '../QRScannerModal'
-import { buildEquipmentQrValue, stringToUuid, getLocalDateStr } from '@/lib/utils/qr'
+import { buildEquipmentQrValue, stringToUuid, getEntryDateStr } from '@/lib/utils/qr'
 
 // JournalView komponentlari lazy load qilinadi
 const DU46JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DU46JournalView), { ssr: false })
@@ -429,7 +429,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     const loadScans = async () => {
       const match = taskTextStr.match(/^\[([^\]]+)\]/);
       const taskNshStr = match ? match[1].trim() : 'noma\'lum';
-      const taskDateStr = getLocalDateStr();
+      const taskDateStr = getEntryDateStr(journalMonth, entry.ragat);
       const data = await getTaskScans(stationId, taskNshStr, taskDateStr);
       setDbScans(data);
     };
@@ -437,7 +437,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     // Har 5 soniyada yangilab turish (boshqa ishchi skaner qilayotgan bo'lsa ko'rinadi)
     const interval = setInterval(loadScans, 5000);
     return () => clearInterval(interval);
-  }, [selectedTaskType, stationId, taskTextStr]);
+  }, [selectedTaskType, stationId, taskTextStr, journalMonth, entry.ragat]);
 
   const storageKey = useMemo(() => {
     if (!reportId || _entryIndex === -1 || !selectedTaskType) return null
@@ -514,7 +514,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     try {
       const match = currentTask?.text.match(/^\[([^\]]+)\]/);
       const taskNshStr = match ? match[1].trim() : 'noma\'lum';
-      const taskDateStr = getLocalDateStr();
+      const taskDateStr = getEntryDateStr(journalMonth, entry.ragat);
 
       const newScan = await insertTaskScan({
         station_id: stationId,

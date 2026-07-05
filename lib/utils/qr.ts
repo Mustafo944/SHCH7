@@ -17,6 +17,20 @@ export function getLocalDateStr(d: Date = new Date()): string {
   return `${y}-${m}-${day}`;
 }
 
+// QR skaner talab qiladigan vazifa "Har kuni" davriylikda bo'lsa, xuddi shu ish nomi (task_nsh)
+// oyning turli kunlari (ragat) uchun alohida-alohida qatorlarda takrorlanadi. Skaner qaysi
+// KUNGA tegishli ekanini hisoblashda haqiqiy bugungi sana (getLocalDateStr) emas, balki
+// aynan o'sha qator tegishli bo'lgan kun ishlatilishi shart — aks holda, ishchi "Kunlik"
+// taqvimida bir xil real kunda (masalan bugun) bir necha kunlik (masalan 6- va 7-kun)
+// qatorlarni ketma-ket bajarsa, birinchi kunda qilingan skaner ikkinchi kun uchun ham
+// "allaqachon skaner qilingan" bo'lib ko'rinadi (chunki ikkalasi ham getLocalDateStr()
+// bilan bir xil "bugungi sana"ga yoziladi/so'raladi).
+export function getEntryDateStr(journalMonth: string, ragat: string): string {
+  const day = parseInt(ragat, 10);
+  if (isNaN(day) || !/^\d{4}-\d{2}$/.test(journalMonth)) return getLocalDateStr();
+  return `${journalMonth}-${String(day).padStart(2, '0')}`;
+}
+
 // task_scans jadvalidagi station_id ustuni uuid bo'lgani uchun,
 // matnli bekat id'larini (masalan "st_1") deterministik uuid'ga o'giradi.
 export function stringToUuid(str: string): string {
