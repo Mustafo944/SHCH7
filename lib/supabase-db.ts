@@ -1253,6 +1253,22 @@ export async function insertTaskScan(scan: Omit<TaskScan, 'id' | 'scanned_at'>):
   return data as TaskScan;
 }
 
+// Bekat bo'yicha barcha skaner tarixi (kim, qachon, qaysi vazifa uchun skaner qilgani) — arxiv ko'rinishi uchun
+export async function getStationTaskScans(stationId: string, limit = 300): Promise<TaskScan[]> {
+  const { data, error } = await supabase
+    .from('task_scans')
+    .select('*')
+    .eq('station_id', stringToUuid(stationId))
+    .order('scanned_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('getStationTaskScans error:', error);
+    return [];
+  }
+  return data as TaskScan[];
+}
+
 
 function mapEquipmentsRow(stationId: string, row: { entries: unknown; updated_at: string; updated_by: string | null }): StationEquipments {
   const entries = row.entries as any[];

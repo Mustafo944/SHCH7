@@ -289,7 +289,9 @@ export default function WorkerPage() {
 
     reports.forEach(r => {
       if (!activeStationId || r.stationId !== activeStationId) return
-      if (!r.confirmedAt) return // tasdiqlangan hisobotlar
+
+      // Faqat dispetcher qabul qilgan (va rad etilmagan) rejalar bugungi ishlarga tushadi
+      if (!r.confirmedAt || r.rejectedAt) return
 
       const isCurrentMonth = r.month === currentMonthStr
       const isPrevMonth = r.month === prevMonthStr

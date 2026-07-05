@@ -1,1 +1,0 @@
-self.addEventListener('install', (e) => { self.skipWaiting(); }); self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((keyList) => Promise.all(keyList.map((key) => caches.delete(key))))); self.clients.claim(); });

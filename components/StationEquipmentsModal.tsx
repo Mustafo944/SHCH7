@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { X, Save, Edit3, Plus, Trash2, Printer, AlertTriangle, Loader2, ArrowRightLeft, Target, ChevronLeft, Clock } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, Save, Edit3, Plus, Trash2, Printer, AlertTriangle, Loader2, ArrowRightLeft, Target, ChevronLeft, ChevronRight, Clock, History } from 'lucide-react';
 import { StationEquipments, EquipmentCategory } from '@/types';
-import { getStationEquipments, upsertStationEquipments } from '@/lib/supabase-db';
+import { getStationEquipments, upsertStationEquipments, getStationTaskScans, type TaskScan } from '@/lib/supabase-db';
 import { useToast } from '@/lib/hooks/useToast';
 import useSWR from 'swr';
 import { QRCodeSVG } from 'qrcode.react';
@@ -9,7 +9,17 @@ import { TORT_HAFTALIK_REJA_FLAT, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA, YILLIK_R
 import { TaskQRMapping } from '@/types';
 import { buildEquipmentQrValue } from '@/lib/utils/qr';
 
-const COLOR_STYLES: Record<string, any> = {
+interface CategoryColorStyle {
+  gradient: string;
+  btnText: string;
+  dot: string;
+  hoverBorder: string;
+  activeBorder: string;
+  iconText: string;
+  iconBg: string;
+}
+
+const COLOR_STYLES: Record<string, CategoryColorStyle> = {
   blue: { gradient: 'from-blue-500 to-blue-600 shadow-blue-500/20', btnText: 'text-blue-600 hover:text-blue-700 bg-blue-50 border-blue-100', dot: 'bg-blue-500', hoverBorder: 'hover:border-blue-200', activeBorder: 'border-blue-500 bg-blue-50', iconText: 'text-blue-500', iconBg: 'bg-blue-100 text-blue-600' },
   emerald: { gradient: 'from-emerald-500 to-emerald-600 shadow-emerald-500/20', btnText: 'text-emerald-600 hover:text-emerald-700 bg-emerald-50 border-emerald-100', dot: 'bg-emerald-500', hoverBorder: 'hover:border-emerald-200', activeBorder: 'border-emerald-500 bg-emerald-50', iconText: 'text-emerald-500', iconBg: 'bg-emerald-100 text-emerald-600' },
   orange: { gradient: 'from-orange-500 to-orange-600 shadow-orange-500/20', btnText: 'text-orange-600 hover:text-orange-700 bg-orange-50 border-orange-100', dot: 'bg-orange-500', hoverBorder: 'hover:border-orange-200', activeBorder: 'border-orange-500 bg-orange-50', iconText: 'text-orange-500', iconBg: 'bg-orange-100 text-orange-600' },
@@ -21,9 +31,49 @@ const COLOR_STYLES: Record<string, any> = {
   pink: { gradient: 'from-pink-500 to-pink-600 shadow-pink-500/20', btnText: 'text-pink-600 hover:text-pink-700 bg-pink-50 border-pink-100', dot: 'bg-pink-500', hoverBorder: 'hover:border-pink-200', activeBorder: 'border-pink-500 bg-pink-50', iconText: 'text-pink-500', iconBg: 'bg-pink-100 text-pink-600' },
 };
 
+function colorStyle(color: string): CategoryColorStyle {
+  return COLOR_STYLES[color] || COLOR_STYLES.blue;
+}
+
+// Skaner sana/vaqtini butun modal bo'ylab bir xil formatda ko'rsatish uchun
+function formatScanDate(iso: string): string {
+  return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function CategoryAvatar({ name, color, size = 'md' }: { name: string; color: string; size?: 'sm' | 'md' | 'lg' }) {
+  const sizeClass = size === 'sm' ? 'h-10 w-10 text-base' : size === 'lg' ? 'h-14 w-14 text-xl' : 'h-12 w-12 text-lg';
+  return (
+    <div className={`flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br font-black text-white shadow-md ${colorStyle(color).gradient} ${sizeClass}`}>
+      {(name || '?').charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+function EmptyHint({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-300">
+        <Icon size={28} />
+      </div>
+      <p className="text-sm font-bold uppercase tracking-widest text-slate-400">{text}</p>
+    </div>
+  );
+}
+
+function BackHeader({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <div className="mb-1 flex items-center gap-3">
+      <button onClick={onBack} className="shrink-0 rounded-xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition hover:bg-slate-50">
+        <ChevronLeft size={18} />
+      </button>
+      <h3 className="truncate text-base font-black tracking-tight text-slate-900">{title}</h3>
+    </div>
+  );
+}
+
 function DebouncedInput({ value, onChange, placeholder, className }: { value: string, onChange: (val: string) => void, placeholder: string, className: string }) {
   const [localVal, setLocalVal] = useState(value);
-  
+
   useEffect(() => {
     setLocalVal(value);
   }, [value]);
@@ -56,12 +106,13 @@ function DebouncedInput({ value, onChange, placeholder, className }: { value: st
 interface Props {
   stationId: string;
   stationName: string;
-  canEdit: boolean; // Katta elektromexanik bo'lsa true
+  canEdit: boolean; // Katta elektromexanik bo'lsa true — "QR kodni bog'lash" faqat shu rolga ko'rinadi
+  isDispatcher?: boolean; // Aloqa dispetcheri bo'lsa true — "QR Chop etish" faqat shu rolga ko'rinadi
   userName: string;
   onClose: () => void;
 }
 
-export function StationEquipmentsModal({ stationId, stationName, canEdit, userName, onClose }: Props) {
+export function StationEquipmentsModal({ stationId, stationName, canEdit, isDispatcher = false, userName, onClose }: Props) {
   const toast = useToast();
   const { data: swrData, isLoading, mutate } = useSWR(
     `equipments_${stationId}`,
@@ -82,12 +133,82 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
   const [taskMappings, setTaskMappings] = useState<TaskQRMapping[]>([]);
   const [newCategoryName, setNewCategoryName] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'equipments' | 'tasks'>('equipments');
+  const [activeTab, setActiveTab] = useState<'equipments' | 'tasks' | 'history'>('equipments');
   const [searchQuery, setSearchQuery] = useState('');
 
   const [selectedPlanType, setSelectedPlanType] = useState<'tort' | 'yillik' | null>(null);
   const [selectedTaskNsh, setSelectedTaskNsh] = useState<string | null>(null);
   const [selectedBolim, setSelectedBolim] = useState<number | null>(null);
+
+  // Skaner tarixi — uch bosqichli navigatsiya: Toifa → Uskuna → Skaner tarixi
+  const [selectedHistoryCategoryId, setSelectedHistoryCategoryId] = useState<string | null>(null);
+  const [selectedHistoryItemId, setSelectedHistoryItemId] = useState<string | null>(null);
+
+  const { data: scanHistory, isLoading: isScanHistoryLoading } = useSWR(
+    activeTab === 'history' ? `scan_history_${stationId}` : null,
+    () => getStationTaskScans(stationId),
+    { revalidateOnFocus: false, dedupingInterval: 60000 }
+  );
+
+  // Xom QR qiymatini ("smart-shch-...") uskunaning o'qiladigan nomi va toifasiga moslashtiramiz
+  const equipmentMetaByQr = useMemo(() => {
+    const map = new Map<string, { name: string; categoryId: string }>();
+    categories.forEach(cat => (cat.items || []).forEach(item => {
+      map.set(buildEquipmentQrValue(stationId, item.id), { name: item.name, categoryId: cat.id });
+    }));
+    return map;
+  }, [categories, stationId]);
+
+  // Skanerlarni uskuna bo'yicha guruhlaymiz (so'rov allaqachon eng yangisidan eskisiga saralangan)
+  const scansByEquipmentQr = useMemo(() => {
+    const map = new Map<string, TaskScan[]>();
+    (scanHistory || []).forEach(scan => {
+      const list = map.get(scan.equipment_name);
+      if (list) list.push(scan);
+      else map.set(scan.equipment_name, [scan]);
+    });
+    return map;
+  }, [scanHistory]);
+
+  const scanCountByCategory = useMemo(() => {
+    const counts = new Map<string, number>();
+    scansByEquipmentQr.forEach((scans, qr) => {
+      const meta = equipmentMetaByQr.get(qr);
+      if (meta) counts.set(meta.categoryId, (counts.get(meta.categoryId) || 0) + scans.length);
+    });
+    return counts;
+  }, [scansByEquipmentQr, equipmentMetaByQr]);
+
+  const selectedHistoryCategory = useMemo(
+    () => categories.find(c => c.id === selectedHistoryCategoryId) || null,
+    [categories, selectedHistoryCategoryId]
+  );
+
+  const historyCategoryItems = useMemo(() => {
+    if (!selectedHistoryCategory) return [];
+    return (selectedHistoryCategory.items || []).map(item => {
+      const scans = scansByEquipmentQr.get(buildEquipmentQrValue(stationId, item.id)) || [];
+      return { item, scanCount: scans.length, lastScan: scans[0] || null };
+    });
+  }, [selectedHistoryCategory, scansByEquipmentQr, stationId]);
+
+  const selectedHistoryItem = useMemo(
+    () => (selectedHistoryCategory?.items || []).find(i => i.id === selectedHistoryItemId) || null,
+    [selectedHistoryCategory, selectedHistoryItemId]
+  );
+
+  const selectedHistoryItemScans = useMemo(() => {
+    if (!selectedHistoryItem) return [];
+    return scansByEquipmentQr.get(buildEquipmentQrValue(stationId, selectedHistoryItem.id)) || [];
+  }, [scansByEquipmentQr, stationId, selectedHistoryItem]);
+
+  const openHistoryTab = () => {
+    setActiveTab('history');
+    setSelectedHistoryCategoryId(null);
+    setSelectedHistoryItemId(null);
+  };
+  const backToHistoryCategories = () => { setSelectedHistoryCategoryId(null); setSelectedHistoryItemId(null); };
+  const backToHistoryItems = () => setSelectedHistoryItemId(null);
 
   // Modal ochiq turganda orqadagi sahifa scroll bo'lib, ikkalasi bir vaqtda tortilib friz bo'lib ko'rinishining oldini oladi
   useEffect(() => {
@@ -110,7 +231,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
       // Filtrlash: faqat bo'sh bo'lmagan qatorlar
       const cleanCategories = categories.map(c => ({
         ...c,
-        items: c.items.filter(item => item.name.trim() !== '')
+        items: (c.items || []).filter(item => item && item.name && item.name.trim() !== '')
       }));
 
       const data = await upsertStationEquipments(stationId, cleanCategories, taskMappings, userName);
@@ -119,28 +240,28 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
         setIsEditing(false);
         mutate(data); // Keshni yangilaymiz
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Saqlashda xatolik');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Saqlashda xatolik');
     } finally {
       setSaving(false);
     }
   };
 
   const addItem = (categoryId: string) => {
-    setCategories(prev => prev.map(c => 
-      c.id === categoryId ? { ...c, items: [...c.items, { id: `item_${Date.now()}_${Math.floor(Math.random()*1000)}`, name: '' }] } : c
+    setCategories(prev => prev.map(c =>
+      c.id === categoryId ? { ...c, items: [...(c.items || []), { id: `item_${Date.now()}_${Math.floor(Math.random() * 1000)}`, name: '' }] } : c
     ));
   };
 
   const updateItem = (categoryId: string, itemId: string, name: string) => {
-    setCategories(prev => prev.map(c => 
-      c.id === categoryId ? { ...c, items: c.items.map(item => item.id === itemId ? { ...item, name } : item) } : c
+    setCategories(prev => prev.map(c =>
+      c.id === categoryId ? { ...c, items: (c.items || []).map(item => item.id === itemId ? { ...item, name } : item) } : c
     ));
   };
 
   const removeItem = (categoryId: string, itemId: string) => {
-    setCategories(prev => prev.map(c => 
-      c.id === categoryId ? { ...c, items: c.items.filter(item => item.id !== itemId) } : c
+    setCategories(prev => prev.map(c =>
+      c.id === categoryId ? { ...c, items: (c.items || []).filter(item => item.id !== itemId) } : c
     ));
   };
 
@@ -149,7 +270,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
     const colors = ['blue', 'emerald', 'orange', 'purple', 'rose', 'cyan', 'indigo', 'teal', 'pink'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
     const newCat: EquipmentCategory = {
-      id: `cat_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+      id: `cat_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       name: newCategoryName,
       color: randomColor,
       items: []
@@ -176,7 +297,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
         <div className="p-8 max-w-5xl mx-auto print:p-8 print:max-w-full">
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-6 print:grid-cols-3 print:gap-16">
             {categories.map(category => (
-              category.items.map(item => (
+              (category.items || []).map(item => (
                 <div key={item.id} className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 rounded-2xl page-break-inside-avoid print:border-4">
                   <QRCodeSVG value={buildEquipmentQrValue(stationId, item.id)} size={160} />
                   <span className="mt-4 font-black text-sm text-center">{stationName}</span>
@@ -187,9 +308,10 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
             ))}
           </div>
         </div>
-        
+
         {/* CSS for print */}
-        <style dangerouslySetInnerHTML={{__html: `
+        <style dangerouslySetInnerHTML={{
+          __html: `
           @media print {
             body * { visibility: hidden; }
             .print\\:hidden { display: none !important; }
@@ -203,37 +325,53 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
     );
   }
 
+  // "QR kodni bog'lash" faqat Katta elektromexanikka ko'rinadi
+  const tabs: { id: 'equipments' | 'tasks' | 'history'; label: string; onClick: () => void }[] = [
+    { id: 'equipments', label: "Uskunalar ro'yxati va QR", onClick: () => setActiveTab('equipments') },
+    ...(canEdit ? [{ id: 'tasks' as const, label: "QR kodni bog'lash", onClick: () => { setActiveTab('tasks'); setSelectedPlanType(null); setSelectedTaskNsh(null); } }] : []),
+    { id: 'history', label: 'Skaner tarixi', onClick: openHistoryTab },
+  ];
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/30 p-2 sm:p-4 backdrop-blur-[2px]">
-      <div className="flex h-[95vh] sm:h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl sm:rounded-[32px] p-0 bg-white/95 border border-slate-200/60 shadow-2xl">
-        
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-2 sm:p-4 backdrop-blur-md">
+      <div className="flex h-[95vh] sm:h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl sm:rounded-[32px] border border-white/60 bg-white/60 shadow-2xl backdrop-blur-xl">
+
         {/* Header */}
-        <div className="flex items-start sm:items-center justify-between border-b border-slate-200/60 px-4 py-4 sm:px-8 sm:py-6 bg-white gap-4">
+        <div className="flex items-start sm:items-center justify-between border-b border-white/60 px-4 py-4 sm:px-8 sm:py-6 gap-4">
           <div className="flex-1 min-w-0">
             <h3 className="text-lg sm:text-xl font-black text-slate-900 break-words leading-tight">
               {stationName} - Bekat qurilmalari
             </h3>
             <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-4 mt-3">
-              <button 
-                onClick={() => setActiveTab('equipments')}
-                className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 sm:py-1 rounded-xl sm:rounded-full transition-all text-center flex-1 sm:flex-none ${activeTab === 'equipments' ? 'bg-slate-800 text-white' : 'text-slate-500 bg-white/50 hover:bg-slate-100 border border-slate-200/50'}`}
-              >
-                Uskunalar ro'yxati va QR
-              </button>
-              <button 
-                onClick={() => { setActiveTab('tasks'); setSelectedPlanType(null); setSelectedTaskNsh(null); }}
-                className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 sm:py-1 rounded-xl sm:rounded-full transition-all text-center flex-1 sm:flex-none ${activeTab === 'tasks' ? 'bg-slate-800 text-white' : 'text-slate-500 bg-white/50 hover:bg-slate-100 border border-slate-200/50'}`}
-              >
-                QR kodni bog'lash
-              </button>
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={tab.onClick}
+                  className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 sm:py-1 rounded-xl sm:rounded-full transition-all text-center flex-1 sm:flex-none ${activeTab === tab.id ? 'bg-slate-800 text-white' : 'text-slate-500 bg-white/50 hover:bg-white/80 border border-slate-200/50'}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
-          <button onClick={onClose} className="shrink-0 rounded-xl bg-white border border-slate-200 p-2 sm:p-3 text-slate-400 hover:text-slate-900 transition-all duration-200 shadow-sm mt-0.5">
-            <X size={24} />
-          </button>
+          <div className="flex shrink-0 items-center gap-2 mt-0.5">
+            {/* QR Chop etish faqat Aloqa dispetcherida ko'rinadi */}
+            {isDispatcher && (
+              <button
+                onClick={() => setIsPrinting(true)}
+                disabled={!equipments}
+                className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
+              >
+                <Printer size={16} className="sm:w-[18px] sm:h-[18px]" /> <span className="hidden sm:inline">QR Chop etish</span>
+              </button>
+            )}
+            <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-2 sm:p-3 text-slate-400 hover:text-slate-900 transition-all duration-200 shadow-sm">
+              <X size={24} />
+            </button>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:p-8 custom-scrollbar bg-transparent">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:p-8 custom-scrollbar">
           {(!swrData && isLoading) ? (
             <div className="flex h-40 items-center justify-center">
               <Loader2 className="animate-spin text-blue-500" size={32} />
@@ -244,54 +382,48 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
                 <>
                   {/* DYNAMIC CATEGORIES */}
                   {categories.map((category) => (
-                    <div key={category.id} className="flex flex-col p-4 sm:p-5 rounded-2xl transition-all duration-200 hover:shadow-md border border-slate-200/60 bg-white hover:bg-slate-50 mb-3">
-                      <div className="flex items-center gap-3 sm:gap-4 border-b border-slate-100 pb-3 mb-3">
-                        <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-br ${COLOR_STYLES[category.color]?.gradient || COLOR_STYLES.blue.gradient} text-lg sm:text-xl font-black text-white shadow-md`}>
-                          {category.name.charAt(0).toUpperCase()}
-                        </div>
+                    <div key={category.id} className="premium-card flex flex-col p-4 sm:p-5 mb-3">
+                      <div className="flex items-center gap-3 sm:gap-4 border-b border-slate-200/60 pb-3 mb-3">
+                        <CategoryAvatar name={category.name} color={category.color} size="sm" />
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight truncate">{category.name}</h4>
-                          <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400">Jami: {category.items.length} ta</p>
+                          <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight truncate">{category.name || 'Nomsiz toifa'}</h4>
+                          <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400">Jami: {(category.items || []).length} ta</p>
                         </div>
                         {(!isEditing && canEdit) ? (
-                          <button onClick={() => { setIsEditing(true); addItem(category.id); }} className={`shrink-0 text-[10px] sm:text-xs font-bold ${COLOR_STYLES[category.color]?.btnText || COLOR_STYLES.blue.btnText} px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center gap-1`}>
+                          <button onClick={() => { setIsEditing(true); addItem(category.id); }} className={`shrink-0 text-[10px] sm:text-xs font-bold ${colorStyle(category.color).btnText} px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center gap-1`}>
                             <Plus size={14} className="sm:w-4 sm:h-4" /> Qo'shish
                           </button>
                         ) : isEditing ? (
-                          <button onClick={() => addItem(category.id)} className={`shrink-0 text-[10px] sm:text-xs font-bold ${COLOR_STYLES[category.color]?.btnText || COLOR_STYLES.blue.btnText} px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center gap-1`}>
+                          <button onClick={() => addItem(category.id)} className={`shrink-0 text-[10px] sm:text-xs font-bold ${colorStyle(category.color).btnText} px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center gap-1`}>
                             <Plus size={14} className="sm:w-4 sm:h-4" /> Qo'shish
                           </button>
                         ) : null}
                       </div>
-                      
-                      {category.items.length === 0 && !isEditing && <p className="text-sm font-bold text-slate-300 uppercase tracking-widest">Kiritilmagan</p>}
-                      
+
+                      {(category.items || []).length === 0 && !isEditing && <p className="text-sm font-bold text-slate-300 uppercase tracking-widest">Kiritilmagan</p>}
+
                       <div className={isEditing ? "flex flex-col gap-3" : "flex flex-wrap gap-2"}>
-                        {category.items.map((item) => (
+                        {(category.items || []).map((item) => (
                           isEditing ? (
                             <div key={item.id} className="relative group flex items-center gap-2">
                               <DebouncedInput
                                 value={item.name}
                                 onChange={(val) => updateItem(category.id, item.id, val)}
-                                className={`w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all`}
+                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
                                 placeholder="Nomi..."
                               />
                               <button onClick={() => removeItem(category.id, item.id)} className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"><Trash2 size={16} /></button>
                             </div>
                           ) : (
-                            <div key={item.id} className={`flex flex-col bg-white border border-slate-200 ${COLOR_STYLES[category.color]?.hoverBorder || COLOR_STYLES.blue.hoverBorder} px-4 py-2 rounded-xl transition-all cursor-default shadow-sm`}>
+                            <div key={item.id} className={`flex flex-col bg-white/70 border border-white/60 ${colorStyle(category.color).hoverBorder} px-4 py-2 rounded-xl transition-all cursor-default shadow-sm`}>
                               <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${COLOR_STYLES[category.color]?.dot || COLOR_STYLES.blue.dot}`}></div>
+                                <div className={`w-2 h-2 rounded-full ${colorStyle(category.color).dot}`}></div>
                                 <span className="font-bold text-slate-700">{item.name}</span>
                               </div>
-                              {item.lastScannedAt ? (
+                              {item.lastScannedAt && (
                                 <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-500 font-medium">
-                                  <Clock size={10} /> {new Date(item.lastScannedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                  <Clock size={10} /> {formatScanDate(item.lastScannedAt)}
                                   {item.lastScannedBy && ` — ${item.lastScannedBy}`}
-                                </div>
-                              ) : (
-                                <div className="mt-1 flex items-center gap-1 text-[9px] text-slate-400 font-medium uppercase tracking-widest">
-                                  <Clock size={9} /> Hali tekshirilmagan
                                 </div>
                               )}
                             </div>
@@ -321,30 +453,30 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
                     </div>
                   )}
 
-              {/* Oxirgi o'zgartirish ma'lumoti */}
-              {!isEditing && equipments?.updatedAt && activeTab === 'equipments' && (
-                <div className="mt-8 flex items-center justify-center">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white/50 border border-white px-4 py-2 rounded-xl">
-                    Oxirgi bor o&apos;zgartirish kiritilgan: {new Date(equipments.updatedAt).toLocaleString('ru-RU')} - <span className="text-slate-600">{equipments.updatedByName}</span>
-                  </p>
-                </div>
-              )}
-              </>
+                  {/* Oxirgi o'zgartirish ma'lumoti */}
+                  {!isEditing && equipments?.updatedAt && (
+                    <div className="mt-8 flex items-center justify-center">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white/50 border border-white px-4 py-2 rounded-xl">
+                        Oxirgi bor o&apos;zgartirish kiritilgan: {new Date(equipments.updatedAt).toLocaleString('ru-RU')} - <span className="text-slate-600">{equipments.updatedByName}</span>
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
 
               {activeTab === 'tasks' && (
                 <div className="flex flex-col gap-4 h-full relative">
                   {!selectedPlanType && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 h-[50vh]">
-                      <button onClick={() => setSelectedPlanType('tort')} className="bg-white border border-slate-200/60 p-6 rounded-3xl hover:bg-slate-50 hover:shadow-lg transition-all text-left group flex flex-col justify-center items-center text-center">
+                      <button onClick={() => setSelectedPlanType('tort')} className="premium-card p-6 text-left group flex flex-col justify-center items-center text-center">
                         <div className="h-20 w-20 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                           <Target size={40} />
                         </div>
                         <h4 className="text-xl font-black text-slate-800 mb-2">To'rt haftalik ish reja</h4>
                         <p className="text-sm text-slate-500 px-4">To'rt haftalik rejadagi ishlarga bekat uskunalarining QR kodini bog'lash.</p>
                       </button>
-                      
-                      <button onClick={() => setSelectedPlanType('yillik')} className="bg-white border border-slate-200/60 p-6 rounded-3xl hover:bg-slate-50 hover:shadow-lg transition-all text-left group flex flex-col justify-center items-center text-center">
+
+                      <button onClick={() => setSelectedPlanType('yillik')} className="premium-card p-6 text-left group flex flex-col justify-center items-center text-center">
                         <div className="h-20 w-20 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                           <Target size={40} />
                         </div>
@@ -355,7 +487,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
                   )}
 
                   {selectedPlanType && !selectedTaskNsh && (
-                    <div className="flex flex-col gap-4" style={{height: 'calc(85vh - 180px)'}}>
+                    <div className="flex flex-col gap-4" style={{ height: 'calc(85vh - 180px)' }}>
                       <div className="flex items-center justify-between">
                         <h3 className="text-lg font-black text-slate-900 tracking-tight">
                           {selectedPlanType === 'tort' ? 'To\'rt haftalik jadval' : 'Yillik jadval'} — vazifa tanlash
@@ -364,9 +496,10 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
                           <X size={20} />
                         </button>
                       </div>
-                      <div className="border-b border-slate-100 pb-3">
+                      <div className="border-b border-slate-200/60 pb-3">
                         <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Vazifa qidirish..." className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-purple-400 bg-white" />
                       </div>
+                      {/* Bu ro'yxatda 100 tagacha element chiqishi mumkin — tezlik uchun shaffof/blur effektsiz, oddiy kartalar ishlatiladi */}
                       <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3">
                         {selectedBolim === null && !searchQuery ? (
                           <div className="grid grid-cols-1 gap-3">
@@ -408,9 +541,8 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
                                   <button
                                     key={ti}
                                     onClick={() => setSelectedTaskNsh(taskKey)}
-                                    className={`w-full rounded-xl border p-3 text-left transition-colors hover:border-purple-300 hover:bg-purple-50/30 group ${
-                                      mapping ? 'border-purple-300 bg-purple-50/40' : 'border-slate-200/60 bg-white'
-                                    }`}
+                                    className={`w-full rounded-xl border p-3 text-left transition-colors hover:border-purple-300 hover:bg-purple-50/30 group ${mapping ? 'border-purple-300 bg-purple-50/40' : 'border-slate-200/60 bg-white'
+                                      }`}
                                   >
                                     <div className="flex items-center justify-between gap-2">
                                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -443,7 +575,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
                   {selectedPlanType && selectedTaskNsh && (() => {
                     const taskDef = (selectedPlanType === 'tort' ? TORT_HAFTALIK_REJA_FLAT : YILLIK_REJA_FLAT).find(t => taskDisplayKey(t.manba, t.raqam) === selectedTaskNsh);
                     const currentMapping = taskMappings.find(m => m.taskNsh === selectedTaskNsh);
-                    
+
                     return (
                       <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-3">
@@ -456,29 +588,32 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
                           </div>
                         </div>
 
-                        <div className="bg-white/70 border border-white/60 p-5 sm:p-8 rounded-3xl">
+                        <div className="premium-card p-5 sm:p-8">
                           <h4 className="font-black text-slate-800 mb-6 text-lg">Qaysi qurilmalar bog'lanadi?</h4>
-                          
+
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {categories.map(category => (
-                              <button 
-                                key={category.id}
-                                disabled={!isEditing}
-                                onClick={() => {
-                                  if (currentMapping?.equipmentType === category.id) {
-                                    setTaskMappings(prev => prev.filter(p => p.taskNsh !== selectedTaskNsh));
-                                  } else {
-                                    setTaskMappings(prev => [...prev.filter(p => p.taskNsh !== selectedTaskNsh), { taskNsh: selectedTaskNsh, equipmentType: category.id }]);
-                                  }
-                                }}
-                                className={`p-5 text-left border-2 rounded-2xl transition-all relative ${currentMapping?.equipmentType === category.id ? `${COLOR_STYLES[category.color]?.activeBorder || COLOR_STYLES.blue.activeBorder} shadow-md` : 'border-slate-200 bg-white hover:border-slate-300'} ${!isEditing ? 'opacity-70 cursor-not-allowed' : ''}`}
-                              >
-                                {currentMapping?.equipmentType === category.id && <div className={`absolute top-4 right-4 ${COLOR_STYLES[category.color]?.iconText || COLOR_STYLES.blue.iconText} bg-white rounded-full p-1 shadow-sm`}><Target size={20} /></div>}
-                                <div className={`h-12 w-12 ${COLOR_STYLES[category.color]?.iconBg || COLOR_STYLES.blue.iconBg} rounded-xl flex items-center justify-center text-xl font-black mb-4`}>{category.name.charAt(0).toUpperCase()}</div>
-                                <h5 className="font-bold text-slate-800 text-sm">{category.name}</h5>
-                                <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Jami: {category.items.length} TA</p>
-                              </button>
-                            ))}
+                            {categories.map(category => {
+                              const isActive = currentMapping?.equipmentType === category.id;
+                              return (
+                                <button
+                                  key={category.id}
+                                  disabled={!isEditing}
+                                  onClick={() => {
+                                    if (isActive) {
+                                      setTaskMappings(prev => prev.filter(p => p.taskNsh !== selectedTaskNsh));
+                                    } else {
+                                      setTaskMappings(prev => [...prev.filter(p => p.taskNsh !== selectedTaskNsh), { taskNsh: selectedTaskNsh, equipmentType: category.id }]);
+                                    }
+                                  }}
+                                  className={`p-5 text-left border-2 rounded-2xl transition-all relative ${isActive ? `${colorStyle(category.color).activeBorder} shadow-md` : 'border-white/60 bg-white/70 hover:border-slate-300'} ${!isEditing ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                >
+                                  {isActive && <div className={`absolute top-4 right-4 ${colorStyle(category.color).iconText} bg-white rounded-full p-1 shadow-sm`}><Target size={20} /></div>}
+                                  <div className={`h-12 w-12 ${colorStyle(category.color).iconBg} rounded-xl flex items-center justify-center text-xl font-black mb-4`}>{(category.name || '?').charAt(0).toUpperCase()}</div>
+                                  <h5 className="font-bold text-slate-800 text-sm">{category.name}</h5>
+                                  <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Jami: {(category.items || []).length} TA</p>
+                                </button>
+                              );
+                            })}
                           </div>
 
                           {!isEditing && (
@@ -493,15 +628,105 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
                   })()}
                 </div>
               )}
+
+              {activeTab === 'history' && (
+                <div className="flex flex-col gap-3">
+                  {isScanHistoryLoading ? (
+                    <div className="flex h-40 items-center justify-center">
+                      <Loader2 className="animate-spin text-blue-500" size={32} />
+                    </div>
+                  ) : !selectedHistoryCategory ? (
+                    // BOSQICH 1 — Toifalar
+                    categories.length === 0 ? (
+                      <EmptyHint icon={History} text="Hali toifa qo'shilmagan" />
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {categories.map(category => (
+                          <button
+                            key={category.id}
+                            onClick={() => setSelectedHistoryCategoryId(category.id)}
+                            className="premium-card flex items-center gap-4 p-4 sm:p-5 text-left"
+                          >
+                            <CategoryAvatar name={category.name} color={category.color} />
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-black text-slate-900 tracking-tight truncate">{category.name || 'Nomsiz toifa'}</h4>
+                              <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">{scanCountByCategory.get(category.id) || 0} marta skaner qilingan</p>
+                            </div>
+                            <ChevronRight size={20} className="shrink-0 text-slate-300" />
+                          </button>
+                        ))}
+                      </div>
+                    )
+                  ) : !selectedHistoryItem ? (
+                    // BOSQICH 2 — Toifadagi uskunalar
+                    <>
+                      <BackHeader title={selectedHistoryCategory.name || 'Toifa'} onBack={backToHistoryCategories} />
+                      {historyCategoryItems.length === 0 ? (
+                        <EmptyHint icon={History} text="Bu toifada uskuna yo'q" />
+                      ) : (
+                        <div className="flex flex-col gap-3">
+                          {historyCategoryItems.map(({ item, scanCount, lastScan }) => (
+                            <button
+                              key={item.id}
+                              onClick={() => setSelectedHistoryItemId(item.id)}
+                              className="premium-card flex items-center justify-between gap-3 p-4 text-left"
+                            >
+                              <div className="min-w-0">
+                                <p className="font-bold text-slate-800 truncate">{item.name}</p>
+                                <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                  {scanCount > 0 ? `${scanCount} marta skaner qilingan` : 'Hali skaner qilinmagan'}
+                                </p>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-3">
+                                {lastScan && (
+                                  <div className="text-right">
+                                    <p className="text-xs font-bold text-slate-600">{lastScan.scanned_by}</p>
+                                    <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-400 font-medium">
+                                      <Clock size={10} /> {formatScanDate(lastScan.scanned_at)}
+                                    </p>
+                                  </div>
+                                )}
+                                <ChevronRight size={18} className="text-slate-300" />
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    // BOSQICH 3 — Tanlangan uskunaning to'liq skaner tarixi
+                    <>
+                      <BackHeader title={selectedHistoryItem.name || 'Uskuna'} onBack={backToHistoryItems} />
+                      {selectedHistoryItemScans.length === 0 ? (
+                        <EmptyHint icon={History} text="Bu uskuna hali skaner qilinmagan" />
+                      ) : (
+                        <div className="flex flex-col gap-3">
+                          {selectedHistoryItemScans.map((scan: TaskScan) => (
+                            <div key={scan.id} className="premium-card flex items-center justify-between gap-3 p-4">
+                              <div className="min-w-0">
+                                <p className="text-[10px] font-bold text-purple-500 uppercase tracking-widest truncate">{scan.task_nsh}</p>
+                                <p className="mt-1 text-xs font-bold text-slate-600">{scan.scanned_by}</p>
+                              </div>
+                              <p className="shrink-0 flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+                                <Clock size={10} /> {formatScanDate(scan.scanned_at)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
 
-        {/* Footer Actions */}
-        <div className="border-t border-slate-100 bg-slate-50/80 px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          {!isEditing ? (
-            <>
-              {canEdit ? (
+        {/* Footer Actions — faqat "Uskunalar ro'yxati va QR" bo'limida (yoki tahrirlash davom etayotganda) ko'rinadi */}
+        {(isEditing || activeTab === 'equipments') && (
+          <div className="border-t border-white/60 px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+            {!isEditing ? (
+              canEdit ? (
                 <button
                   onClick={() => setIsEditing(true)}
                   className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition shadow-md whitespace-nowrap"
@@ -510,41 +735,33 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, userNa
                 </button>
               ) : (
                 <div className="text-[11px] sm:text-xs font-bold text-slate-400 text-center sm:text-left">Tahrirlash huquqi faqat Katta elektromexanikda</div>
-              )}
-              
-              <button
-                onClick={() => setIsPrinting(true)}
-                disabled={!equipments}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition shadow-md shadow-blue-500/20 disabled:opacity-50 whitespace-nowrap shrink-0"
-              >
-                <Printer size={18} /> QR Chop etish
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => {
-                  setIsEditing(false);
-                  if (swrData) {
-                    setCategories(swrData.categories || []);
-                    setTaskMappings(swrData.taskMappings || []);
-                  }
-                }}
-                disabled={saving}
-                className="w-full sm:w-auto flex items-center justify-center px-6 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition whitespace-nowrap"
-              >
-                Bekor qilish
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="w-full sm:flex-1 sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 text-white font-bold text-sm hover:bg-emerald-600 transition shadow-md shadow-emerald-500/20 whitespace-nowrap"
-              >
-                {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} Saqlash
-              </button>
-            </>
-          )}
-        </div>
+              )
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    setIsEditing(false);
+                    if (swrData) {
+                      setCategories(swrData.categories || []);
+                      setTaskMappings(swrData.taskMappings || []);
+                    }
+                  }}
+                  disabled={saving}
+                  className="w-full sm:w-auto flex items-center justify-center px-6 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition whitespace-nowrap"
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="w-full sm:flex-1 sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 text-white font-bold text-sm hover:bg-emerald-600 transition shadow-md shadow-emerald-500/20 whitespace-nowrap"
+                >
+                  {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} Saqlash
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
       </div>
     </div>

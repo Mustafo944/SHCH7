@@ -1094,6 +1094,7 @@ export default function DispatcherPage() {
           stationId={selectedStation}
           stationName={stations.find(s => s.id === selectedStation)?.name || ''}
           canEdit={false} // Dispetcher faqat ko'radi
+          isDispatcher // QR Chop etish faqat shu rolga ko'rinadi
           userName={session?.fullName || 'Dispetcher'}
           onClose={() => setSelectedReportType(null)}
         />
