@@ -220,16 +220,16 @@ export function LibraryView({ userName, userRole }: LibraryViewProps) {
               </div>
             </div>
             
-            {/* Modal Content */}
-            <div className="h-[calc(100%-70px)] sm:h-[calc(100%-80px)] w-full bg-slate-100/50">
+            {/* Modal Content — min-h-0 flex ichida kichrayish/scroll ishlashi uchun shart */}
+            <div className="min-h-0 w-full flex-1 overflow-auto bg-slate-100/50" style={{ WebkitOverflowScrolling: 'touch' }}>
               {preview.isImg ? (
                 <div className="h-full w-full overflow-auto p-4 flex items-center justify-center">
                   <img src={preview.url} alt={preview.title} className="max-h-full max-w-full object-contain rounded-xl shadow-lg" />
                 </div>
               ) : (
-                <iframe 
+                <iframe
                   src={preview.url}
-                  className="h-full w-full border-0" 
+                  className="h-full w-full border-0"
                   title={preview.title}
                   loading="lazy"
                 />

@@ -75,12 +75,15 @@ export function WorkerSchemasView({ stationId, stationName }: { stationId: strin
 
       {preview && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all">
-          <div className="h-full w-full overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in">
-            <div className="flex items-center justify-between border-b border-slate-200/60 px-8 py-4 bg-slate-50/80">
+          <div className="flex h-[calc(100dvh-2rem)] w-full max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in sm:h-[90vh] sm:max-h-[90vh]">
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-200/60 px-8 py-4 bg-slate-50/80">
               <h3 className="text-lg font-black text-slate-900 tracking-tight">Sxema Ko&apos;rish</h3>
               <button onClick={() => { setPreview(null); if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null } }} className="rounded-xl border border-slate-200/60 bg-white/80 p-2 text-slate-400 hover:text-slate-900 backdrop-blur-sm transition-all shadow-sm"><X size={24} /></button>
             </div>
-            <iframe src={preview} className="h-[calc(100%-80px)] w-full" />
+            {/* min-h-0 flex ichida kichrayish/scroll ishlashi uchun shart — aks holda iframe konteynerdan tashib ketishi mumkin */}
+            <div className="min-h-0 flex-1 overflow-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <iframe src={preview} className="h-full w-full" title="Sxema ko'rish" />
+            </div>
           </div>
         </div>
       )}
