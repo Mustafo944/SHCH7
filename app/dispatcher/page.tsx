@@ -56,7 +56,8 @@ import {
   BarChart2,
   ChevronLeft,
   ChevronRight,
-  Server
+  Server,
+  Loader2
 } from 'lucide-react'
 
 import { StatCard, BigActionCard, WorkerForm, ReportList, SchemasView, ArchiveView, DownloadCard, WorkersModal, TodayTasksModal } from './components'
@@ -88,6 +89,8 @@ export default function DispatcherPage() {
   const [activeJournalType, setActiveJournalType] = useState<JournalType | null>(null)
   const [activeJournalMonth, setActiveJournalMonth] = useState<string>('')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [isDeletingWorker, setIsDeletingWorker] = useState(false)
+  const [deleteWorkerError, setDeleteWorkerError] = useState<string | null>(null)
   const [todayModal, setTodayModal] = useState<'bugunReja' | 'qolibKetgan' | 'sababliBajarilmagan' | null>(null)
   const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
@@ -446,21 +449,22 @@ export default function DispatcherPage() {
   }
 
   async function handleDeleteWorker(workerId: string) {
+    setDeleteWorkerError(null)
     setDeleteConfirmId(workerId)
   }
 
   async function confirmDeleteWorker() {
-    if (!deleteConfirmId) return
+    if (!deleteConfirmId || isDeletingWorker) return
+    setIsDeletingWorker(true)
+    setDeleteWorkerError(null)
     try {
       await deleteWorker(deleteConfirmId)
       refreshData()
-    } catch (err: unknown) {
-      setFormMsg({
-        type: 'err',
-        text: err instanceof Error ? err.message : "Xatolik yuz berdi"
-      })
-    } finally {
       setDeleteConfirmId(null)
+    } catch (err: unknown) {
+      setDeleteWorkerError(err instanceof Error ? err.message : "Xatolik yuz berdi")
+    } finally {
+      setIsDeletingWorker(false)
     }
   }
 
@@ -1133,9 +1137,15 @@ export default function DispatcherPage() {
           <div className="premium-card w-full max-w-md p-8 animate-scale-in">
             <h3 className="text-lg font-black text-slate-900">Ishchini o&apos;chirish</h3>
             <p className="mt-2 text-sm text-slate-500">Haqiqatdan ham ishchini o&apos;chirishni xohlaysizmi? Bu amalni qaytarib bo&apos;lmaydi.</p>
+            {deleteWorkerError && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-600">{deleteWorkerError}</div>
+            )}
             <div className="mt-8 flex justify-end gap-3">
-              <button onClick={() => setDeleteConfirmId(null)} className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Bekor qilish</button>
-              <button onClick={confirmDeleteWorker} className="rounded-xl bg-red-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all">O&apos;chirish</button>
+              <button disabled={isDeletingWorker} onClick={() => setDeleteConfirmId(null)} className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50">Bekor qilish</button>
+              <button disabled={isDeletingWorker} onClick={confirmDeleteWorker} className="flex items-center justify-center gap-2 rounded-xl bg-red-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all disabled:opacity-70 disabled:cursor-not-allowed">
+                {isDeletingWorker ? <Loader2 size={16} className="animate-spin" /> : null}
+                {isDeletingWorker ? "O'chirilmoqda..." : "O'chirish"}
+              </button>
             </div>
           </div>
         </div>
