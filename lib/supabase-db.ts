@@ -1303,22 +1303,18 @@ export interface TaskScan {
 }
 
 export async function getTaskScans(stationId: string, taskNsh: string, taskDate: string): Promise<TaskScan[]> {
-  // MUHIM: `task_date` ustuni bazada `date` emas, `timestamptz` bo'lib chiqdi —
-  // u to'liq skaner vaqtini saqlaydi, shu sababli `.eq('task_date', ...)` kun
-  // chegarasidagi skanerni ikki kalendar kunga ham mos keltiradi (kunlik ajratish buziladi).
-  // Buning o'rniga ishonchli `scanned_at` (timestamptz) ustunini MAHALLIY kun
-  // oralig'i bo'yicha filtrlaymiz: [mahalliy yarim tun, keyingi mahalliy yarim tun).
-  const [y, m, d] = taskDate.split('-').map(Number);
-  const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0);     // qurilma mahalliy vaqti bo'yicha kun boshi
-  const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0, 0);   // keyingi kun boshi
-
+  // `task_date` ustuni bazada haqiqiy `date` turida (vaqt/vaqt mintaqasiz sof sana) —
+  // shuning uchun aniq (`.eq`) qidirish ishonchli. `scanned_at` (haqiqiy skaner vaqti)
+  // bo'yicha filtrlash XATO edi: `task_date` — yozuv tegishli bo'lgan REJA kuni (masalan,
+  // ishchi "Kunlik" ko'rinishida ertangi/o'tgan kunning vazifasini bugun bajarishi mumkin),
+  // `scanned_at` esa HAQIQIY skaner vaqti — ular boshqa-boshqa kalendar kuniga tushib qolishi
+  // mumkin, natijada baza yozuvi bor bo'lsa ham skaner "topilmagan" bo'lib qolar edi.
   const { data, error } = await supabase
     .from('task_scans')
     .select('*')
     .eq('station_id', stringToUuid(stationId))
     .eq('task_nsh', taskNsh)
-    .gte('scanned_at', dayStart.toISOString())
-    .lt('scanned_at', dayEnd.toISOString());
+    .eq('task_date', taskDate);
 
   if (error) {
     console.error('getTaskScans error:', error);

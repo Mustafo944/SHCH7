@@ -514,10 +514,12 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   const [scannerListOpen, setScannerListOpen] = useState(false);
   const [specificScanItem, setSpecificScanItem] = useState<{ id: string, name: string } | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanErrorMsg, setScanErrorMsg] = useState<string | null>(null);
 
   const handleScanSuccess = async (decodedText: string) => {
     if (!selectedTaskType || isScanningDb) return;
     setIsScanningDb(true);
+    setScanErrorMsg(null);
     try {
       const match = currentTask?.text.match(/^\[([^\]]+)\]/);
       const taskNshStr = match ? match[1].trim() : 'noma\'lum';
@@ -545,7 +547,9 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
 
     } catch (err: any) {
       console.error('Scan save error:', err);
-      toast.error('Skanerni saqlashda xatolik yuz berdi. Qaytadan skaner qiling: ' + (err?.message || ''));
+      const msg = 'Skanerni saqlashda xatolik: ' + (err?.message || 'Nomaʼlum xatolik');
+      setScanErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setIsScanningDb(false);
       setScannerOpen(false);
@@ -764,6 +768,13 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                 <X size={20} />
               </button>
             </div>
+
+            {scanErrorMsg && (
+              <div className="mx-6 mt-4 flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-600">
+                <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                <span>{scanErrorMsg}</span>
+              </div>
+            )}
 
             <div className="p-6 overflow-y-auto space-y-3 flex-1 bg-slate-50/30">
               {targetItems.map((item: any) => {
