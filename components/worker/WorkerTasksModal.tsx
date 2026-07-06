@@ -386,6 +386,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   const [stationEq, setStationEq] = useState<any>(preloadedStationEq || null)
   const [dbScans, setDbScans] = useState<TaskScan[]>([])
   const [isScanningDb, setIsScanningDb] = useState(false)
+  const toast = useToast()
 
   // Agar tashqaridan berilmagan bo'lsa, o'zi yuklaydi
   useEffect(() => {
@@ -431,7 +432,13 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
       const taskNshStr = match ? match[1].trim() : 'noma\'lum';
       const taskDateStr = getEntryDateStr(journalMonth, entry.ragat);
       const data = await getTaskScans(stationId, taskNshStr, taskDateStr);
-      setDbScans(data);
+      // Eskirib qolgan (kechikkan) so'rov javobi hozirgina mahalliy qo'shilgan skanerni
+      // o'chirib yubormasligi uchun — natijani ustidan yozish o'rniga ID bo'yicha birlashtiramiz.
+      setDbScans(prev => {
+        const map = new Map(prev.map(s => [s.id, s]));
+        data.forEach(s => map.set(s.id, s));
+        return Array.from(map.values());
+      });
     };
     loadScans();
     // Har 5 soniyada yangilab turish (boshqa ishchi skaner qilayotgan bo'lsa ko'rinadi)
@@ -538,6 +545,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
 
     } catch (err: any) {
       console.error('Scan save error:', err);
+      toast.error('Skanerni saqlashda xatolik yuz berdi. Qaytadan skaner qiling: ' + (err?.message || ''));
     } finally {
       setIsScanningDb(false);
       setScannerOpen(false);
