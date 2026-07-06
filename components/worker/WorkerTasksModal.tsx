@@ -684,7 +684,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                       <div className="text-left flex flex-col">
                         <span className="font-black text-slate-900 text-sm sm:text-base">{name} jurnali</span>
                         <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${isDone ? 'text-emerald-500' : isJournalInProgress ? 'text-amber-500' : 'text-purple-600'}`}>
-                          {isJournalInProgress ? 'Jarayonda' : isDone ? 'Bajarildi' : 'Bajarish kerak'}
+                          {isDone ? 'Bajarildi' : isJournalInProgress ? 'Jarayonda' : 'Bajarish kerak'}
                         </span>
                       </div>
                     </div>

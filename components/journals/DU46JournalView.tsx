@@ -733,14 +733,22 @@ export function DU46JournalView({
       showMsg("10, 11 va 12-ustunlarni to'ldiring!")
       return
     }
-    updated[i] = {
+    const updatedEntry = {
       ...updated[i],
       bartarafBajarildi: true,
       bartarafBajarildiAt: new Date().toISOString(),
       bartarafImzo: userName,
       bartarafByRole: userRole,
     }
-    if (onAccepted) onAccepted(true, false)
+    updated[i] = updatedEntry
+    // "Tugadi" bosilgani — bu hali to'liq "Bajarildi" degani emas: odatda bekat navbatchisi
+    // hali ham 12-ustunni tasdiqlashi kerak. Agar boshqa tasdiqlovchi kerak bo'lmasa
+    // (masalan "Tugadi" bosgan odamning o'zi bekat navbatchisi bo'lsa) — to'g'ridan-to'g'ri
+    // "Bajarildi" deb belgilaymiz; aks holda "Jarayonda" holatida qoldiramiz — shunda
+    // vazifa kartasi ("2/2" yashil) va pastdagi "Kutish"/"Bajarildi" tugmasi bir-biriga
+    // zid ko'rinmaydi.
+    const needsMoreApproval = getNextApproverRole(updatedEntry, 12) !== null
+    if (onAccepted) onAccepted(!needsMoreApproval, needsMoreApproval)
     showMsg('Bajarildi belgilandi!')
     saveEntries(updated, prev).catch(() => { })
   }
