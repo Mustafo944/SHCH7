@@ -249,7 +249,10 @@ export default function DispatcherPage() {
                 newReports[idx] = mapDbReport(mergedRow as DbWorkReportRow)
                 return newReports
               }
-              // If it's a completely new insert
+              // Yangi qator — faqat "Yuborish" bosilgan (is_submitted=true) rejalarni qo'shamiz.
+              // Avtosaqlangan draft uchun ham realtime hodisa keladi, lekin dispetcherga
+              // ko'rinmasligi kerak — Yuborish bosilmaguncha bu yerga tushmasligi shart.
+              if (!payload.new.is_submitted) return prev
               return [mapDbReport(payload.new as DbWorkReportRow), ...prev]
             }, { revalidate: false })
           } else if (payload.eventType === 'DELETE') {
