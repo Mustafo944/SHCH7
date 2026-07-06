@@ -480,6 +480,9 @@ export async function rejectReport(reportId: string, dispatcherName: string): Pr
       // Rad etish ma'lumotlarini yozamiz
       rejected_at: new Date().toISOString(),
       rejected_by: dispatcherName,
+      // Rad etilgach reja qayta DRAFT bo'ladi: xodim uni tahrirlab,
+      // qaytadan "Yuborish" bosmaguncha dispetcherga ko'rinmaydi.
+      is_submitted: false,
     })
     .eq('id', reportId)
     .select()
