@@ -305,7 +305,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
         </div>
 
         {/* PRINT CONTENT */}
-        <div className="p-4 max-w-5xl mx-auto sm:p-8 print:p-8 print:max-w-full">
+        <div id="qr-print-content" className="p-4 max-w-5xl mx-auto sm:p-8 print:p-8 print:max-w-full">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4 print:grid-cols-3 print:gap-16">
             {categories.map(category => (
               (category.items || []).map(item => (
@@ -320,15 +320,17 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
           </div>
         </div>
 
-        {/* CSS for print */}
+        {/* CSS for print — #qr-print-content ID orqali aniq maqsadga mo'ljallangan (avvalgi
+            ".fixed > div:last-child" strukturaviy tanlagichi shu divdan keyin qo'shilgan
+            <style> elementi tufayli hech qachon mos kelmas edi, buning ustiga scope qilinmagan
+            ".fixed { position: static }" qoidasi sahifadagi BOSHQA "fixed" klassli elementlarni
+            ham chop etishga chiqarib yuborishi mumkin edi). */}
         <style dangerouslySetInnerHTML={{
           __html: `
           @media print {
             body * { visibility: hidden; }
-            .print\\:hidden { display: none !important; }
-            .fixed { position: static !important; }
-            .fixed > div:last-child, .fixed > div:last-child * { visibility: visible; }
-            .fixed > div:last-child { position: absolute; left: 0; top: 0; width: 100%; }
+            #qr-print-content, #qr-print-content * { visibility: visible; }
+            #qr-print-content { position: fixed !important; left: 0; top: 0; width: 100%; }
             .page-break-inside-avoid { page-break-inside: avoid; }
           }
         `}} />
