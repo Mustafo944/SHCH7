@@ -982,6 +982,7 @@ export default function WorkerPage() {
                 stationId={activeStationId}
                 stationName={stationName}
                 canEdit={session?.role === 'katta_elektromexanik' || session?.position === 'katta_elektromexanik'}
+                canEditTaskMappings={session?.role === 'katta_elektromexanik' || session?.position === 'katta_elektromexanik'}
                 userName={session?.fullName || 'Foydalanuvchi'}
                 onClose={() => setView('home')}
               />

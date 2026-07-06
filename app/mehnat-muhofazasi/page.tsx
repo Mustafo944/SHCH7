@@ -6,8 +6,9 @@ import { LogOut, ShieldAlert, ChevronLeft, ChevronRight, Menu, Home } from 'luci
 import useSWR from 'swr'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import { useSessionGuard } from '@/lib/hooks/useSessionGuard'
-import { getIncidents, addIncident, deleteIncident } from '@/lib/supabase-db'
+import { getIncidents, addIncident, deleteIncident, updateIncidentSeverity } from '@/lib/supabase-db'
 import { IncidentAdminView } from '@/components/admin/IncidentAdminView'
+import type { IncidentSeverity } from '@/types'
 
 export default function MehnatMuhofazasiPage() {
   const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['mehnat_muhofazasi'])
@@ -22,10 +23,10 @@ export default function MehnatMuhofazasiPage() {
     getIncidents
   )
 
-  const handleAddIncident = useCallback(async (month: string, content: string) => {
+  const handleAddIncident = useCallback(async (month: string, content: string, severity: IncidentSeverity) => {
     if (!session) return
     try {
-      await addIncident(month, content, session.fullName)
+      await addIncident(month, content, session.fullName, severity)
       mutateIncidents()
     } catch (err) {
       alert("Hodisani qo'shishda xatolik yuz berdi")
@@ -40,6 +41,16 @@ export default function MehnatMuhofazasiPage() {
       alert("Hodisani o'chirishda xatolik yuz berdi")
     }
   }, [mutateIncidents])
+
+  const handleUpdateSeverity = useCallback(async (id: string, severity: IncidentSeverity) => {
+    try {
+      await updateIncidentSeverity(id, severity)
+      mutateIncidents()
+    } catch (err) {
+      alert("Hodisani o'zgartirishda xatolik yuz berdi")
+    }
+  }, [mutateIncidents])
+
 
   if (sessionLoading || !session) return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50">
@@ -198,6 +209,7 @@ export default function MehnatMuhofazasiPage() {
                 incidents={allIncidents}
                 onAdd={handleAddIncident}
                 onDelete={handleRemoveIncident}
+                onUpdateSeverity={handleUpdateSeverity}
               />
             </div>
           </div>

@@ -165,12 +165,16 @@ export interface WorkReport {
   rejectedBy: string | null;
 }
 
+// Baxtsiz hodisaning og'irlik darajasi
+export type IncidentSeverity = "olim" | "ogir" | "orta_ogir" | "yengil";
+
 export interface Incident {
   id: string;
   month: string; // "YYYY-MM"
   content: string;
   createdAt: string;
   createdByName: string;
+  severity: IncidentSeverity | null; // Ushbu tasnif joriy etilishidan oldingi yozuvlarda null bo'ladi
 }
 
 export interface IncidentRead {

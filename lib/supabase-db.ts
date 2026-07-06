@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { User, WorkReport, StationSchema, ReportEntry, GrafikTuri, StationJournal, JournalType, DU46Entry, SHU2Entry, ALSNEntry, YerlatgichEntry, AlsnKodEntry, MpsFriksionEntry, Incident } from '@/types';
+import type { User, WorkReport, StationSchema, ReportEntry, GrafikTuri, StationJournal, JournalType, DU46Entry, SHU2Entry, ALSNEntry, YerlatgichEntry, AlsnKodEntry, MpsFriksionEntry, Incident, IncidentSeverity } from '@/types';
 
 // Stations
 import { getStations, getStation } from './store';
@@ -11,7 +11,7 @@ const USER_COLUMNS = 'id, login, full_name, role, position, station_ids, phone, 
 
 const WORK_REPORT_COLUMNS = 'id, worker_id, worker_name, worker_phone, station_id, station_name, week_label, month, year, entries, submitted_at, confirmed_at, confirmed_by, rejected_at, rejected_by' as const;
 
-const INCIDENT_COLUMNS = 'id, month, content, created_at, created_by_name' as const;
+const INCIDENT_COLUMNS = 'id, month, content, created_at, created_by_name, severity' as const;
 
 const SCHEMA_COLUMNS = 'id, station_id, file_name, file_path, schema_type, uploaded_at, uploaded_by' as const;
 
@@ -53,6 +53,7 @@ interface DbIncidentRow {
   content: string;
   created_at: string;
   created_by_name: string;
+  severity: string | null;
 }
 
 
@@ -692,6 +693,17 @@ export async function getStationPendingCount(): Promise<Record<string, number>> 
 
 // Incidents
 
+function mapDbIncident(row: DbIncidentRow): Incident {
+  return {
+    id: row.id,
+    month: row.month,
+    content: row.content,
+    createdAt: row.created_at,
+    createdByName: row.created_by_name,
+    severity: (row.severity as IncidentSeverity | null) ?? null,
+  };
+}
+
 /**
  * Eng oxirgi hodisalar. Default limit 100 — dispatcher va worker
  * sahifalari uchun yetarli; eskilari getIncidentsByMonth orqali olinadi.
@@ -704,13 +716,7 @@ export async function getIncidents(limit = 100): Promise<Incident[]> {
     .limit(limit);
 
   if (error || !data) return [];
-  return (data as DbIncidentRow[]).map(row => ({
-    id: row.id,
-    month: row.month,
-    content: row.content,
-    createdAt: row.created_at,
-    createdByName: row.created_by_name,
-  }));
+  return (data as DbIncidentRow[]).map(mapDbIncident);
 }
 
 export async function getIncidentsByMonth(month: string): Promise<Incident[]> {
@@ -721,35 +727,35 @@ export async function getIncidentsByMonth(month: string): Promise<Incident[]> {
     .order('created_at', { ascending: false });
 
   if (error || !data) return [];
-  return (data as DbIncidentRow[]).map(row => ({
-    id: row.id,
-    month: row.month,
-    content: row.content,
-    createdAt: row.created_at,
-    createdByName: row.created_by_name,
-  }));
+  return (data as DbIncidentRow[]).map(mapDbIncident);
 }
 
-export async function addIncident(month: string, content: string, createdByName: string): Promise<Incident> {
+export async function addIncident(month: string, content: string, createdByName: string, severity: IncidentSeverity): Promise<Incident> {
   const { data, error } = await supabase
     .from('incidents')
     .insert({
       month,
       content,
       created_by_name: createdByName,
+      severity,
     })
     .select()
     .single();
 
   if (error || !data) throw new Error(error?.message ?? 'Insert failed');
-  const row = data as DbIncidentRow;
-  return {
-    id: row.id,
-    month: row.month,
-    content: row.content,
-    createdAt: row.created_at,
-    createdByName: row.created_by_name,
-  };
+  return mapDbIncident(data as DbIncidentRow);
+}
+
+export async function updateIncidentSeverity(id: string, severity: IncidentSeverity): Promise<Incident> {
+  const { data, error } = await supabase
+    .from('incidents')
+    .update({ severity })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error || !data) throw new Error(error?.message ?? 'Update failed');
+  return mapDbIncident(data as DbIncidentRow);
 }
 
 export async function deleteIncident(id: string): Promise<void> {

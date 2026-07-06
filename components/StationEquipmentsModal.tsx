@@ -106,13 +106,14 @@ function DebouncedInput({ value, onChange, placeholder, className }: { value: st
 interface Props {
   stationId: string;
   stationName: string;
-  canEdit: boolean; // Katta elektromexanik bo'lsa true — "QR kodni bog'lash" faqat shu rolga ko'rinadi
+  canEdit: boolean; // Katta elektromexanik bo'lsa true — uskunalar ro'yxatini tahrirlash shu rolga tegishli
   isDispatcher?: boolean; // Aloqa dispetcheri bo'lsa true — "QR Chop etish" faqat shu rolga ko'rinadi
+  canEditTaskMappings?: boolean; // Katta elektromexanik bo'lsa true — "QR kodni bog'lash" faqat shu rolga ko'rinadi
   userName: string;
   onClose: () => void;
 }
 
-export function StationEquipmentsModal({ stationId, stationName, canEdit, isDispatcher = false, userName, onClose }: Props) {
+export function StationEquipmentsModal({ stationId, stationName, canEdit, isDispatcher = false, canEditTaskMappings = false, userName, onClose }: Props) {
   const toast = useToast();
   const { data: swrData, isLoading, mutate } = useSWR(
     `equipments_${stationId}`,
@@ -125,6 +126,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
 
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingMappings, setIsEditingMappings] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
 
   const [equipments, setEquipments] = useState<StationEquipments | null>(null);
@@ -132,6 +134,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
   const [categories, setCategories] = useState<EquipmentCategory[]>([]);
   const [taskMappings, setTaskMappings] = useState<TaskQRMapping[]>([]);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [deleteConfirmCategoryId, setDeleteConfirmCategoryId] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<'equipments' | 'tasks' | 'history'>('equipments');
   const [searchQuery, setSearchQuery] = useState('');
@@ -218,12 +221,12 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
   }, []);
 
   useEffect(() => {
-    if (swrData && !isEditing) {
+    if (swrData && !isEditing && !isEditingMappings) {
       setEquipments(swrData);
       setCategories(swrData.categories || []);
       setTaskMappings(swrData.taskMappings || []);
     }
-  }, [swrData, isEditing]);
+  }, [swrData, isEditing, isEditingMappings]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -238,6 +241,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
       if (data) {
         toast.success("O'zgarishlar muvaffaqiyatli saqlandi!");
         setIsEditing(false);
+        setIsEditingMappings(false);
         mutate(data); // Keshni yangilaymiz
       }
     } catch (err) {
@@ -263,6 +267,13 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
     setCategories(prev => prev.map(c =>
       c.id === categoryId ? { ...c, items: (c.items || []).filter(item => item.id !== itemId) } : c
     ));
+  };
+
+  const removeCategory = (categoryId: string) => {
+    setCategories(prev => prev.filter(c => c.id !== categoryId));
+    // Shu toifaga bog'langan QR vazifa moslashuvlarini ham tozalaymiz — aks holda "osilib qolgan" havola qoladi
+    setTaskMappings(prev => prev.filter(m => m.equipmentType !== categoryId));
+    setDeleteConfirmCategoryId(null);
   };
 
   const handleAddCategory = () => {
@@ -328,7 +339,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
   // "QR kodni bog'lash" faqat Katta elektromexanikka ko'rinadi
   const tabs: { id: 'equipments' | 'tasks' | 'history'; label: string; onClick: () => void }[] = [
     { id: 'equipments', label: "Uskunalar ro'yxati va QR", onClick: () => setActiveTab('equipments') },
-    ...(canEdit ? [{ id: 'tasks' as const, label: "QR kodni bog'lash", onClick: () => { setActiveTab('tasks'); setSelectedPlanType(null); setSelectedTaskNsh(null); } }] : []),
+    ...(canEditTaskMappings ? [{ id: 'tasks' as const, label: "QR kodni bog'lash", onClick: () => { setActiveTab('tasks'); setSelectedPlanType(null); setSelectedTaskNsh(null); } }] : []),
     { id: 'history', label: 'Skaner tarixi', onClick: openHistoryTab },
   ];
 
@@ -394,9 +405,14 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                             <Plus size={14} className="sm:w-4 sm:h-4" /> Qo'shish
                           </button>
                         ) : isEditing ? (
-                          <button onClick={() => addItem(category.id)} className={`shrink-0 text-[10px] sm:text-xs font-bold ${colorStyle(category.color).btnText} px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center gap-1`}>
-                            <Plus size={14} className="sm:w-4 sm:h-4" /> Qo'shish
-                          </button>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <button onClick={() => addItem(category.id)} className={`text-[10px] sm:text-xs font-bold ${colorStyle(category.color).btnText} px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center gap-1`}>
+                              <Plus size={14} className="sm:w-4 sm:h-4" /> Qo'shish
+                            </button>
+                            <button onClick={() => setDeleteConfirmCategoryId(category.id)} className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors" title="Toifani o'chirish">
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         ) : null}
                       </div>
 
@@ -597,7 +613,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                               return (
                                 <button
                                   key={category.id}
-                                  disabled={!isEditing}
+                                  disabled={!isEditingMappings}
                                   onClick={() => {
                                     if (isActive) {
                                       setTaskMappings(prev => prev.filter(p => p.taskNsh !== selectedTaskNsh));
@@ -605,7 +621,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                                       setTaskMappings(prev => [...prev.filter(p => p.taskNsh !== selectedTaskNsh), { taskNsh: selectedTaskNsh, equipmentType: category.id }]);
                                     }
                                   }}
-                                  className={`p-5 text-left border-2 rounded-2xl transition-all relative ${isActive ? `${colorStyle(category.color).activeBorder} shadow-md` : 'border-white/60 bg-white/70 hover:border-slate-300'} ${!isEditing ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                  className={`p-5 text-left border-2 rounded-2xl transition-all relative ${isActive ? `${colorStyle(category.color).activeBorder} shadow-md` : 'border-white/60 bg-white/70 hover:border-slate-300'} ${!isEditingMappings ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
                                   {isActive && <div className={`absolute top-4 right-4 ${colorStyle(category.color).iconText} bg-white rounded-full p-1 shadow-sm`}><Target size={20} /></div>}
                                   <div className={`h-12 w-12 ${colorStyle(category.color).iconBg} rounded-xl flex items-center justify-center text-xl font-black mb-4`}>{(category.name || '?').charAt(0).toUpperCase()}</div>
@@ -616,7 +632,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                             })}
                           </div>
 
-                          {!isEditing && (
+                          {!isEditingMappings && (
                             <div className="flex items-center gap-2 text-xs font-bold text-red-500 mt-6 bg-red-50 p-4 rounded-2xl border border-red-100">
                               <AlertTriangle size={18} />
                               O'zgartirish kiritish uchun quyidagi "O'zgartirish" tugmasini bosing!
@@ -722,25 +738,15 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
           )}
         </div>
 
-        {/* Footer Actions — faqat "Uskunalar ro'yxati va QR" bo'limida (yoki tahrirlash davom etayotganda) ko'rinadi */}
-        {(isEditing || activeTab === 'equipments') && (
+        {/* Footer Actions — "Uskunalar ro'yxati va QR" va "QR kodni bog'lash" bo'limlarida (ikkalasi ham Katta elektromexanikka tegishli), yoki tahrirlash davom etayotganda ko'rinadi */}
+        {(isEditing || isEditingMappings || activeTab === 'equipments' || (activeTab === 'tasks' && canEditTaskMappings)) && (
           <div className="border-t border-white/60 px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-            {!isEditing ? (
-              canEdit ? (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition shadow-md whitespace-nowrap"
-                >
-                  <Edit3 size={18} /> O&apos;zgartirish
-                </button>
-              ) : (
-                <div className="text-[11px] sm:text-xs font-bold text-slate-400 text-center sm:text-left">Tahrirlash huquqi faqat Katta elektromexanikda</div>
-              )
-            ) : (
+            {isEditing || isEditingMappings ? (
               <>
                 <button
                   onClick={() => {
                     setIsEditing(false);
+                    setIsEditingMappings(false);
                     if (swrData) {
                       setCategories(swrData.categories || []);
                       setTaskMappings(swrData.taskMappings || []);
@@ -759,11 +765,48 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                   {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} Saqlash
                 </button>
               </>
+            ) : activeTab === 'equipments' ? (
+              canEdit ? (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition shadow-md whitespace-nowrap"
+                >
+                  <Edit3 size={18} /> O&apos;zgartirish
+                </button>
+              ) : (
+                <div className="text-[11px] sm:text-xs font-bold text-slate-400 text-center sm:text-left">Tahrirlash huquqi faqat Katta elektromexanikda</div>
+              )
+            ) : (
+              <button
+                onClick={() => setIsEditingMappings(true)}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition shadow-md whitespace-nowrap"
+              >
+                <Edit3 size={18} /> O&apos;zgartirish
+              </button>
             )}
           </div>
         )}
 
       </div>
+
+      {/* Toifani o'chirishni tasdiqlash */}
+      {deleteConfirmCategoryId && (() => {
+        const categoryToDelete = categories.find(c => c.id === deleteConfirmCategoryId);
+        return (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
+            <div className="premium-card w-full max-w-md p-8 animate-scale-in">
+              <h3 className="text-lg font-black text-slate-900">Toifani o&apos;chirish</h3>
+              <p className="mt-2 text-sm text-slate-500">
+                <span className="font-bold text-slate-700">{categoryToDelete?.name || 'Bu toifa'}</span> toifasi va undagi barcha uskunalar ({(categoryToDelete?.items || []).length} ta) o&apos;chiriladi. Bu amalni Bekor qilish tugmasi bilangina qaytarish mumkin — hozircha faqat lokal, "Saqlash" bosilgandan keyin bazaga yoziladi.
+              </p>
+              <div className="mt-8 flex justify-end gap-3">
+                <button onClick={() => setDeleteConfirmCategoryId(null)} className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Bekor qilish</button>
+                <button onClick={() => removeCategory(deleteConfirmCategoryId)} className="rounded-xl bg-red-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-500/20 hover:bg-red-600 transition-colors">O&apos;chirish</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

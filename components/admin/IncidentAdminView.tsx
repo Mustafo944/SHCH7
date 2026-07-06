@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react'
 import { AlertTriangle, CheckCircle2, ChevronLeft, Edit, FileText, Plus, Trash2 } from 'lucide-react'
-import { Incident } from '@/types'
+import { Incident, IncidentSeverity } from '@/types'
+import { INCIDENT_SEVERITY_META, INCIDENT_SEVERITY_ORDER } from '@/lib/constants'
+import { IncidentStatsSummary } from '@/components/IncidentStatsSummary'
 
 const UZ_MONTHS_MAP: Record<string, string> = {
   '01': 'Yanvar', '02': 'Fevral', '03': 'Mart', '04': 'Aprel',
@@ -16,11 +18,12 @@ function formatDateUz(ds: string) {
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}, ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-export function IncidentAdminView({ incidents, onAdd, onDelete }: { incidents: Incident[], onAdd: (month: string, content: string) => Promise<void>, onDelete: (id: string) => void }) {
+export function IncidentAdminView({ incidents, onAdd, onDelete, onUpdateSeverity }: { incidents: Incident[], onAdd: (month: string, content: string, severity: IncidentSeverity) => Promise<void>, onDelete: (id: string) => void, onUpdateSeverity?: (id: string, severity: IncidentSeverity) => Promise<void> }) {
   const now = new Date()
   const [selectedYear, setSelectedYear] = useState(now.getFullYear())
   const [selectedMonthIdx, setSelectedMonthIdx] = useState<number | null>(null)
   const [content, setContent] = useState('')
+  const [severity, setSeverity] = useState<IncidentSeverity | null>(null)
   const [loading, setLoading] = useState(false)
 
   const UZ_MONTH_NAMES = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek']
@@ -31,11 +34,12 @@ export function IncidentAdminView({ incidents, onAdd, onDelete }: { incidents: I
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedMonthValue || !content.trim()) return
+    if (!selectedMonthValue || !content.trim() || !severity) return
     setLoading(true)
-    await onAdd(selectedMonthValue, content)
+    await onAdd(selectedMonthValue, content, severity)
     setSelectedMonthIdx(null)
     setContent('')
+    setSeverity(null)
     setLoading(false)
   }
 
@@ -93,6 +97,28 @@ export function IncidentAdminView({ incidents, onAdd, onDelete }: { incidents: I
             )}
           </div>
           <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Og'irlik darajasi</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {INCIDENT_SEVERITY_ORDER.map(sev => {
+                const meta = INCIDENT_SEVERITY_META[sev]
+                const isSelected = severity === sev
+                return (
+                  <button
+                    key={sev}
+                    type="button"
+                    onClick={() => setSeverity(sev)}
+                    className={`flex items-center justify-center gap-2 rounded-xl border-2 px-3 py-2.5 text-xs font-bold transition-all ${
+                      isSelected ? `${meta.badgeClass} border-transparent shadow-md scale-[1.03]` : 'bg-white text-slate-500 border-slate-200/60 hover:border-slate-300'
+                    }`}
+                  >
+                    <span className={`h-2 w-2 rounded-full ${isSelected ? 'bg-white/70' : meta.dotClass}`} />
+                    {meta.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Mazmuni</label>
             <textarea
               value={content}
@@ -105,7 +131,7 @@ export function IncidentAdminView({ incidents, onAdd, onDelete }: { incidents: I
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={loading || !selectedMonthValue}
+              disabled={loading || !selectedMonthValue || !severity}
               className="btn-gradient flex items-center gap-2 disabled:opacity-40 rounded-xl px-10 py-4 text-sm font-black text-white shadow-xl transition-all duration-200 hover:scale-[1.02] active:scale-95"
             >
               {loading ? <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" /> : <Plus size={18} />}
@@ -114,12 +140,12 @@ export function IncidentAdminView({ incidents, onAdd, onDelete }: { incidents: I
           </div>
         </form>
       </div>
-      <IncidentMonthList grouped={grouped} onDelete={onDelete} />
+      <IncidentMonthList grouped={grouped} incidents={incidents} onDelete={onDelete} onUpdateSeverity={onUpdateSeverity} />
     </div>
   )
 }
 
-function IncidentMonthList({ grouped, onDelete }: { grouped: Record<string, Incident[]>, onDelete: (id: string) => void }) {
+function IncidentMonthList({ grouped, incidents, onDelete, onUpdateSeverity }: { grouped: Record<string, Incident[]>, incidents: Incident[], onDelete: (id: string) => void, onUpdateSeverity?: (id: string, severity: IncidentSeverity) => Promise<void> }) {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null)
 
   const allYears = useMemo(() => {
@@ -136,9 +162,13 @@ function IncidentMonthList({ grouped, onDelete }: { grouped: Record<string, Inci
 
   return (
     <div className="space-y-6">
-      <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+      <h3 className="text-xl font-black text-slate-900 flex items-center gap-2 mb-4">
         <FileText className="text-purple-500" /> Barcha Baxtsiz Hodisalar
       </h3>
+
+      <div className="mb-6">
+        <IncidentStatsSummary incidents={incidents} />
+      </div>
 
       {allYears.map(year => (
         <div key={year}>
@@ -191,11 +221,55 @@ function IncidentMonthList({ grouped, onDelete }: { grouped: Record<string, Inci
                   <span className="badge-danger">{grouped[expandedMonth].length} ta hodisa</span>
                 )}
               </h4>
+              {(grouped[expandedMonth]?.length || 0) > 0 && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {INCIDENT_SEVERITY_ORDER.map(sev => {
+                    const meta = INCIDENT_SEVERITY_META[sev]
+                    const count = grouped[expandedMonth].filter(inc => inc.severity === sev).length
+                    return (
+                      <span key={sev} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${meta.badgeClass}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${meta.dotClass === 'bg-slate-900' ? 'bg-white/70' : meta.dotClass}`} />
+                        {count} {meta.label}
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
               {(grouped[expandedMonth]?.length || 0) > 0 ? (
                 <div className="space-y-3">
-                  {grouped[expandedMonth].map(inc => (
-                    <div key={inc.id} className="relative rounded-2xl border border-red-100 bg-red-50/30 p-4 sm:p-5">
-                      <div className="absolute top-4 right-4">
+                  {grouped[expandedMonth].map(inc => {
+                    const meta = inc.severity ? INCIDENT_SEVERITY_META[inc.severity] : null
+                    return (
+                    <div key={inc.id} className={`relative rounded-2xl border p-4 sm:p-5 ${meta?.cardClass || 'border-slate-200 bg-slate-50/30'}`}>
+                      <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+                        {onUpdateSeverity && (
+                          <div className="relative group/edit">
+                            <button
+                              className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm border border-slate-200 hover:bg-slate-50 hover:text-blue-600 transition-colors"
+                              title="Toifasini o'zgartirish"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <div className="absolute right-0 top-full pt-2 hidden group-hover/edit:block z-50">
+                              <div className="w-48 bg-white rounded-xl shadow-xl border border-slate-100 p-2">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-2 px-2">Toifani tanlang:</p>
+                                {INCIDENT_SEVERITY_ORDER.map(sev => {
+                                  const smeta = INCIDENT_SEVERITY_META[sev]
+                                  return (
+                                    <button
+                                      key={sev}
+                                      onClick={() => onUpdateSeverity(inc.id, sev)}
+                                      className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
+                                    >
+                                      <span className={`h-2 w-2 rounded-full ${smeta.dotClass === 'bg-slate-900' ? 'bg-slate-800' : smeta.dotClass}`} />
+                                      {smeta.label}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                         <button
                           onClick={() => onDelete(inc.id)}
                           className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-red-400 shadow-sm border border-red-100 hover:bg-red-50 hover:text-red-600 transition-colors"
@@ -205,12 +279,20 @@ function IncidentMonthList({ grouped, onDelete }: { grouped: Record<string, Inci
                         </button>
                       </div>
                       <div className="pr-12">
-                        <p className="text-xs font-bold text-slate-500 mb-2">{formatDateUz(inc.createdAt)}</p>
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <p className="text-xs font-bold text-slate-500">{formatDateUz(inc.createdAt)}</p>
+                          {meta && (
+                            <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest ${meta.badgeClass}`}>
+                              {meta.label}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed break-words overflow-hidden">{inc.content}</p>
                         <p className="text-[10px] font-black text-slate-400 mt-3 flex items-center gap-1"><Edit size={10} /> Mehnat muhofazasi muhandisi</p>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8">

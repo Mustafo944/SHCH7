@@ -1108,7 +1108,7 @@ export default function DispatcherPage() {
         <StationEquipmentsModal
           stationId={selectedStation}
           stationName={stations.find(s => s.id === selectedStation)?.name || ''}
-          canEdit={false} // Dispetcher faqat ko'radi
+          canEdit={false} // Dispetcher uskunalar ro'yxatini tahrirlamaydi
           isDispatcher // QR Chop etish faqat shu rolga ko'rinadi
           userName={session?.fullName || 'Dispetcher'}
           onClose={() => setSelectedReportType(null)}

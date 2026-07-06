@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react'
 import { AlertTriangle, CheckCircle2, Clock } from 'lucide-react'
 import type { Incident } from '@/types'
 import { markIncidentAsRead } from '@/lib/supabase-db'
+import { INCIDENT_SEVERITY_META, INCIDENT_SEVERITY_ORDER } from '@/lib/constants'
+import { IncidentStatsSummary } from '@/components/IncidentStatsSummary'
 
 const UZ_MONTHS_MAP: Record<string, string> = {
   '01': 'Yanvar', '02': 'Fevral', '03': 'Mart', '04': 'Aprel',
@@ -80,6 +82,8 @@ export default function IncidentsView({
         </div>
       </div>
 
+      <IncidentStatsSummary incidents={incidents} />
+
       {allYears.map(year => (
         <div key={year}>
           <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">📅 {year}-yil</p>
@@ -139,6 +143,20 @@ export default function IncidentsView({
                   return unread > 0 ? <span className="badge-danger">{unread} ta o&apos;qilmagan</span> : null
                 })()}
               </h3>
+              {(grouped[expandedMonth]?.length || 0) > 0 && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {INCIDENT_SEVERITY_ORDER.map(sev => {
+                    const meta = INCIDENT_SEVERITY_META[sev]
+                    const count = grouped[expandedMonth].filter(inc => inc.severity === sev).length
+                    return (
+                      <span key={sev} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${meta.badgeClass}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${meta.dotClass === 'bg-slate-900' ? 'bg-white/70' : meta.dotClass}`} />
+                        {count} {meta.label}
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
               {(grouped[expandedMonth]?.length || 0) > 0 ? (
                 <div className="space-y-4">
                   {grouped[expandedMonth].map(inc => {
@@ -154,11 +172,18 @@ export default function IncidentsView({
                             : 'border-amber-100 bg-amber-50/30 hover:bg-amber-50/50'
                         }`}
                       >
-                        <div className="flex justify-between items-start mb-3">
-                          <p className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-                            <Clock size={12} />
-                            {formatDateUz(inc.createdAt)}
-                          </p>
+                        <div className="flex flex-wrap justify-between items-start gap-2 mb-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+                              <Clock size={12} />
+                              {formatDateUz(inc.createdAt)}
+                            </p>
+                            {inc.severity && (
+                              <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border ${INCIDENT_SEVERITY_META[inc.severity].badgeClass}`}>
+                                {INCIDENT_SEVERITY_META[inc.severity].label}
+                              </span>
+                            )}
+                          </div>
                           <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border ${
                             isRead ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
                           }`}>
