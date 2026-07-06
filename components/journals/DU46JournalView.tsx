@@ -264,7 +264,6 @@ export function DU46JournalView({
           if (emptyIndex !== -1) {
             n[emptyIndex] = {
               ...n[emptyIndex],
-              kamchilik: taskContext.taskText || '',
               oyKun1: todayStr,
               soatMinut1: timeStr,
               linkedReportId: taskContext.reportId,
@@ -275,7 +274,6 @@ export function DU46JournalView({
           } else {
             // Append a new row if no empty rows
             const newRow = EMPTY_DU46(journalMonth)
-            newRow.kamchilik = taskContext.taskText || ''
             newRow.oyKun1 = todayStr
             newRow.soatMinut1 = timeStr
             newRow.linkedReportId = taskContext.reportId
@@ -287,7 +285,7 @@ export function DU46JournalView({
           return n
         })
 
-        showMsg("Vazifa matni avtomatik kiritildi", 3000)
+        showMsg("Sana va vaqt avtomatik kiritildi — ish mazmunini o'zingiz yozing", 3000)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

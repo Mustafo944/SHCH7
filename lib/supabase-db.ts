@@ -458,6 +458,10 @@ export async function confirmReport(reportId: string, dispatcherName: string): P
       // Qabul qilinganda rad etish ma'lumotlarini tozalaymiz
       rejected_at: null,
       rejected_by: null,
+      // Himoya: tasdiqlangan reja har doim "yuborilgan" hisoblanishi shart —
+      // aks holda is_submitted=false qolib ketsa, reja tasdiqlangan bo'lsa ham
+      // dispetcher ro'yxatida ko'rinmay qoladi.
+      is_submitted: true,
     })
     .eq('id', reportId)
     .select()
