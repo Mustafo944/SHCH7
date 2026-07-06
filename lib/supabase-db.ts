@@ -499,7 +499,8 @@ export async function rejectReport(reportId: string, dispatcherName: string): Pr
 export async function updateReportEntryInProgress(
   reportId: string,
   entryIndex: number,
-  taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy'
+  taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy',
+  value: boolean = true
 ): Promise<void> {
   const MAX_RETRIES = 3;
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -528,7 +529,7 @@ export async function updateReportEntryInProgress(
 
     const key = typeKeyMap[taskType];
     if (key) {
-      (entry as any)[key] = true;
+      (entry as any)[key] = value;
     }
 
     // Optimistic locking: faqat submitted_at o'zgarmagan bo'lsa yangilash

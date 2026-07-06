@@ -741,14 +741,21 @@ export function DU46JournalView({
       bartarafByRole: userRole,
     }
     updated[i] = updatedEntry
-    // "Tugadi" bosilgani — bu hali to'liq "Bajarildi" degani emas: odatda bekat navbatchisi
-    // hali ham 12-ustunni tasdiqlashi kerak. Agar boshqa tasdiqlovchi kerak bo'lmasa
-    // (masalan "Tugadi" bosgan odamning o'zi bekat navbatchisi bo'lsa) — to'g'ridan-to'g'ri
-    // "Bajarildi" deb belgilaymiz; aks holda "Jarayonda" holatida qoldiramiz — shunda
-    // vazifa kartasi ("2/2" yashil) va pastdagi "Kutish"/"Bajarildi" tugmasi bir-biriga
-    // zid ko'rinmaydi.
-    const needsMoreApproval = getNextApproverRole(updatedEntry, 12) !== null
-    if (onAccepted) onAccepted(!needsMoreApproval, needsMoreApproval)
+
+    // "Tugadi" bosilishi oylik ish reja checklisti uchun yetarli hisoblanadi —
+    // DU-46ning o'z ichidagi tasdiqlash zanjiri (bekat navbatchisigacha) mustaqil davom etadi,
+    // lekin oylik vazifani endi bloklamaydi.
+    if (onAccepted) onAccepted(true, false)
+
+    const activeReportId = updatedEntry.linkedReportId || taskContext?.reportId
+    const activeTaskType = updatedEntry.linkedTaskType || taskContext?.taskType
+    const activeEntryIndex = updatedEntry.linkedEntryIndex ?? taskContext?.entryIndex
+    if (activeReportId && activeTaskType && activeEntryIndex !== undefined) {
+      import('@/lib/supabase-db').then(db => {
+        db.updateReportEntryInProgress(activeReportId, activeEntryIndex, activeTaskType, false)
+      }).catch(err => console.error("In progress clear error:", err))
+    }
+
     showMsg('Bajarildi belgilandi!')
     saveEntries(updated, prev).catch(() => { })
   }
