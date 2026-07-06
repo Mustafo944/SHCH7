@@ -26,6 +26,31 @@ const ROLE_HOME: Record<string, string> = {
   mehnat_muhofazasi: '/mehnat-muhofazasi',
 }
 
+/**
+ * JWT'ning `user_role` claim'ini o'qiydi (Custom Access Token Hook qo'shadi).
+ *   - `string`    → rol topildi (DB so'roviga hojat yo'q)
+ *   - `null`      → claim bor, lekin rol yo'q (role'siz akkaunt)
+ *   - `undefined` → claim yo'q / dekod muvaffaqiyatsiz → DB fallback ishlaydi
+ *
+ * Bu token'ni getUser() allaqachon Auth serverida tekshirgani uchun
+ * uning claim'lariga ishonish xavfsiz. Faqat lokal dekod (imzo qayta
+ * tekshirilmaydi, chunki bu allaqachon bajarilgan).
+ */
+function getRoleFromToken(accessToken?: string): string | null | undefined {
+  if (!accessToken) return undefined
+  const parts = accessToken.split('.')
+  if (parts.length !== 3) return undefined
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const payload = JSON.parse(atob(base64)) as Record<string, unknown>
+    if (!('user_role' in payload)) return undefined
+    const role = payload.user_role
+    return typeof role === 'string' ? role : null
+  } catch {
+    return undefined
+  }
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -52,35 +77,47 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
   const { pathname } = request.nextUrl
 
   const matchedRoute = Object.keys(PROTECTED_ROUTES).find(route =>
     pathname.startsWith(route)
   )
 
-  // Himoyalanmagan sahifa — darhol ruxsat
+  // Himoyalanmagan sahifa — darhol ruxsat (auth so'roviga hojat yo'q)
   if (!matchedRoute) return supabaseResponse
+
+  // ── XAVFSIZLIK ANKORI ──
+  // getUser() JWT ni Auth serverida tekshiradi (getSession()'dan farqli).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   // Login qilinmagan — login sahifasiga
   if (!user) {
     return redirectTo(request, supabaseResponse, '/')
   }
 
-  // ── XAVFSIZLIK: Rol HAR DOIM ma'lumotlar bazasidan olinadi. ──
-  // Eski `user-role` cookie mijoz tomonidan soxtalashtirilishi mumkin edi,
-  // shuning uchun unga endi ISHONILMAYDI va u o'chiriladi.
-  // users.id — primary key, bu so'rov indeksli va juda tez (~1-2ms).
-  const { data: profile } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  // ── ROL: avval imzolangan JWT ichidan (DB so'rovisiz) ──
+  // Custom Access Token Hook rolni token'ga `user_role` claim sifatida
+  // qo'shadi. getUser() aynan shu token'ni tekshirgani uchun claim'ga
+  // ishonish mumkin. Bu har bir navigatsiyadagi DB so'rovini yo'q qiladi.
+  // getSession() token'ni cookie'dan lokal o'qiydi (tarmoq so'rovi yo'q).
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
 
-  const userRole = profile?.role || null
+  let userRole = getRoleFromToken(session?.access_token)
+
+  // Fallback: hook hali yoqilmagan yoki eski token (claim yo'q) bo'lsa,
+  // DB'dan o'qiymiz — hech narsa buzilmaydi, loop ham yuzaga kelmaydi.
+  if (userRole === undefined) {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    userRole = profile?.role || null
+  }
 
   // Eskirgan, ishonchsiz cookie'ni tozalaymiz
   supabaseResponse.cookies.set('user-role', '', { maxAge: 0, path: '/' })

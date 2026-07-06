@@ -387,7 +387,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           month: monthStr,
           year: String(new Date().getFullYear()),
           weekLabel: 'Draft Oylik Reja'
-        })
+        }, true) // ← Yuborish: dispetcherga tasdiqlash uchun ko'rinadi
         setFormMessage({ type: 'success', text: 'Muvaffaqiyatli yuborildi!' })
         setTimeout(() => setFormMessage(null), 3000)
         setHasUnsavedChanges(false)

@@ -9,7 +9,7 @@ export { getStations, getStation };
 // DB SELECT konstantalari (takrorlanishni kamaytirish)
 const USER_COLUMNS = 'id, login, full_name, role, position, station_ids, phone, created_at' as const;
 
-const WORK_REPORT_COLUMNS = 'id, worker_id, worker_name, worker_phone, station_id, station_name, week_label, month, year, entries, submitted_at, confirmed_at, confirmed_by, rejected_at, rejected_by' as const;
+const WORK_REPORT_COLUMNS = 'id, worker_id, worker_name, worker_phone, station_id, station_name, week_label, month, year, entries, submitted_at, confirmed_at, confirmed_by, rejected_at, rejected_by, is_submitted' as const;
 
 const INCIDENT_COLUMNS = 'id, month, content, created_at, created_by_name, severity' as const;
 
@@ -45,6 +45,7 @@ export type DbWorkReportRow = {
   confirmed_by?: string;
   rejected_at?: string;
   rejected_by?: string;
+  is_submitted?: boolean;
 };
 
 interface DbIncidentRow {
@@ -295,6 +296,7 @@ export function mapDbReport(row: DbWorkReportRow): WorkReport {
     confirmedBy: row.confirmed_by || null,
     rejectedAt: row.rejected_at || null,
     rejectedBy: row.rejected_by || null,
+    isSubmitted: row.is_submitted ?? false,
   };
 }
 
@@ -326,6 +328,8 @@ export async function getReportsByMonths(months: string[]): Promise<WorkReport[]
     .from('work_reports')
     .select(WORK_REPORT_COLUMNS)
     .in('month', months)
+    // Faqat yuborilgan rejalar — draft (avtosaqlangan) rejalar dispetcherga ko'rinmaydi
+    .eq('is_submitted', true)
     .order('submitted_at', { ascending: false });
 
   if (error || !data) return [];
@@ -349,6 +353,8 @@ export async function getReportsByStationYear(
     .select(WORK_REPORT_COLUMNS)
     .eq('station_id', stationId)
     .like('month', `${year}-%`)
+    // Arxiv ham faqat yuborilgan rejalarni ko'rsatadi
+    .eq('is_submitted', true)
     .order('month', { ascending: false });
 
   if (error || !data) return [];
@@ -406,7 +412,8 @@ export async function getReportByWorkerAndMonth(workerId: string, month: string)
 }
 
 export async function upsertReport(
-  report: Omit<WorkReport, 'id' | 'submittedAt' | 'confirmedAt' | 'confirmedBy' | 'rejectedAt' | 'rejectedBy'> & { id?: string }
+  report: Omit<WorkReport, 'id' | 'submittedAt' | 'confirmedAt' | 'confirmedBy' | 'rejectedAt' | 'rejectedBy' | 'isSubmitted'> & { id?: string },
+  isSubmitted?: boolean
 ): Promise<WorkReport> {
   const payload: Record<string, unknown> = {
     worker_id: report.workerId,
@@ -423,6 +430,11 @@ export async function upsertReport(
     rejected_by: null,
   };
   if (report.id) payload.id = report.id;
+  // Faqat "Yuborish" bosilganda is_submitted=true yoziladi.
+  // Avtosaqlashda (isSubmitted=undefined) bu ustun payload'ga qo'shilmaydi:
+  //  - yangi draft → DB default `false` (dispetcherga ko'rinmaydi)
+  //  - allaqachon yuborilgan reja → qiymat o'zgarmasdan saqlanadi (`true` qoladi)
+  if (isSubmitted === true) payload.is_submitted = true;
 
   const { data, error } = await supabase
     .from('work_reports')
@@ -678,7 +690,9 @@ export async function getStationPendingCount(): Promise<Record<string, number>> 
   const { data, error } = await supabase
     .from('work_reports')
     .select('station_id, id')
-    .is('confirmed_at', null);
+    .is('confirmed_at', null)
+    // Faqat yuborilgan, hali tasdiqlanmagan rejalar hisoblanadi
+    .eq('is_submitted', true);
 
   if (error || !data) return {};
 

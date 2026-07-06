@@ -163,6 +163,9 @@ export interface WorkReport {
   confirmedBy: string | null;
   rejectedAt: string | null;
   rejectedBy: string | null;
+  // Faqat "Yuborish" bosilganda true bo'ladi. Draft (avtosaqlangan)
+  // rejalar false bo'lib, dispetcherga ko'rinmaydi.
+  isSubmitted: boolean;
 }
 
 // Baxtsiz hodisaning og'irlik darajasi
