@@ -366,7 +366,7 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
    TaskCompletionModal — ishni bajarish modali (jurnal bilan bog'langan)
    ═══════════════════════════════════════════════════════════════════════ */
 
-export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session, stationId, stationName, journalMonth, onComplete, onScanProgress, onClose, preloadedStationEq }: {
+export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session, stationId, stationName, journalMonth, onComplete, onScanProgress, onJournalVisited, onClose, preloadedStationEq }: {
   entry: ReportEntry
   entryIndex: number
   reportId: string
@@ -376,11 +376,11 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   journalMonth: string
   onComplete: (taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy') => void
   onScanProgress?: (scans: any[], taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy') => void
+  onJournalVisited?: (taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy', journalName: string) => void
   onClose: () => void
   preloadedStationEq?: any
 }) {
   const [activeJournal, setActiveJournal] = useState<'du46' | 'shu2' | 'yerlatgich' | 'alsnKod' | 'mpsFriksion' | 'dgaNazorat' | null>(null)
-  const [visitedJournals, setVisitedJournals] = useState<Set<string>>(new Set())
   const [selectedTaskType, setSelectedTaskType] = useState<'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy' | null>(null)
   const [localProgress, setLocalProgress] = useState<Record<string, boolean>>({})
   const [stationEq, setStationEq] = useState<any>(preloadedStationEq || null)
@@ -446,25 +446,17 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     return () => clearInterval(interval);
   }, [selectedTaskType, stationId, taskTextStr, journalMonth, entry.ragat]);
 
-  const storageKey = useMemo(() => {
-    if (!reportId || _entryIndex === -1 || !selectedTaskType) return null
-    return `visitedJournals_${reportId}_${_entryIndex}_${selectedTaskType}`
-  }, [reportId, _entryIndex, selectedTaskType])
+  // To'ldirilgan jurnallar — serverdagi report entry'dan olinadi (localStorage emas),
+  // shunda holat qurilma/brauzerdan qat'i nazar bir xil ko'rinadi.
+  const visitedJournalsKey = useMemo(() => {
+    if (!selectedTaskType) return null
+    return `visitedJournals${selectedTaskType.charAt(0).toUpperCase() + selectedTaskType.slice(1)}` as keyof ReportEntry
+  }, [selectedTaskType])
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const loadVisitedJournals = () => {
-    if (storageKey) {
-      try {
-        const saved = localStorage.getItem(storageKey)
-        if (saved) setVisitedJournals(new Set(JSON.parse(saved)))
-      } catch { /* ignore */ }
-    } else {
-      setVisitedJournals(new Set())
-    }
-  }
-  // Load on storageKey change
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useMemo(loadVisitedJournals, [storageKey])
+  const visitedJournals = useMemo(() => {
+    if (!visitedJournalsKey) return new Set<string>()
+    return new Set((entry[visitedJournalsKey] as string[] | undefined) || [])
+  }, [entry, visitedJournalsKey])
 
   const requiredJournals = useMemo(() => {
     if (!currentTask?.journals) return []
@@ -558,19 +550,13 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   };
 
   const handleJournalClose = (journalName: string, isDone = false, isInProgressFlag = false) => {
-    if (isDone) {
-      setVisitedJournals(prev => {
-        const next = new Set(prev).add(journalName)
-        if (storageKey) localStorage.setItem(storageKey, JSON.stringify(Array.from(next)))
+    if (isDone && selectedTaskType) {
+      onJournalVisited?.(selectedTaskType, journalName)
+      setLocalProgress(prev => {
+        const next = { ...prev }
+        delete next[selectedTaskType]
         return next
       })
-      if (selectedTaskType) {
-        setLocalProgress(prev => {
-          const next = { ...prev }
-          delete next[selectedTaskType]
-          return next
-        })
-      }
     }
     if (isInProgressFlag && selectedTaskType) {
       setLocalProgress(prev => ({ ...prev, [selectedTaskType]: true }))
@@ -735,7 +721,6 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                   if (isInProgress) {
                     onClose()
                   } else if (selectedTaskType) {
-                    if (storageKey) localStorage.removeItem(storageKey)
                     onComplete(selectedTaskType)
                   }
                 }}

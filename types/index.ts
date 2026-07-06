@@ -96,6 +96,14 @@ export interface ReportEntry {
   inProgressKmo?: boolean;
   inProgressMajburiy?: boolean;
 
+  // Har bir ustun uchun to'ldirilgan jurnallar ro'yxati (serverda saqlanadi —
+  // qurilma/brauzerga bog'liq bo'lmasligi uchun, localStorage o'rniga)
+  visitedJournalsHaftalik?: string[];
+  visitedJournalsYillik?: string[];
+  visitedJournalsYangi?: string[];
+  visitedJournalsKmo?: string[];
+  visitedJournalsMajburiy?: string[];
+
   // Har bir ustun uchun bajarilmagan sababi (Izox)
   missedReasonHaftalik?: string;
   missedReasonYillik?: string;

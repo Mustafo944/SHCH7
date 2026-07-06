@@ -817,6 +817,18 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
             setEntries(newEntries);
             setHasUnsavedChanges(true);
           }}
+          onJournalVisited={(taskType, journalName) => {
+            const newEntries = [...entries];
+            const e = { ...newEntries[completionIdx] };
+            const field = `visitedJournals${taskType.charAt(0).toUpperCase() + taskType.slice(1)}` as keyof ReportEntry;
+            const current = ((e as any)[field] as string[] | undefined) || [];
+            if (!current.includes(journalName)) {
+              (e as any)[field] = [...current, journalName];
+              newEntries[completionIdx] = e;
+              setEntries(newEntries);
+              setHasUnsavedChanges(true);
+            }
+          }}
           onClose={() => setCompletionIdx(null)}
           preloadedStationEq={stationEq}
         />
