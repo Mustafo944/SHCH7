@@ -80,14 +80,11 @@ export default function WorkerPage() {
   
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
 
-  const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen || isProfileMenuOpen
+  const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen
   const handleHardwareBack = useCallback(() => {
     if (isSignOutModalOpen) {
       setIsSignOutModalOpen(false)
-    } else if (isProfileMenuOpen) {
-      setIsProfileMenuOpen(false)
     } else if (selectedJournalType !== null) {
       setSelectedJournalType(null)
     } else if (workerModal !== null) {
@@ -95,7 +92,7 @@ export default function WorkerPage() {
     } else if (view !== 'home') {
       setView('home')
     }
-  }, [view, workerModal, selectedJournalType, isSignOutModalOpen, isProfileMenuOpen])
+  }, [view, workerModal, selectedJournalType, isSignOutModalOpen])
 
   useHardwareBack(isSubViewActive, handleHardwareBack)
 
@@ -431,6 +428,10 @@ export default function WorkerPage() {
               <Server size={18} className="shrink-0" />
               <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Bekat qurilmalari</span>
             </button>
+            <button onClick={() => { setIsMobileSidebarOpen(false); setIsSignOutModalOpen(true); }} className={`mt-auto flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden text-rose-600 hover:bg-rose-50 ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+              <LogOut size={18} className="shrink-0" />
+              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Chiqish</span>
+            </button>
         </nav>
 
         {/* Train Image & User Block */}
@@ -453,29 +454,7 @@ export default function WorkerPage() {
            <div className={`relative z-20 h-full flex flex-col justify-end px-4 pb-4 ${isDesktopSidebarCollapsed ? 'lg:p-3 lg:justify-center' : ''}`}>
              
              <div className="relative w-full mx-auto max-w-[230px]">
-               {/* Dropup Menu */}
-               {isProfileMenuOpen && (
-                 <>
-                   <div className="fixed inset-0 z-30" onClick={() => setIsProfileMenuOpen(false)} />
-                   <div className="absolute bottom-full left-0 right-0 mb-2 z-40 bg-white/90 backdrop-blur-xl border border-white/50 shadow-xl rounded-2xl p-1.5 animate-fade-up origin-bottom">
-                     <button
-                       onClick={() => {
-                         setIsProfileMenuOpen(false);
-                         setIsSignOutModalOpen(true);
-                       }}
-                       className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl hover:bg-red-50 text-red-600 transition-colors font-bold text-sm"
-                     >
-                       <LogOut size={18} />
-                       {!isDesktopSidebarCollapsed && <span>Chiqish</span>}
-                     </button>
-                   </div>
-                 </>
-               )}
-
-               <button 
-                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                 className={`flex items-center rounded-2xl backdrop-blur-md border shadow-lg transition-all duration-300 active:scale-95 text-left w-full ${isDesktopSidebarCollapsed ? 'lg:p-2 lg:justify-center' : 'p-3 gap-3'} ${isProfileMenuOpen ? 'bg-white/60 border-blue-300 ring-4 ring-blue-500/20' : 'bg-white/40 border-white/50 hover:bg-white/50'}`}
-               >
+               <div className={`flex items-center rounded-2xl backdrop-blur-md border shadow-lg bg-white/40 border-white/50 transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:p-2 lg:justify-center' : 'p-3 gap-3'}`}>
                  <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-200">
                    <div className="h-full w-full bg-gradient-to-br from-blue-100/80 to-blue-50/80 flex items-center justify-center text-blue-700 font-bold shadow-inner">
                        {session?.fullName?.charAt(0) || 'U'}
@@ -487,7 +466,7 @@ export default function WorkerPage() {
                       {session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : session?.role === 'elektromexanik' ? 'Elektromexanik' : session?.role === 'elektromontyor' ? 'Elektromontyor' : "Katta Elektromexanik"}
                    </p>
                  </div>
-               </button>
+               </div>
              </div>
            </div>
         </div>

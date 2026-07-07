@@ -10,7 +10,7 @@ import {
   FileText,
   Target
 } from 'lucide-react'
-import { getStationEquipments, getTaskScans, insertTaskScan, type TaskScan } from '@/lib/supabase-db'
+import { getStationEquipments, getTaskScans, insertTaskScan, autoFillShu2Entry, type TaskScan } from '@/lib/supabase-db'
 import { supabase } from '@/lib/supabase'
 import type { User, ReportEntry } from '@/types'
 import { useToast } from '@/lib/hooks/useToast'
@@ -537,6 +537,25 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
 
       if (onScanProgress) onScanProgress(newScansArray, selectedTaskType);
 
+      // Oxirgi qurilma skaner qilindi — agar SHU-2 kerak bo'lsa-yu, ishchi hali
+      // uni qo'lda to'ldirmagan bo'lsa, tizim o'zi to'ldirib tasdiqlaydi.
+      if (
+        updatedDbScans.length >= targetScans &&
+        supportedRequired.includes('SHU-2') &&
+        !visitedJournals.has('SHU-2')
+      ) {
+        try {
+          const todayDate = new Date();
+          const dateFormatted = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`;
+          const firstLine = currentTask?.text.split('\n')[0] || '';
+          await autoFillShu2Entry(stationId, journalMonth, firstLine, dateFormatted, session?.fullName || 'Ishchi');
+          onJournalVisited?.(selectedTaskType, 'SHU-2');
+          toast.success("SHU-2 jurnali avtomatik to'ldirildi");
+        } catch (autoErr) {
+          console.error('SHU-2 auto-fill error:', autoErr);
+        }
+      }
+
     } catch (err: any) {
       console.error('Scan save error:', err);
       const msg = 'Skanerni saqlashda xatolik: ' + (err?.message || 'Nomaʼlum xatolik');
@@ -652,32 +671,40 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                 const isDone = visitedJournals.has(name)
                 const isJournalInProgress = name === 'DU-46' ? isInProgress : false
 
+                const showAutoFillHint = name === 'SHU-2' && !isDone && requiresQR
+
                 return (
-                  <button
-                    key={name}
-                    onClick={() => setActiveJournal(SUPPORTED_JOURNALS[name])}
-                    className={`w-full flex items-center justify-between rounded-2xl border p-5 transition-all active:scale-[0.98] ${isDone
-                      ? 'border-emerald-200 bg-emerald-50/80'
-                      : isJournalInProgress
-                        ? 'border-amber-200 bg-amber-50/80'
-                        : 'border-purple-200 bg-purple-50/50 hover:bg-purple-100 hover:border-purple-300'
-                      }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl ${isDone ? 'bg-emerald-100 text-emerald-600' : isJournalInProgress ? 'bg-amber-100 text-amber-500' : 'bg-white text-purple-600 shadow-sm'}`}>
-                        {isDone ? <CheckCircle2 size={24} /> : <BookOpen size={24} />}
+                  <div key={name}>
+                    {showAutoFillHint && (
+                      <p className="mb-1.5 px-1 text-[10px] font-bold text-purple-500 leading-snug">
+                        💡 Barcha qurilmalarni skaner qilsangiz, SHU-2 jurnali avtomatik to'ldiriladi — qo'lda to'ldirish shart emas.
+                      </p>
+                    )}
+                    <button
+                      onClick={() => setActiveJournal(SUPPORTED_JOURNALS[name])}
+                      className={`w-full flex items-center justify-between rounded-2xl border p-5 transition-all active:scale-[0.98] ${isDone
+                        ? 'border-emerald-200 bg-emerald-50/80'
+                        : isJournalInProgress
+                          ? 'border-amber-200 bg-amber-50/80'
+                          : 'border-purple-200 bg-purple-50/50 hover:bg-purple-100 hover:border-purple-300'
+                        }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl ${isDone ? 'bg-emerald-100 text-emerald-600' : isJournalInProgress ? 'bg-amber-100 text-amber-500' : 'bg-white text-purple-600 shadow-sm'}`}>
+                          {isDone ? <CheckCircle2 size={24} /> : <BookOpen size={24} />}
+                        </div>
+                        <div className="text-left flex flex-col">
+                          <span className="font-black text-slate-900 text-sm sm:text-base">{name} jurnali</span>
+                          <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${isDone ? 'text-emerald-500' : isJournalInProgress ? 'text-amber-500' : 'text-purple-600'}`}>
+                            {isDone ? 'Bajarildi' : isJournalInProgress ? 'Jarayonda' : 'Bajarish kerak'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-left flex flex-col">
-                        <span className="font-black text-slate-900 text-sm sm:text-base">{name} jurnali</span>
-                        <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${isDone ? 'text-emerald-500' : isJournalInProgress ? 'text-amber-500' : 'text-purple-600'}`}>
-                          {isDone ? 'Bajarildi' : isJournalInProgress ? 'Jarayonda' : 'Bajarish kerak'}
-                        </span>
+                      <div className="text-slate-300">
+                        {isDone ? <CheckCircle2 size={20} className="text-emerald-500" /> : <ChevronRight size={20} />}
                       </div>
-                    </div>
-                    <div className="text-slate-300">
-                      {isDone ? <CheckCircle2 size={20} className="text-emerald-500" /> : <ChevronRight size={20} />}
-                    </div>
-                  </button>
+                    </button>
+                  </div>
                 )
               })}
 

@@ -1225,6 +1225,52 @@ export async function upsertJournal(
   } as unknown as DbJournalRow)
 }
 
+/**
+ * Vazifaga bog'liq barcha qurilmalar skaner qilib bo'lingach, ishchi SHU-2
+ * jurnalini hali qo'lda to'ldirmagan bo'lsa — shu funksiya avtomatik
+ * to'ldirib, darhol tasdiqlaydi (xuddi ishchi o'zi "Bajarildi" bosgandek).
+ * Agar xuddi shu matn+sana bilan yozuv allaqachon bo'lsa (masalan qayta
+ * chaqirilib qolsa), dublikat yaratilmaydi.
+ */
+export async function autoFillShu2Entry(
+  stationId: string,
+  journalMonth: string,
+  taskText: string,
+  dateFormatted: string,
+  workerName: string
+): Promise<void> {
+  const journal = await getJournal(stationId, 'shu2');
+  const allEntries = ((journal?.entries as SHU2Entry[]) || []);
+  const monthEntries = allEntries.filter(e => e.journalMonth === journalMonth);
+  const otherMonths = allEntries.filter(e => e.journalMonth !== journalMonth);
+
+  const alreadyExists = monthEntries.some(e => e.sana === dateFormatted && e.yozuv === taskText);
+  if (alreadyExists) return;
+
+  const emptyIndex = monthEntries.findIndex(e => !e.sana && !e.yozuv && !e.tasdiqlandi && !e.yuborildi);
+
+  const filledRow: SHU2Entry = {
+    nomber: String((emptyIndex !== -1 ? emptyIndex : monthEntries.length) + 1),
+    sana: dateFormatted,
+    yozuv: taskText,
+    imzo: workerName,
+    tasdiqlandi: true,
+    tasdiqlaganImzo: workerName,
+    yuborildi: true,
+    dispetcherQabulQildi: true,
+    journalMonth,
+  };
+
+  const updatedMonthEntries = [...monthEntries];
+  if (emptyIndex !== -1) {
+    updatedMonthEntries[emptyIndex] = { ...updatedMonthEntries[emptyIndex], ...filledRow };
+  } else {
+    updatedMonthEntries.push(filledRow);
+  }
+
+  await upsertJournal(stationId, 'shu2', [...otherMonths, ...updatedMonthEntries], workerName);
+}
+
 // ── DISPETCHER UCHUN YENGIL FUNKSIYALAR ──────────────────────────────
 
 /** Faqat DU-46 va SHU-2 pending countlarini qaytaradi (entries matnisiz) */

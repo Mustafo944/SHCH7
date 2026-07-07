@@ -1,5 +1,5 @@
-import yillikData from '../yillik.json'
-import tortData from '../tort.json'
+import yillikData from '../data/yillik.json'
+import tortData from '../data/tort.json'
 
 export interface ParsedTaskItem {
   bolim: string

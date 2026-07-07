@@ -17,7 +17,6 @@
 .DS_Store
 *.pem
 *.bak
-refactor.js
 
 # debug
 npm-debug.log*
@@ -36,3 +35,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# dev-only skript va vaqtinchalik fayllar
+/.dev-scripts/
+*.orig
+output*.txt
+step*.txt
+temp_dev.log
