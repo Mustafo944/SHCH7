@@ -40,6 +40,16 @@ function formatScanDate(iso: string): string {
   return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+// Eski ma'lumotlarda equipmentType bitta string edi (masalan "machtali"),
+// yangi formatda esa massiv (bir nechta toifa bog'lanishi mumkin). Ikkalasini
+// ham to'g'ri o'qish uchun har doim massivga normalizatsiya qilamiz.
+function normalizeTaskMappings(mappings: TaskQRMapping[] | undefined): TaskQRMapping[] {
+  return (mappings || []).map(m => ({
+    ...m,
+    equipmentType: Array.isArray(m.equipmentType) ? m.equipmentType : [m.equipmentType].filter(Boolean),
+  }));
+}
+
 function CategoryAvatar({ name, color, size = 'md' }: { name: string; color: string; size?: 'sm' | 'md' | 'lg' }) {
   const sizeClass = size === 'sm' ? 'h-10 w-10 text-base' : size === 'lg' ? 'h-14 w-14 text-xl' : 'h-12 w-12 text-lg';
   return (
@@ -224,7 +234,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
     if (swrData && !isEditing && !isEditingMappings) {
       setEquipments(swrData);
       setCategories(swrData.categories || []);
-      setTaskMappings(swrData.taskMappings || []);
+      setTaskMappings(normalizeTaskMappings(swrData.taskMappings));
     }
   }, [swrData, isEditing, isEditingMappings]);
 
@@ -271,8 +281,11 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
 
   const removeCategory = (categoryId: string) => {
     setCategories(prev => prev.filter(c => c.id !== categoryId));
-    // Shu toifaga bog'langan QR vazifa moslashuvlarini ham tozalaymiz — aks holda "osilib qolgan" havola qoladi
-    setTaskMappings(prev => prev.filter(m => m.equipmentType !== categoryId));
+    // Shu toifaga bog'langan QR vazifa moslashuvlaridan uni olib tashlaymiz —
+    // agar boshqa toifa qolmasa, butun moslashuv o'chiriladi ("osilib qolgan" havola qolmasligi uchun)
+    setTaskMappings(prev => prev
+      .map(m => ({ ...m, equipmentType: m.equipmentType.filter(id => id !== categoryId) }))
+      .filter(m => m.equipmentType.length > 0));
     setDeleteConfirmCategoryId(null);
   };
 
@@ -569,9 +582,9 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                                         <p className="text-[10px] text-slate-400"><Clock size={10} className="inline mr-0.5" /> {task.davriylik}</p>
                                         <p className="text-[10px] text-slate-400"><span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-300 mr-0.5" /> {task.bajaruvchi}</p>
                                       </div>
-                                      {mapping && (
+                                      {mapping && mapping.equipmentType.length > 0 && (
                                         <div className="shrink-0 bg-purple-100 text-purple-700 px-2 py-1 rounded-lg text-[9px] font-black uppercase border border-purple-200">
-                                          ✓ {mapping.equipmentType}
+                                          ✓ {mapping.equipmentType.length} ta toifa
                                         </div>
                                       )}
                                     </div>
@@ -607,21 +620,30 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                         </div>
 
                         <div className="premium-card p-5 sm:p-8">
-                          <h4 className="font-black text-slate-800 mb-6 text-lg">Qaysi qurilmalar bog'lanadi?</h4>
+                          <h4 className="font-black text-slate-800 text-lg">Qaysi qurilmalar bog'lanadi?</h4>
+                          <p className="mt-1 mb-6 text-xs font-bold text-slate-400">Bir nechta toifani tanlash mumkin — har birini bosib yoqing/o'chiring.</p>
 
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {categories.map(category => {
-                              const isActive = currentMapping?.equipmentType === category.id;
+                              const isActive = currentMapping?.equipmentType.includes(category.id) ?? false;
                               return (
                                 <button
                                   key={category.id}
                                   disabled={!isEditingMappings}
                                   onClick={() => {
-                                    if (isActive) {
-                                      setTaskMappings(prev => prev.filter(p => p.taskNsh !== selectedTaskNsh));
-                                    } else {
-                                      setTaskMappings(prev => [...prev.filter(p => p.taskNsh !== selectedTaskNsh), { taskNsh: selectedTaskNsh, equipmentType: category.id }]);
-                                    }
+                                    setTaskMappings(prev => {
+                                      const existing = prev.find(p => p.taskNsh === selectedTaskNsh);
+                                      if (!existing) {
+                                        return [...prev, { taskNsh: selectedTaskNsh, equipmentType: [category.id] }];
+                                      }
+                                      const newTypes = isActive
+                                        ? existing.equipmentType.filter(id => id !== category.id)
+                                        : [...existing.equipmentType, category.id];
+                                      if (newTypes.length === 0) {
+                                        return prev.filter(p => p.taskNsh !== selectedTaskNsh);
+                                      }
+                                      return prev.map(p => p.taskNsh === selectedTaskNsh ? { ...p, equipmentType: newTypes } : p);
+                                    });
                                   }}
                                   className={`p-5 text-left border-2 rounded-2xl transition-all relative ${isActive ? `${colorStyle(category.color).activeBorder} shadow-md` : 'border-white/60 bg-white/70 hover:border-slate-300'} ${!isEditingMappings ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
@@ -751,7 +773,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                     setIsEditingMappings(false);
                     if (swrData) {
                       setCategories(swrData.categories || []);
-                      setTaskMappings(swrData.taskMappings || []);
+                      setTaskMappings(normalizeTaskMappings(swrData.taskMappings));
                     }
                   }}
                   disabled={saving}

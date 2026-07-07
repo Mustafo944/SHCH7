@@ -491,10 +491,12 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     const mapping = stationEq.taskMappings.find((tm: any) => tm.taskNsh === taskNsh);
     if (!mapping) return [];
 
-    const reqQR = mapping.equipmentType;
+    // Eski ma'lumotlarda equipmentType bitta string bo'lishi mumkin — ikkalasini ham qo'llab-quvvatlaymiz
+    const reqTypes: string[] = Array.isArray(mapping.equipmentType) ? mapping.equipmentType : [mapping.equipmentType].filter(Boolean);
     const categories = stationEq.categories || [];
-    const cat = categories.find((c: any) => c.id === reqQR);
-    return cat?.items || [];
+    return categories
+      .filter((c: any) => reqTypes.includes(c.id))
+      .flatMap((c: any) => c.items || []);
   }, [selectedTaskType, stationEq, currentTask]);
 
   const targetScans = targetItems.length;

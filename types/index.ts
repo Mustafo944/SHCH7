@@ -39,7 +39,7 @@ export interface EquipmentCategory {
 
 export interface TaskQRMapping {
   taskNsh: string; // e.g., NSH-01 7.1
-  equipmentType: string;
+  equipmentType: string[]; // bir nechta uskuna toifasi bog'lanishi mumkin
 }
 
 export interface StationEquipments {

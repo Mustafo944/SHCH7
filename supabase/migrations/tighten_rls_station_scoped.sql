@@ -195,12 +195,26 @@ CREATE POLICY "station_journals_delete_dispatcher" ON station_journals
 -- ─────────────────────────────────────────────────────────────────────
 -- 4. STATION_SCHEMAS (bir/ikki ipli sxemalar, PDF fayl yo'llari) —
 --    station_id: text
+--
+--    MUHIM: "Elektron kutubxona" (LibraryView.tsx) ham ALOHIDA jadval EMAS —
+--    xuddi bekat qurilmalari kabi, shu jadvalda maxsus
+--    station_id = 'global_library_books' bilan saqlanadi
+--    (lib/supabase-db.ts: LIBRARY_BOOKS_STATION_ID, getLibraryBooks/
+--    uploadLibraryBook). Bu qiymat HECH BIR foydalanuvchining
+--    users.station_ids massivida yo'q — shuning uchun uni alohida ruxsat
+--    sifatida qo'shmasak, kutubxona BARCHA dispatcher bo'lmagan
+--    foydalanuvchilar uchun "bo'sh" bo'lib qoladi (ular kitob o'qiy oladi,
+--    lekin qo'sha/o'chira olmaydi — buni UI allaqachon to'g'ri cheklaydi).
 -- ─────────────────────────────────────────────────────────────────────
 ALTER TABLE station_schemas ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "station_schemas_select_scoped" ON station_schemas
   FOR SELECT TO authenticated
-  USING (get_user_role() = 'dispatcher' OR station_id = ANY(get_user_stations()));
+  USING (
+    get_user_role() = 'dispatcher'
+    OR station_id = ANY(get_user_stations())
+    OR station_id = 'global_library_books'
+  );
 
 CREATE POLICY "station_schemas_insert_scoped" ON station_schemas
   FOR INSERT TO authenticated
