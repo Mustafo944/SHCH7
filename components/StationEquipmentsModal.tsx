@@ -446,17 +446,9 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                               <button onClick={() => removeItem(category.id, item.id)} className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"><Trash2 size={16} /></button>
                             </div>
                           ) : (
-                            <div key={item.id} className={`flex flex-col bg-white/70 border border-white/60 ${colorStyle(category.color).hoverBorder} px-4 py-2 rounded-xl transition-all cursor-default shadow-sm`}>
-                              <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${colorStyle(category.color).dot}`}></div>
-                                <span className="font-bold text-slate-700">{item.name}</span>
-                              </div>
-                              {item.lastScannedAt && (
-                                <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-500 font-medium">
-                                  <Clock size={10} /> {formatScanDate(item.lastScannedAt)}
-                                  {item.lastScannedBy && ` — ${item.lastScannedBy}`}
-                                </div>
-                              )}
+                            <div key={item.id} className={`flex items-center gap-2 bg-white/70 border border-white/60 ${colorStyle(category.color).hoverBorder} px-4 py-2 rounded-xl transition-all cursor-default shadow-sm`}>
+                              <div className={`w-2 h-2 rounded-full ${colorStyle(category.color).dot}`}></div>
+                              <span className="font-bold text-slate-700">{item.name}</span>
                             </div>
                           )
                         ))}
