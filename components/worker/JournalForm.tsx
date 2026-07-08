@@ -141,7 +141,7 @@ function TaskSelectionModal({
   );
 }
 
-export function JournalForm({ session, stationId, stationName, month, reports, onSubmit, onCancel, onReportUpdated }: { session: User, stationId: string, stationName: string, month: number, reports: WorkReport[], onSubmit: () => void, onCancel: () => void, onReportUpdated?: (reportId: string, entries: ReportEntry[]) => void }) {
+export function JournalForm({ session, stationId, stationName, month, reports, onSubmit, onCancel, onReportUpdated, initialDay }: { session: User, stationId: string, stationName: string, month: number, reports: WorkReport[], onSubmit: () => void, onCancel: () => void, onReportUpdated?: (reportId: string, entries: ReportEntry[]) => void, initialDay?: number }) {
   const [entries, setEntries] = useState<ReportEntry[]>(Array.from({ length: TOTAL_ROWS }, (_, i) => ({
     ragat: String(i + 1), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: ''
   })))
@@ -161,7 +161,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   const draftReport = useMemo(() => reports.find(r => r.month === monthStr && r.stationId === stationId), [reports, monthStr, stationId])
   const canEditPlan = session.position === 'katta_elektromexanik'
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards')
-  const [selectedDay, setSelectedDay] = useState<number>(new Date().getDate() || 1)
+  const [selectedDay, setSelectedDay] = useState<number>(initialDay || new Date().getDate() || 1)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 

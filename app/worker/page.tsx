@@ -70,6 +70,7 @@ export default function WorkerPage() {
   const [readIncidentIds, setReadIncidentIds] = useState<Set<string>>(new Set())
   const [activeStationId, setActiveStationId] = useState<string>('')
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
+  const [selectedJournalDay, setSelectedJournalDay] = useState<number | null>(null)
   const [selectedReport, _setSelectedReport] = useState<WorkReport | null>(null)
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
   const { isMuted, setIsMuted } = useNotificationSound(pendingCounts.du46)
@@ -539,7 +540,12 @@ export default function WorkerPage() {
             <div className="grid gap-4 lg:grid-cols-3 sm:grid-cols-2 animate-fade-up">
                   {/* Bugun Bajarilishi Kerak Bo'lgan Ishlar */}
                   <div
-                    onClick={() => setWorkerModal('bugunBajarilgan')}
+                    onClick={() => {
+                      const today = new Date()
+                      setSelectedJournalDay(today.getDate())
+                      setSelectedMonth(today.getMonth())
+                      setView('journal')
+                    }}
                     className="cursor-pointer group relative rounded-3xl bg-white/30 backdrop-blur-md p-6 shadow-sm ring-1 ring-white/20 transition-all hover:bg-white/40 hover:shadow-md hover:ring-white/40 active:scale-95"
                   >
                      <div className="flex items-center gap-4">
@@ -606,7 +612,7 @@ export default function WorkerPage() {
               {MONTHS.map((m, i) => {
                 const isCurrent = i === new Date().getMonth()
                 return (
-                  <button key={m} onClick={() => { setSelectedMonth(i); setView('journal') }} className={`group flex flex-col p-6 rounded-2xl border shadow-sm backdrop-blur-sm transition-all ${isCurrent ? 'border-purple-300 bg-purple-50/80 shadow-purple-500/5' : 'border-slate-200/60 bg-white/80 hover:bg-purple-50/40 hover:border-purple-200'}`}>
+                  <button key={m} onClick={() => { setSelectedMonth(i); setSelectedJournalDay(null); setView('journal') }} className={`group flex flex-col p-6 rounded-2xl border shadow-sm backdrop-blur-sm transition-all ${isCurrent ? 'border-purple-300 bg-purple-50/80 shadow-purple-500/5' : 'border-slate-200/60 bg-white/80 hover:bg-purple-50/40 hover:border-purple-200'}`}>
                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{String(i + 1).padStart(2, '0')}</span>
                     <span className="mt-4 text-lg font-black text-slate-900 group-hover:text-purple-600 transition-colors uppercase tracking-tight">{m}</span>
                   </button>
@@ -622,8 +628,9 @@ export default function WorkerPage() {
               stationName={stationName!}
               month={selectedMonth}
               reports={reports}
-              onSubmit={() => { refreshData(session!.id, session!.stationIds || []); setView('home') }}
-              onCancel={() => setView('home')}
+              initialDay={selectedJournalDay ?? undefined}
+              onSubmit={() => { refreshData(session!.id, session!.stationIds || []); setSelectedJournalDay(null); setView('home') }}
+              onCancel={() => { setSelectedJournalDay(null); setView('home') }}
               onReportUpdated={(reportId, newEntries) => {
                 setReports(prev => prev.map(r => r.id === reportId ? { ...r, entries: newEntries } : r))
               }}
@@ -983,6 +990,8 @@ export default function WorkerPage() {
                 if ((workerModal === 'bugunBajarilgan' || workerModal === 'qolibKetgan' || workerModal === 'sababliBajarilmagan') && task.month) {
                   const mIdx = Number(task.month.split('-')[1]) - 1
                   if (!isNaN(mIdx)) {
+                    const taskDay = parseInt((task.entry.ragat || '').trim(), 10)
+                    setSelectedJournalDay(!isNaN(taskDay) ? taskDay : null)
                     setSelectedMonth(mIdx)
                     setView('journal')
                     setWorkerModal(null)
