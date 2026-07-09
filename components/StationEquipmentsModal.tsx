@@ -330,35 +330,43 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
   const handleDownloadSingleQr = async (item: { id: string; name: string }, categoryName: string) => {
     setIsDownloadingPdf(true);
     try {
-      const canvas = document.getElementById(`qr-pdf-canvas-${item.id}`) as HTMLCanvasElement | null;
-      if (!canvas) throw new Error('QR kod topilmadi');
-      const dataUrl = canvas.toDataURL('image/png');
+      const qrCanvas = document.getElementById(`qr-pdf-canvas-${item.id}`) as HTMLCanvasElement | null;
+      if (!qrCanvas) throw new Error('QR kod topilmadi');
+      const qrDataUrl = qrCanvas.toDataURL('image/png');
+
+      // "№" kabi belgilar jsPDF ning standart shriftida (WinAnsi) yo'q va "!" bo'lib chiqadi.
+      // Shuning uchun matnni jsPDF shrifti bilan emas, brauzer canvas'ida chizib, rasm sifatida
+      // PDF'ga qo'shamiz — canvas har qanday Unicode belgini (shu jumladan №) to'g'ri chizadi
+      const labelCanvas = document.createElement('canvas');
+      labelCanvas.width = 900;
+      labelCanvas.height = 260;
+      const ctx = labelCanvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas ochilmadi');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, labelCanvas.width, labelCanvas.height);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#1a1a1a';
+      ctx.font = "bold 44px Arial, sans-serif";
+      ctx.fillText(stationName, labelCanvas.width / 2, 60);
+      ctx.font = "bold 92px Arial, sans-serif";
+      ctx.fillText(item.name, labelCanvas.width / 2, 172);
+      ctx.fillStyle = '#787878';
+      ctx.font = "bold 30px Arial, sans-serif";
+      ctx.fillText(categoryName.toUpperCase(), labelCanvas.width / 2, 226);
+      const labelDataUrl = labelCanvas.toDataURL('image/png');
 
       const { jsPDF } = await import('jspdf');
       const doc = new jsPDF({ unit: 'mm', format: 'a4' });
       const pageWidth = 210;
-      const qrSize = 100;
+      const qrSize = 150;
       const qrX = (pageWidth - qrSize) / 2;
-      const qrY = 60;
+      const qrY = 35;
 
-      doc.addImage(dataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+      doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
 
-      // jsPDF standart shriftlari (helvetica) faqat WinAnsi belgilarni qo'llab-quvvatlaydi —
-      // "№" belgisi bunga kirmaydi va "!" ga o'xshab chiqib qoladi, shuning uchun "#" ga almashtiramiz
-      const forPdf = (text: string) => text.replace(/№/g, '#');
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.setTextColor(20, 20, 20);
-      doc.text(forPdf(stationName), pageWidth / 2, qrY + qrSize + 16, { align: 'center' });
-
-      doc.setFontSize(24);
-      doc.text(forPdf(item.name), pageWidth / 2, qrY + qrSize + 30, { align: 'center' });
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      doc.setTextColor(120, 120, 120);
-      doc.text(forPdf(categoryName.toUpperCase()), pageWidth / 2, qrY + qrSize + 40, { align: 'center' });
+      const labelWidth = 150;
+      const labelHeight = labelWidth * (labelCanvas.height / labelCanvas.width);
+      doc.addImage(labelDataUrl, 'PNG', (pageWidth - labelWidth) / 2, qrY + qrSize + 6, labelWidth, labelHeight);
 
       doc.save(`${stationName}_${item.name}_QR.pdf`);
     } catch (err) {
@@ -444,7 +452,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
         {selectedPrintItem && selectedPrintCategory && (
           <div id="qr-print-content" className="flex items-center justify-center p-4 sm:p-8 print:p-8">
             <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 rounded-2xl sm:p-12 print:p-8 print:border-4">
-              <QRCodeSVG value={buildEquipmentQrValue(stationId, selectedPrintItem.id)} size={220} />
+              <QRCodeSVG value={buildEquipmentQrValue(stationId, selectedPrintItem.id)} size={280} />
               <span className="mt-4 font-black text-sm text-center">{stationName}</span>
               <span className="font-black text-2xl text-center mt-1">{selectedPrintItem.name}</span>
               <span className="text-xs font-bold text-slate-500 mt-2 uppercase text-center">{selectedPrintCategory.name}</span>
@@ -456,7 +464,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
         <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }} aria-hidden="true">
           {categories.map(category => (
             (category.items || []).map(item => (
-              <QRCodeCanvas key={item.id} id={`qr-pdf-canvas-${item.id}`} value={buildEquipmentQrValue(stationId, item.id)} size={300} />
+              <QRCodeCanvas key={item.id} id={`qr-pdf-canvas-${item.id}`} value={buildEquipmentQrValue(stationId, item.id)} size={600} />
             ))
           ))}
         </div>
