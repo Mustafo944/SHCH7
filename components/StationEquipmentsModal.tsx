@@ -337,22 +337,70 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
       // "№" kabi belgilar jsPDF ning standart shriftida (WinAnsi) yo'q va "!" bo'lib chiqadi.
       // Shuning uchun matnni jsPDF shrifti bilan emas, brauzer canvas'ida chizib, rasm sifatida
       // PDF'ga qo'shamiz — canvas har qanday Unicode belgini (shu jumladan №) to'g'ri chizadi
+      const wrapCanvasText = (ctx2d: CanvasRenderingContext2D, text: string, maxWidth: number): string[] => {
+        const words = text.split(' ');
+        const lines: string[] = [];
+        let current = '';
+        words.forEach(word => {
+          const test = current ? `${current} ${word}` : word;
+          if (current && ctx2d.measureText(test).width > maxWidth) {
+            lines.push(current);
+            current = word;
+          } else {
+            current = test;
+          }
+        });
+        if (current) lines.push(current);
+        return lines;
+      };
+
+      const labelWidthPx = 900;
+      const maxTextWidth = labelWidthPx - 80;
+      const measureCtx = document.createElement('canvas').getContext('2d');
+      if (!measureCtx) throw new Error('Canvas ochilmadi');
+
+      // Uzoq nomlar bir qatorga sig'may qolsa avval qatorlarga bo'linadi, hali ham sig'masa
+      // shrift kichraytiriladi — nom hech qachon canvas chetidan chiqib ketmasligi uchun
+      let itemFontSize = 84;
+      measureCtx.font = `bold ${itemFontSize}px Arial, sans-serif`;
+      let nameLines = wrapCanvasText(measureCtx, item.name, maxTextWidth);
+      if (nameLines.length > 2) {
+        itemFontSize = 56;
+        measureCtx.font = `bold ${itemFontSize}px Arial, sans-serif`;
+        nameLines = wrapCanvasText(measureCtx, item.name, maxTextWidth);
+      }
+
+      const stationFontSize = 40;
+      const categoryFontSize = 28;
+      const topPad = 55;
+      const stationGap = 45;
+      const itemLineHeight = itemFontSize * 1.15;
+      const categoryGap = 45;
+      const bottomPad = 20;
+      const labelHeightPx = Math.round(topPad + stationGap + nameLines.length * itemLineHeight + categoryGap + categoryFontSize + bottomPad);
+
       const labelCanvas = document.createElement('canvas');
-      labelCanvas.width = 900;
-      labelCanvas.height = 260;
+      labelCanvas.width = labelWidthPx;
+      labelCanvas.height = labelHeightPx;
       const ctx = labelCanvas.getContext('2d');
       if (!ctx) throw new Error('Canvas ochilmadi');
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, labelCanvas.width, labelCanvas.height);
       ctx.textAlign = 'center';
+
       ctx.fillStyle = '#1a1a1a';
-      ctx.font = "bold 44px Arial, sans-serif";
-      ctx.fillText(stationName, labelCanvas.width / 2, 60);
-      ctx.font = "bold 92px Arial, sans-serif";
-      ctx.fillText(item.name, labelCanvas.width / 2, 172);
+      ctx.font = `bold ${stationFontSize}px Arial, sans-serif`;
+      ctx.fillText(stationName, labelCanvas.width / 2, topPad);
+
+      ctx.font = `bold ${itemFontSize}px Arial, sans-serif`;
+      nameLines.forEach((line, i) => {
+        ctx.fillText(line, labelCanvas.width / 2, topPad + stationGap + itemLineHeight * (i + 0.75));
+      });
+
       ctx.fillStyle = '#787878';
-      ctx.font = "bold 30px Arial, sans-serif";
-      ctx.fillText(categoryName.toUpperCase(), labelCanvas.width / 2, 226);
+      ctx.font = `bold ${categoryFontSize}px Arial, sans-serif`;
+      ctx.fillText(categoryName.toUpperCase(), labelCanvas.width / 2, topPad + stationGap + nameLines.length * itemLineHeight + categoryGap);
+
       const labelDataUrl = labelCanvas.toDataURL('image/png');
 
       const { jsPDF } = await import('jspdf');
@@ -451,11 +499,11 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
         {/* BOSQICH 3 — Tanlangan uskunaning QR kodi (chop etiladigan qism) */}
         {selectedPrintItem && selectedPrintCategory && (
           <div id="qr-print-content" className="flex items-center justify-center p-4 sm:p-8 print:p-8">
-            <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 rounded-2xl sm:p-12 print:p-8 print:border-4">
+            <div className="flex w-full max-w-md min-w-0 flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 rounded-2xl sm:p-12 print:p-8 print:border-4">
               <QRCodeSVG value={buildEquipmentQrValue(stationId, selectedPrintItem.id)} size={280} />
               <span className="mt-4 font-black text-sm text-center">{stationName}</span>
-              <span className="font-black text-2xl text-center mt-1">{selectedPrintItem.name}</span>
-              <span className="text-xs font-bold text-slate-500 mt-2 uppercase text-center">{selectedPrintCategory.name}</span>
+              <span className="font-black text-4xl sm:text-5xl text-center mt-2 break-words">{selectedPrintItem.name}</span>
+              <span className="text-xs font-bold text-slate-500 mt-3 uppercase text-center">{selectedPrintCategory.name}</span>
             </div>
           </div>
         )}
