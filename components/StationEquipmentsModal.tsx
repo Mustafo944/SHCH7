@@ -370,11 +370,12 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
         nameLines = wrapCanvasText(measureCtx, item.name, maxTextWidth);
       }
 
-      let categoryFontSize = 42;
+      // Toifa nomi ham qurilma nomi bilan bir xil kattalikda chiziladi
+      let categoryFontSize = 84;
       measureCtx.font = `bold ${categoryFontSize}px Arial, sans-serif`;
       let categoryLines = wrapCanvasText(measureCtx, categoryName.toUpperCase(), maxTextWidth);
       if (categoryLines.length > 2) {
-        categoryFontSize = 30;
+        categoryFontSize = 56;
         measureCtx.font = `bold ${categoryFontSize}px Arial, sans-serif`;
         categoryLines = wrapCanvasText(measureCtx, categoryName.toUpperCase(), maxTextWidth);
       }
@@ -514,7 +515,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
               <QRCodeSVG value={buildEquipmentQrValue(stationId, selectedPrintItem.id)} size={280} />
               <span className="mt-4 font-black text-sm text-center">{stationName}</span>
               <span className="font-black text-4xl sm:text-5xl text-center mt-2 break-words">{selectedPrintItem.name}</span>
-              <span className="text-lg sm:text-xl font-bold text-slate-500 mt-3 uppercase text-center break-words">{selectedPrintCategory.name}</span>
+              <span className="font-black text-4xl sm:text-5xl text-slate-500 mt-3 uppercase text-center break-words">{selectedPrintCategory.name}</span>
             </div>
           </div>
         )}
