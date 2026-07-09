@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Save, Edit3, Plus, Trash2, Printer, AlertTriangle, Loader2, ArrowRightLeft, Target, ChevronLeft, ChevronRight, Clock, History } from 'lucide-react';
+import { X, Save, Edit3, Plus, Trash2, Printer, Download, AlertTriangle, Loader2, ArrowRightLeft, Target, ChevronLeft, ChevronRight, Clock, History } from 'lucide-react';
 import { StationEquipments, EquipmentCategory } from '@/types';
 import { getStationEquipments, upsertStationEquipments, getStationTaskScans, type TaskScan } from '@/lib/supabase-db';
 import { useToast } from '@/lib/hooks/useToast';
 import useSWR from 'swr';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import { TORT_HAFTALIK_REJA_FLAT, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA, YILLIK_REJA, taskDisplayKey } from '@/lib/reja-data';
 import { TaskQRMapping } from '@/types';
 import { buildEquipmentQrValue } from '@/lib/utils/qr';
@@ -138,6 +138,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingMappings, setIsEditingMappings] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const [equipments, setEquipments] = useState<StationEquipments | null>(null);
 
@@ -156,6 +157,10 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
   // Skaner tarixi — uch bosqichli navigatsiya: Toifa → Uskuna → Skaner tarixi
   const [selectedHistoryCategoryId, setSelectedHistoryCategoryId] = useState<string | null>(null);
   const [selectedHistoryItemId, setSelectedHistoryItemId] = useState<string | null>(null);
+
+  // QR chop etish — xuddi shu naqshdagi uch bosqichli navigatsiya: Toifa → Uskuna → bitta QR kod
+  const [selectedPrintCategoryId, setSelectedPrintCategoryId] = useState<string | null>(null);
+  const [selectedPrintItemId, setSelectedPrintItemId] = useState<string | null>(null);
 
   const { data: scanHistory, isLoading: isScanHistoryLoading } = useSWR(
     activeTab === 'history' ? `scan_history_${stationId}` : null,
@@ -222,6 +227,25 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
   };
   const backToHistoryCategories = () => { setSelectedHistoryCategoryId(null); setSelectedHistoryItemId(null); };
   const backToHistoryItems = () => setSelectedHistoryItemId(null);
+
+  const selectedPrintCategory = useMemo(
+    () => categories.find(c => c.id === selectedPrintCategoryId) || null,
+    [categories, selectedPrintCategoryId]
+  );
+  const selectedPrintItem = useMemo(
+    () => (selectedPrintCategory?.items || []).find(i => i.id === selectedPrintItemId) || null,
+    [selectedPrintCategory, selectedPrintItemId]
+  );
+  const openPrintingView = () => {
+    setIsPrinting(true);
+    setSelectedPrintCategoryId(null);
+    setSelectedPrintItemId(null);
+  };
+  const handlePrintBack = () => {
+    if (selectedPrintItemId) setSelectedPrintItemId(null);
+    else if (selectedPrintCategoryId) setSelectedPrintCategoryId(null);
+    else setIsPrinting(false);
+  };
 
   // Modal ochiq turganda orqadagi sahifa scroll bo'lib, ikkalasi bir vaqtda tortilib friz bo'lib ko'rinishining oldini oladi
   useEffect(() => {
@@ -303,34 +327,138 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
     setNewCategoryName('');
   };
 
-  // Chop etish sahifasi
+  const handleDownloadSingleQr = async (item: { id: string; name: string }, categoryName: string) => {
+    setIsDownloadingPdf(true);
+    try {
+      const canvas = document.getElementById(`qr-pdf-canvas-${item.id}`) as HTMLCanvasElement | null;
+      if (!canvas) throw new Error('QR kod topilmadi');
+      const dataUrl = canvas.toDataURL('image/png');
+
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+      const pageWidth = 210;
+      const qrSize = 100;
+      const qrX = (pageWidth - qrSize) / 2;
+      const qrY = 60;
+
+      doc.addImage(dataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+
+      // jsPDF standart shriftlari (helvetica) faqat WinAnsi belgilarni qo'llab-quvvatlaydi —
+      // "№" belgisi bunga kirmaydi va "!" ga o'xshab chiqib qoladi, shuning uchun "#" ga almashtiramiz
+      const forPdf = (text: string) => text.replace(/№/g, '#');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(20, 20, 20);
+      doc.text(forPdf(stationName), pageWidth / 2, qrY + qrSize + 16, { align: 'center' });
+
+      doc.setFontSize(24);
+      doc.text(forPdf(item.name), pageWidth / 2, qrY + qrSize + 30, { align: 'center' });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(120, 120, 120);
+      doc.text(forPdf(categoryName.toUpperCase()), pageWidth / 2, qrY + qrSize + 40, { align: 'center' });
+
+      doc.save(`${stationName}_${item.name}_QR.pdf`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'PDF yuklab olishda xatolik');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
+  // Chop etish sahifasi — uch bosqichli navigatsiya: Toifa → Uskuna → bitta QR kod
   if (isPrinting) {
+    const printTitle = selectedPrintItem
+      ? `${selectedPrintItem.name} - QR kod`
+      : selectedPrintCategory
+        ? `${selectedPrintCategory.name} - Qurilmalar`
+        : `${stationName} - Toifalar`;
+
     return (
       <div className="fixed inset-0 z-[10000] bg-white overflow-y-auto">
         <div className="flex flex-col gap-3 p-4 border-b border-slate-200 bg-slate-50 print:hidden sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-base font-bold text-slate-800 sm:text-xl">{stationName} - QR Kodlarni chop etish</h2>
+          <h2 className="text-base font-bold text-slate-800 sm:text-xl truncate">{printTitle}</h2>
           <div className="flex gap-2 sm:gap-4">
-            <button onClick={() => setIsPrinting(false)} className="flex-1 px-4 py-2 border rounded-xl text-slate-600 font-bold hover:bg-slate-100 sm:flex-none">Orqaga</button>
-            <button onClick={() => window.print()} className="flex flex-1 items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 sm:flex-none sm:px-6">
-              <Printer size={18} /> Chop etish
-            </button>
+            <button onClick={handlePrintBack} className="flex-1 px-4 py-2 border rounded-xl text-slate-600 font-bold hover:bg-slate-100 sm:flex-none">Orqaga</button>
+            {selectedPrintItem && selectedPrintCategory && (
+              <>
+                <button onClick={() => handleDownloadSingleQr(selectedPrintItem, selectedPrintCategory.name)} disabled={isDownloadingPdf} className="flex flex-1 items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 disabled:opacity-50 sm:flex-none sm:px-6">
+                  {isDownloadingPdf ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />} {isDownloadingPdf ? 'Tayyorlanmoqda...' : 'Yuklab olish'}
+                </button>
+                <button onClick={() => window.print()} className="flex flex-1 items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 sm:flex-none sm:px-6">
+                  <Printer size={18} /> Chop etish
+                </button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* PRINT CONTENT */}
-        <div id="qr-print-content" className="p-4 max-w-5xl mx-auto sm:p-8 print:p-8 print:max-w-full">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4 print:grid-cols-3 print:gap-16">
-            {categories.map(category => (
-              (category.items || []).map(item => (
-                <div key={item.id} className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 rounded-2xl page-break-inside-avoid sm:p-8 print:p-8 print:border-4">
-                  <QRCodeSVG value={buildEquipmentQrValue(stationId, item.id)} size={160} />
-                  <span className="mt-4 font-black text-sm text-center">{stationName}</span>
-                  <span className="font-black text-xl text-center mt-1">{item.name}</span>
-                  <span className="text-xs font-bold text-slate-500 mt-2 uppercase text-center">{category.name}</span>
+        {/* BOSQICH 1 va 2 — Toifa va uskuna tanlash (faqat ekranda, chop etilmaydi) */}
+        {!selectedPrintItem && (
+          <div className="p-4 max-w-3xl mx-auto sm:p-8 print:hidden">
+            {!selectedPrintCategory ? (
+              categories.length === 0 ? (
+                <EmptyHint icon={Printer} text="Hali toifa qo'shilmagan" />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {categories.map(category => (
+                    <button
+                      key={category.id}
+                      onClick={() => setSelectedPrintCategoryId(category.id)}
+                      className="premium-card flex items-center gap-4 p-4 sm:p-5 text-left"
+                    >
+                      <CategoryAvatar name={category.name} color={category.color} />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-black text-slate-900 tracking-tight truncate">{category.name || 'Nomsiz toifa'}</h4>
+                        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">{(category.items || []).length} ta qurilma</p>
+                      </div>
+                      <ChevronRight size={20} className="shrink-0 text-slate-300" />
+                    </button>
+                  ))}
                 </div>
-              ))
-            ))}
+              )
+            ) : (
+              (selectedPrintCategory.items || []).length === 0 ? (
+                <EmptyHint icon={Printer} text="Bu toifada qurilma yo'q" />
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {(selectedPrintCategory.items || []).map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => setSelectedPrintItemId(item.id)}
+                      className="premium-card flex items-center justify-between gap-2 p-4 text-left"
+                    >
+                      <span className="font-bold text-slate-800 truncate">{item.name}</span>
+                      <ChevronRight size={18} className="shrink-0 text-slate-300" />
+                    </button>
+                  ))}
+                </div>
+              )
+            )}
           </div>
+        )}
+
+        {/* BOSQICH 3 — Tanlangan uskunaning QR kodi (chop etiladigan qism) */}
+        {selectedPrintItem && selectedPrintCategory && (
+          <div id="qr-print-content" className="flex items-center justify-center p-4 sm:p-8 print:p-8">
+            <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 rounded-2xl sm:p-12 print:p-8 print:border-4">
+              <QRCodeSVG value={buildEquipmentQrValue(stationId, selectedPrintItem.id)} size={220} />
+              <span className="mt-4 font-black text-sm text-center">{stationName}</span>
+              <span className="font-black text-2xl text-center mt-1">{selectedPrintItem.name}</span>
+              <span className="text-xs font-bold text-slate-500 mt-2 uppercase text-center">{selectedPrintCategory.name}</span>
+            </div>
+          </div>
+        )}
+
+        {/* PDF eksport uchun ko'rinmas canvas QR kodlar — jsPDF addImage PNG dataURL talab qiladi, SVG emas */}
+        <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }} aria-hidden="true">
+          {categories.map(category => (
+            (category.items || []).map(item => (
+              <QRCodeCanvas key={item.id} id={`qr-pdf-canvas-${item.id}`} value={buildEquipmentQrValue(stationId, item.id)} size={300} />
+            ))
+          ))}
         </div>
 
         {/* CSS for print — #qr-print-content ID orqali aniq maqsadga mo'ljallangan (avvalgi
@@ -384,7 +512,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
             {/* QR Chop etish faqat Aloqa dispetcherida ko'rinadi */}
             {isDispatcher && (
               <button
-                onClick={() => setIsPrinting(true)}
+                onClick={openPrintingView}
                 disabled={!equipments}
                 className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
               >
