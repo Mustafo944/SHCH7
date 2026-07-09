@@ -645,7 +645,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                     </div>
                   )}
 
-                  {selectedPlanType && !selectedTaskNsh && (
+                  {selectedPlanType && selectedTaskNsh === null && (
                     <div className="flex flex-col gap-4" style={{ height: 'calc(85vh - 180px)' }}>
                       <div className="flex items-center justify-between">
                         <h3 className="text-lg font-black text-slate-900 tracking-tight">
@@ -731,7 +731,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                     </div>
                   )}
 
-                  {selectedPlanType && selectedTaskNsh && (() => {
+                  {selectedPlanType && selectedTaskNsh !== null && (() => {
                     const taskDef = (selectedPlanType === 'tort' ? TORT_HAFTALIK_REJA_FLAT : YILLIK_REJA_FLAT).find(t => taskDisplayKey(t.manba, t.raqam) === selectedTaskNsh);
                     const currentMapping = taskMappings.find(m => m.taskNsh === selectedTaskNsh);
 
@@ -742,8 +742,8 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                             <ArrowRightLeft size={18} className="text-slate-600" />
                           </button>
                           <div className="overflow-hidden">
-                            <p className="text-sm font-bold text-slate-800">{selectedTaskNsh}</p>
-                            <p className="text-xs text-slate-500 max-w-xl truncate">{taskDef?.ish}</p>
+                            <p className="text-sm font-bold text-slate-800">{selectedTaskNsh || taskDef?.ish}</p>
+                            {selectedTaskNsh && <p className="text-xs text-slate-500 max-w-xl truncate">{taskDef?.ish}</p>}
                           </div>
                         </div>
 
