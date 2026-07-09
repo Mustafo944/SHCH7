@@ -370,14 +370,23 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
         nameLines = wrapCanvasText(measureCtx, item.name, maxTextWidth);
       }
 
+      let categoryFontSize = 42;
+      measureCtx.font = `bold ${categoryFontSize}px Arial, sans-serif`;
+      let categoryLines = wrapCanvasText(measureCtx, categoryName.toUpperCase(), maxTextWidth);
+      if (categoryLines.length > 2) {
+        categoryFontSize = 30;
+        measureCtx.font = `bold ${categoryFontSize}px Arial, sans-serif`;
+        categoryLines = wrapCanvasText(measureCtx, categoryName.toUpperCase(), maxTextWidth);
+      }
+
       const stationFontSize = 40;
-      const categoryFontSize = 28;
       const topPad = 55;
       const stationGap = 45;
       const itemLineHeight = itemFontSize * 1.15;
       const categoryGap = 45;
+      const categoryLineHeight = categoryFontSize * 1.15;
       const bottomPad = 20;
-      const labelHeightPx = Math.round(topPad + stationGap + nameLines.length * itemLineHeight + categoryGap + categoryFontSize + bottomPad);
+      const labelHeightPx = Math.round(topPad + stationGap + nameLines.length * itemLineHeight + categoryGap + categoryLines.length * categoryLineHeight + bottomPad);
 
       const labelCanvas = document.createElement('canvas');
       labelCanvas.width = labelWidthPx;
@@ -399,7 +408,9 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
 
       ctx.fillStyle = '#787878';
       ctx.font = `bold ${categoryFontSize}px Arial, sans-serif`;
-      ctx.fillText(categoryName.toUpperCase(), labelCanvas.width / 2, topPad + stationGap + nameLines.length * itemLineHeight + categoryGap);
+      categoryLines.forEach((line, i) => {
+        ctx.fillText(line, labelCanvas.width / 2, topPad + stationGap + nameLines.length * itemLineHeight + categoryGap + categoryLineHeight * (i + 0.75));
+      });
 
       const labelDataUrl = labelCanvas.toDataURL('image/png');
 
@@ -503,7 +514,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
               <QRCodeSVG value={buildEquipmentQrValue(stationId, selectedPrintItem.id)} size={280} />
               <span className="mt-4 font-black text-sm text-center">{stationName}</span>
               <span className="font-black text-4xl sm:text-5xl text-center mt-2 break-words">{selectedPrintItem.name}</span>
-              <span className="text-xs font-bold text-slate-500 mt-3 uppercase text-center">{selectedPrintCategory.name}</span>
+              <span className="text-lg sm:text-xl font-bold text-slate-500 mt-3 uppercase text-center break-words">{selectedPrintCategory.name}</span>
             </div>
           </div>
         )}
