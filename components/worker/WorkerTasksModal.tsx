@@ -19,12 +19,12 @@ import { QRScannerModal } from '../QRScannerModal'
 import { buildEquipmentQrValue, stringToUuid, getEntryDateStr } from '@/lib/utils/qr'
 
 // JournalView komponentlari lazy load qilinadi
-const DU46JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DU46JournalView), { ssr: false })
-const SHU2JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.SHU2JournalView), { ssr: false })
-const YerlatgichJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.YerlatgichJournalView), { ssr: false })
-const AlsnKodJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
-const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
-const DgaNazoratJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DgaNazoratJournalView), { ssr: false })
+const DU46JournalView = dynamic(() => import('@/components/journals/DU46JournalView').then(mod => mod.DU46JournalView), { ssr: false })
+const SHU2JournalView = dynamic(() => import('@/components/journals/SHU2JournalView').then(mod => mod.SHU2JournalView), { ssr: false })
+const YerlatgichJournalView = dynamic(() => import('@/components/journals/YerlatgichJournalView').then(mod => mod.YerlatgichJournalView), { ssr: false })
+const AlsnKodJournalView = dynamic(() => import('@/components/journals/AlsnKodJournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
+const MpsFriksionJournalView = dynamic(() => import('@/components/journals/MpsFriksionJournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
+const DgaNazoratJournalView = dynamic(() => import('@/components/journals/DgaNazoratJournalView').then(mod => mod.DgaNazoratJournalView), { ssr: false })
 
 /* ═══════════════════════════════════════════════════════════════════════
    TYPES
@@ -441,9 +441,32 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
       });
     };
     loadScans();
-    // Har 5 soniyada yangilab turish (boshqa ishchi skaner qilayotgan bo'lsa ko'rinadi)
-    const interval = setInterval(loadScans, 5000);
-    return () => clearInterval(interval);
+
+    // Boshqa ishchining skanini realtime orqali olamiz (5 soniyalik polling o'rniga —
+    // tarmoq yuki keskin kamayadi). task_scans jadvaliga faqat INSERT bo'ladi.
+    const channel = supabase
+      .channel(`task_scans_${stationId}_${selectedTaskType}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'task_scans',
+          filter: `station_id=eq.${stringToUuid(stationId)}`,
+        },
+        () => loadScans()
+      )
+      .subscribe();
+
+    // Zaxira yo'l: task_scans hali realtime publication'ga qo'shilmagan bo'lsa
+    // (supabase/migrations/add_worker_pending_rpc_and_task_scans_realtime.sql
+    // ishga tushirilmagan holat), 30 soniyalik sekin polling baribir ishlaydi.
+    const fallbackInterval = setInterval(loadScans, 30000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(fallbackInterval);
+    };
   }, [selectedTaskType, stationId, taskTextStr, journalMonth, entry.ragat]);
 
   // To'ldirilgan jurnallar — serverdagi report entry'dan olinadi (localStorage emas),

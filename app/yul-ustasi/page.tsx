@@ -7,9 +7,9 @@ import { ToastContainer } from '@/components/ToastContainer'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import { getStation } from '@/lib/store'
 import dynamic from 'next/dynamic'
-import { JournalMonthSelectModal } from '@/components/JournalView'
+import { JournalMonthSelectModal } from '@/components/journals/JournalSelectModal'
 
-const DU46JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DU46JournalView), { ssr: false })
+const DU46JournalView = dynamic(() => import('@/components/journals/DU46JournalView').then(mod => mod.DU46JournalView), { ssr: false })
 import { BigActionCard } from '@/components/worker/WorkerComponents'
 import { getPendingJournalCounts } from '@/lib/supabase-db'
 import {

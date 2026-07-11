@@ -30,17 +30,17 @@ import { useSessionGuard, useToast, useRealtimeSubscription, useHardwareBack } f
 import { ToastContainer } from '@/components/ToastContainer'
 import type { User, Role, JournalType, ReportEntry, WorkReport } from '@/types'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
-import { JournalSelectModal, JournalMonthSelectModal } from '@/components/JournalView'
+import { JournalSelectModal, JournalMonthSelectModal } from '@/components/journals/JournalSelectModal'
 import dynamic from 'next/dynamic'
 
 // Heavy components are lazy loaded to improve initial load speed
-const DU46JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DU46JournalView), { ssr: false })
-const SHU2JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.SHU2JournalView), { ssr: false })
-const ALSNJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.ALSNJournalView), { ssr: false })
-const YerlatgichJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.YerlatgichJournalView), { ssr: false })
-const AlsnKodJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
-const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
-const DgaNazoratJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DgaNazoratJournalView), { ssr: false })
+const DU46JournalView = dynamic(() => import('@/components/journals/DU46JournalView').then(mod => mod.DU46JournalView), { ssr: false })
+const SHU2JournalView = dynamic(() => import('@/components/journals/SHU2JournalView').then(mod => mod.SHU2JournalView), { ssr: false })
+const ALSNJournalView = dynamic(() => import('@/components/journals/ALSNJournalView').then(mod => mod.ALSNJournalView), { ssr: false })
+const YerlatgichJournalView = dynamic(() => import('@/components/journals/YerlatgichJournalView').then(mod => mod.YerlatgichJournalView), { ssr: false })
+const AlsnKodJournalView = dynamic(() => import('@/components/journals/AlsnKodJournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
+const MpsFriksionJournalView = dynamic(() => import('@/components/journals/MpsFriksionJournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
+const DgaNazoratJournalView = dynamic(() => import('@/components/journals/DgaNazoratJournalView').then(mod => mod.DgaNazoratJournalView), { ssr: false })
 import {
   LogOut,
   Plus,
@@ -66,15 +66,6 @@ import IncidentsView from '@/components/worker/IncidentsView'
 const StationEquipmentsModal = dynamic(() => import('@/components/StationEquipmentsModal').then(mod => mod.StationEquipmentsModal), { ssr: false })
 
 type Tab = 'bekatlar' | 'arxiv' | 'grafiklar' | 'baxtsiz_hodisalar' | 'kutubxona'
-
-type _WorkerEditData = {
-  fullName: string
-  login: string
-  password?: string
-  phone: string
-  role: Role
-  stationIds: string[]
-}
 
 export default function DispatcherPage() {
   const { session, loading: sessionLoading, handleSignOut } = useSessionGuard('dispatcher')
@@ -156,7 +147,7 @@ export default function DispatcherPage() {
     return w.filter(user => user.role !== 'dispatcher')
   }, {
     fallbackData: getFallback('dispatcher_workers_cache', []),
-    onSuccess: (data) => safeStorage.setItem('dispatcher_workers_cache', JSON.stringify(data))
+    onSuccess: (data) => safeStorage.setItemDebounced('dispatcher_workers_cache', JSON.stringify(data))
   })
   
   // Dashboard faqat joriy + o'tgan oy hisobotlarini ishlatadi (pastdagi
@@ -175,23 +166,23 @@ export default function DispatcherPage() {
     },
     {
       fallbackData: getFallback('dispatcher_reports_cache_v2', []),
-      onSuccess: (data) => safeStorage.setItem('dispatcher_reports_cache_v2', JSON.stringify(data)),
+      onSuccess: (data) => safeStorage.setItemDebounced('dispatcher_reports_cache_v2', JSON.stringify(data)),
     }
   )
   
   const { data: allIncidents = [], mutate: mutateIncidents } = useSWR(session ? 'dispatcher_incidents' : null, getIncidents, {
     fallbackData: getFallback('dispatcher_incidents_cache', []),
-    onSuccess: (data) => safeStorage.setItem('dispatcher_incidents_cache', JSON.stringify(data))
+    onSuccess: (data) => safeStorage.setItemDebounced('dispatcher_incidents_cache', JSON.stringify(data))
   })
   
   const { data: globalGraphics = [], mutate: mutateGraphics } = useSWR(session ? 'dispatcher_graphics' : null, getGlobalGraphics, {
     fallbackData: getFallback('dispatcher_graphics_cache', []),
-    onSuccess: (data) => safeStorage.setItem('dispatcher_graphics_cache', JSON.stringify(data))
+    onSuccess: (data) => safeStorage.setItemDebounced('dispatcher_graphics_cache', JSON.stringify(data))
   })
   
   const { data: journalSummary = {}, mutate: mutateJournalSummary } = useSWR(session ? 'dispatcher_journals' : null, getDispatcherJournalSummary, {
     fallbackData: getFallback('dispatcher_journals_cache', {}),
-    onSuccess: (data) => safeStorage.setItem('dispatcher_journals_cache', JSON.stringify(data))
+    onSuccess: (data) => safeStorage.setItemDebounced('dispatcher_journals_cache', JSON.stringify(data))
   })
 
   const { data: readIncidentIdsData, mutate: mutateReadIds } = useSWR(
@@ -199,7 +190,7 @@ export default function DispatcherPage() {
     () => getReadIncidentIds(session!.id),
     {
       fallbackData: getFallback(`dispatcher_read_incidents_cache_${session?.id}`, []),
-      onSuccess: (data) => safeStorage.setItem(`dispatcher_read_incidents_cache_${session?.id}`, JSON.stringify(data))
+      onSuccess: (data) => safeStorage.setItemDebounced(`dispatcher_read_incidents_cache_${session?.id}`, JSON.stringify(data))
     }
   )
   const readIncidentIds = useMemo(() => new Set(readIncidentIdsData || []), [readIncidentIdsData])

@@ -201,7 +201,7 @@ export async function getWorkers(): Promise<User[]> {
     .order('created_at', { ascending: true });
 
   if (error) {
-    if (typeof window !== 'undefined') alert("Supabase Error (getWorkers): " + error.message);
+    console.error('getWorkers error:', error.message);
     return [];
   }
   if (!data) return [];
@@ -301,21 +301,6 @@ export function mapDbReport(row: DbWorkReportRow): WorkReport {
 }
 
 /**
- * ⚠️ OG'IR SO'ROV: bazadagi BARCHA hisobotlarni to'liq entries bilan tortadi.
- * UI sahifalarida ishlatmang! Faqat bir martalik export/migratsiya uchun.
- * Sahifalar uchun: getReportsByMonths yoki getReportsByStationYear.
- */
-export async function getAllReports(): Promise<WorkReport[]> {
-  const { data, error } = await supabase
-    .from('work_reports')
-    .select(WORK_REPORT_COLUMNS)
-    .order('submitted_at', { ascending: false });
-
-  if (error || !data) return [];
-  return (data as DbWorkReportRow[]).map(mapDbReport);
-}
-
-/**
  * Berilgan oylar ro'yxati bo'yicha hisobotlar.
  * Dispatcher dashboard faqat joriy + o'tgan oyni ishlatadi —
  * butun bazani tortish o'rniga shu funksiyadan foydalanamiz.
@@ -361,36 +346,25 @@ export async function getReportsByStationYear(
   return (data as DbWorkReportRow[]).map(mapDbReport);
 }
 
-export async function getReportsByWorker(workerId: string): Promise<WorkReport[]> {
-  const { data, error } = await supabase
-    .from('work_reports')
-    .select(WORK_REPORT_COLUMNS)
-    .eq('worker_id', workerId)
-    .order('month', { ascending: false });
-
-  if (error || !data) return [];
-  return (data as DbWorkReportRow[]).map(mapDbReport);
-}
-
-export async function getReportsByStation(stationId: string): Promise<WorkReport[]> {
-  const { data, error } = await supabase
-    .from('work_reports')
-    .select(WORK_REPORT_COLUMNS)
-    .eq('station_id', stationId)
-    .order('month', { ascending: false });
-
-  if (error || !data) return [];
-  return (data as DbWorkReportRow[]).map(mapDbReport);
-}
-
-export async function getReportsByStations(stationIds: string[]): Promise<WorkReport[]> {
-  if (!stationIds || stationIds.length === 0) return [];
+/**
+ * Bekatlar hisobotlari — faqat berilgan oylar bo'yicha.
+ * Draft (is_submitted=false) rejalar ham qaytariladi — Katta Elektromexanik
+ * yuborishdan avval ularni ko'rishi/tahrirlashi kerak.
+ * Worker sahifasi joriy yil oylari (+o'tgan yil dekabri) bilan chaqiradi —
+ * yillar o'tsa ham payload o'smaydi.
+ * @param months — 'YYYY-MM' formatidagi oylar ro'yxati
+ */
+export async function getReportsByStationsAndMonths(
+  stationIds: string[],
+  months: string[]
+): Promise<WorkReport[]> {
+  if (!stationIds || stationIds.length === 0 || !months || months.length === 0) return [];
 
   const { data, error } = await supabase
     .from('work_reports')
     .select(WORK_REPORT_COLUMNS)
     .in('station_id', stationIds)
-    // Removed the 'Draft Oylik Reja' filter so that draft reports can also be seen and edited by authorized users (e.g., Katta Elektromexanik) before submission.
+    .in('month', months)
     .order('month', { ascending: false });
 
   if (error || !data) return [];
@@ -692,27 +666,6 @@ export async function updateReportEntries(
   return mapDbReport(data as DbWorkReportRow);
 }
 
-export async function getStationPendingCount(): Promise<Record<string, number>> {
-  // Optimizatsiya: entries massivini yuklamaymiz — faqat station_id va id olamiz
-  // confirmed_at IS NULL filtri serverda ishlaydi, client'da faqat hisoblaymiz
-  const { data, error } = await supabase
-    .from('work_reports')
-    .select('station_id, id')
-    .is('confirmed_at', null)
-    // Faqat yuborilgan, hali tasdiqlanmagan rejalar hisoblanadi
-    .eq('is_submitted', true);
-
-  if (error || !data) return {};
-
-  const counts: Record<string, number> = {};
-
-  for (const r of data as Array<{ station_id: string; id: string }>) {
-    counts[r.station_id] = (counts[r.station_id] || 0) + 1;
-  }
-
-  return counts;
-}
-
 // Incidents
 
 function mapDbIncident(row: DbIncidentRow): Incident {
@@ -787,26 +740,6 @@ export async function deleteIncident(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) throw new Error(error.message);
-}
-
-export async function getUnreadIncidentsCount(workerId: string): Promise<number> {
-  // First get all incidents
-  const { data: incidents, error: incidentsError } = await supabase
-    .from('incidents')
-    .select('id');
-
-  if (incidentsError || !incidents) return 0;
-
-  // Get read incidents for this worker
-  const { data: reads, error: readsError } = await supabase
-    .from('incident_reads')
-    .select('incident_id')
-    .eq('worker_id', workerId);
-
-  if (readsError || !reads) return incidents.length;
-
-  const readIds = new Set(reads.map(r => r.incident_id));
-  return incidents.filter(i => !readIds.has(i.id)).length;
 }
 
 export async function getReadIncidentIds(workerId: string): Promise<string[]> {
@@ -1059,6 +992,25 @@ export async function getPendingJournalCounts(
     return cached.data
   }
 
+  // 1-yo'l: RPC — hisob serverda bajariladi, jurnalning to'liq entries massivi
+  // klientga tortilmaydi (payload: butun jurnal → 2 ta raqam).
+  // RPC hali yaratilmagan bo'lsa (migratsiya ishga tushirilmagan), xato qaytadi
+  // va pastdagi eski client-side hisobga o'tamiz — funksionallik buzilmaydi.
+  try {
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_worker_pending_counts', {
+      p_station_id: stationId,
+      p_role: role,
+      p_position: position || null,
+    })
+    if (!rpcError && rpcData && rpcData.length > 0) {
+      const row = rpcData[0] as { du46_count: number; shu2_count: number }
+      const result = { du46: row.du46_count || 0, shu2: row.shu2_count || 0 }
+      _pendingJournalCache.set(cacheKey, { data: result, ts: Date.now() })
+      return result
+    }
+  } catch { /* RPC yo'q — fallback davom etadi */ }
+
+  // 2-yo'l (fallback): eski client-side hisob
   try {
     const { data, error } = await supabase
       .from('station_journals')

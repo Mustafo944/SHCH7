@@ -4,15 +4,17 @@ import { WorkReport, Station, StationJournal, JournalType, DU46Entry, SHU2Entry 
 import { getJournalsByStationId, getReportsByStationYear } from '@/lib/supabase-db'
 import { MONTHS } from '@/lib/constants'
 import { ReportCard } from './ReportList'
-import {
-  DU46JournalView,
-  SHU2JournalView,
-  ALSNJournalView,
-  AlsnKodJournalView,
-  MpsFriksionJournalView,
-  YerlatgichJournalView,
-  DgaNazoratJournalView,
-} from '@/components/JournalView'
+import dynamic from 'next/dynamic'
+
+// Jurnal ko'rinishlari og'ir (jspdf va h.k.) — faqat arxivda jurnal ochilganda yuklanadi,
+// dispetcher sahifasining asosiy bundle'iga kirmaydi.
+const DU46JournalView = dynamic(() => import('@/components/journals/DU46JournalView').then(m => m.DU46JournalView), { ssr: false })
+const SHU2JournalView = dynamic(() => import('@/components/journals/SHU2JournalView').then(m => m.SHU2JournalView), { ssr: false })
+const ALSNJournalView = dynamic(() => import('@/components/journals/ALSNJournalView').then(m => m.ALSNJournalView), { ssr: false })
+const AlsnKodJournalView = dynamic(() => import('@/components/journals/AlsnKodJournalView').then(m => m.AlsnKodJournalView), { ssr: false })
+const MpsFriksionJournalView = dynamic(() => import('@/components/journals/MpsFriksionJournalView').then(m => m.MpsFriksionJournalView), { ssr: false })
+const YerlatgichJournalView = dynamic(() => import('@/components/journals/YerlatgichJournalView').then(m => m.YerlatgichJournalView), { ssr: false })
+const DgaNazoratJournalView = dynamic(() => import('@/components/journals/DgaNazoratJournalView').then(m => m.DgaNazoratJournalView), { ssr: false })
 
 // ─────────────────────────────────────────────────────────────────
 // JOURNAL_META: Har bir jurnal turining nomi, rangi va ikonkasi

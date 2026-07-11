@@ -268,25 +268,3 @@ export async function serverSaveJournal(
     'Jurnal band: boshqa xodimlar bir vaqtda saqlamoqda. Bir necha soniyadan so\'ng qayta urinib ko\'ring.'
   )
 }
-
-/**
- * ESKI NOM BILAN MOSLIK: avvalgi kod `serverUpsertJournal` ni chaqiradi.
- * Endi u ham auth tekshiruvidan o'tadi va optimistic locking ishlatadi.
- *
- * baseUpdatedAt sifatida `null` beriladi — bu avval INSERT'ga urinadi:
- *  - Qator hali yo'q bo'lsa, INSERT to'g'ridan-to'g'ri muvaffaqiyatli bo'ladi.
- *  - Qator allaqachon bor bo'lsa, INSERT `station_id+journal_type` UNIQUE
- *    cheklovini buzib 23505 xatosi bilan qaytadi — bu kutilgan holat sifatida
- *    ushlanadi va pastda serverdan o'qib merge qilish yo'liga o'tkaziladi.
- * (`updated_at` ustuni TIMESTAMPTZ bo'lgani uchun bu yerga haqiqiy sana
- * bo'lmagan qiymat berish mumkin emas — Postgres uni cast qila olmay xato beradi.)
- */
-export async function serverUpsertJournal(
-  stationId: string,
-  journalType: string,
-  entries: Record<string, unknown>[],
-  updatedBy: string
-) {
-  const result = await serverSaveJournal(stationId, journalType, entries, updatedBy, null)
-  return result
-}

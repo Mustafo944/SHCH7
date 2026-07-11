@@ -8,7 +8,7 @@ import {
   getStation,
 } from '@/lib/store'
 import {
-  getReportsByStations,
+  getReportsByStationsAndMonths,
   getIncidents,
   getReadIncidentIds,
   getPendingJournalCounts,
@@ -22,15 +22,15 @@ import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import type { WorkReport, ReportEntry, Incident, JournalType } from '@/types'
 import { MONTHS } from '@/lib/constants'
 import dynamic from 'next/dynamic'
-import { JournalSelectModal, JournalMonthSelectModal } from '@/components/JournalView'
+import { JournalSelectModal, JournalMonthSelectModal } from '@/components/journals/JournalSelectModal'
 
-const DU46JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DU46JournalView), { ssr: false })
-const SHU2JournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.SHU2JournalView), { ssr: false })
-const ALSNJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.ALSNJournalView), { ssr: false })
-const YerlatgichJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.YerlatgichJournalView), { ssr: false })
-const AlsnKodJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
-const MpsFriksionJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
-const DgaNazoratJournalView = dynamic(() => import('@/components/JournalView').then(mod => mod.DgaNazoratJournalView), { ssr: false })
+const DU46JournalView = dynamic(() => import('@/components/journals/DU46JournalView').then(mod => mod.DU46JournalView), { ssr: false })
+const SHU2JournalView = dynamic(() => import('@/components/journals/SHU2JournalView').then(mod => mod.SHU2JournalView), { ssr: false })
+const ALSNJournalView = dynamic(() => import('@/components/journals/ALSNJournalView').then(mod => mod.ALSNJournalView), { ssr: false })
+const YerlatgichJournalView = dynamic(() => import('@/components/journals/YerlatgichJournalView').then(mod => mod.YerlatgichJournalView), { ssr: false })
+const AlsnKodJournalView = dynamic(() => import('@/components/journals/AlsnKodJournalView').then(mod => mod.AlsnKodJournalView), { ssr: false })
+const MpsFriksionJournalView = dynamic(() => import('@/components/journals/MpsFriksionJournalView').then(mod => mod.MpsFriksionJournalView), { ssr: false })
+const DgaNazoratJournalView = dynamic(() => import('@/components/journals/DgaNazoratJournalView').then(mod => mod.DgaNazoratJournalView), { ssr: false })
 import { HeaderCard } from '@/components/worker/BigActionCard'
 // Og'ir komponentlar haqiqiy code splitting bilan lazy load qilinadi
 const JournalForm = dynamic(() => import('@/components/worker/JournalForm').then(mod => mod.JournalForm), { ssr: false, loading: () => <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-md"><div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-purple-500" /></div> })
@@ -118,10 +118,18 @@ export default function WorkerPage() {
 
   const loadWorkReports = useCallback(async (stationIds: string[]) => {
     try {
-      const r = await getReportsByStations(stationIds)
+      // Faqat kerakli oylar yuklanadi: joriy yilning 12 oyi (JournalForm faqat
+      // joriy yil oylarini ochadi) + yanvarda o'tgan yil dekabri ("o'tgan oy"
+      // statistikasi uchun). Shu bilan payload yillar o'tsa ham o'smaydi.
+      const now = new Date()
+      const y = now.getFullYear()
+      const months = Array.from({ length: 12 }, (_, i) => `${y}-${String(i + 1).padStart(2, '0')}`)
+      if (now.getMonth() === 0) months.push(`${y - 1}-12`)
+
+      const r = await getReportsByStationsAndMonths(stationIds, months)
       setReports(r)
       if (typeof window !== 'undefined' && stationIds.length > 0) {
-        safeStorage.setItem(`worker_reports_cache_${stationIds.join('_')}`, JSON.stringify(r))
+        safeStorage.setItemDebounced(`worker_reports_cache_${stationIds.join('_')}`, JSON.stringify(r))
       }
     } catch {
       toast.error('Hisobotlarni yuklashda xatolik')
@@ -138,8 +146,8 @@ export default function WorkerPage() {
       setIncidents(allInc)
       setReadIncidentIds(new Set(readIds))
       if (typeof window !== 'undefined') {
-        safeStorage.setItem(`worker_incidents_cache_${userId}`, JSON.stringify(allInc))
-        safeStorage.setItem(`worker_read_inc_cache_${userId}`, JSON.stringify(readIds))
+        safeStorage.setItemDebounced(`worker_incidents_cache_${userId}`, JSON.stringify(allInc))
+        safeStorage.setItemDebounced(`worker_read_inc_cache_${userId}`, JSON.stringify(readIds))
       }
     } catch {
       console.warn('Baxtsiz hodisalarni yuklashda xatolik')

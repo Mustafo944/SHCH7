@@ -8,7 +8,8 @@ import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
 import type { DU46Entry } from '@/types'
 import { Plus, Trash2, CheckCircle2, Download, ChevronLeft, ChevronRight, Calendar, LayoutGrid, List } from 'lucide-react'
 import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel } from './helpers'
-import { TaskSelectModal, DateInput, TimeInput } from './JournalSelectModal'
+import { DateInput, TimeInput } from './JournalSelectModal'
+import { TaskSelectModal } from './TaskSelectModal'
 import { ApprovalChainModal } from './ApprovalChainModal'
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -98,6 +99,17 @@ const EMPTY_DU46 = (month?: string): DU46Entry => ({
   journalMonth: month,
 })
 
+// _isNew/_isEdited faqat shu sessiyada Kunlik filtrda qatorni ko'rsatib turish uchun ishlatiladigan
+// vaqtinchalik UI bayroqlari — bazaga hech qachon yozilmasligi kerak, aks holda o'sha qator boshqa
+// barcha foydalanuvchilarda, har doim, tanlangan kundan qat'i nazar ko'rinib qolaveradi.
+function stripSessionFlags(e: DU46Entry): DU46Entry {
+  if (!(e as any)._isNew && !(e as any)._isEdited) return e
+  const copy: any = { ...e }
+  delete copy._isNew
+  delete copy._isEdited
+  return copy
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // DU-46 JURNAL KO'RINISHI
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -174,7 +186,8 @@ export function DU46JournalView({
     try {
       const j = await getJournal(stationId, 'du46')
       if (j && j.entries.length > 0) {
-        const loadedAllEntries = j.entries as DU46Entry[]
+        // Eski buzilgan yozuvlarda _isNew/_isEdited bazaga yozilib qolgan bo'lishi mumkin — yuklashda tozalaymiz
+        const loadedAllEntries = (j.entries as DU46Entry[]).map(stripSessionFlags)
         setAllEntries(loadedAllEntries)
 
         // Bug #11 fix: eski qatorlarda journalMonth bo'lmasligi mumkin (migratsiyadan oldin saqlangan).
@@ -618,7 +631,8 @@ export function DU46JournalView({
       setAllEntries(newAllEntries)
       setEntries(mergedMonthEntries)
 
-      await upsertJournal(stationId, 'du46', newAllEntries, userName)
+      // _isNew/_isEdited faqat shu sessiya uchun — bazaga hech qachon yozilmasligi kerak
+      await upsertJournal(stationId, 'du46', newAllEntries.map(stripSessionFlags), userName)
     } catch (err) {
       // Bug #6 fix: snapshot'dan to'g'ri rollback
       console.error('Saqlash xatosi:', err)
