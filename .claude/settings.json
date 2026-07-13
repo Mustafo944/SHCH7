@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(tasklist //FI \"IMAGENAME eq node.exe\")"
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\")",
+      "Bash(ls -la \"/c/Users/User/Desktop\" 2>&1 | head -50)",
+      "Read(//c/Users/User/Desktop/**)",
+      "Bash(ls -la \"/c/Users/User/Desktop/relenazorat\" 2>&1 | head -80)",
+      "Read(//c/Users/User/Desktop/relenazorat/**)",
+      "Bash(find \"/c/Users/User/Desktop/relenazorat/src\" -type f | sort)",
+      "Read(//c/Users/User/Desktop/relenazorat/src/**)",
+      "Bash(ls \"/c/Users/User/Desktop/relenazorat/node_modules/@supabase\" 2>&1 | head -5)",
+      "Read(//c/Users/User/Desktop/relenazorat/node_modules/**)"
     ]
   }
 }

@@ -428,7 +428,9 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   useEffect(() => {
     if (!selectedTaskType || !stationId || !taskTextStr) return;
     const loadScans = async () => {
-      const match = taskTextStr.match(/^\[([^\]]+)\]/);
+      // "[]" (bo'sh qavs) — rasmiy NSH raqami yo'q vazifalar uchun ham to'g'ri kalit hisoblanishi kerak,
+      // shuning uchun "+" emas "*" ishlatiladi (aks holda bunday vazifalar "noma'lum" ostida yashiringan bo'lardi)
+      const match = taskTextStr.match(/^\[([^\]]*)\]/);
       const taskNshStr = match ? match[1].trim() : 'noma\'lum';
       const taskDateStr = getEntryDateStr(journalMonth, entry.ragat);
       const data = await getTaskScans(stationId, taskNshStr, taskDateStr);
@@ -499,18 +501,18 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
 
   const requiresQR = useMemo(() => {
     if (!selectedTaskType || !stationEq?.taskMappings) return false;
-    const match = currentTask?.text.match(/^\[([^\]]+)\]/);
-    const taskNsh = match ? match[1].trim() : '';
-    if (!taskNsh) return false;
+    const match = currentTask?.text.match(/^\[([^\]]*)\]/);
+    if (!match) return false;
+    const taskNsh = match[1].trim();
     return stationEq.taskMappings.some((tm: any) => tm.taskNsh === taskNsh);
   }, [selectedTaskType, stationEq, currentTask]);
 
   const targetItems = useMemo(() => {
     if (!selectedTaskType || !stationEq?.taskMappings) return [];
-    const match = currentTask?.text.match(/^\[([^\]]+)\]/);
-    const taskNsh = match ? match[1].trim() : '';
-    if (!taskNsh) return [];
-    
+    const match = currentTask?.text.match(/^\[([^\]]*)\]/);
+    if (!match) return [];
+    const taskNsh = match[1].trim();
+
     const mapping = stationEq.taskMappings.find((tm: any) => tm.taskNsh === taskNsh);
     if (!mapping) return [];
 
@@ -538,7 +540,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     setIsScanningDb(true);
     setScanErrorMsg(null);
     try {
-      const match = currentTask?.text.match(/^\[([^\]]+)\]/);
+      const match = currentTask?.text.match(/^\[([^\]]*)\]/);
       const taskNshStr = match ? match[1].trim() : 'noma\'lum';
       const taskDateStr = getEntryDateStr(journalMonth, entry.ragat);
 
