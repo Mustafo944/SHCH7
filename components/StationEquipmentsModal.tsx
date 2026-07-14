@@ -981,7 +981,8 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
               canEdit ? (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition shadow-md whitespace-nowrap"
+                  disabled={!swrData}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition shadow-md whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Edit3 size={18} /> O&apos;zgartirish
                 </button>
@@ -991,7 +992,8 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
             ) : (
               <button
                 onClick={() => setIsEditingMappings(true)}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition shadow-md whitespace-nowrap"
+                disabled={!swrData}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition shadow-md whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Edit3 size={18} /> O&apos;zgartirish
               </button>
