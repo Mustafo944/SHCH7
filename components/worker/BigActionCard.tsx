@@ -1,5 +1,5 @@
 import React from 'react'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, X } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════
    BigActionCard — yengil, har joyda ishlatiladigan harakat kartochkasi
@@ -85,17 +85,19 @@ export function HeaderCard({
   subtitle,
   status,
   statusColor,
+  onClose,
 }: {
   title: string
   subtitle: string
   status?: string
   statusColor?: string
+  onClose?: () => void
 }) {
   return (
     <div className="rounded-[32px] bg-white/30 backdrop-blur-[40px] p-6 sm:p-8 shadow-[0_8px_32px_rgba(31,38,135,0.05)] border border-white/60 relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80" />
-      <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between relative z-10">
-        <div>
+      <div className="flex items-center gap-4 justify-between relative z-10">
+        <div className="min-w-0 flex-1">
           <h2 className="text-2xl sm:text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-indigo-900 tracking-tight">
             {title}
           </h2>
@@ -103,17 +105,28 @@ export function HeaderCard({
             {subtitle}
           </p>
         </div>
-        {status && (
-          <div
-            className={`${
-              statusColor && STATUS_CLASSES[statusColor]
-                ? STATUS_CLASSES[statusColor]
-                : STATUS_CLASSES[status.toLowerCase()] || 'badge'
-            }`}
-          >
-            {status}
-          </div>
-        )}
+        <div className="flex items-center gap-3 shrink-0">
+          {status && (
+            <div
+              className={`${
+                statusColor && STATUS_CLASSES[statusColor]
+                  ? STATUS_CLASSES[statusColor]
+                  : STATUS_CLASSES[status.toLowerCase()] || 'badge'
+              }`}
+            >
+              {status}
+            </div>
+          )}
+          {onClose && (
+            <button
+              onClick={onClose}
+              aria-label="Yopish"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/60 bg-white/70 text-slate-500 shadow-sm transition hover:bg-white hover:text-slate-900"
+            >
+              <X size={20} />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

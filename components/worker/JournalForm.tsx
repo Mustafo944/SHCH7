@@ -553,7 +553,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
   if (!reportsLoaded) {
     return (
       <div className="space-y-6">
-        <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} />
+        <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} onClose={onCancel} />
         <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200/60 bg-white/80 shadow-sm backdrop-blur-sm">
           <Loader2 className="animate-spin text-purple-500" size={32} />
         </div>
@@ -564,7 +564,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
   if (!canEditPlan && !draftReport) {
     return (
       <div className="space-y-6">
-        <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} />
+        <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} onClose={onCancel} />
         <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-12 text-center shadow-sm backdrop-blur-sm">
           <h3 className="text-xl font-black text-slate-900 tracking-tight mb-2">Oylik ish reja hali tuzilmagan</h3>
           <p className="text-slate-500 font-medium max-w-md mx-auto mb-8">Ushbu bekat va oy uchun oylik ish reja Katta elektromexanik tomonidan hali tizimga kiritilmagan. Iltimos kuting.</p>
@@ -581,6 +581,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
         subtitle={`${MONTHS[month]} · ${stationName}`}
         status={headerError || ""}
         statusColor={headerError ? "error" : "default"}
+        onClose={onCancel}
       />
       {saveConflict && (
         <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
@@ -807,15 +808,12 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
       )}
       <div className="flex gap-2 sm:gap-4 items-stretch justify-center max-w-2xl mx-auto">
         <button onClick={handleDownloadPDF}
-          className="rounded-xl sm:rounded-2xl border border-slate-200/60 bg-white/80 px-2 sm:px-6 py-2.5 sm:py-5 text-[10px] sm:text-base font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition flex items-center justify-center gap-1 sm:gap-2 shadow-sm backdrop-blur-sm whitespace-nowrap min-w-[70px]">
+          className={`rounded-xl sm:rounded-2xl border border-slate-200/60 bg-white/80 px-4 sm:px-6 py-2.5 sm:py-5 text-[12px] sm:text-base font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm backdrop-blur-sm whitespace-nowrap ${(!isConfirmed && canEditPlan) ? 'min-w-[70px]' : 'flex-1'}`}>
           <Download className="w-3.5 h-3.5 sm:w-6 sm:h-6" /> <span className="hidden sm:inline">Yuklab olish</span><span className="sm:hidden">Yuklash</span>
         </button>
         {(!isConfirmed && canEditPlan) && (
           <button onClick={handleSubmit} disabled={submitting} className="btn-gradient flex-1 py-2.5 sm:py-5 text-[13px] sm:text-lg font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all">{submitting ? 'Kut...' : 'YUBORISH'}</button>
         )}
-        <button onClick={onCancel} className="rounded-xl sm:rounded-2xl bg-white/80 border border-slate-200/60 px-2 sm:px-10 py-2.5 sm:py-5 text-[10px] sm:text-base font-bold text-slate-400 hover:text-slate-900 transition flex items-center justify-center shadow-sm backdrop-blur-sm whitespace-nowrap min-w-[70px]">
-          {isConfirmed ? 'Orqaga' : 'Bekor qilish'}
-        </button>
       </div>
 
       <TaskSelectionModal
