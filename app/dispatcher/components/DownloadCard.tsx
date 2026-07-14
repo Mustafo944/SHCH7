@@ -11,6 +11,7 @@ export function DownloadCard({ title, desc, existingFile, onUpload, onDelete }: 
 }) {
   const [isUploading, setIsUploading] = useState(false)
   const [dlMsg, setDlMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -51,12 +52,30 @@ export function DownloadCard({ title, desc, existingFile, onUpload, onDelete }: 
           <>
             <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-2 text-[10px] font-bold text-slate-400">
               <span className="truncate max-w-[150px]">{existingFile.fileName}</span>
-              <button
-                onClick={() => onDelete(existingFile.id)}
-                className="text-red-500 hover:text-red-600 transition-colors"
-              >
-                O'chirish
-              </button>
+              {confirmDelete ? (
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="text-slate-500">Aniqmi?</span>
+                  <button
+                    onClick={async () => { setConfirmDelete(false); await onDelete(existingFile.id) }}
+                    className="font-black text-red-500 hover:text-red-600 transition-colors"
+                  >
+                    Ha, o'chirish
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    Yo'q
+                  </button>
+                </span>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="text-red-500 hover:text-red-600 transition-colors"
+                >
+                  O'chirish
+                </button>
+              )}
             </div>
             <button
               onClick={() => window.open(existingFile.filePath, '_blank')}
