@@ -649,7 +649,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', padding: '16px' }}>
       <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl animate-scale-in overflow-hidden" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
         {/* Header — zamonaviy gradient */}
-        <div className="bg-gradient-to-br from-purple-600 via-fuchsia-600 to-indigo-600 px-6 py-5 sm:px-8 sm:py-6">
+        <div className="bg-gradient-to-br from-purple-600 via-fuchsia-600 to-indigo-600 px-5 py-4 sm:px-6 sm:py-5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
@@ -689,8 +689,8 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
           </div>
         ) : (
           <>
-            <div className="px-6 pt-5 pb-4 bg-white sm:px-8">
-              <div className="flex items-center justify-between mb-2.5">
+            <div className="px-5 pt-3 pb-2.5 bg-white sm:px-6">
+              <div className="flex items-center justify-between mb-2">
                 <span className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-purple-700">{currentTask?.label}</span>
                 {availableTasks.length > 1 && (
                   <button onClick={() => setSelectedTaskType(null)} className="flex items-center gap-1 text-[10px] font-black text-slate-400 hover:text-purple-600 transition">
@@ -698,13 +698,13 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                   </button>
                 )}
               </div>
-              <div className="rounded-2xl border border-purple-100 bg-purple-50/50 p-4">
-                <p className="text-[11px] text-slate-600 whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">{currentTask?.text}</p>
+              <div className="rounded-2xl border border-purple-100 bg-purple-50/50 p-3.5">
+                <p className="text-[13.5px] font-semibold text-slate-700 whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto">{currentTask?.text}</p>
               </div>
             </div>
 
-            <div className="px-8 py-6 space-y-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">
+            <div className="px-5 py-3 space-y-2.5 sm:px-6">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
                 Kerakli jurnallar ({visitedJournals.size}/{supportedRequired.length})
               </p>
 
@@ -717,13 +717,13 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                 return (
                   <div key={name}>
                     {showAutoFillHint && (
-                      <p className="mb-1.5 px-1 text-[10px] font-bold text-purple-500 leading-snug">
-                        💡 Barcha qurilmalarni skaner qilsangiz, SHU-2 jurnali avtomatik to'ldiriladi — qo'lda to'ldirish shart emas.
+                      <p className="mb-1 px-1 text-[10px] font-bold text-purple-500 leading-snug">
+                        💡 Barcha qurilmalarni skaner qilsangiz, SHU-2 jurnali avtomatik to'ldiriladi.
                       </p>
                     )}
                     <button
                       onClick={() => setActiveJournal(SUPPORTED_JOURNALS[name])}
-                      className={`w-full flex items-center justify-between rounded-2xl border p-5 transition-all active:scale-[0.98] ${isDone
+                      className={`w-full flex items-center justify-between rounded-2xl border p-4 transition-all active:scale-[0.98] ${isDone
                         ? 'border-emerald-200 bg-emerald-50/80'
                         : isJournalInProgress
                           ? 'border-amber-200 bg-amber-50/80'
@@ -768,7 +768,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
               const allScanned = scanned >= targetScans
               const pct = targetScans > 0 ? Math.min(100, Math.round((scanned / targetScans) * 100)) : 0
               return (
-                <div className="px-8 pb-4 bg-white">
+                <div className="px-5 pb-3 bg-white sm:px-6">
                   <button
                     onClick={() => setScannerListOpen(true)}
                     className={`group relative w-full overflow-hidden rounded-[19px] p-[2px] shadow-md transition-all duration-300 hover:shadow-xl active:scale-[0.98] ${allScanned
@@ -776,11 +776,11 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                       : 'bg-gradient-to-r from-purple-500 via-fuchsia-500 to-indigo-500'
                       }`}
                   >
-                    <div className="relative flex items-center gap-4 rounded-[17px] bg-white px-4 py-3.5">
+                    <div className="relative flex items-center gap-3 rounded-[17px] bg-white px-3 py-3">
                       {/* QR ikonka — zamonaviy, skaner nuri bilan */}
-                      <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl ${allScanned ? 'bg-emerald-50' : 'bg-gradient-to-br from-purple-50 to-fuchsia-50'
+                      <div className={`relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl ${allScanned ? 'bg-emerald-50' : 'bg-gradient-to-br from-purple-50 to-fuchsia-50'
                         }`}>
-                        <QrCode size={30} strokeWidth={2.2} className={allScanned ? 'text-emerald-600' : 'text-purple-600'} />
+                        <QrCode size={26} strokeWidth={2.2} className={allScanned ? 'text-emerald-600' : 'text-purple-600'} />
                         {!allScanned && (
                           <span className="animate-scan-line pointer-events-none absolute top-0 left-2.5 right-2.5 h-[2px] rounded-full bg-gradient-to-r from-transparent via-fuchsia-500 to-transparent shadow-[0_0_8px_1px_rgba(217,70,239,0.7)]" />
                         )}
@@ -788,13 +788,13 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
 
                       {/* Matn + progress */}
                       <div className="min-w-0 flex-1 text-left">
-                        <span className={`block text-sm font-black uppercase tracking-wide ${allScanned ? 'text-emerald-700' : 'text-purple-700'}`}>
+                        <span className={`block text-[15px] font-black leading-tight ${allScanned ? 'text-emerald-700' : 'text-purple-700'}`}>
                           Qurilmalarni skanerlash
                         </span>
                         <p className="mt-0.5 truncate text-[11px] font-bold text-slate-400">
-                          {allScanned ? 'Barcha qurilmalar skanerlandi ✓' : 'Vazifani tugatish uchun skaner qiling'}
+                          {allScanned ? 'Barcha qurilmalar skanerlandi ✓' : 'Skaner qilish uchun bosing'}
                         </p>
-                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${allScanned ? 'bg-emerald-400' : 'bg-gradient-to-r from-purple-500 to-fuchsia-500'}`}
                             style={{ width: `${pct}%` }}
@@ -803,12 +803,12 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                       </div>
 
                       {/* Hisob va strelka */}
-                      <div className="flex shrink-0 items-center gap-2">
-                        <div className={`flex items-center rounded-xl px-2.5 py-1.5 text-white shadow-sm ${allScanned ? 'bg-emerald-500' : 'bg-purple-600'}`}>
-                          <span className="text-base font-black leading-none">{scanned}</span>
-                          <span className="text-xs font-black leading-none text-white/60">/{targetScans}</span>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <div className={`flex items-center rounded-lg px-2 py-1 text-white shadow-sm ${allScanned ? 'bg-emerald-500' : 'bg-purple-600'}`}>
+                          <span className="text-sm font-black leading-none">{scanned}</span>
+                          <span className="text-[11px] font-black leading-none text-white/60">/{targetScans}</span>
                         </div>
-                        <ChevronRight size={18} className={`transition-transform group-hover:translate-x-0.5 ${allScanned ? 'text-emerald-400' : 'text-purple-400'}`} />
+                        <ChevronRight size={16} className={`transition-transform group-hover:translate-x-0.5 ${allScanned ? 'text-emerald-400' : 'text-purple-400'}`} />
                       </div>
                     </div>
                   </button>
@@ -816,8 +816,8 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
               )
             })()}
 
-            <div className="border-t border-slate-100 bg-slate-50/50 px-8 py-5 flex gap-3">
-              <button onClick={onClose} className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all shadow-sm">
+            <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-3 flex items-stretch gap-2.5 sm:px-6">
+              <button onClick={onClose} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-bold text-slate-500 hover:bg-slate-50 transition-all shadow-sm">
                 Bekor qilish
               </button>
 
@@ -830,7 +830,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                   }
                 }}
                 disabled={!isInProgress && (!allDone || (requiresQR && currentScans.length < targetScans))}
-                className={`flex-1 rounded-xl px-6 py-3 text-sm font-black text-white shadow-lg transition-all active:scale-95 ${isInProgress
+                className={`flex-1 rounded-xl px-4 py-2 text-[13px] font-black leading-tight text-white shadow-md transition-all active:scale-95 ${isInProgress
                   ? 'bg-amber-500 shadow-amber-500/20 hover:bg-amber-600'
                   : ((!allDone || (requiresQR && currentScans.length < targetScans)) ? 'bg-slate-300 shadow-none cursor-not-allowed text-slate-500' : 'bg-emerald-500 shadow-emerald-500/20 hover:bg-emerald-600')
                   }`}
