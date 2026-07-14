@@ -19,6 +19,7 @@ import { safeStorage } from '@/lib/utils/storage'
 import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription, useHardwareBack } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
+import { AppSidebar, type SidebarNavItem } from '@/components/AppSidebar'
 import type { WorkReport, ReportEntry, Incident, JournalType } from '@/types'
 import { MONTHS } from '@/lib/constants'
 import dynamic from 'next/dynamic'
@@ -43,7 +44,6 @@ const StationEquipmentsModal = dynamic(() => import('@/components/StationEquipme
 import {
   FileText,
   Map as MapIcon,
-  ChevronLeft,
   LogOut,
   BookOpen,
   AlertTriangle,
@@ -52,7 +52,6 @@ import {
   CheckCircle2,
   Menu,
   Home,
-  ChevronRight,
   BarChart2,
   Library,
   Server
@@ -365,128 +364,31 @@ export default function WorkerPage() {
   const station = activeStationId ? getStation(activeStationId) : null
   const stationName = station?.name || '...'
 
+  const sidebarItems: SidebarNavItem[] = [
+    { key: 'home', label: 'Bosh sahifa', icon: Home, active: view === 'home' || view === 'selectStation', onClick: () => setView('home') },
+    { key: 'reja', label: 'Oylik ish reja', icon: FileText, active: ['selectMonth', 'viewReport', 'journal'].includes(view), onClick: () => setView('selectMonth') },
+    { key: 'jurnallar', label: 'Ish Jurnallari', icon: BookOpen, active: ['journalSelect', 'journalMonthSelect', 'du46', 'shu2', 'boshqaJurnallar', 'alsn', 'yerlatgich', 'alsnKod', 'mpsFriksion', 'dgaNazorat'].includes(view), onClick: () => setView('journalSelect') },
+    { key: 'sxemalar', label: 'Bekat Sxemalari', icon: MapIcon, active: view === 'sxemalar', onClick: () => setView('sxemalar') },
+    { key: 'grafiklar', label: 'Grafiklar', icon: BarChart2, active: view === 'grafiklar', onClick: () => setView('grafiklar') },
+    { key: 'incidents', label: 'Baxtsiz hodisalar', icon: AlertTriangle, active: view === 'incidents', onClick: () => setView('incidents') },
+    { key: 'kutubxona', label: 'Kutubxona', icon: Library, active: view === 'kutubxona', onClick: () => setView('kutubxona') },
+    { key: 'qurilmalar', label: 'Bekat qurilmalari', icon: Server, active: view === 'qurilmalar', onClick: () => setView('qurilmalar') },
+  ]
+
   return (
     <div className="relative flex h-screen overflow-hidden bg-slate-50 text-slate-900 selection:bg-blue-500/10 font-sans">
       <AuroraMeshBackground />
 
-      {/* Mobile Sidebar Backdrop & Close Button */}
-      {isMobileSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 lg:hidden" 
-          onClick={() => setIsMobileSidebarOpen(false)} 
-        />
-      )}
-
-      {/* Left Sidebar (Desktop & Mobile Drawer) */}
-      <aside className={`bg-white/40 backdrop-blur-md border-r border-white/40 flex flex-col shrink-0 shadow-2xl lg:shadow-sm z-50 lg:z-20 fixed lg:relative inset-y-0 left-0 transform transition-all duration-300 ease-in-out ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 ${isDesktopSidebarCollapsed ? 'w-[260px] lg:w-[88px]' : 'w-[260px]'}`}>
-        
-        {/* Mobile Close Button (attached to right edge of menu) */}
-        <button 
-          onClick={() => setIsMobileSidebarOpen(false)} 
-          className={`lg:hidden absolute top-1/2 -translate-y-1/2 -right-5 h-10 w-10 flex items-center justify-center rounded-full bg-white border border-slate-200 shadow-md text-slate-500 hover:text-blue-600 transition-all z-[60] duration-300 ${isMobileSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        >
-          <ChevronLeft size={20} />
-        </button>
-
-        {/* Desktop Collapse Button */}
-        <button 
-          onClick={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)} 
-          className="hidden lg:flex absolute top-1/2 -translate-y-1/2 -right-5 h-10 w-10 items-center justify-center rounded-full bg-white border border-slate-200 shadow-md text-slate-500 hover:text-blue-600 transition-all z-[60]"
-        >
-          {isDesktopSidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-        </button>
-
-        <div className="shrink-0">
-          {/* Logo */}
-          <div className={`flex items-center ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0 p-6 gap-3' : 'gap-4 p-6'} mb-2 transition-all duration-300 relative`}>
-            <div className="flex h-14 w-14 items-center justify-center shrink-0">
-              <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
-            </div>
-            <div className={`flex flex-col justify-center overflow-hidden transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:w-0 lg:opacity-0 lg:hidden' : 'w-[140px] opacity-100'}`}>
-              <h1 className="text-[15px] font-black uppercase tracking-tight text-[#0050a0] leading-none whitespace-nowrap">O‘ZBEKISTON</h1>
-              <h1 className="text-[15px] font-black uppercase tracking-tight text-[#0050a0] leading-none whitespace-nowrap mt-0.5">TEMIR YO‘LLARI</h1>
-              <p className="text-[9px] font-bold text-slate-500 tracking-[0.15em] mt-1.5 uppercase whitespace-nowrap">SMART CONTROL TIZIMI</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2 px-4 pb-2 mt-2">
-            <button onClick={() => { setView('home'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${view === 'home' || view === 'selectStation' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-              <Home size={18} className="shrink-0" /> 
-              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Bosh sahifa</span>
-            </button>
-            <button onClick={() => { setView('selectMonth'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${view === 'selectMonth' || view === 'viewReport' || view === 'journal' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-              <FileText size={18} className="shrink-0" />
-              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Oylik ish reja</span>
-            </button>
-            <button onClick={() => { setView('journalSelect'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${['journalSelect', 'journalMonthSelect', 'du46', 'shu2', 'boshqaJurnallar', 'alsn', 'yerlatgich', 'alsnKod', 'mpsFriksion', 'dgaNazorat'].includes(view) ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-              <BookOpen size={18} className="shrink-0" />
-              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Ish Jurnallari</span>
-            </button>
-            <button onClick={() => { setView('sxemalar'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${view === 'sxemalar' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-              <MapIcon size={18} className="shrink-0" />
-              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Bekat Sxemalari</span>
-            </button>
-            <button onClick={() => { setView('grafiklar'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${view === 'grafiklar' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-              <BarChart2 size={18} className="shrink-0" />
-              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Grafiklar</span>
-            </button>
-            <button onClick={() => { setView('incidents'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${view === 'incidents' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-              <AlertTriangle size={18} className="shrink-0" />
-              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Baxtsiz hodisalar</span>
-            </button>
-            <button onClick={() => { setView('kutubxona'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${view === 'kutubxona' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-              <Library size={18} className="shrink-0" />
-              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Kutubxona</span>
-            </button>
-            <button onClick={() => { setView('qurilmalar'); setIsMobileSidebarOpen(false); }} className={`flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden ${view === 'qurilmalar' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-              <Server size={18} className="shrink-0" />
-              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Bekat qurilmalari</span>
-            </button>
-            <button onClick={() => { setIsMobileSidebarOpen(false); setIsSignOutModalOpen(true); }} className={`mt-auto flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold transition-all overflow-hidden text-rose-600 hover:bg-rose-50 ${isDesktopSidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-              <LogOut size={18} className="shrink-0" />
-              <span className={`whitespace-nowrap transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:hidden' : 'block'}`}>Chiqish</span>
-            </button>
-        </nav>
-
-        {/* Train Image & User Block */}
-        <div className={`relative shrink-0 w-full transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:h-[88px] lg:bg-white/40 lg:border-t lg:border-white/60' : 'h-[220px]'}`}>
-           {/* Image Background */}
-           <div className={`absolute inset-0 pointer-events-none overflow-hidden ${isDesktopSidebarCollapsed ? 'lg:hidden' : ''}`}>
-             <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-white/80 to-transparent z-10" />
-             <img
-               src="/afrosiyob.webp"
-               loading="lazy"
-               decoding="async"
-               onError={(e) => e.currentTarget.src='/1.png'}
-               alt="Afrosiyob"
-               className="w-full h-full object-cover object-[80%_center] opacity-100"
-             />
-             <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/90 to-transparent z-10" />
-           </div>
-
-           {/* Floating User Card */}
-           <div className={`relative z-20 h-full flex flex-col justify-end px-4 pb-4 ${isDesktopSidebarCollapsed ? 'lg:p-3 lg:justify-center' : ''}`}>
-             
-             <div className="relative w-full mx-auto max-w-[230px]">
-               <div className={`flex items-center rounded-2xl backdrop-blur-md border shadow-lg bg-white/40 border-white/50 transition-all duration-300 ${isDesktopSidebarCollapsed ? 'lg:p-2 lg:justify-center' : 'p-3 gap-3'}`}>
-                 <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-200">
-                   <div className="h-full w-full bg-gradient-to-br from-blue-100/80 to-blue-50/80 flex items-center justify-center text-blue-700 font-bold shadow-inner">
-                       {session?.fullName?.charAt(0) || 'U'}
-                   </div>
-                 </div>
-                 <div className={`flex-1 min-w-0 transition-all duration-300 overflow-hidden ${isDesktopSidebarCollapsed ? 'lg:w-0 lg:opacity-0 lg:hidden' : 'opacity-100 w-auto'}`}>
-                   <p className="truncate text-sm font-bold text-slate-900">{session?.fullName || 'Foydalanuvchi'}</p>
-                   <p className="truncate text-[11px] font-bold text-slate-600 uppercase">
-                      {session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : session?.role === 'elektromexanik' ? 'Elektromexanik' : session?.role === 'elektromontyor' ? 'Elektromontyor' : "Katta Elektromexanik"}
-                   </p>
-                 </div>
-               </div>
-             </div>
-           </div>
-        </div>
-      </aside>
+      <AppSidebar
+        items={sidebarItems}
+        onSignOut={() => setIsSignOutModalOpen(true)}
+        isMobileOpen={isMobileSidebarOpen}
+        onMobileClose={() => setIsMobileSidebarOpen(false)}
+        isCollapsed={isDesktopSidebarCollapsed}
+        onToggleCollapse={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)}
+        userName={session?.fullName}
+        userRole={session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : session?.role === 'elektromexanik' ? 'Elektromexanik' : session?.role === 'elektromontyor' ? 'Elektromontyor' : 'Katta Elektromexanik'}
+      />
 
       {/* Main Content Area */}
       <div className="relative flex-1 flex flex-col min-w-0">

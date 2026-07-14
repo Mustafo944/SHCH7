@@ -24,12 +24,12 @@ export function JournalSelectModal({
   shu2Count?: number
 }) {
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/30 p-3 sm:p-4 backdrop-blur-md">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 p-3 sm:p-4 transition-all">
       <div className="w-full max-w-lg overflow-hidden rounded-[24px] sm:rounded-[40px] bg-white shadow-2xl animate-scale-in flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-8 sm:py-6 bg-slate-50/50 shrink-0">
           <div>
-            <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">Ish Jurnallari</h3>
-            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">Jurnalni tanlang</p>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Ish Jurnallari</h3>
+            <p className="text-xs sm:text-sm font-bold uppercase tracking-widest text-slate-400">Jurnalni tanlang</p>
           </div>
           <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-2 sm:p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
             <X size={20} className="sm:w-6 sm:h-6" />
@@ -38,60 +38,60 @@ export function JournalSelectModal({
         <div className="grid gap-3 sm:gap-4 p-4 sm:p-8 overflow-y-auto hide-scrollbar">
           <button
             onClick={() => onSelect('du46')}
-            className="group relative flex items-center gap-4 sm:gap-5 rounded-[20px] sm:rounded-[28px] border border-slate-200 bg-white p-4 sm:p-6 text-left transition-all hover:border-purple-300 hover:shadow-xl hover:shadow-purple-500/5 active:scale-95"
+            className="group relative flex items-center gap-4 sm:gap-5 rounded-[20px] sm:rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 text-left transition-all hover:border-purple-300 hover:shadow-xl hover:shadow-purple-500/5 active:scale-95"
           >
             {du46Count > 0 && (
               <div className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-[11px] font-black text-white shadow-lg shadow-red-500/30">
                 {du46Count > 9 ? '9+' : du46Count}
               </div>
             )}
-            <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[16px] sm:rounded-2xl bg-purple-50 text-purple-600 transition-all group-hover:bg-white border border-transparent group-hover:border-purple-100 shadow-sm">
-              <BookOpen size={24} className="sm:w-[28px] sm:h-[28px]" />
+            <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-[16px] sm:rounded-2xl bg-purple-50 text-purple-600 transition-all group-hover:bg-white border border-transparent group-hover:border-purple-100 shadow-sm">
+              <BookOpen size={26} className="sm:w-7 sm:h-7" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-lg font-black text-slate-900 tracking-tight">DU-46</h4>
+                <h4 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">DU-46</h4>
                 {du46Count > 0 && (
                   <span className="badge badge-danger text-[9px] px-2 py-0.5">+{du46Count}</span>
                 )}
               </div>
-              <p className="mt-1 text-xs text-slate-500 leading-relaxed">Ko&apos;rik, tekshiruvlar tahlili va nosozliklar jurnali</p>
+              <p className="mt-1 text-sm font-bold text-slate-500 leading-relaxed">Ko&apos;rik, tekshiruvlar tahlili va nosozliklar jurnali</p>
             </div>
           </button>
           <button
             onClick={() => onSelect('shu2')}
-            className="group relative flex items-center gap-4 sm:gap-5 rounded-[20px] sm:rounded-[28px] border border-slate-200 bg-white p-4 sm:p-6 text-left transition-all hover:border-amber-300 hover:shadow-xl hover:shadow-amber-500/5 active:scale-95"
+            className="group relative flex items-center gap-4 sm:gap-5 rounded-[20px] sm:rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 text-left transition-all hover:border-amber-300 hover:shadow-xl hover:shadow-amber-500/5 active:scale-95"
           >
             {shu2Count > 0 && (
               <div className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-[11px] font-black text-white shadow-lg shadow-red-500/30">
                 {shu2Count > 9 ? '9+' : shu2Count}
               </div>
             )}
-            <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[16px] sm:rounded-2xl bg-amber-50 text-amber-600 transition-all group-hover:bg-white border border-transparent group-hover:border-amber-100 shadow-sm">
-              <BookOpen size={24} className="sm:w-[28px] sm:h-[28px]" />
+            <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-[16px] sm:rounded-2xl bg-amber-50 text-amber-600 transition-all group-hover:bg-white border border-transparent group-hover:border-amber-100 shadow-sm">
+              <BookOpen size={26} className="sm:w-7 sm:h-7" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-lg font-black text-slate-900 tracking-tight">SHU-2</h4>
+                <h4 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">SHU-2</h4>
                 {shu2Count > 0 && (
                   <span className="badge badge-warning text-[9px] px-2 py-0.5">+{shu2Count}</span>
                 )}
               </div>
-              <p className="mt-1 text-xs text-slate-500 leading-relaxed">SMB va aloqa obyektlarida bajarilgan ishlar jurnali</p>
+              <p className="mt-1 text-sm font-bold text-slate-500 leading-relaxed">SMB va aloqa obyektlarida bajarilgan ishlar jurnali</p>
             </div>
           </button>
           <button
             onClick={() => onSelect('boshqa')}
-            className="group relative flex items-center gap-4 sm:gap-5 rounded-[20px] sm:rounded-[28px] border border-slate-200 bg-white p-4 sm:p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
+            className="group relative flex items-center gap-4 sm:gap-5 rounded-[20px] sm:rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
           >
-            <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[16px] sm:rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
-              <BookOpen size={24} className="sm:w-[28px] sm:h-[28px]" />
+            <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-[16px] sm:rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
+              <BookOpen size={26} className="sm:w-7 sm:h-7" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-lg font-black text-slate-900 tracking-tight">Boshqa jurnallar</h4>
+                <h4 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">Boshqa jurnallar</h4>
               </div>
-              <p className="mt-1 text-xs text-slate-500 leading-relaxed">Tez kunda yangi jurnallar ro'yxati qo'shiladi</p>
+              <p className="mt-1 text-sm font-bold text-slate-500 leading-relaxed">Tez kunda yangi jurnallar ro'yxati qo'shiladi</p>
             </div>
           </button>
         </div>
@@ -120,20 +120,20 @@ export function JournalMonthSelectModal({
   const currentMonth = new Date().getMonth()
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/30 p-3 sm:p-4 backdrop-blur-md">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 p-3 sm:p-4 transition-all">
       <div className="w-full max-w-2xl overflow-hidden rounded-[24px] sm:rounded-[32px] bg-white shadow-2xl animate-scale-in flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-8 sm:py-6 bg-slate-50/50 shrink-0">
           <div>
-            <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               {journalType === 'du46' ? 'DU-46' : journalType === 'shu2' ? 'SHU-2' : 'ALSN'} oyini tanlang
             </h3>
-            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">{year} yil</p>
+            <p className="text-xs sm:text-sm font-bold uppercase tracking-widest text-slate-400">{year} yil</p>
           </div>
           <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-2 sm:p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
             <X size={20} className="sm:w-6 sm:h-6" />
           </button>
         </div>
-        <div className="grid grid-cols-2 gap-3 p-4 sm:p-8 sm:grid-cols-3 md:grid-cols-4 overflow-y-auto hide-scrollbar">
+        <div className="grid flex-1 min-h-0 grid-cols-2 gap-3 p-4 sm:p-8 sm:grid-cols-3 md:grid-cols-4 overflow-y-auto hide-scrollbar content-start">
           {MONTHS.map((monthName, index) => {
             const isCurrent = index === currentMonth
             const currentYear = new Date().getFullYear()
@@ -146,24 +146,40 @@ export function JournalMonthSelectModal({
                 key={monthName}
                 onClick={() => !isDisabled && onSelect(getJournalMonthKey(index, year), index)}
                 disabled={isDisabled}
-                className={`group flex flex-col rounded-2xl border p-5 text-left shadow-sm transition-all ${isDisabled
-                    ? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed opacity-50'
+                className={`group flex min-h-[108px] flex-col justify-between gap-3 rounded-2xl border p-4 text-left shadow-sm transition-all ${isDisabled
+                    ? 'border-slate-100 bg-slate-50 cursor-not-allowed opacity-60'
                     : isCurrent
-                      ? 'border-purple-300 bg-purple-50 text-slate-900 shadow-purple-500/10 active:scale-[0.98]'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-purple-200 hover:bg-purple-50/50 active:scale-[0.98]'
+                      ? 'border-purple-300 bg-purple-50 shadow-purple-500/10 active:scale-[0.98]'
+                      : 'border-slate-200 bg-white hover:border-purple-200 hover:bg-purple-50/50 active:scale-[0.98]'
                   }`}
               >
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
-                  {String(index + 1).padStart(2, '0')}
-                </span>
-                <span className={`mt-3 text-sm font-black uppercase tracking-tight ${isDisabled ? 'text-slate-300' : 'group-hover:text-purple-600'}`}>
-                  {monthName}
-                </span>
+                <div>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${isDisabled ? 'text-slate-300' : 'text-slate-400'}`}>
+                    {String(index + 1).padStart(2, '0')}-oy
+                  </span>
+                  <h4 className={`mt-1 text-lg font-black uppercase tracking-tight ${isDisabled
+                      ? 'text-slate-300'
+                      : isCurrent
+                        ? 'text-purple-700'
+                        : 'text-slate-800 group-hover:text-purple-600'
+                    }`}>
+                    {monthName}
+                  </h4>
+                </div>
                 {isFuture && (
-                  <span className="mt-1 text-[9px] font-bold text-red-300">Hali kelmagan</span>
+                  <span className="w-fit max-w-full truncate rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-red-600">
+                    Hali kelmagan
+                  </span>
                 )}
                 {isPast && (
-                  <span className="mt-1 text-[9px] font-bold text-amber-400">Faqat o&apos;qish uchun</span>
+                  <span className="w-fit max-w-full truncate rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-amber-600">
+                    Faqat o&apos;qish
+                  </span>
+                )}
+                {isCurrent && (
+                  <span className="w-fit max-w-full truncate rounded-md border border-purple-200 bg-purple-50 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-purple-600">
+                    Joriy oy
+                  </span>
                 )}
               </button>
             )
