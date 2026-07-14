@@ -178,7 +178,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
   useEffect(() => {
     getStationEquipments(stationId).then((data) => {
       if (data) setStationEq(data)
-    })
+    }).catch(console.error)
   }, [stationId])
   const stationTaskMappings: TaskQRMapping[] = useMemo(() => stationEq?.taskMappings || [], [stationEq])
 

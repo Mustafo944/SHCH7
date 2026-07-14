@@ -1447,7 +1447,14 @@ export async function getStationEquipments(stationId: string): Promise<StationEq
     .eq('journal_type', 'shu2')
     .maybeSingle();
 
-  if (error || !data) return null;
+  // MUHIM: fetch XATOSI va "ma'lumot umuman yo'q" ni ajratamiz.
+  // Xatoni null qaytarish orqali yashirsak, chaqiruvchi buni "yozuv yo'q"
+  // deb qabul qilib, bo'sh nusxani mavjud ma'lumot ustidan saqlab yuborishi
+  // mumkin (2026-07-07 hodisasining ildizi). Xato bo'lsa — throw qilamiz.
+  if (error) {
+    throw new Error(error.message || 'Bekat uskunalarini yuklab bo\'lmadi');
+  }
+  if (!data) return null; // Haqiqatan hali yaratilmagan — INSERT bo'ladi
   return mapEquipmentsRow(stationId, data);
 }
 
@@ -1472,11 +1479,14 @@ export async function upsertStationEquipments(
     .maybeSingle();
 
   if (existing) {
-    // Optimistik lock: agar chaqiruvchi oxirgi ko'rgan updated_at'ni bergan bo'lsa va u
-    // bazadagidan farq qilsa — demak biz yuklaganimizdan beri boshqa kimdir saqlagan.
-    // Shu holatda ustidan yozib, uning o'zgarishini yo'qotib qo'ymaslik uchun to'xtaymiz.
-    if (expectedUpdatedAt && existing.updated_at !== expectedUpdatedAt) {
-      throw new Error('CONFLICT: Bu bekat uskunalarini boshqa foydalanuvchi allaqachon o\'zgartirgan. Sahifani yangilab, o\'zgarishingizni qayta kiriting.');
+    // Optimistik lock: mavjud qatorni yangilash uchun chaqiruvchi uni oxirgi
+    // ko'rgan updated_at'ni BERISHI SHART va u bazadagiga MOS kelishi kerak.
+    //  - expectedUpdatedAt null/undefined  → qator yuklanmagan (fetch xato bergan
+    //    yoki umuman o'qilmagan). Bunday holda saqlash bo'sh nusxani ustidan
+    //    yozib yuborishi mumkin — RAD ETAMIZ (2026-07-07 hodisasining ildizi).
+    //  - mos kelmasa → biz yuklaganimizdan beri boshqa kimdir saqlagan → RAD.
+    if (!expectedUpdatedAt || existing.updated_at !== expectedUpdatedAt) {
+      throw new Error('CONFLICT: Bu bekat uskunalari yangilangan yoki to\'liq yuklanmagan. Sahifani yangilab, o\'zgarishingizni qayta kiriting.');
     }
 
     const { data: resultData, error: resultError } = await supabase

@@ -272,6 +272,16 @@ textarea:read-only:focus {
 .animate-scale-in { animation: scaleIn 0.3s ease forwards; }
 .animate-slide-in-right { animation: slideInRight 0.3s ease forwards; }
 
+/* QR skaner chizig'i — yuqoridan pastga yurib turadigan nur.
+   transform bilan (GPU-accelerated) — layout qayta hisoblanmaydi, ravon ishlaydi. */
+@keyframes scanLine {
+  0%   { transform: translateY(6px);  opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateY(46px); opacity: 0; }
+}
+.animate-scan-line { animation: scanLine 1.8s ease-in-out infinite; will-change: transform; }
+
 /* ===== Skeleton Loading ===== */
 .skeleton {
   background: linear-gradient(90deg, #f0ecff 0%, #e8e0ff 50%, #f0ecff 100%);

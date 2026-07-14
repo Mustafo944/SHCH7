@@ -5,10 +5,12 @@ import {
   X, CheckCircle2,
   BookOpen,
   ChevronRight,
+  ChevronLeft,
   Download,
   AlertTriangle,
   FileText,
-  Target
+  QrCode,
+  ClipboardCheck
 } from 'lucide-react'
 import { getStationEquipments, getTaskScans, insertTaskScan, autoFillShu2Entry, type TaskScan } from '@/lib/supabase-db'
 import { supabase } from '@/lib/supabase'
@@ -396,7 +398,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     }
     getStationEquipments(stationId).then((data) => {
       if (data) setStationEq(data)
-    })
+    }).catch(console.error)
   }, [stationId, preloadedStationEq])
 
   const extractJurnal = (text: string): string => {
@@ -644,49 +646,61 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   }
 
   return createPortal(
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(12px)', padding: '16px' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', padding: '16px' }}>
       <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl animate-scale-in overflow-hidden" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-        {/* Header */}
-        <div className="border-b border-slate-100 bg-slate-50/80 px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-black text-slate-900 tracking-tight">Ishni Bajarish</h3>
-              <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                Sana: {`${String(new Date().getDate()).padStart(2, '0')}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}`} · {selectedTaskType ? 'Jurnallarga yozuv kiriting' : 'Ishni tanlang'}
-              </p>
+        {/* Header — zamonaviy gradient */}
+        <div className="bg-gradient-to-br from-purple-600 via-fuchsia-600 to-indigo-600 px-6 py-5 sm:px-8 sm:py-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
+                <ClipboardCheck size={22} className="text-white" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-lg font-black text-white tracking-tight leading-tight">Ishni Bajarish</h3>
+                <p className="mt-0.5 text-[10px] font-bold text-white/70 uppercase tracking-widest truncate">
+                  {`${String(new Date().getDate()).padStart(2, '0')}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}`} · {selectedTaskType ? 'Jurnallarga yozuv kiriting' : 'Ishni tanlang'}
+                </p>
+              </div>
             </div>
-            <button onClick={onClose} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 hover:text-slate-900 transition shadow-sm">
+            <button onClick={onClose} className="shrink-0 rounded-xl bg-white/15 p-2 text-white/80 hover:bg-white/25 hover:text-white transition">
               <X size={20} />
             </button>
           </div>
         </div>
 
         {!selectedTaskType ? (
-          <div className="p-8 space-y-4">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Bajariladigan ishni tanlang:</p>
+          <div className="p-6 space-y-3 sm:p-8 sm:space-y-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Bajariladigan ishni tanlang:</p>
             {availableTasks.map(t => (
-              <button key={t.type} onClick={() => setSelectedTaskType(t.type)} className="w-full text-left rounded-2xl border border-slate-200 p-5 hover:border-purple-500 hover:bg-purple-50 transition-all group">
-                <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 mb-1 block">{t.label}</span>
-                <p className="text-xs font-bold text-slate-700 line-clamp-2 group-hover:text-slate-900">{t.text}</p>
-                {t.journals && (
-                  <div className="mt-2 flex items-center gap-1.5">
-                    <BookOpen size={12} className="text-slate-400" />
-                    <span className="text-[10px] text-slate-400 font-bold uppercase">{t.journals}</span>
-                  </div>
-                )}
+              <button key={t.type} onClick={() => setSelectedTaskType(t.type)} className="group flex w-full items-center gap-3 rounded-2xl border border-slate-200 p-5 text-left transition-all hover:border-purple-300 hover:bg-purple-50/60 hover:shadow-md active:scale-[0.99]">
+                <div className="min-w-0 flex-1">
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-purple-600">{t.label}</span>
+                  <p className="text-xs font-bold text-slate-700 line-clamp-2 group-hover:text-slate-900">{t.text}</p>
+                  {t.journals && (
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <BookOpen size={12} className="text-slate-400" />
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">{t.journals}</span>
+                    </div>
+                  )}
+                </div>
+                <ChevronRight size={20} className="shrink-0 text-slate-300 transition-all group-hover:translate-x-0.5 group-hover:text-purple-500" />
               </button>
             ))}
           </div>
         ) : (
           <>
-            <div className="px-8 py-4 border-b border-slate-100 bg-white">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-purple-600">{currentTask?.label}</span>
+            <div className="px-6 pt-5 pb-4 bg-white sm:px-8">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-purple-700">{currentTask?.label}</span>
                 {availableTasks.length > 1 && (
-                  <button onClick={() => setSelectedTaskType(null)} className="text-[10px] font-black text-slate-400 hover:text-purple-600 underline">Ortga</button>
+                  <button onClick={() => setSelectedTaskType(null)} className="flex items-center gap-1 text-[10px] font-black text-slate-400 hover:text-purple-600 transition">
+                    <ChevronLeft size={13} /> Ortga
+                  </button>
                 )}
               </div>
-              <p className="text-[11px] text-slate-600 whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">{currentTask?.text}</p>
+              <div className="rounded-2xl border border-purple-100 bg-purple-50/50 p-4">
+                <p className="text-[11px] text-slate-600 whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">{currentTask?.text}</p>
+              </div>
             </div>
 
             <div className="px-8 py-6 space-y-3">
@@ -749,21 +763,58 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
               ))}
             </div>
 
-            {requiresQR && (
-              <div className="px-8 pb-4 bg-white">
-                <button
-                  onClick={() => setScannerListOpen(true)}
-                  className="w-full rounded-2xl border-2 border-purple-200 bg-purple-50 hover:bg-purple-100 p-4 transition-all flex flex-col items-center justify-center gap-1 group shadow-sm hover:shadow-md"
-                >
-                  <span className="font-black text-purple-700 uppercase tracking-wider text-sm flex items-center gap-2">
-                    <Target size={18} /> Qurilmalarni skanerlash oynasi ({currentScans.length}/{targetScans})
-                  </span>
-                  <p className="text-[10px] text-purple-500 font-bold">
-                    {currentScans.length >= targetScans ? "Barcha qurilmalar skanerlandi" : "Vazifani tugatish uchun barcha qurilmalarni skanerlang"}
-                  </p>
-                </button>
-              </div>
-            )}
+            {requiresQR && (() => {
+              const scanned = currentScans.length
+              const allScanned = scanned >= targetScans
+              const pct = targetScans > 0 ? Math.min(100, Math.round((scanned / targetScans) * 100)) : 0
+              return (
+                <div className="px-8 pb-4 bg-white">
+                  <button
+                    onClick={() => setScannerListOpen(true)}
+                    className={`group relative w-full overflow-hidden rounded-[19px] p-[2px] shadow-md transition-all duration-300 hover:shadow-xl active:scale-[0.98] ${allScanned
+                      ? 'bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-400'
+                      : 'bg-gradient-to-r from-purple-500 via-fuchsia-500 to-indigo-500'
+                      }`}
+                  >
+                    <div className="relative flex items-center gap-4 rounded-[17px] bg-white px-4 py-3.5">
+                      {/* QR ikonka — zamonaviy, skaner nuri bilan */}
+                      <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl ${allScanned ? 'bg-emerald-50' : 'bg-gradient-to-br from-purple-50 to-fuchsia-50'
+                        }`}>
+                        <QrCode size={30} strokeWidth={2.2} className={allScanned ? 'text-emerald-600' : 'text-purple-600'} />
+                        {!allScanned && (
+                          <span className="animate-scan-line pointer-events-none absolute top-0 left-2.5 right-2.5 h-[2px] rounded-full bg-gradient-to-r from-transparent via-fuchsia-500 to-transparent shadow-[0_0_8px_1px_rgba(217,70,239,0.7)]" />
+                        )}
+                      </div>
+
+                      {/* Matn + progress */}
+                      <div className="min-w-0 flex-1 text-left">
+                        <span className={`block text-sm font-black uppercase tracking-wide ${allScanned ? 'text-emerald-700' : 'text-purple-700'}`}>
+                          Qurilmalarni skanerlash
+                        </span>
+                        <p className="mt-0.5 truncate text-[11px] font-bold text-slate-400">
+                          {allScanned ? 'Barcha qurilmalar skanerlandi ✓' : 'Vazifani tugatish uchun skaner qiling'}
+                        </p>
+                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${allScanned ? 'bg-emerald-400' : 'bg-gradient-to-r from-purple-500 to-fuchsia-500'}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Hisob va strelka */}
+                      <div className="flex shrink-0 items-center gap-2">
+                        <div className={`flex items-center rounded-xl px-2.5 py-1.5 text-white shadow-sm ${allScanned ? 'bg-emerald-500' : 'bg-purple-600'}`}>
+                          <span className="text-base font-black leading-none">{scanned}</span>
+                          <span className="text-xs font-black leading-none text-white/60">/{targetScans}</span>
+                        </div>
+                        <ChevronRight size={18} className={`transition-transform group-hover:translate-x-0.5 ${allScanned ? 'text-emerald-400' : 'text-purple-400'}`} />
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              )
+            })()}
 
             <div className="border-t border-slate-100 bg-slate-50/50 px-8 py-5 flex gap-3">
               <button onClick={onClose} className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all shadow-sm">
@@ -795,17 +846,36 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
         )}
       </div>
 
-      {scannerListOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(12px)', padding: '16px' }}>
-          <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl animate-scale-in flex flex-col" style={{ maxHeight: '90vh' }}>
-            <div className="border-b border-slate-100 bg-slate-50/80 px-6 py-5 flex items-center justify-between rounded-t-3xl">
-              <div>
-                <h3 className="font-black text-slate-800">Qurilmalar ro'yxati</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Skaner qilingan: {currentScans.length}/{targetScans}</p>
+      {scannerListOpen && (() => {
+        const doneCount = currentScans.length
+        const allDoneScan = doneCount >= targetScans
+        const pct = targetScans > 0 ? Math.min(100, Math.round((doneCount / targetScans) * 100)) : 0
+        return (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', padding: '16px' }}>
+          <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl animate-scale-in flex flex-col" style={{ maxHeight: '90vh' }}>
+            {/* Sarlavha — QR ikonka, progress bar */}
+            <div className={`relative px-6 py-5 ${allDoneScan ? 'bg-gradient-to-br from-emerald-500 to-teal-500' : 'bg-gradient-to-br from-purple-600 via-fuchsia-600 to-indigo-600'}`}>
+              <div className="flex items-center gap-4">
+                <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25">
+                  <QrCode size={30} strokeWidth={2.2} className="text-white" />
+                  {!allDoneScan && (
+                    <span className="animate-scan-line pointer-events-none absolute top-0 left-2.5 right-2.5 h-[2px] rounded-full bg-white shadow-[0_0_8px_1px_rgba(255,255,255,0.9)]" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg font-black text-white leading-tight">Qurilmalar ro'yxati</h3>
+                  <p className="text-[11px] font-bold text-white/70 mt-0.5">
+                    {allDoneScan ? 'Barcha qurilmalar skanerlandi ✓' : `Skaner qilingan: ${doneCount} / ${targetScans}`}
+                  </p>
+                </div>
+                <button onClick={() => setScannerListOpen(false)} className="shrink-0 rounded-xl bg-white/15 p-2 text-white/80 hover:bg-white/25 hover:text-white transition backdrop-blur-sm">
+                  <X size={20} />
+                </button>
               </div>
-              <button onClick={() => setScannerListOpen(false)} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 hover:text-slate-900 transition">
-                <X size={20} />
-              </button>
+              {/* Progress bar */}
+              <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-white/20">
+                <div className="h-full rounded-full bg-white transition-all duration-500" style={{ width: `${pct}%` }} />
+              </div>
             </div>
 
             {scanErrorMsg && (
@@ -815,33 +885,51 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
               </div>
             )}
 
-            <div className="p-6 overflow-y-auto space-y-3 flex-1 bg-slate-50/30">
-              {targetItems.map((item: any) => {
+            <div className="p-5 overflow-y-auto space-y-2.5 flex-1 bg-slate-50/50">
+              {targetItems.map((item: any, idx: number) => {
                 const expectedQR = buildEquipmentQrValue(stationId, item.id);
                 const scanRecord = dbScans.find((s: any) => s.equipment_name === expectedQR);
 
                 return (
-                  <div key={item.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
-                    <span className="font-black text-slate-700">{item.name}</span>
-                    {scanRecord ? (
-                      <div className="flex flex-col items-end">
-                        <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
-                          <CheckCircle2 size={14} />
-                          <span className="text-[10px] font-black uppercase tracking-wider">{scanRecord.scanned_by}</span>
-                        </div>
-                        <span className="text-[9px] font-bold text-slate-400 mt-1">
-                          {new Date(scanRecord.scanned_at || Date.now()).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+                  <div
+                    key={item.id}
+                    className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${scanRecord
+                      ? 'border-emerald-200 bg-emerald-50/60'
+                      : 'border-slate-200 bg-white shadow-sm hover:border-purple-200 hover:shadow-md'}`}
+                  >
+                    {/* Holat ikonkasi */}
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-black ${scanRecord
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-purple-100 text-purple-600'}`}>
+                      {scanRecord ? <CheckCircle2 size={22} /> : idx + 1}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <span className="block font-black text-slate-800 leading-snug">{item.name}</span>
+                      {scanRecord && (
+                        <span className="mt-0.5 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600">
+                          <span className="truncate">{scanRecord.scanned_by}</span>
+                          <span className="text-slate-300">·</span>
+                          <span className="shrink-0 text-slate-400">
+                            {new Date(scanRecord.scanned_at || Date.now()).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
                         </span>
-                      </div>
+                      )}
+                    </div>
+
+                    {scanRecord ? (
+                      <span className="shrink-0 rounded-lg bg-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                        Skanerlandi
+                      </span>
                     ) : (
                       <button
                         onClick={() => {
                           setSpecificScanItem(item);
                           setScannerOpen(true);
                         }}
-                        className="bg-purple-100 text-purple-700 hover:bg-purple-200 px-4 py-2 rounded-xl text-xs font-black transition active:scale-95 border border-purple-200"
+                        className="shrink-0 flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 px-4 py-2.5 text-xs font-black text-white shadow-sm shadow-purple-500/25 transition-all hover:shadow-md hover:shadow-purple-500/40 active:scale-95"
                       >
-                        Skanerlash
+                        <QrCode size={15} strokeWidth={2.5} /> Skanerlash
                       </button>
                     )}
                   </div>
@@ -850,7 +938,8 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {scannerOpen && specificScanItem && (
         <QRScannerModal
