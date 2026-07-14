@@ -46,7 +46,7 @@ function TaskSelectionModal({
   if (!modalOpen || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/60 p-4 transition-all">
       <div className="relative flex h-[70vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in">
         <div className="flex items-center justify-between border-b border-slate-200/60 px-8 py-5 bg-slate-50/80">
           <h3 className="text-lg font-black text-slate-900 tracking-tight">
@@ -883,7 +883,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
       )}
 
       {navbatdanTashqariModalDay !== null && typeof document !== 'undefined' ? createPortal(
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/60 p-4 transition-all">
           <div className="relative flex w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-2xl animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-200/60 px-6 py-4 bg-slate-50/80">
               <div>
@@ -950,7 +950,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
       ) : null}
 
       {deleteConfirmIdx !== null && typeof document !== 'undefined' ? createPortal(
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/60 p-4 transition-all">
           <div className="relative flex w-full max-w-sm flex-col overflow-hidden rounded-3xl border border-red-200/60 bg-white shadow-2xl animate-scale-in">
             <div className="flex items-center justify-between border-b border-red-100 bg-red-50/80 px-6 py-4">
               <div className="flex items-center gap-3">

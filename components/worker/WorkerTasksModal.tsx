@@ -192,7 +192,7 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-all">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 p-4 transition-all">
       <div className="flex h-[80vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
 
         {/* HEADER */}
@@ -646,7 +646,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   }
 
   return createPortal(
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', padding: '16px' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.7)', padding: '16px' }}>
       <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl animate-scale-in overflow-hidden" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
         {/* Header — zamonaviy gradient */}
         <div className="bg-gradient-to-br from-purple-600 via-fuchsia-600 to-indigo-600 px-5 py-4 sm:px-6 sm:py-5">
