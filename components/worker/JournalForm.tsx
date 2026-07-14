@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Download, X, CheckCircle2, Clock, Plus, ChevronLeft, ChevronRight, ArrowRight, AlertTriangle, LayoutGrid, List, Calendar } from 'lucide-react'
+import { Download, X, CheckCircle2, Clock, Plus, ChevronLeft, ChevronRight, ArrowRight, AlertTriangle, LayoutGrid, List, Calendar, Loader2 } from 'lucide-react'
 import { upsertReport, updateReportEntries, getStationEquipments, updateEquipmentScanHistory } from '@/lib/supabase-db'
 import type { User, WorkReport, ReportEntry, TaskQRMapping } from '@/types'
 import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, taskDisplayKey, type ParsedTaskItem } from '@/lib/reja-data'
@@ -141,7 +141,7 @@ function TaskSelectionModal({
   );
 }
 
-export function JournalForm({ session, stationId, stationName, month, reports, onSubmit, onCancel, onReportUpdated, initialDay }: { session: User, stationId: string, stationName: string, month: number, reports: WorkReport[], onSubmit: () => void, onCancel: () => void, onReportUpdated?: (reportId: string, entries: ReportEntry[]) => void, initialDay?: number }) {
+export function JournalForm({ session, stationId, stationName, month, reports, reportsLoaded = true, onSubmit, onCancel, onReportUpdated, initialDay }: { session: User, stationId: string, stationName: string, month: number, reports: WorkReport[], reportsLoaded?: boolean, onSubmit: () => void, onCancel: () => void, onReportUpdated?: (reportId: string, entries: ReportEntry[]) => void, initialDay?: number }) {
   const [entries, setEntries] = useState<ReportEntry[]>(Array.from({ length: TOTAL_ROWS }, (_, i) => ({
     ragat: String(i + 1), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: ''
   })))
@@ -163,6 +163,14 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards')
   const [selectedDay, setSelectedDay] = useState<number>(initialDay || new Date().getDate() || 1)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  // Serverda reja boshqa joyda (masalan boshqa tab/qurilmada) allaqachon o'zgargan bo'lsa —
+  // ustidan yozib yubormaymiz, o'rniga foydalanuvchidan sahifani yangilashni so'raymiz.
+  const [saveConflict, setSaveConflict] = useState(false)
+  // Optimistik lock uchun "oxirgi ko'rgan submitted_at" — draftReport.submittedAt'dan farqli,
+  // bu HAR BIR muvaffaqiyatli saqlashdan keyin yangilanadi (draftReport esa faqat sahifa
+  // to'liq qayta yuklanganda yangilanadi), aks holda o'zimizning ketma-ket avto-saqlashlarimiz
+  // bir-birini "ziddiyat" deb noto'g'ri belgilab qo'yar edi.
+  const [knownSubmittedAt, setKnownSubmittedAt] = useState<string | null>(null)
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
   // Bekat uskunalari — oldindan yuklanadi (QR tekshirish uchun)
@@ -179,6 +187,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     if (draft) {
       if (!hasUnsavedChanges) {
         setEntries(draft.entries)
+        setKnownSubmittedAt(draft.submittedAt)
       }
       setIsConfirmed(!!draft.confirmedAt)
       setIsRejected(!!draft.rejectedAt)
@@ -217,33 +226,39 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   const addNavbatdanTashqari = async (day: number | null, text: string) => {
     if (!text.trim() || !reportId) return
 
-    const newEntries = [...entries]
-
-    if (navbatdanTashqariModalIndex !== null) {
-      newEntries[navbatdanTashqariModalIndex] = { ...newEntries[navbatdanTashqariModalIndex], yangiIshlar: text }
-    } else if (day !== null) {
-      const existingIdx = entries.findIndex(e => parseInt(e.ragat) === day)
-      if (existingIdx !== -1 && !newEntries[existingIdx].yangiIshlar) {
-        newEntries[existingIdx] = { ...newEntries[existingIdx], yangiIshlar: text, isNavbatdanTashqari: true }
-      } else {
-        newEntries.push({
-          ragat: String(day),
-          haftalikJadval: '', yillikJadval: '',
-          yangiIshlar: text,
-          kmoBartaraf: '', majburiyOzgarish: '',
-          bajarildiShn: '', bajarildiImzo: '', adImzosi: '',
-          isNavbatdanTashqari: true,
-        })
+    // Bu funksiya nafaqat lokal holatga, balki serverdan qayta o'qilgan ENG SO'NGGI
+    // massivga ham qo'llanadi (pastda updateReportEntries ichida) — shu bilan boshqa
+    // joyda parallel kiritilgan o'zgarishlar ustidan yozib yuborilmaydi.
+    const applyChange = (current: ReportEntry[]): ReportEntry[] => {
+      const newEntries = [...current]
+      if (navbatdanTashqariModalIndex !== null) {
+        newEntries[navbatdanTashqariModalIndex] = { ...newEntries[navbatdanTashqariModalIndex], yangiIshlar: text }
+      } else if (day !== null) {
+        const existingIdx = newEntries.findIndex(e => parseInt(e.ragat) === day)
+        if (existingIdx !== -1 && !newEntries[existingIdx].yangiIshlar) {
+          newEntries[existingIdx] = { ...newEntries[existingIdx], yangiIshlar: text, isNavbatdanTashqari: true }
+        } else {
+          newEntries.push({
+            ragat: String(day),
+            haftalikJadval: '', yillikJadval: '',
+            yangiIshlar: text,
+            kmoBartaraf: '', majburiyOzgarish: '',
+            bajarildiShn: '', bajarildiImzo: '', adImzosi: '',
+            isNavbatdanTashqari: true,
+          })
+        }
       }
+      return newEntries
     }
 
-    setEntries(newEntries)
+    setEntries(prev => applyChange(prev)) // darhol ekranda ko'rsatish uchun
     setNavbatdanTashqariModalDay(null)
     setNavbatdanTashqariModalIndex(null)
     setNavbatdanTashqariText('')
 
     try {
-      await updateReportEntries(reportId, newEntries)
+      const updated = await updateReportEntries(reportId, applyChange)
+      setEntries(updated.entries) // serverdagi haqiqiy holat bilan sinxronlaymiz
       setFormMessage({ type: 'success', text: 'Navbatdan tashqari ish qo\'shildi!' })
       setTimeout(() => setFormMessage(null), 3000)
     } catch {
@@ -299,17 +314,17 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   }, [])
 
   // ── Auto-save: ref bilan eng oxirgi ma'lumotlarni saqlash ──────────
-  const latestData = useRef({ entries, hasUnsavedChanges, reportId, draftReport, session, stationId, stationName, monthStr });
+  const latestData = useRef({ entries, hasUnsavedChanges, reportId, draftReport, knownSubmittedAt, session, stationId, stationName, monthStr });
   useEffect(() => {
-    latestData.current = { entries, hasUnsavedChanges, reportId, draftReport, session, stationId, stationName, monthStr };
-  }, [entries, hasUnsavedChanges, reportId, draftReport, session, stationId, stationName, monthStr]);
+    latestData.current = { entries, hasUnsavedChanges, reportId, draftReport, knownSubmittedAt, session, stationId, stationName, monthStr };
+  }, [entries, hasUnsavedChanges, reportId, draftReport, knownSubmittedAt, session, stationId, stationName, monthStr]);
 
   // ── Auto-save: flush funksiyasi ────────────────────────────────────
   const flushSave = useCallback(async () => {
     const data = latestData.current;
-    if (!data.hasUnsavedChanges) return;
+    if (!data.hasUnsavedChanges || saveConflict) return;
     try {
-      await upsertReport({
+      const result = await upsertReport({
         id: data.reportId || undefined,
         workerId: data.draftReport?.workerId || data.session.id,
         workerName: data.draftReport?.workerName || data.session.fullName,
@@ -320,11 +335,14 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
         month: data.monthStr,
         year: String(new Date().getFullYear()),
         weekLabel: 'Draft Oylik Reja'
-      });
+      }, undefined, data.knownSubmittedAt);
+      setKnownSubmittedAt(result.submittedAt);
+      if (!data.reportId) setReportId(result.id);
     } catch (e) {
       console.error('Auto-save failed:', e);
+      if (e instanceof Error && e.message.startsWith('CONFLICT')) setSaveConflict(true);
     }
-  }, []);
+  }, [saveConflict]);
 
   // ── visibilitychange va beforeunload bilan sahifa yopilishida saqlash ──
   useEffect(() => {
@@ -348,10 +366,10 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
 
   // ── Debounced auto-save (1.5 sek) ─────────────────────────────────
   useEffect(() => {
-    if (!hasUnsavedChanges || submitting) return;
+    if (!hasUnsavedChanges || submitting || saveConflict) return;
     const timeoutId = setTimeout(async () => {
       try {
-        await upsertReport({
+        const result = await upsertReport({
           id: reportId || undefined,
           workerId: draftReport?.workerId || session.id,
           workerName: draftReport?.workerName || session.fullName,
@@ -362,13 +380,16 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           month: monthStr,
           year: String(new Date().getFullYear()),
           weekLabel: 'Draft Oylik Reja'
-        });
+        }, undefined, knownSubmittedAt);
+        setKnownSubmittedAt(result.submittedAt);
+        if (!reportId) setReportId(result.id);
       } catch (e) {
         console.error('Auto-save failed:', e);
+        if (e instanceof Error && e.message.startsWith('CONFLICT')) setSaveConflict(true);
       }
     }, 1500);
     return () => clearTimeout(timeoutId);
-  }, [entries, hasUnsavedChanges, submitting, reportId, draftReport, session, stationId, stationName, monthStr]);
+  }, [entries, hasUnsavedChanges, submitting, saveConflict, reportId, draftReport, knownSubmittedAt, session, stationId, stationName, monthStr]);
 
   async function handleSubmit() {
     setSubmitting(true)
@@ -387,7 +408,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
           month: monthStr,
           year: String(new Date().getFullYear()),
           weekLabel: 'Draft Oylik Reja'
-        }, true) // ← Yuborish: dispetcherga tasdiqlash uchun ko'rinadi
+        }, true, knownSubmittedAt) // ← Yuborish: dispetcherga tasdiqlash uchun ko'rinadi
         setFormMessage({ type: 'success', text: 'Muvaffaqiyatli yuborildi!' })
         setTimeout(() => setFormMessage(null), 3000)
         setHasUnsavedChanges(false)
@@ -396,11 +417,13 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
         return
       } catch (err: unknown) {
         lastErr = err
+        // Ziddiyat bo'lsa qayta urinish foydasiz — eskirgan holat bilan urinaveramiz, shuning uchun darhol to'xtaymiz
+        if (err instanceof Error && err.message.startsWith('CONFLICT')) { setSaveConflict(true); break }
         if (attempt < 3) await new Promise(r => setTimeout(r, 1000 * attempt))
       }
     }
     const msg = lastErr instanceof Error ? lastErr.message : 'Xatolik'
-    setFormMessage({ type: 'error', text: msg.includes('fetch') ? 'Internet bilan muammo. Qayta urinildi, ammo muvaffaqiyatsiz. Iltimos sahifani yangilang.' : msg })
+    setFormMessage({ type: 'error', text: msg.includes('fetch') ? 'Internet bilan muammo. Qayta urinildi, ammo muvaffaqiyatsiz. Iltimos sahifani yangilang.' : msg.replace('CONFLICT: ', '') })
     setTimeout(() => setFormMessage(null), 5000)
     setSubmitting(false)
   }
@@ -420,48 +443,56 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
   const confirmBajarildi = async (idx: number, taskType?: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy') => {
     if (!reportId) return
     const oldEntries = entries.map(e => ({ ...e }))
-    const newEntries = [...entries]
-    const entry = { ...newEntries[idx] }
+    const planOwnerName = draftReport?.workerName || session.fullName;
 
-    if (taskType === 'haftalik') entry.doneHaftalik = true
-    if (taskType === 'yillik') entry.doneYillik = true
-    if (taskType === 'yangi') entry.doneYangi = true
-    if (taskType === 'kmo') entry.doneKmo = true
-    if (taskType === 'majburiy') entry.doneMajburiy = true
+    // Serverdan qayta o'qilgan ENG SO'NGGI massivga qo'llanadi (updateReportEntries ichida) —
+    // shu bilan boshqa joyda parallel kiritilgan o'zgarishlar ustidan yozib yuborilmaydi.
+    const applyChange = (current: ReportEntry[]): ReportEntry[] => {
+      const newEntries = [...current]
+      const entry = { ...newEntries[idx] }
 
-    const ragatNum = parseInt(entry.ragat)
-    if (!isNaN(ragatNum)) {
-      const ragatDate = new Date(new Date().getFullYear(), month, ragatNum)
-      if (Date.now() > ragatDate.getTime() + 5 * 24 * 60 * 60 * 1000) {
-        if (taskType === 'haftalik') entry.completedAfterMissedDateHaftalik = new Date().toISOString()
-        if (taskType === 'yillik') entry.completedAfterMissedDateYillik = new Date().toISOString()
-        if (taskType === 'yangi') entry.completedAfterMissedDateYangi = new Date().toISOString()
-        if (taskType === 'kmo') entry.completedAfterMissedDateKmo = new Date().toISOString()
-        if (taskType === 'majburiy') entry.completedAfterMissedDateMajburiy = new Date().toISOString()
+      if (taskType === 'haftalik') entry.doneHaftalik = true
+      if (taskType === 'yillik') entry.doneYillik = true
+      if (taskType === 'yangi') entry.doneYangi = true
+      if (taskType === 'kmo') entry.doneKmo = true
+      if (taskType === 'majburiy') entry.doneMajburiy = true
+
+      const ragatNum = parseInt(entry.ragat)
+      if (!isNaN(ragatNum)) {
+        const ragatDate = new Date(new Date().getFullYear(), month, ragatNum)
+        if (Date.now() > ragatDate.getTime() + 5 * 24 * 60 * 60 * 1000) {
+          if (taskType === 'haftalik') entry.completedAfterMissedDateHaftalik = new Date().toISOString()
+          if (taskType === 'yillik') entry.completedAfterMissedDateYillik = new Date().toISOString()
+          if (taskType === 'yangi') entry.completedAfterMissedDateYangi = new Date().toISOString()
+          if (taskType === 'kmo') entry.completedAfterMissedDateKmo = new Date().toISOString()
+          if (taskType === 'majburiy') entry.completedAfterMissedDateMajburiy = new Date().toISOString()
+        }
       }
+
+      entry.bajarildiShn = planOwnerName
+      entry.bajarildiImzo = planOwnerName
+      entry.adImzosi = planOwnerName
+
+      newEntries[idx] = entry
+      return newEntries
     }
 
-    const _tasksCount = [!!entry.haftalikJadval, !!entry.yillikJadval, !!entry.yangiIshlar, !!entry.kmoBartaraf, !!entry.majburiyOzgarish].filter(Boolean).length;
-    const _doneCount = [entry.doneHaftalik, entry.doneYillik, entry.doneYangi, entry.doneKmo, entry.doneMajburiy].filter(Boolean).length;
+    // Skanerlar ro'yxati shu foydalanuvchining lokal holatidan olinadi (server-fetch'dan oldin
+    // shu sessiyada QR skanerlangan bo'lishi mumkin) — shuning uchun lokal entry'dan o'qiymiz
+    const localEntry = applyChange(entries)[idx]
 
-    const planOwnerName = draftReport?.workerName || session.fullName;
-    entry.bajarildiShn = planOwnerName
-    entry.bajarildiImzo = planOwnerName
-    entry.adImzosi = planOwnerName
-
-    newEntries[idx] = entry
-
-    setEntries(newEntries)
+    setEntries(applyChange(entries)) // darhol ekranda ko'rsatish uchun
     setCompletionIdx(null)
 
     setSubmitting(true)
     try {
-      await updateReportEntries(reportId, newEntries)
-      
+      const updated = await updateReportEntries(reportId, applyChange)
+      setEntries(updated.entries) // serverdagi haqiqiy holat bilan sinxronlaymiz
+
       let scansToUpdate: any[] = [];
       if (taskType) {
         const field = `scans${taskType.charAt(0).toUpperCase() + taskType.slice(1)}` as keyof ReportEntry;
-        const scans = entry[field];
+        const scans = localEntry[field];
         if (scans && Array.isArray(scans)) {
           scansToUpdate = scans.filter(s => typeof s !== 'string');
         }
@@ -475,7 +506,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
       setTimeout(() => setFormMessage(null), 3000)
 
       if (onReportUpdated) {
-        onReportUpdated(reportId, newEntries)
+        onReportUpdated(reportId, updated.entries)
       }
     } catch (err: unknown) {
       setEntries(oldEntries)
@@ -517,6 +548,19 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
     doc.save(`Oylik-Reja_${stationName}_${MONTHS[month]}.pdf`)
   }
 
+  // Serverdagi haqiqiy reja hali kelmasdan turib tahrirlash/avto-saqlashni boshlamaslik uchun —
+  // aks holda mavjud, to'liq reja bo'sh (hali yuklanmagan) lokal holat bilan almashtirilib qolishi mumkin.
+  if (!reportsLoaded) {
+    return (
+      <div className="space-y-6">
+        <HeaderCard title="Jurnal To'ldirish" subtitle={`${MONTHS[month]} · ${stationName}`} />
+        <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200/60 bg-white/80 shadow-sm backdrop-blur-sm">
+          <Loader2 className="animate-spin text-purple-500" size={32} />
+        </div>
+      </div>
+    )
+  }
+
   if (!canEditPlan && !draftReport) {
     return (
       <div className="space-y-6">
@@ -538,6 +582,12 @@ export function JournalForm({ session, stationId, stationName, month, reports, o
         status={headerError || ""}
         statusColor={headerError ? "error" : "default"}
       />
+      {saveConflict && (
+        <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+          <AlertTriangle size={20} className="shrink-0" />
+          <span>Bu reja boshqa joyda allaqachon o&apos;zgargan — o&apos;zgarishlaringiz saqlanmayapti. Iltimos sahifani yangilang (F5) va qaytadan kiriting.</span>
+        </div>
+      )}
       {/* View Mode Toggler */}
       <div className="flex items-center gap-2 bg-white/60 backdrop-blur-md p-1.5 rounded-2xl shadow-sm border border-slate-200/60 w-fit mx-auto sm:mx-0 mt-4 mb-2">
         <button

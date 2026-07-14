@@ -66,6 +66,9 @@ export default function WorkerPage() {
   const [view, setView] = useState<'home' | 'selectStation' | 'selectMonth' | 'journal' | 'viewReport' | 'incidents' | 'sxemalar' | 'grafiklar' | 'kutubxona' | 'journalSelect' | 'journalMonthSelect' | 'du46' | 'shu2' | 'boshqaJurnallar' | 'alsn' | 'alsnMonthSelect' | 'yerlatgich' | 'yerlatgichMonthSelect' | 'alsnKod' | 'alsnKodMonthSelect' | 'mpsFriksion' | 'mpsFriksionMonthSelect' | 'dgaNazorat' | 'dgaNazoratMonthSelect' | 'qurilmalar'>('home')
 
   const [reports, setReports] = useState<WorkReport[]>([])
+  // Haqiqiy (tarmoqdan) hisobotlar hali kelmasdan turib JournalForm tahrirlash/avto-saqlashni
+  // boshlab yubormasligi uchun — aks holda eski, to'liq reja bo'sh holat bilan almashtirilib qolishi mumkin.
+  const [reportsLoaded, setReportsLoaded] = useState(false)
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [readIncidentIds, setReadIncidentIds] = useState<Set<string>>(new Set())
   const [activeStationId, setActiveStationId] = useState<string>('')
@@ -133,6 +136,10 @@ export default function WorkerPage() {
       }
     } catch {
       toast.error('Hisobotlarni yuklashda xatolik')
+    } finally {
+      // Tarmoqdan bir marta (muvaffaqiyatli yoki xatolik bilan) javob kelgandan keyingina
+      // JournalForm'ga tahrirlashga ruxsat beramiz — keshdan ko'rsatilgan taxminiy holatga ishonib qolmaslik uchun
+      setReportsLoaded(true)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -636,6 +643,7 @@ export default function WorkerPage() {
               stationName={stationName!}
               month={selectedMonth}
               reports={reports}
+              reportsLoaded={reportsLoaded}
               initialDay={selectedJournalDay ?? undefined}
               onSubmit={() => { refreshData(session!.id, session!.stationIds || []); setSelectedJournalDay(null); setView('home') }}
               onCancel={() => { setSelectedJournalDay(null); setView('home') }}

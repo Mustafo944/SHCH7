@@ -387,7 +387,10 @@ export async function getReportByWorkerAndMonth(workerId: string, month: string)
 
 export async function upsertReport(
   report: Omit<WorkReport, 'id' | 'submittedAt' | 'confirmedAt' | 'confirmedBy' | 'rejectedAt' | 'rejectedBy' | 'isSubmitted'> & { id?: string },
-  isSubmitted?: boolean
+  isSubmitted?: boolean,
+  // Chaqiruvchi oxirgi ko'rgan submitted_at qiymati — agar berilgan bo'lsa va bazadagisidan
+  // farq qilsa, demak shu orada boshqa joyda saqlangan; ustidan yozib yubormaymiz.
+  expectedSubmittedAt?: string | null
 ): Promise<WorkReport> {
   const payload: Record<string, unknown> = {
     worker_id: report.workerId,
@@ -403,22 +406,45 @@ export async function upsertReport(
     rejected_at: null, // Qayta yuborilganda rad etish statusini tozalash
     rejected_by: null,
   };
-  if (report.id) payload.id = report.id;
   // Faqat "Yuborish" bosilganda is_submitted=true yoziladi.
   // Avtosaqlashda (isSubmitted=undefined) bu ustun payload'ga qo'shilmaydi:
   //  - yangi draft → DB default `false` (dispetcherga ko'rinmaydi)
   //  - allaqachon yuborilgan reja → qiymat o'zgarmasdan saqlanadi (`true` qoladi)
   if (isSubmitted === true) payload.is_submitted = true;
 
+  // Mavjud qatorni topamiz — id bo'yicha (agar chaqiruvchi biladigan bo'lsa) yoki
+  // worker+oy+bekat bo'yicha (agar chaqiruvchi hali reportId'ni bilmasa).
+  const existingQuery = report.id
+    ? supabase.from('work_reports').select('id, submitted_at').eq('id', report.id).maybeSingle()
+    : supabase.from('work_reports').select('id, submitted_at')
+      .eq('worker_id', report.workerId).eq('month', report.month).eq('station_id', report.stationId).maybeSingle();
+  const { data: existing } = await existingQuery;
+
+  if (existing) {
+    // Chaqiruvchi reportId'ni bilmagan holda (report.id yo'q) mavjud qator topilgan bo'lsa —
+    // demak chaqiruvchi hali haqiqiy rejani hech qachon ko'rmagan (masalan sahifa hali
+    // to'liq yuklanmagan). Bunday holatda hech qachon ustidan yozmaymiz.
+    if (!report.id) {
+      throw new Error('CONFLICT: Bu bekat/oy uchun reja allaqachon mavjud, lekin hali yuklanmagan edi. Sahifani yangilang.');
+    }
+    if (expectedSubmittedAt !== undefined && expectedSubmittedAt !== null && existing.submitted_at !== expectedSubmittedAt) {
+      throw new Error('CONFLICT: Bu reja boshqa joyda allaqachon saqlangan. Sahifani yangilang.');
+    }
+    const { data, error } = await supabase
+      .from('work_reports')
+      .update(payload)
+      .eq('id', existing.id)
+      .select()
+      .single();
+    if (error || !data) throw new Error(error?.message ?? 'Upsert failed');
+    return mapDbReport(data as DbWorkReportRow);
+  }
+
   const { data, error } = await supabase
     .from('work_reports')
-    .upsert(
-      payload,
-      { onConflict: report.id ? 'id' : 'worker_id,month,station_id' }
-    )
+    .insert(payload)
     .select()
     .single();
-
   if (error || !data) throw new Error(error?.message ?? 'Upsert failed');
   return mapDbReport(data as DbWorkReportRow);
 }
@@ -650,20 +676,44 @@ export async function confirmReportEntry(
   return mapDbReport(data as DbWorkReportRow);
 }
 
-// Worker har kuni "Bajarildi" bosganida entries ni yangilaydi (confirmed_at o'zgarmaydi)
+// Worker har kuni "Bajarildi" bosganida yoki navbatdan tashqari ish qo'shganida entries ni yangilaydi
+// (confirmed_at o'zgarmaydi). Chaqiruvchi butun (potentsial eskirgan) massivni emas, balki
+// "hozirgi holatni qanday o'zgartirish kerak" funksiyasini beradi — shu bilan har doim
+// SERVERDAGI ENG SO'NGGI entries ustida ishlaymiz, boshqa joyda parallel kiritilgan
+// o'zgarishlarni (masalan dispetcher tasdig'i yoki boshqa qurilmadagi skaner) yo'qotib qo'ymaymiz.
 export async function updateReportEntries(
   reportId: string,
-  entries: ReportEntry[]
+  mutate: (currentEntries: ReportEntry[]) => ReportEntry[]
 ): Promise<WorkReport> {
-  const { data, error } = await supabase
-    .from('work_reports')
-    .update({ entries })
-    .eq('id', reportId)
-    .select()
-    .single();
+  const MAX_RETRIES = 3;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const { data: current, error: fetchError } = await supabase
+      .from('work_reports')
+      .select('entries, submitted_at')
+      .eq('id', reportId)
+      .single();
 
-  if (error || !data) throw new Error(error?.message || 'Update failed');
-  return mapDbReport(data as DbWorkReportRow);
+    if (fetchError || !current) {
+      throw new Error(fetchError?.message || 'Report not found');
+    }
+
+    const entries = mutate([...(current.entries as ReportEntry[])]);
+
+    const { data: updated, error: updateError } = await supabase
+      .from('work_reports')
+      .update({ entries, submitted_at: new Date().toISOString() })
+      .eq('id', reportId)
+      .eq('submitted_at', current.submitted_at)
+      .select()
+      .maybeSingle();
+
+    if (updateError) throw new Error(updateError.message || 'Update failed');
+    if (updated) return mapDbReport(updated as DbWorkReportRow);
+
+    // updated === null → boshqa joyda shu orada saqlangan, yangi holat bilan qayta urinamiz
+    if (attempt < MAX_RETRIES - 1) await new Promise(r => setTimeout(r, 100 * (attempt + 1)));
+  }
+  throw new Error('updateReportEntries: bir necha marta urinildi, saqlab bo\'lmadi');
 }
 
 // Incidents
@@ -1489,5 +1539,5 @@ export async function updateEquipmentScanHistory(
 
   if (!hasChanges) return equipments;
 
-  return upsertStationEquipments(stationId, newCategories, equipments.taskMappings || [], updatedByName);
+  return upsertStationEquipments(stationId, newCategories, equipments.taskMappings || [], updatedByName, equipments.updatedAt);
 }
