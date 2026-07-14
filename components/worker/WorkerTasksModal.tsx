@@ -851,7 +851,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
         const allDoneScan = doneCount >= targetScans
         const pct = targetScans > 0 ? Math.min(100, Math.round((doneCount / targetScans) * 100)) : 0
         return (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', padding: '16px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.72)', padding: '16px' }}>
           <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl animate-scale-in flex flex-col" style={{ maxHeight: '90vh' }}>
             {/* Sarlavha — QR ikonka, progress bar */}
             <div className={`relative px-6 py-5 ${allDoneScan ? 'bg-gradient-to-br from-emerald-500 to-teal-500' : 'bg-gradient-to-br from-purple-600 via-fuchsia-600 to-indigo-600'}`}>
