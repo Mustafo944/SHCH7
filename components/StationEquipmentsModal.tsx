@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { X, Save, Edit3, Plus, Trash2, Printer, Download, AlertTriangle, Loader2, ArrowRightLeft, Target, ChevronLeft, ChevronRight, Clock, History } from 'lucide-react';
 import { StationEquipments, EquipmentCategory } from '@/types';
 import { getStationEquipments, upsertStationEquipments, getStationTaskScans, type TaskScan } from '@/lib/supabase-db';
@@ -8,6 +8,8 @@ import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import { TORT_HAFTALIK_REJA_FLAT, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA, YILLIK_REJA, taskDisplayKey } from '@/lib/reja-data';
 import { TaskQRMapping } from '@/types';
 import { buildEquipmentQrValue } from '@/lib/utils/qr';
+
+// ─── Turlar va konstantalar ──────────────────────────────────────────
 
 interface CategoryColorStyle {
   gradient: string;
@@ -50,14 +52,16 @@ function normalizeTaskMappings(mappings: TaskQRMapping[] | undefined): TaskQRMap
   }));
 }
 
-function CategoryAvatar({ name, color, size = 'md' }: { name: string; color: string; size?: 'sm' | 'md' | 'lg' }) {
+// ─── Kichik yordamchi komponentlar (React.memo bilan) ────────────────
+
+const CategoryAvatar = memo(function CategoryAvatar({ name, color, size = 'md' }: { name: string; color: string; size?: 'sm' | 'md' | 'lg' }) {
   const sizeClass = size === 'sm' ? 'h-10 w-10 text-base' : size === 'lg' ? 'h-14 w-14 text-xl' : 'h-12 w-12 text-lg';
   return (
     <div className={`flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br font-black text-white shadow-md ${colorStyle(color).gradient} ${sizeClass}`}>
       {(name || '?').charAt(0).toUpperCase()}
     </div>
   );
-}
+});
 
 function EmptyHint({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
   return (
@@ -81,7 +85,9 @@ function BackHeader({ title, onBack }: { title: string; onBack: () => void }) {
   );
 }
 
-function DebouncedInput({ value, onChange, placeholder, className }: { value: string, onChange: (val: string) => void, placeholder: string, className: string }) {
+// ─── DebouncedInput: local state bilan ishlaydi, blur/Enter da parent'ga uzatadi ─
+
+const DebouncedInput = memo(function DebouncedInput({ value, onChange, placeholder, className }: { value: string; onChange: (val: string) => void; placeholder: string; className: string }) {
   const [localVal, setLocalVal] = useState(value);
 
   useEffect(() => {
@@ -89,15 +95,11 @@ function DebouncedInput({ value, onChange, placeholder, className }: { value: st
   }, [value]);
 
   const handleBlur = () => {
-    if (localVal !== value) {
-      onChange(localVal);
-    }
+    if (localVal !== value) onChange(localVal);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      onChange(localVal);
-    }
+    if (e.key === 'Enter') onChange(localVal);
   };
 
   return (
@@ -111,7 +113,131 @@ function DebouncedInput({ value, onChange, placeholder, className }: { value: st
       className={className}
     />
   );
+});
+
+// ─── Alohida qurilma elementlari (React.memo — faqat o'zi o'zgarganda qayta render) ─
+
+/** O'qish rejimidagi bitta qurilma badge'i */
+const EquipmentBadge = memo(function EquipmentBadge({ name, color }: { name: string; color: string }) {
+  const style = colorStyle(color);
+  return (
+    <div className={`flex items-center gap-2.5 bg-gradient-to-br from-white to-purple-50/40 border border-purple-100/40 ${style.hoverBorder} px-4 py-2.5 rounded-xl transition-all cursor-default shadow-sm hover:shadow-md hover:shadow-purple-500/5`}>
+      <div className={`w-2.5 h-2.5 rounded-full ${style.dot} ring-2 ring-offset-1 ring-current/20`} />
+      <span className="font-bold text-slate-700">{name}</span>
+    </div>
+  );
+});
+
+/** Tahrirlash rejimidagi bitta qurilma qatori */
+const EditableItem = memo(function EditableItem({ itemId, name, onUpdate, onRemove }: { itemId: string; name: string; onUpdate: (name: string) => void; onRemove: () => void }) {
+  return (
+    <div className="relative group flex items-center gap-2">
+      <DebouncedInput
+        value={name}
+        onChange={onUpdate}
+        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+        placeholder="Nomi..."
+      />
+      <button onClick={onRemove} className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">
+        <Trash2 size={16} />
+      </button>
+    </div>
+  );
+});
+
+// ─── Bitta toifa kartasi (React.memo — boshqa toifa o'zgarganda qayta render bo'lmaydi) ─
+
+interface CategoryCardProps {
+  category: EquipmentCategory;
+  isEditing: boolean;
+  canEdit: boolean;
+  onAddItem: (categoryId: string) => void;
+  onUpdateItem: (categoryId: string, itemId: string, name: string) => void;
+  onRemoveItem: (categoryId: string, itemId: string) => void;
+  onStartEditWithAdd: (categoryId: string) => void;
+  onDeleteCategory: (categoryId: string) => void;
 }
+
+const CategoryCard = memo(function CategoryCard({
+  category,
+  isEditing,
+  canEdit,
+  onAddItem,
+  onUpdateItem,
+  onRemoveItem,
+  onStartEditWithAdd,
+  onDeleteCategory,
+}: CategoryCardProps) {
+  const style = colorStyle(category.color);
+  const items = category.items || [];
+
+  return (
+    <div className="premium-card flex flex-col p-4 sm:p-5 mb-3">
+      {/* Toifa sarlavhasi */}
+      <div className="flex items-center gap-3 sm:gap-4 border-b border-slate-200/60 pb-3 mb-3">
+        <CategoryAvatar name={category.name} color={category.color} size="sm" />
+        <div className="flex-1 min-w-0">
+          <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight truncate">{category.name || 'Nomsiz toifa'}</h4>
+          <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400">Jami: {items.length} ta</p>
+        </div>
+        {!isEditing && canEdit ? (
+          <button onClick={() => onStartEditWithAdd(category.id)} className={`shrink-0 text-[10px] sm:text-xs font-bold ${style.btnText} px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center gap-1`}>
+            <Plus size={14} className="sm:w-4 sm:h-4" /> Qo&apos;shish
+          </button>
+        ) : isEditing ? (
+          <div className="flex shrink-0 items-center gap-2">
+            <button onClick={() => onAddItem(category.id)} className={`text-[10px] sm:text-xs font-bold ${style.btnText} px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center gap-1`}>
+              <Plus size={14} className="sm:w-4 sm:h-4" /> Qo&apos;shish
+            </button>
+            <button onClick={() => onDeleteCategory(category.id)} className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors" title="Toifani o'chirish">
+              <Trash2 size={16} />
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Qurilmalar ro'yxati */}
+      {items.length === 0 && !isEditing && <p className="text-sm font-bold text-slate-300 uppercase tracking-widest">Kiritilmagan</p>}
+
+      <div className={isEditing ? 'flex flex-col gap-3' : 'flex flex-wrap gap-2'}>
+        {items.map((item) =>
+          isEditing ? (
+            <EditableItem
+              key={item.id}
+              itemId={item.id}
+              name={item.name}
+              onUpdate={(name) => onUpdateItem(category.id, item.id, name)}
+              onRemove={() => onRemoveItem(category.id, item.id)}
+            />
+          ) : (
+            <EquipmentBadge key={item.id} name={item.name} color={category.color} />
+          )
+        )}
+      </div>
+    </div>
+  );
+});
+
+// ─── PDF uchun canvas matn chizuvchi yordamchi ──────────────────────
+
+function wrapCanvasText(ctx2d: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let current = '';
+  words.forEach(word => {
+    const test = current ? `${current} ${word}` : word;
+    if (current && ctx2d.measureText(test).width > maxWidth) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = test;
+    }
+  });
+  if (current) lines.push(current);
+  return lines;
+}
+
+// ─── Asosiy komponent ───────────────────────────────────────────────
 
 interface Props {
   stationId: string;
@@ -168,6 +294,8 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
     { revalidateOnFocus: false, dedupingInterval: 60000 }
   );
 
+  // ─── Hisoblangan ma'lumotlar (useMemo) ────────────────────────────
+
   // Xom QR qiymatini ("smart-shch-...") uskunaning o'qiladigan nomi va toifasiga moslashtiramiz
   const equipmentMetaByQr = useMemo(() => {
     const map = new Map<string, { name: string; categoryId: string }>();
@@ -220,14 +348,6 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
     return scansByEquipmentQr.get(buildEquipmentQrValue(stationId, selectedHistoryItem.id)) || [];
   }, [scansByEquipmentQr, stationId, selectedHistoryItem]);
 
-  const openHistoryTab = () => {
-    setActiveTab('history');
-    setSelectedHistoryCategoryId(null);
-    setSelectedHistoryItemId(null);
-  };
-  const backToHistoryCategories = () => { setSelectedHistoryCategoryId(null); setSelectedHistoryItemId(null); };
-  const backToHistoryItems = () => setSelectedHistoryItemId(null);
-
   const selectedPrintCategory = useMemo(
     () => categories.find(c => c.id === selectedPrintCategoryId) || null,
     [categories, selectedPrintCategoryId]
@@ -236,16 +356,35 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
     () => (selectedPrintCategory?.items || []).find(i => i.id === selectedPrintItemId) || null,
     [selectedPrintCategory, selectedPrintItemId]
   );
-  const openPrintingView = () => {
+
+  // ─── Navigatsiya handlerlari ──────────────────────────────────────
+
+  const openHistoryTab = useCallback(() => {
+    setActiveTab('history');
+    setSelectedHistoryCategoryId(null);
+    setSelectedHistoryItemId(null);
+  }, []);
+
+  const backToHistoryCategories = useCallback(() => {
+    setSelectedHistoryCategoryId(null);
+    setSelectedHistoryItemId(null);
+  }, []);
+
+  const backToHistoryItems = useCallback(() => setSelectedHistoryItemId(null), []);
+
+  const openPrintingView = useCallback(() => {
     setIsPrinting(true);
     setSelectedPrintCategoryId(null);
     setSelectedPrintItemId(null);
-  };
-  const handlePrintBack = () => {
+  }, []);
+
+  const handlePrintBack = useCallback(() => {
     if (selectedPrintItemId) setSelectedPrintItemId(null);
     else if (selectedPrintCategoryId) setSelectedPrintCategoryId(null);
     else setIsPrinting(false);
-  };
+  }, [selectedPrintItemId, selectedPrintCategoryId]);
+
+  // ─── Ma'lumotlarni sinxronlashtirish ──────────────────────────────
 
   // Modal ochiq turganda orqadagi sahifa scroll bo'lib, ikkalasi bir vaqtda tortilib friz bo'lib ko'rinishining oldini oladi
   useEffect(() => {
@@ -262,6 +401,8 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
     }
   }, [swrData, isEditing, isEditingMappings]);
 
+  // ─── Saqlash logikasi ─────────────────────────────────────────────
+
   const [saveWarning, setSaveWarning] = useState<{ prevItems: number; nextItems: number; prevMappings: number; nextMappings: number } | null>(null);
 
   const countItems = (cats: EquipmentCategory[]) => cats.reduce((sum, c) => sum + (c.items || []).length, 0);
@@ -269,7 +410,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
   // Oldingi (serverdagi so'nggi ma'lumot) bilan solishtirganda katta qismi o'chirilayotgan bo'lsa — chindan shuni xohlaysizmi, deb so'raymiz
   const isMassDeletion = (prev: number, next: number) => prev > 0 && (next === 0 || next <= prev / 2);
 
-  const performSave = async () => {
+  const performSave = useCallback(async () => {
     setSaving(true);
     try {
       // Filtrlash: faqat bo'sh bo'lmagan qatorlar
@@ -300,9 +441,9 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
     } finally {
       setSaving(false);
     }
-  };
+  }, [categories, taskMappings, stationId, userName, equipments?.updatedAt, toast, mutate]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     const cleanCategories = categories.map(c => ({
       ...c,
       items: (c.items || []).filter(item => item && item.name && item.name.trim() !== '')
@@ -317,27 +458,40 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
       return;
     }
     await performSave();
-  };
+  }, [categories, taskMappings, equipments, performSave]);
 
-  const addItem = (categoryId: string) => {
+  // ─── Toifa/qurilma tahrirlash handlerlari (useCallback — CategoryCard qayta render bo'lmasligi uchun) ─
+
+  const addItem = useCallback((categoryId: string) => {
     setCategories(prev => prev.map(c =>
       c.id === categoryId ? { ...c, items: [...(c.items || []), { id: `item_${Date.now()}_${Math.floor(Math.random() * 1000)}`, name: '' }] } : c
     ));
-  };
+  }, []);
 
-  const updateItem = (categoryId: string, itemId: string, name: string) => {
+  const updateItem = useCallback((categoryId: string, itemId: string, name: string) => {
     setCategories(prev => prev.map(c =>
       c.id === categoryId ? { ...c, items: (c.items || []).map(item => item.id === itemId ? { ...item, name } : item) } : c
     ));
-  };
+  }, []);
 
-  const removeItem = (categoryId: string, itemId: string) => {
+  const removeItem = useCallback((categoryId: string, itemId: string) => {
     setCategories(prev => prev.map(c =>
       c.id === categoryId ? { ...c, items: (c.items || []).filter(item => item.id !== itemId) } : c
     ));
-  };
+  }, []);
 
-  const removeCategory = (categoryId: string) => {
+  const startEditWithAdd = useCallback((categoryId: string) => {
+    setIsEditing(true);
+    setCategories(prev => prev.map(c =>
+      c.id === categoryId ? { ...c, items: [...(c.items || []), { id: `item_${Date.now()}_${Math.floor(Math.random() * 1000)}`, name: '' }] } : c
+    ));
+  }, []);
+
+  const requestDeleteCategory = useCallback((categoryId: string) => {
+    setDeleteConfirmCategoryId(categoryId);
+  }, []);
+
+  const removeCategory = useCallback((categoryId: string) => {
     setCategories(prev => prev.filter(c => c.id !== categoryId));
     // Shu toifaga bog'langan QR vazifa moslashuvlaridan uni olib tashlaymiz —
     // agar boshqa toifa qolmasa, butun moslashuv o'chiriladi ("osilib qolgan" havola qolmasligi uchun)
@@ -345,9 +499,9 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
       .map(m => ({ ...m, equipmentType: m.equipmentType.filter(id => id !== categoryId) }))
       .filter(m => m.equipmentType.length > 0));
     setDeleteConfirmCategoryId(null);
-  };
+  }, []);
 
-  const handleAddCategory = () => {
+  const handleAddCategory = useCallback(() => {
     if (!newCategoryName.trim()) return;
     const colors = ['blue', 'emerald', 'orange', 'purple', 'rose', 'cyan', 'indigo', 'teal', 'pink'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
@@ -357,11 +511,22 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
       color: randomColor,
       items: []
     };
-    setCategories([...categories, newCat]);
+    setCategories(prev => [...prev, newCat]);
     setNewCategoryName('');
-  };
+  }, [newCategoryName]);
 
-  const handleDownloadSingleQr = async (item: { id: string; name: string }, categoryName: string) => {
+  const handleCancelEditing = useCallback(() => {
+    setIsEditing(false);
+    setIsEditingMappings(false);
+    if (swrData) {
+      setCategories(swrData.categories || []);
+      setTaskMappings(normalizeTaskMappings(swrData.taskMappings));
+    }
+  }, [swrData]);
+
+  // ─── PDF yuklab olish ─────────────────────────────────────────────
+
+  const handleDownloadSingleQr = useCallback(async (item: { id: string; name: string }, categoryName: string) => {
     setIsDownloadingPdf(true);
     try {
       const qrCanvas = document.getElementById(`qr-pdf-canvas-${item.id}`) as HTMLCanvasElement | null;
@@ -371,22 +536,6 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
       // "№" kabi belgilar jsPDF ning standart shriftida (WinAnsi) yo'q va "!" bo'lib chiqadi.
       // Shuning uchun matnni jsPDF shrifti bilan emas, brauzer canvas'ida chizib, rasm sifatida
       // PDF'ga qo'shamiz — canvas har qanday Unicode belgini (shu jumladan №) to'g'ri chizadi
-      const wrapCanvasText = (ctx2d: CanvasRenderingContext2D, text: string, maxWidth: number): string[] => {
-        const words = text.split(' ');
-        const lines: string[] = [];
-        let current = '';
-        words.forEach(word => {
-          const test = current ? `${current} ${word}` : word;
-          if (current && ctx2d.measureText(test).width > maxWidth) {
-            lines.push(current);
-            current = word;
-          } else {
-            current = test;
-          }
-        });
-        if (current) lines.push(current);
-        return lines;
-      };
 
       const labelWidthPx = 900;
       const maxTextWidth = labelWidthPx - 80;
@@ -468,9 +617,10 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
     } finally {
       setIsDownloadingPdf(false);
     }
-  };
+  }, [stationId, stationName, toast]);
 
-  // Chop etish sahifasi — uch bosqichli navigatsiya: Toifa → Uskuna → bitta QR kod
+  // ─── Chop etish sahifasi ──────────────────────────────────────────
+
   if (isPrinting) {
     const printTitle = selectedPrintItem
       ? `${selectedPrintItem.name} - QR kod`
@@ -554,20 +704,14 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
           </div>
         )}
 
-        {/* PDF eksport uchun ko'rinmas canvas QR kodlar — jsPDF addImage PNG dataURL talab qiladi, SVG emas */}
-        <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }} aria-hidden="true">
-          {categories.map(category => (
-            (category.items || []).map(item => (
-              <QRCodeCanvas key={item.id} id={`qr-pdf-canvas-${item.id}`} value={buildEquipmentQrValue(stationId, item.id)} size={600} />
-            ))
-          ))}
-        </div>
+        {/* PDF eksport uchun ko'rinmas canvas — FAQAT tanlangan qurilma uchun (avval BARCHA qurilmalar uchun render qilinar edi) */}
+        {selectedPrintItem && (
+          <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }} aria-hidden="true">
+            <QRCodeCanvas id={`qr-pdf-canvas-${selectedPrintItem.id}`} value={buildEquipmentQrValue(stationId, selectedPrintItem.id)} size={600} />
+          </div>
+        )}
 
-        {/* CSS for print — #qr-print-content ID orqali aniq maqsadga mo'ljallangan (avvalgi
-            ".fixed > div:last-child" strukturaviy tanlagichi shu divdan keyin qo'shilgan
-            <style> elementi tufayli hech qachon mos kelmas edi, buning ustiga scope qilinmagan
-            ".fixed { position: static }" qoidasi sahifadagi BOSHQA "fixed" klassli elementlarni
-            ham chop etishga chiqarib yuborishi mumkin edi). */}
+        {/* CSS for print — #qr-print-content ID orqali aniq maqsadga mo'ljallangan */}
         <style dangerouslySetInnerHTML={{
           __html: `
           @media print {
@@ -581,6 +725,8 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
     );
   }
 
+  // ─── Tablar ───────────────────────────────────────────────────────
+
   // "QR kodni bog'lash" faqat Katta elektromexanikka ko'rinadi
   const tabs: { id: 'equipments' | 'tasks' | 'history'; label: string; onClick: () => void }[] = [
     { id: 'equipments', label: "Uskunalar ro'yxati va QR", onClick: () => setActiveTab('equipments') },
@@ -590,10 +736,10 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-2 sm:p-4 backdrop-blur-md">
-      <div className="flex h-[95vh] sm:h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl sm:rounded-[32px] border border-white/60 bg-white/60 shadow-2xl backdrop-blur-xl">
+      <div className="flex h-[95vh] sm:h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl sm:rounded-[32px] border border-white/60 bg-white/80 shadow-2xl backdrop-blur-xl">
 
         {/* Header */}
-        <div className="flex items-start sm:items-center justify-between border-b border-white/60 px-4 py-4 sm:px-8 sm:py-6 gap-4">
+        <div className="flex items-start sm:items-center justify-between border-b border-purple-100/60 px-4 py-4 sm:px-8 sm:py-6 gap-4 bg-gradient-to-r from-white/60 to-purple-50/30">
           <div className="flex-1 min-w-0">
             <h3 className="text-lg sm:text-xl font-black text-slate-900 break-words leading-tight">
               {stationName} - Bekat qurilmalari
@@ -603,7 +749,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                 <button
                   key={tab.id}
                   onClick={tab.onClick}
-                  className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 sm:py-1 rounded-xl sm:rounded-full transition-all text-center flex-1 sm:flex-none ${activeTab === tab.id ? 'bg-slate-800 text-white' : 'text-slate-500 bg-white/50 hover:bg-white/80 border border-slate-200/50'}`}
+                  className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 sm:py-1 rounded-xl sm:rounded-full transition-all text-center flex-1 sm:flex-none ${activeTab === tab.id ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-500 bg-white/70 hover:bg-white border border-purple-100/50 hover:border-purple-200/60'}`}
                 >
                   {tab.label}
                 </button>
@@ -636,60 +782,25 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
             <>
               {activeTab === 'equipments' && (
                 <>
-                  {/* DYNAMIC CATEGORIES */}
+                  {/* TOIFALAR — har biri alohida memoized komponent */}
                   {categories.map((category) => (
-                    <div key={category.id} className="premium-card flex flex-col p-4 sm:p-5 mb-3">
-                      <div className="flex items-center gap-3 sm:gap-4 border-b border-slate-200/60 pb-3 mb-3">
-                        <CategoryAvatar name={category.name} color={category.color} size="sm" />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight truncate">{category.name || 'Nomsiz toifa'}</h4>
-                          <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400">Jami: {(category.items || []).length} ta</p>
-                        </div>
-                        {(!isEditing && canEdit) ? (
-                          <button onClick={() => { setIsEditing(true); addItem(category.id); }} className={`shrink-0 text-[10px] sm:text-xs font-bold ${colorStyle(category.color).btnText} px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center gap-1`}>
-                            <Plus size={14} className="sm:w-4 sm:h-4" /> Qo'shish
-                          </button>
-                        ) : isEditing ? (
-                          <div className="flex shrink-0 items-center gap-2">
-                            <button onClick={() => addItem(category.id)} className={`text-[10px] sm:text-xs font-bold ${colorStyle(category.color).btnText} px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl flex items-center gap-1`}>
-                              <Plus size={14} className="sm:w-4 sm:h-4" /> Qo'shish
-                            </button>
-                            <button onClick={() => setDeleteConfirmCategoryId(category.id)} className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors" title="Toifani o'chirish">
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
-
-                      {(category.items || []).length === 0 && !isEditing && <p className="text-sm font-bold text-slate-300 uppercase tracking-widest">Kiritilmagan</p>}
-
-                      <div className={isEditing ? "flex flex-col gap-3" : "flex flex-wrap gap-2"}>
-                        {(category.items || []).map((item) => (
-                          isEditing ? (
-                            <div key={item.id} className="relative group flex items-center gap-2">
-                              <DebouncedInput
-                                value={item.name}
-                                onChange={(val) => updateItem(category.id, item.id, val)}
-                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
-                                placeholder="Nomi..."
-                              />
-                              <button onClick={() => removeItem(category.id, item.id)} className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"><Trash2 size={16} /></button>
-                            </div>
-                          ) : (
-                            <div key={item.id} className={`flex items-center gap-2 bg-white/70 border border-white/60 ${colorStyle(category.color).hoverBorder} px-4 py-2 rounded-xl transition-all cursor-default shadow-sm`}>
-                              <div className={`w-2 h-2 rounded-full ${colorStyle(category.color).dot}`}></div>
-                              <span className="font-bold text-slate-700">{item.name}</span>
-                            </div>
-                          )
-                        ))}
-                      </div>
-                    </div>
+                    <CategoryCard
+                      key={category.id}
+                      category={category}
+                      isEditing={isEditing}
+                      canEdit={canEdit}
+                      onAddItem={addItem}
+                      onUpdateItem={updateItem}
+                      onRemoveItem={removeItem}
+                      onStartEditWithAdd={startEditWithAdd}
+                      onDeleteCategory={requestDeleteCategory}
+                    />
                   ))}
 
                   {/* ADD NEW CATEGORY */}
                   {isEditing && (
                     <div className="flex flex-col p-4 sm:p-5 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 mb-3">
-                      <h4 className="text-sm font-bold text-slate-600 mb-3">Yangi toifa qo'shish</h4>
+                      <h4 className="text-sm font-bold text-slate-600 mb-3">Yangi toifa qo&apos;shish</h4>
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                         <input
                           type="text"
@@ -699,8 +810,8 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                           placeholder="Toifa nomi..."
                           onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
                         />
-                        <button onClick={handleAddCategory} className="px-4 py-2.5 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-all text-sm whitespace-nowrap flex items-center justify-center gap-2">
-                          <Plus size={16} /> Toifa qo'shish
+                        <button onClick={handleAddCategory} className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl font-bold hover:from-purple-700 hover:to-violet-700 transition-all text-sm whitespace-nowrap flex items-center justify-center gap-2 shadow-md shadow-purple-500/20">
+                          <Plus size={16} /> Toifa qo&apos;shish
                         </button>
                       </div>
                     </div>
@@ -709,8 +820,8 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                   {/* Oxirgi o'zgartirish ma'lumoti */}
                   {!isEditing && equipments?.updatedAt && (
                     <div className="mt-8 flex items-center justify-center">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white/50 border border-white px-4 py-2 rounded-xl">
-                        Oxirgi bor o&apos;zgartirish kiritilgan: {new Date(equipments.updatedAt).toLocaleString('ru-RU')} - <span className="text-slate-600">{equipments.updatedByName}</span>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-gradient-to-r from-purple-50/60 to-violet-50/40 border border-purple-100/40 px-5 py-2.5 rounded-full shadow-sm">
+                        Oxirgi bor o&apos;zgartirish kiritilgan: {new Date(equipments.updatedAt).toLocaleString('ru-RU')} - <span className="text-purple-600 font-black">{equipments.updatedByName}</span>
                       </p>
                     </div>
                   )}
@@ -725,8 +836,8 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                         <div className="h-20 w-20 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                           <Target size={40} />
                         </div>
-                        <h4 className="text-xl font-black text-slate-800 mb-2">To'rt haftalik ish reja</h4>
-                        <p className="text-sm text-slate-500 px-4">To'rt haftalik rejadagi ishlarga bekat uskunalarining QR kodini bog'lash.</p>
+                        <h4 className="text-xl font-black text-slate-800 mb-2">To&apos;rt haftalik ish reja</h4>
+                        <p className="text-sm text-slate-500 px-4">To&apos;rt haftalik rejadagi ishlarga bekat uskunalarining QR kodini bog&apos;lash.</p>
                       </button>
 
                       <button onClick={() => setSelectedPlanType('yillik')} className="premium-card p-6 text-left group flex flex-col justify-center items-center text-center">
@@ -734,7 +845,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                           <Target size={40} />
                         </div>
                         <h4 className="text-xl font-black text-slate-800 mb-2">Yillik ish reja</h4>
-                        <p className="text-sm text-slate-500 px-4">Yillik rejadagi ishlarga bekat uskunalarining QR kodini bog'lash.</p>
+                        <p className="text-sm text-slate-500 px-4">Yillik rejadagi ishlarga bekat uskunalarining QR kodini bog&apos;lash.</p>
                       </button>
                     </div>
                   )}
@@ -752,7 +863,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                       <div className="border-b border-slate-200/60 pb-3">
                         <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Vazifa qidirish..." className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-purple-400 bg-white" />
                       </div>
-                      {/* Bu ro'yxatda 100 tagacha element chiqishi mumkin — tezlik uchun shaffof/blur effektsiz, oddiy kartalar ishlatiladi */}
+                      {/* Bu ro'yxatda 100 tagacha element chiqishi mumkin — tezlik uchun oddiy kartalar ishlatiladi */}
                       <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3">
                         {selectedBolim === null && !searchQuery ? (
                           <div className="grid grid-cols-1 gap-3">
@@ -794,8 +905,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                                   <button
                                     key={ti}
                                     onClick={() => setSelectedTaskNsh(taskKey)}
-                                    className={`w-full rounded-xl border p-3 text-left transition-colors hover:border-purple-300 hover:bg-purple-50/30 group ${mapping ? 'border-purple-300 bg-purple-50/40' : 'border-slate-200/60 bg-white'
-                                      }`}
+                                    className={`w-full rounded-xl border p-3 text-left transition-colors hover:border-purple-300 hover:bg-purple-50/30 group ${mapping ? 'border-purple-200 bg-purple-50/20' : 'border-slate-200/60 bg-white'}`}
                                   >
                                     <div className="flex items-center justify-between gap-2">
                                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -817,7 +927,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                                       </div>
                                     )}
                                   </button>
-                                )
+                                );
                               })}
                           </div>
                         )}
@@ -842,8 +952,8 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                         </div>
 
                         <div className="premium-card p-5 sm:p-8">
-                          <h4 className="font-black text-slate-800 text-lg">Qaysi qurilmalar bog'lanadi?</h4>
-                          <p className="mt-1 mb-6 text-xs font-bold text-slate-400">Bir nechta toifani tanlash mumkin — har birini bosib yoqing/o'chiring.</p>
+                          <h4 className="font-black text-slate-800 text-lg">Qaysi qurilmalar bog&apos;lanadi?</h4>
+                          <p className="mt-1 mb-6 text-xs font-bold text-slate-400">Bir nechta toifani tanlash mumkin — har birini bosib yoqing/o&apos;chiring.</p>
 
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {categories.map(category => {
@@ -867,7 +977,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                                       return prev.map(p => p.taskNsh === selectedTaskNsh ? { ...p, equipmentType: newTypes } : p);
                                     });
                                   }}
-                                  className={`p-5 text-left border-2 rounded-2xl transition-all relative ${isActive ? `${colorStyle(category.color).activeBorder} shadow-md` : 'border-white/60 bg-white/70 hover:border-slate-300'} ${!isEditingMappings ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                  className={`p-5 text-left border-2 rounded-2xl transition-all relative ${isActive ? `${colorStyle(category.color).activeBorder} shadow-md` : 'border-slate-200/60 bg-white hover:border-slate-300'} ${!isEditingMappings ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
                                   {isActive && <div className={`absolute top-4 right-4 ${colorStyle(category.color).iconText} bg-white rounded-full p-1 shadow-sm`}><Target size={20} /></div>}
                                   <div className={`h-12 w-12 ${colorStyle(category.color).iconBg} rounded-xl flex items-center justify-center text-xl font-black mb-4`}>{(category.name || '?').charAt(0).toUpperCase()}</div>
@@ -881,12 +991,12 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                           {!isEditingMappings && (
                             <div className="flex items-center gap-2 text-xs font-bold text-red-500 mt-6 bg-red-50 p-4 rounded-2xl border border-red-100">
                               <AlertTriangle size={18} />
-                              O'zgartirish kiritish uchun quyidagi "O'zgartirish" tugmasini bosing!
+                              O&apos;zgartirish kiritish uchun quyidagi &quot;O&apos;zgartirish&quot; tugmasini bosing!
                             </div>
                           )}
                         </div>
                       </div>
-                    )
+                    );
                   })()}
                 </div>
               )}
@@ -986,18 +1096,11 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
 
         {/* Footer Actions — "Uskunalar ro'yxati va QR" va "QR kodni bog'lash" bo'limlarida (ikkalasi ham Katta elektromexanikka tegishli), yoki tahrirlash davom etayotganda ko'rinadi */}
         {(isEditing || isEditingMappings || activeTab === 'equipments' || (activeTab === 'tasks' && canEditTaskMappings)) && (
-          <div className="border-t border-white/60 px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="border-t border-purple-100/60 px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-white/60 to-purple-50/30">
             {isEditing || isEditingMappings ? (
               <>
                 <button
-                  onClick={() => {
-                    setIsEditing(false);
-                    setIsEditingMappings(false);
-                    if (swrData) {
-                      setCategories(swrData.categories || []);
-                      setTaskMappings(normalizeTaskMappings(swrData.taskMappings));
-                    }
-                  }}
+                  onClick={handleCancelEditing}
                   disabled={saving}
                   className="w-full sm:w-auto flex items-center justify-center px-6 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition whitespace-nowrap"
                 >
@@ -1006,7 +1109,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="w-full sm:flex-1 sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 text-white font-bold text-sm hover:bg-emerald-600 transition shadow-md shadow-emerald-500/20 whitespace-nowrap"
+                  className="w-full sm:flex-1 sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold text-sm hover:from-emerald-600 hover:to-green-600 transition shadow-lg shadow-emerald-500/25 whitespace-nowrap"
                 >
                   {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} Saqlash
                 </button>
@@ -1016,7 +1119,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                 <button
                   onClick={() => setIsEditing(true)}
                   disabled={!swrData}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition shadow-md whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 text-white font-bold text-sm hover:from-purple-700 hover:to-violet-700 transition shadow-lg shadow-purple-500/25 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Edit3 size={18} /> O&apos;zgartirish
                 </button>
@@ -1027,7 +1130,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
               <button
                 onClick={() => setIsEditingMappings(true)}
                 disabled={!swrData}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition shadow-md whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 text-white font-bold text-sm hover:from-purple-700 hover:to-violet-700 transition shadow-lg shadow-purple-500/25 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Edit3 size={18} /> O&apos;zgartirish
               </button>
@@ -1041,11 +1144,11 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
       {deleteConfirmCategoryId && (() => {
         const categoryToDelete = categories.find(c => c.id === deleteConfirmCategoryId);
         return (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
+          <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
             <div className="premium-card w-full max-w-md p-8 animate-scale-in">
               <h3 className="text-lg font-black text-slate-900">Toifani o&apos;chirish</h3>
               <p className="mt-2 text-sm text-slate-500">
-                <span className="font-bold text-slate-700">{categoryToDelete?.name || 'Bu toifa'}</span> toifasi va undagi barcha uskunalar ({(categoryToDelete?.items || []).length} ta) o&apos;chiriladi. Bu amalni Bekor qilish tugmasi bilangina qaytarish mumkin — hozircha faqat lokal, "Saqlash" bosilgandan keyin bazaga yoziladi.
+                <span className="font-bold text-slate-700">{categoryToDelete?.name || 'Bu toifa'}</span> toifasi va undagi barcha uskunalar ({(categoryToDelete?.items || []).length} ta) o&apos;chiriladi. Bu amalni Bekor qilish tugmasi bilangina qaytarish mumkin — hozircha faqat lokal, &quot;Saqlash&quot; bosilgandan keyin bazaga yoziladi.
               </p>
               <div className="mt-8 flex justify-end gap-3">
                 <button onClick={() => setDeleteConfirmCategoryId(null)} className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Bekor qilish</button>
@@ -1058,7 +1161,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
 
       {/* Katta miqdorda o'chirilishi tasdiqlanmasa — saqlanmaydi */}
       {saveWarning && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
           <div className="premium-card w-full max-w-md p-8 animate-scale-in">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600"><AlertTriangle size={20} /></div>
@@ -1075,7 +1178,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                   QR bog&apos;lanishlar: <span className="font-bold text-slate-700">{saveWarning.prevMappings} ta</span> → <span className="font-black text-red-600">{saveWarning.nextMappings} ta</span>
                 </p>
               )}
-              <p>Bu chindan xohlagan o&apos;zgarishingizmi, yoki ma&apos;lumot hali to&apos;liq yuklanmagan bo&apos;lishi mumkinmi? Xato bo&apos;lsa, "Bekor qilish"ni bosib sahifani yangilang.</p>
+              <p>Bu chindan xohlagan o&apos;zgarishingizmi, yoki ma&apos;lumot hali to&apos;liq yuklanmagan bo&apos;lishi mumkinmi? Xato bo&apos;lsa, &quot;Bekor qilish&quot;ni bosib sahifani yangilang.</p>
             </div>
             <div className="mt-8 flex justify-end gap-3">
               <button onClick={() => setSaveWarning(null)} className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Bekor qilish</button>

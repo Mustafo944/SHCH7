@@ -662,7 +662,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                 </p>
               </div>
             </div>
-            <button onClick={onClose} className="shrink-0 rounded-xl bg-white/15 p-2 text-white/80 hover:bg-white/25 hover:text-white transition">
+            <button onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white/80 hover:bg-white/25 hover:text-white transition">
               <X size={20} />
             </button>
           </div>
@@ -854,22 +854,22 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.72)', padding: '16px' }}>
           <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl animate-scale-in flex flex-col" style={{ maxHeight: '90vh' }}>
             {/* Sarlavha — QR ikonka, progress bar */}
-            <div className={`relative px-6 py-5 ${allDoneScan ? 'bg-gradient-to-br from-emerald-500 to-teal-500' : 'bg-gradient-to-br from-purple-600 via-fuchsia-600 to-indigo-600'}`}>
-              <div className="flex items-center gap-4">
-                <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25">
-                  <QrCode size={30} strokeWidth={2.2} className="text-white" />
+            <div className={`relative px-4 py-4 ${allDoneScan ? 'bg-gradient-to-br from-emerald-500 to-teal-500' : 'bg-gradient-to-br from-purple-600 via-fuchsia-600 to-indigo-600'}`}>
+              <div className="flex items-center gap-3">
+                <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[14px] bg-white/15 backdrop-blur-sm ring-1 ring-white/25">
+                  <QrCode size={20} strokeWidth={2.2} className="text-white" />
                   {!allDoneScan && (
-                    <span className="animate-scan-line pointer-events-none absolute top-0 left-2.5 right-2.5 h-[2px] rounded-full bg-white shadow-[0_0_8px_1px_rgba(255,255,255,0.9)]" />
+                    <span className="animate-scan-line pointer-events-none absolute top-0 left-2 right-2 h-[2px] rounded-full bg-white shadow-[0_0_8px_1px_rgba(255,255,255,0.9)]" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-lg font-black text-white leading-tight">Qurilmalar ro'yxati</h3>
-                  <p className="text-[11px] font-bold text-white/70 mt-0.5">
+                  <h3 className="text-base font-black text-white leading-tight">Qurilmalar ro'yxati</h3>
+                  <p className="text-[10px] font-bold text-white/70 mt-0.5">
                     {allDoneScan ? 'Barcha qurilmalar skanerlandi ✓' : `Skaner qilingan: ${doneCount} / ${targetScans}`}
                   </p>
                 </div>
-                <button onClick={() => setScannerListOpen(false)} className="shrink-0 rounded-xl bg-white/15 p-2 text-white/80 hover:bg-white/25 hover:text-white transition backdrop-blur-sm">
-                  <X size={20} />
+                <button onClick={() => setScannerListOpen(false)} className="shrink-0 flex h-8 w-8 items-center justify-center rounded-xl bg-white/15 text-white/80 hover:bg-white/25 hover:text-white transition backdrop-blur-sm self-center">
+                  <X size={18} />
                 </button>
               </div>
               {/* Progress bar */}
@@ -893,19 +893,19 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                 return (
                   <div
                     key={item.id}
-                    className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${scanRecord
+                    className={`flex items-center gap-2.5 rounded-2xl border p-2.5 transition-all ${scanRecord
                       ? 'border-emerald-200 bg-emerald-50/60'
                       : 'border-slate-200 bg-white shadow-sm hover:border-purple-200 hover:shadow-md'}`}
                   >
                     {/* Holat ikonkasi */}
-                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-black ${scanRecord
+                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-black ${scanRecord
                       ? 'bg-emerald-500 text-white'
                       : 'bg-purple-100 text-purple-600'}`}>
-                      {scanRecord ? <CheckCircle2 size={22} /> : idx + 1}
+                      {scanRecord ? <CheckCircle2 size={16} /> : idx + 1}
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <span className="block font-black text-slate-800 leading-snug">{item.name}</span>
+                      <span className="block text-sm font-black text-slate-800 leading-snug">{item.name}</span>
                       {scanRecord && (
                         <span className="mt-0.5 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600">
                           <span className="truncate">{scanRecord.scanned_by}</span>
@@ -918,7 +918,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                     </div>
 
                     {scanRecord ? (
-                      <span className="shrink-0 rounded-lg bg-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                      <span className="shrink-0 rounded-lg bg-emerald-100 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-emerald-700">
                         Skanerlandi
                       </span>
                     ) : (
@@ -927,9 +927,9 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                           setSpecificScanItem(item);
                           setScannerOpen(true);
                         }}
-                        className="shrink-0 flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 px-4 py-2.5 text-xs font-black text-white shadow-sm shadow-purple-500/25 transition-all hover:shadow-md hover:shadow-purple-500/40 active:scale-95"
+                        className="shrink-0 flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 px-3 py-2 text-[11px] font-black text-white shadow-sm shadow-purple-500/25 transition-all hover:shadow-md hover:shadow-purple-500/40 active:scale-95"
                       >
-                        <QrCode size={15} strokeWidth={2.5} /> Skanerlash
+                        <QrCode size={14} strokeWidth={2.5} /> Skanerlash
                       </button>
                     )}
                   </div>

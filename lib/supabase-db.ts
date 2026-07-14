@@ -1400,7 +1400,7 @@ export async function insertTaskScan(scan: Omit<TaskScan, 'id' | 'scanned_at'>):
 export async function getStationTaskScans(stationId: string, limit = 300): Promise<TaskScan[]> {
   const { data, error } = await supabase
     .from('task_scans')
-    .select('*')
+    .select('id, equipment_name, scanned_at, scanned_by, task_nsh')
     .eq('station_id', stringToUuid(stationId))
     .order('scanned_at', { ascending: false })
     .limit(limit);

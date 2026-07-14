@@ -94,18 +94,18 @@ export function HeaderCard({
   onClose?: () => void
 }) {
   return (
-    <div className="rounded-[32px] bg-white/30 backdrop-blur-[40px] p-6 sm:p-8 shadow-[0_8px_32px_rgba(31,38,135,0.05)] border border-white/60 relative overflow-hidden">
+    <div className="rounded-[24px] bg-white/30 backdrop-blur-[40px] p-4 sm:p-5 shadow-[0_8px_32px_rgba(31,38,135,0.05)] border border-white/60 relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80" />
-      <div className="flex items-center gap-4 justify-between relative z-10">
+      <div className="flex items-center gap-3 justify-between relative z-10">
         <div className="min-w-0 flex-1">
-          <h2 className="text-2xl sm:text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-indigo-900 tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-indigo-900 tracking-tight">
             {title}
           </h2>
-          <p className="mt-1 text-xs sm:text-sm font-black text-indigo-600/80 uppercase tracking-widest">
+          <p className="mt-0.5 text-[10px] sm:text-xs font-black text-indigo-600/80 uppercase tracking-widest">
             {subtitle}
           </p>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 self-center">
           {status && (
             <div
               className={`${
@@ -121,9 +121,9 @@ export function HeaderCard({
             <button
               onClick={onClose}
               aria-label="Yopish"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/60 bg-white/70 text-slate-500 shadow-sm transition hover:bg-white hover:text-slate-900"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/60 bg-white/70 text-slate-500 shadow-sm transition hover:bg-white hover:text-slate-900"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           )}
         </div>
