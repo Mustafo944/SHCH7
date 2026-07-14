@@ -262,7 +262,14 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
     }
   }, [swrData, isEditing, isEditingMappings]);
 
-  const handleSave = async () => {
+  const [saveWarning, setSaveWarning] = useState<{ prevItems: number; nextItems: number; prevMappings: number; nextMappings: number } | null>(null);
+
+  const countItems = (cats: EquipmentCategory[]) => cats.reduce((sum, c) => sum + (c.items || []).length, 0);
+
+  // Oldingi (serverdagi so'nggi ma'lumot) bilan solishtirganda katta qismi o'chirilayotgan bo'lsa — chindan shuni xohlaysizmi, deb so'raymiz
+  const isMassDeletion = (prev: number, next: number) => prev > 0 && (next === 0 || next <= prev / 2);
+
+  const performSave = async () => {
     setSaving(true);
     try {
       // Filtrlash: faqat bo'sh bo'lmagan qatorlar
@@ -271,7 +278,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
         items: (c.items || []).filter(item => item && item.name && item.name.trim() !== '')
       }));
 
-      const data = await upsertStationEquipments(stationId, cleanCategories, taskMappings, userName);
+      const data = await upsertStationEquipments(stationId, cleanCategories, taskMappings, userName, equipments?.updatedAt ?? null);
       if (data) {
         toast.success("O'zgarishlar muvaffaqiyatli saqlandi!");
         setIsEditing(false);
@@ -279,10 +286,37 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
         mutate(data); // Keshni yangilaymiz
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Saqlashda xatolik');
+      const message = err instanceof Error ? err.message : 'Saqlashda xatolik';
+      if (message.startsWith('CONFLICT:')) {
+        toast.error(message.replace('CONFLICT: ', ''));
+        // Tahrirlash rejimidan chiqamiz — shu bilan effekt eng so'nggi server holatini
+        // qayta yuklaydi (aks holda keyingi urinish ham eskirgan updatedAt bilan yana ziddiyatga uchraydi)
+        setIsEditing(false);
+        setIsEditingMappings(false);
+        mutate();
+      } else {
+        toast.error(message);
+      }
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSave = async () => {
+    const cleanCategories = categories.map(c => ({
+      ...c,
+      items: (c.items || []).filter(item => item && item.name && item.name.trim() !== '')
+    }));
+    const prevItems = countItems(equipments?.categories || []);
+    const nextItems = countItems(cleanCategories);
+    const prevMappings = (equipments?.taskMappings || []).length;
+    const nextMappings = taskMappings.length;
+
+    if (isMassDeletion(prevItems, nextItems) || isMassDeletion(prevMappings, nextMappings)) {
+      setSaveWarning({ prevItems, nextItems, prevMappings, nextMappings });
+      return;
+    }
+    await performSave();
   };
 
   const addItem = (categoryId: string) => {
@@ -1021,6 +1055,40 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
           </div>
         );
       })()}
+
+      {/* Katta miqdorda o'chirilishi tasdiqlanmasa — saqlanmaydi */}
+      {saveWarning && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
+          <div className="premium-card w-full max-w-md p-8 animate-scale-in">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600"><AlertTriangle size={20} /></div>
+              <h3 className="text-lg font-black text-slate-900">Diqqat — ko&apos;p narsa o&apos;chiriladi</h3>
+            </div>
+            <div className="mt-4 space-y-2 text-sm text-slate-500">
+              {isMassDeletion(saveWarning.prevItems, saveWarning.nextItems) && (
+                <p>
+                  Uskunalar: <span className="font-bold text-slate-700">{saveWarning.prevItems} ta</span> → <span className="font-black text-red-600">{saveWarning.nextItems} ta</span>
+                </p>
+              )}
+              {isMassDeletion(saveWarning.prevMappings, saveWarning.nextMappings) && (
+                <p>
+                  QR bog&apos;lanishlar: <span className="font-bold text-slate-700">{saveWarning.prevMappings} ta</span> → <span className="font-black text-red-600">{saveWarning.nextMappings} ta</span>
+                </p>
+              )}
+              <p>Bu chindan xohlagan o&apos;zgarishingizmi, yoki ma&apos;lumot hali to&apos;liq yuklanmagan bo&apos;lishi mumkinmi? Xato bo&apos;lsa, "Bekor qilish"ni bosib sahifani yangilang.</p>
+            </div>
+            <div className="mt-8 flex justify-end gap-3">
+              <button onClick={() => setSaveWarning(null)} className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Bekor qilish</button>
+              <button
+                onClick={() => { setSaveWarning(null); performSave(); }}
+                className="rounded-xl bg-red-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-500/20 hover:bg-red-600 transition-colors"
+              >
+                Ha, shunday saqlayman
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

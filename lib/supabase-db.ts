@@ -1405,7 +1405,8 @@ export async function upsertStationEquipments(
   stationId: string,
   categories: EquipmentCategory[],
   taskMappings: any[],
-  updatedByName: string
+  updatedByName: string,
+  expectedUpdatedAt?: string | null
 ): Promise<StationEquipments> {
 
   const entries = [
@@ -1415,31 +1416,43 @@ export async function upsertStationEquipments(
 
   const { data: existing } = await supabase
     .from('station_journals')
-    .select('id')
+    .select('id, updated_at')
     .eq('station_id', stationId + '_equipments')
     .eq('journal_type', 'shu2')
     .maybeSingle();
 
-  const write = existing
-    ? supabase
+  if (existing) {
+    // Optimistik lock: agar chaqiruvchi oxirgi ko'rgan updated_at'ni bergan bo'lsa va u
+    // bazadagidan farq qilsa — demak biz yuklaganimizdan beri boshqa kimdir saqlagan.
+    // Shu holatda ustidan yozib, uning o'zgarishini yo'qotib qo'ymaslik uchun to'xtaymiz.
+    if (expectedUpdatedAt && existing.updated_at !== expectedUpdatedAt) {
+      throw new Error('CONFLICT: Bu bekat uskunalarini boshqa foydalanuvchi allaqachon o\'zgartirgan. Sahifani yangilab, o\'zgarishingizni qayta kiriting.');
+    }
+
+    const { data: resultData, error: resultError } = await supabase
       .from('station_journals')
       .update({ entries, updated_at: new Date().toISOString(), updated_by: updatedByName })
       .eq('id', existing.id)
       .select('entries, updated_at, updated_by')
-      .single()
-    : supabase
-      .from('station_journals')
-      .insert({
-        station_id: stationId + '_equipments',
-        journal_type: 'shu2',
-        entries,
-        updated_at: new Date().toISOString(),
-        updated_by: updatedByName
-      })
-      .select('entries, updated_at, updated_by')
       .single();
 
-  const { data: resultData, error: resultError } = await write;
+    if (resultError || !resultData) {
+      throw new Error(resultError?.message || 'Bekat uskunalarini saqlab bo\'lmadi');
+    }
+    return mapEquipmentsRow(stationId, resultData);
+  }
+
+  const { data: resultData, error: resultError } = await supabase
+    .from('station_journals')
+    .insert({
+      station_id: stationId + '_equipments',
+      journal_type: 'shu2',
+      entries,
+      updated_at: new Date().toISOString(),
+      updated_by: updatedByName
+    })
+    .select('entries, updated_at, updated_by')
+    .single();
 
   if (resultError || !resultData) {
     throw new Error(resultError?.message || 'Bekat uskunalarini saqlab bo\'lmadi');
