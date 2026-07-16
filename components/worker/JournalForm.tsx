@@ -780,7 +780,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
               </tbody>
             </table>
           </div>
-          {(!isConfirmed && canEditPlan) && (
+          {(canEditPlan) && (
             <div className="flex items-center gap-3 border-t border-slate-200/60 bg-slate-50/50 p-4">
               <button onClick={addRow} className="flex items-center gap-2 rounded-xl border border-slate-200/60 bg-white/80 px-4 py-2 text-xs font-bold text-slate-700 shadow-sm backdrop-blur-sm transition hover:bg-slate-100">
                 <Plus size={14} /> Qator qo&apos;shish
@@ -808,10 +808,10 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
       )}
       <div className="flex gap-2 sm:gap-4 items-stretch justify-center max-w-2xl mx-auto">
         <button onClick={handleDownloadPDF}
-          className={`rounded-xl sm:rounded-2xl border border-slate-200/60 bg-white/80 px-4 sm:px-6 py-2.5 sm:py-5 text-[12px] sm:text-base font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm backdrop-blur-sm whitespace-nowrap ${(!isConfirmed && canEditPlan) ? 'min-w-[70px]' : 'flex-1'}`}>
+          className={`rounded-xl sm:rounded-2xl border border-slate-200/60 bg-white/80 px-4 sm:px-6 py-2.5 sm:py-5 text-[12px] sm:text-base font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm backdrop-blur-sm whitespace-nowrap ${(canEditPlan) ? 'min-w-[70px]' : 'flex-1'}`}>
           <Download className="w-3.5 h-3.5 sm:w-6 sm:h-6" /> <span className="hidden sm:inline">Yuklab olish</span><span className="sm:hidden">Yuklash</span>
         </button>
-        {(!isConfirmed && canEditPlan) && (
+        {(canEditPlan) && (
           <button onClick={handleSubmit} disabled={submitting} className="btn-gradient flex-1 py-2.5 sm:py-5 text-[13px] sm:text-lg font-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all">{submitting ? 'Kut...' : 'YUBORISH'}</button>
         )}
       </div>

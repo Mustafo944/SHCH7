@@ -99,9 +99,9 @@ const MemoizedJournalRow = React.memo(({
       <td className="border-r border-slate-100 p-1 align-top text-center relative">
         <LocalInput
           value={e.ragat}
-          readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+          readOnly={!!e.adImzosi || !canEditPlan}
           onChange={(val: string) => updateEntry(i, 'ragat', val)}
-          className={`w-full rounded bg-transparent text-center font-bold text-purple-600 outline-none focus:bg-white ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-40' : ''}`}
+          className={`w-full rounded bg-transparent text-center font-bold text-purple-600 outline-none focus:bg-white ${(!!e.adImzosi || !canEditPlan) ? 'opacity-40' : ''}`}
         />
         {e.isNavbatdanTashqari && (
           <div className="absolute top-1 left-1">
@@ -113,9 +113,9 @@ const MemoizedJournalRow = React.memo(({
         <div className="relative">
           <LocalTextarea
             value={e.haftalikJadval}
-            readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+            readOnly={!!e.adImzosi || !canEditPlan}
             onChange={(val: string) => updateEntry(i, 'haftalikJadval', val)}
-            className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
+            className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
           />
           {e.doneHaftalik && (
             <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateHaftalik ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
@@ -128,7 +128,7 @@ const MemoizedJournalRow = React.memo(({
             </div>
           )}
         </div>
-        {(!e.adImzosi && !isConfirmed && canEditPlan) && (
+        {(!e.adImzosi && canEditPlan) && (
           <button
             type="button"
             onClick={() => openSelectModal(i, '4-haftalik')}
@@ -142,9 +142,9 @@ const MemoizedJournalRow = React.memo(({
         <div className="relative">
           <LocalTextarea
             value={e.yillikJadval}
-            readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+            readOnly={!!e.adImzosi || !canEditPlan}
             onChange={(val: string) => updateEntry(i, 'yillikJadval', val)}
-            className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
+            className={`min-h-[60px] w-full resize-none rounded border bg-slate-50 px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 shadow-inner ${(!!e.adImzosi || !canEditPlan) ? 'opacity-60 cursor-not-allowed border-transparent' : 'border-slate-100'}`}
           />
           {e.doneYillik && (
             <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateYillik ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
@@ -157,7 +157,7 @@ const MemoizedJournalRow = React.memo(({
             </div>
           )}
         </div>
-        {(!e.adImzosi && !isConfirmed && canEditPlan) && (
+        {(!e.adImzosi && canEditPlan) && (
           <button
             type="button"
             onClick={() => openSelectModal(i, 'yillik')}
@@ -218,9 +218,9 @@ const MemoizedJournalRow = React.memo(({
         <div className="relative h-full">
           <LocalTextarea
             value={e.kmoBartaraf}
-            readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+            readOnly={!!e.adImzosi || !canEditPlan}
             onChange={(val: string) => updateEntry(i, 'kmoBartaraf', val)}
-            className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
+            className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
           />
           {e.doneKmo && (
             <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateKmo ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
@@ -238,9 +238,9 @@ const MemoizedJournalRow = React.memo(({
         <div className="relative h-full">
           <LocalTextarea
             value={e.majburiyOzgarish}
-            readOnly={!!e.adImzosi || isConfirmed || !canEditPlan}
+            readOnly={!!e.adImzosi || !canEditPlan}
             onChange={(val: string) => updateEntry(i, 'majburiyOzgarish', val)}
-            className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || isConfirmed || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
+            className={`min-h-[60px] w-full h-full resize-none rounded border border-transparent bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-purple-500/50 ${(!!e.adImzosi || !canEditPlan) ? 'opacity-60 cursor-not-allowed' : ''}`}
           />
           {e.doneMajburiy && (
             <div className={`absolute top-1 right-1 text-white rounded-full p-0.5 shadow-sm ${e.completedAfterMissedDateMajburiy ? 'bg-orange-500' : 'bg-emerald-500'}`} title="Bajarildi">
