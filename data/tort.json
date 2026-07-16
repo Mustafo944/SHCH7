@@ -222,7 +222,7 @@
         "davriylik": "Doimiy harakatda bo'ladigan strelkalarda bir oyda bir marta",
         "bajaruvchi": "SHNS,SHN",
         "jurnal": "DU-46",
-        "nsh": "NSH-01 7.1",
+        "nsh": "NSH-01 9.1.3",
         "requiresQR": "strelkalar"
       }
     ]
@@ -479,14 +479,14 @@
         "davriylik": "Har kuni",
         "bajaruvchi": "SHN",
         "jurnal": "SHU-2",
-        "nsh": "NSH-17"
+        "nsh": "NSH-17 17.1"
       },
       {
         "ish": "Trassa kabelini ko'zdan kechirish",
         "davriylik": "Haftada bir marta",
         "bajaruvchi": "SHN",
         "jurnal": "SHU-2",
-        "nsh": "NSH-17"
+        "nsh": "NSH-17 17.2"
       }
     ]
   }
