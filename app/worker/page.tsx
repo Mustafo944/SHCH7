@@ -78,6 +78,11 @@ export default function WorkerPage() {
   const [selectedReport, _setSelectedReport] = useState<WorkReport | null>(null)
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
   const [relayCounts, setRelayCounts] = useState<RelayStatusCounts>({ soz: 0, nosoz: 0, muddatiKelgan: 0 })
+  const relayTotal = relayCounts.soz + relayCounts.muddatiKelgan + relayCounts.nosoz
+  const relaySafeTotal = relayTotal || 1
+  const relaySozPct = (relayCounts.soz / relaySafeTotal) * 100
+  const relayWarnPct = (relayCounts.muddatiKelgan / relaySafeTotal) * 100
+  const relayBadPct = (relayCounts.nosoz / relaySafeTotal) * 100
   const { isMuted, setIsMuted } = useNotificationSound(pendingCounts.du46)
   const [selectedJournalType, setSelectedJournalType] = useState<JournalType | null>(null)
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
@@ -387,7 +392,7 @@ export default function WorkerPage() {
   ]
 
   return (
-    <div className="relative flex h-screen overflow-hidden bg-slate-50 text-slate-900 selection:bg-blue-500/10 font-sans">
+    <div className="relative flex h-dvh overflow-hidden bg-slate-50 text-slate-900 selection:bg-blue-500/10 font-sans">
       <AuroraMeshBackground />
 
       <AppSidebar
@@ -474,7 +479,7 @@ export default function WorkerPage() {
                       setSelectedMonth(today.getMonth())
                       setView('journal')
                     }}
-                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/25 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-blue-100 hover:shadow-[0_20px_40px_-20px_rgba(37,99,235,0.35)] active:scale-[0.98]"
+                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/35 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-blue-100 hover:shadow-[0_20px_40px_-20px_rgba(37,99,235,0.35)] active:scale-[0.98]"
                   >
                      <div className="flex items-center gap-4">
                        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30 transition-transform duration-300 group-hover:scale-110">
@@ -498,7 +503,7 @@ export default function WorkerPage() {
                   {/* Bajarilmagan Ishlar */}
                   <div
                     onClick={() => setWorkerModal('qolibKetgan')}
-                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/25 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-red-100 hover:shadow-[0_20px_40px_-20px_rgba(220,38,38,0.35)] active:scale-[0.98]"
+                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/35 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-red-100 hover:shadow-[0_20px_40px_-20px_rgba(220,38,38,0.35)] active:scale-[0.98]"
                   >
                      <div className="flex items-center gap-4">
                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/30 transition-transform duration-300 group-hover:scale-110">
@@ -517,7 +522,7 @@ export default function WorkerPage() {
                   {/* Sababli Bajarilmagan Ishlar */}
                   <div
                     onClick={() => setWorkerModal('sababliBajarilmagan')}
-                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/25 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-orange-100 hover:shadow-[0_20px_40px_-20px_rgba(234,88,12,0.35)] active:scale-[0.98]"
+                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/35 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-orange-100 hover:shadow-[0_20px_40px_-20px_rgba(234,88,12,0.35)] active:scale-[0.98]"
                   >
                      <div className="flex items-center gap-4">
                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30 transition-transform duration-300 group-hover:scale-110">
@@ -536,21 +541,36 @@ export default function WorkerPage() {
                   {/* Relelar Holati (Rele-nazorat loyihasiga o'tish) */}
                   <div
                     onClick={() => { window.location.href = RELE_SITE_URL }}
-                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/25 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-amber-100 hover:shadow-[0_20px_40px_-20px_rgba(217,119,6,0.35)] active:scale-[0.98]"
+                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/35 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-amber-100 hover:shadow-[0_20px_40px_-20px_rgba(217,119,6,0.35)] active:scale-[0.98]"
                   >
-                     <div className="flex items-center gap-4">
-                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 text-white shadow-lg shadow-amber-500/30 transition-transform duration-300 group-hover:scale-110">
-                         <Zap size={26} strokeWidth={2.5} />
-                       </div>
-                       <div>
-                         <p className="text-xs font-black uppercase tracking-widest text-slate-400">Relelar holati</p>
-                         <p className="text-3xl font-black text-slate-900 mt-1">{relayCounts.nosoz}<span className="text-sm font-bold text-slate-400 ml-1">nosoz</span></p>
+                     <div className="flex items-center justify-between gap-4">
+                       <div className="flex items-center gap-4">
+                         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 text-white shadow-lg shadow-amber-500/30 transition-transform duration-300 group-hover:scale-110">
+                           <Zap size={26} strokeWidth={2.5} />
+                         </div>
+                         <div>
+                           <p className="text-xs font-black uppercase tracking-widest text-slate-400">Relelar holati</p>
+                           <p className="text-3xl font-black text-slate-900 mt-1">{relayTotal}<span className="text-sm font-bold text-slate-400 ml-1">ta rele</span></p>
+                         </div>
                        </div>
                      </div>
-                     <div className="mt-2 sm:mt-4 flex items-center gap-3 text-xs font-bold">
-                        <span className="inline-flex items-center gap-1 text-emerald-600"><span className="h-2 w-2 rounded-full bg-emerald-500" />{relayCounts.soz} soz</span>
-                        <span className="inline-flex items-center gap-1 text-amber-600"><span className="h-2 w-2 rounded-full bg-amber-500" />{relayCounts.muddatiKelgan} muddati kelgan</span>
-                        <span className="inline-flex items-center gap-1 text-red-600"><span className="h-2 w-2 rounded-full bg-red-500" />{relayCounts.nosoz} nosoz</span>
+
+                     <div className="mt-4 flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                        {relayTotal > 0 ? (
+                          <>
+                            <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${relaySozPct}%` }} />
+                            <div className="h-full bg-amber-500 transition-all duration-500" style={{ width: `${relayWarnPct}%` }} />
+                            <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${relayBadPct}%` }} />
+                          </>
+                        ) : (
+                          <div className="h-full w-full bg-slate-200" />
+                        )}
+                     </div>
+
+                     <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{relayCounts.soz} soz</span>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 ring-1 ring-inset ring-amber-200"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />{relayCounts.muddatiKelgan} muddati kelgan</span>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-700 ring-1 ring-inset ring-red-200"><span className="h-1.5 w-1.5 rounded-full bg-red-500" />{relayCounts.nosoz} nosoz</span>
                      </div>
                   </div>
             </div>

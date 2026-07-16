@@ -108,7 +108,7 @@ export function AppSidebar({
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-150 ${
                   active
                     ? 'bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-md shadow-blue-600/25'
-                    : 'bg-white/50 text-slate-500 group-hover:bg-white/70 group-hover:text-blue-600'
+                    : 'text-slate-500 group-hover:text-blue-600'
                 }`}
               >
                 <Icon size={19} strokeWidth={active ? 2.4 : 2} />
