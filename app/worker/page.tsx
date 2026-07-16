@@ -16,6 +16,7 @@ import {
   type DbWorkReportRow
 } from '@/lib/supabase-db'
 import { safeStorage } from '@/lib/utils/storage'
+import { getRelayStatusCounts, RELE_SITE_URL, type RelayStatusCounts } from '@/lib/relenazorat'
 import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription, useHardwareBack } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
@@ -54,7 +55,8 @@ import {
   Home,
   BarChart2,
   Library,
-  Server
+  Server,
+  Zap
 } from 'lucide-react'
 
 
@@ -75,6 +77,7 @@ export default function WorkerPage() {
   const [selectedJournalDay, setSelectedJournalDay] = useState<number | null>(null)
   const [selectedReport, _setSelectedReport] = useState<WorkReport | null>(null)
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
+  const [relayCounts, setRelayCounts] = useState<RelayStatusCounts>({ soz: 0, nosoz: 0, muddatiKelgan: 0 })
   const { isMuted, setIsMuted } = useNotificationSound(pendingCounts.du46)
   const [selectedJournalType, setSelectedJournalType] = useState<JournalType | null>(null)
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
@@ -203,6 +206,14 @@ export default function WorkerPage() {
       loadPendingCounts(activeStationId, session.role, session.position)
     }
   }, [activeStationId, session?.role, session?.position, loadPendingCounts])
+
+  useEffect(() => {
+    const name = activeStationId ? getStation(activeStationId)?.name : null
+    if (!name) { setRelayCounts({ soz: 0, nosoz: 0, muddatiKelgan: 0 }); return }
+    let cancelled = false
+    getRelayStatusCounts(name).then(counts => { if (!cancelled) setRelayCounts(counts) })
+    return () => { cancelled = true }
+  }, [activeStationId])
 
   const realtimeConfigs = useMemo(() => {
     const configs = []
@@ -430,7 +441,7 @@ export default function WorkerPage() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto pt-4 sm:pt-8 px-4 lg:px-8 pb-8 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto pt-2 sm:pt-8 px-3 sm:px-4 lg:px-8 pb-4 sm:pb-8 custom-scrollbar">
           {view === 'selectStation' && (
             <div className="grid gap-6 sm:grid-cols-2 pt-4">
               {session?.stationIds?.length === 0 ? (
@@ -454,7 +465,7 @@ export default function WorkerPage() {
           )}
 
           {view === 'home' && (
-            <div className="grid gap-4 lg:grid-cols-3 sm:grid-cols-2 animate-fade-up">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-3 sm:mt-0 animate-fade-up">
                   {/* Bugun Bajarilishi Kerak Bo'lgan Ishlar */}
                   <div
                     onClick={() => {
@@ -463,23 +474,23 @@ export default function WorkerPage() {
                       setSelectedMonth(today.getMonth())
                       setView('journal')
                     }}
-                    className="cursor-pointer group relative rounded-3xl bg-white/30 backdrop-blur-md p-6 shadow-sm ring-1 ring-white/20 transition-all hover:bg-white/40 hover:shadow-md hover:ring-white/40 active:scale-95"
+                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/25 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-blue-100 hover:shadow-[0_20px_40px_-20px_rgba(37,99,235,0.35)] active:scale-[0.98]"
                   >
                      <div className="flex items-center gap-4">
-                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform relative">
-                         <FileText size={28} strokeWidth={2.5} />
+                       <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30 transition-transform duration-300 group-hover:scale-110">
+                         <FileText size={26} strokeWidth={2.5} />
                          {bugunReja.length > 0 && bugunReja.filter(b => b.done).length === bugunReja.length && (
-                           <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5 border-2 border-white">
+                           <div className="absolute -top-1.5 -right-1.5 bg-emerald-500 rounded-full p-0.5 border-2 border-white">
                              <CheckCircle2 size={12} className="text-white" />
                            </div>
                          )}
                        </div>
                        <div>
-                         <p className="text-xs font-black uppercase tracking-widest text-slate-500">Bugungi ishlar</p>
+                         <p className="text-xs font-black uppercase tracking-widest text-slate-400">Bugungi ishlar</p>
                          <p className="text-3xl font-black text-slate-900 mt-1">{bugunReja.length}</p>
                        </div>
                      </div>
-                     <p className="mt-4 text-sm font-medium text-slate-500">
+                     <p className="mt-2 sm:mt-4 text-sm font-medium text-slate-500">
                         {bugunReja.length > 0 ? `${bugunReja.length} ta reja, ${bugunReja.filter(b => b.done).length} ta bajarildi` : "Bugun uchun ish yo'q"}
                      </p>
                   </div>
@@ -487,18 +498,18 @@ export default function WorkerPage() {
                   {/* Bajarilmagan Ishlar */}
                   <div
                     onClick={() => setWorkerModal('qolibKetgan')}
-                    className="cursor-pointer group relative rounded-3xl bg-white/30 backdrop-blur-md p-6 shadow-sm ring-1 ring-white/20 transition-all hover:bg-white/40 hover:shadow-md hover:ring-white/40 active:scale-95"
+                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/25 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-red-100 hover:shadow-[0_20px_40px_-20px_rgba(220,38,38,0.35)] active:scale-[0.98]"
                   >
                      <div className="flex items-center gap-4">
-                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-red-50 text-red-600 group-hover:scale-110 transition-transform">
-                         <AlertTriangle size={28} strokeWidth={2.5} />
+                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/30 transition-transform duration-300 group-hover:scale-110">
+                         <AlertTriangle size={26} strokeWidth={2.5} />
                        </div>
                        <div>
-                         <p className="text-xs font-black uppercase tracking-widest text-slate-500">Bajarilmagan ishlar</p>
+                         <p className="text-xs font-black uppercase tracking-widest text-slate-400">Bajarilmagan ishlar</p>
                          <p className="text-3xl font-black text-slate-900 mt-1">{qolibKetgan.length}</p>
                        </div>
                      </div>
-                     <p className="mt-4 text-sm font-medium text-slate-500">
+                     <p className="mt-2 sm:mt-4 text-sm font-medium text-slate-500">
                         {qolibKetgan.length > 0 ? "Izoxsiz qolib ketgan ishlar" : "Barcha ishlar bajarilgan"}
                      </p>
                   </div>
@@ -506,20 +517,41 @@ export default function WorkerPage() {
                   {/* Sababli Bajarilmagan Ishlar */}
                   <div
                     onClick={() => setWorkerModal('sababliBajarilmagan')}
-                    className="cursor-pointer group relative rounded-3xl bg-white/30 backdrop-blur-md p-6 shadow-sm ring-1 ring-white/20 transition-all hover:bg-white/40 hover:shadow-md hover:ring-white/40 active:scale-95"
+                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/25 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-orange-100 hover:shadow-[0_20px_40px_-20px_rgba(234,88,12,0.35)] active:scale-[0.98]"
                   >
                      <div className="flex items-center gap-4">
-                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 group-hover:scale-110 transition-transform">
-                         <BookOpen size={28} strokeWidth={2.5} />
+                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30 transition-transform duration-300 group-hover:scale-110">
+                         <BookOpen size={26} strokeWidth={2.5} />
                        </div>
                        <div>
-                         <p className="text-xs font-black uppercase tracking-widest text-slate-500">Sababli qoldirilgan</p>
+                         <p className="text-xs font-black uppercase tracking-widest text-slate-400">Sababli qoldirilgan</p>
                          <p className="text-3xl font-black text-slate-900 mt-1">{sababliBajarilmagan.length}</p>
                        </div>
                      </div>
-                     <p className="mt-4 text-sm font-medium text-slate-500">
+                     <p className="mt-2 sm:mt-4 text-sm font-medium text-slate-500">
                         {sababliBajarilmagan.length > 0 ? "Sabab ko'rsatilgan ishlar" : "Bunday ishlar yo'q"}
                      </p>
+                  </div>
+
+                  {/* Relelar Holati (Rele-nazorat loyihasiga o'tish) */}
+                  <div
+                    onClick={() => { window.location.href = RELE_SITE_URL }}
+                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/25 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-amber-100 hover:shadow-[0_20px_40px_-20px_rgba(217,119,6,0.35)] active:scale-[0.98]"
+                  >
+                     <div className="flex items-center gap-4">
+                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 text-white shadow-lg shadow-amber-500/30 transition-transform duration-300 group-hover:scale-110">
+                         <Zap size={26} strokeWidth={2.5} />
+                       </div>
+                       <div>
+                         <p className="text-xs font-black uppercase tracking-widest text-slate-400">Relelar holati</p>
+                         <p className="text-3xl font-black text-slate-900 mt-1">{relayCounts.nosoz}<span className="text-sm font-bold text-slate-400 ml-1">nosoz</span></p>
+                       </div>
+                     </div>
+                     <div className="mt-2 sm:mt-4 flex items-center gap-3 text-xs font-bold">
+                        <span className="inline-flex items-center gap-1 text-emerald-600"><span className="h-2 w-2 rounded-full bg-emerald-500" />{relayCounts.soz} soz</span>
+                        <span className="inline-flex items-center gap-1 text-amber-600"><span className="h-2 w-2 rounded-full bg-amber-500" />{relayCounts.muddatiKelgan} muddati kelgan</span>
+                        <span className="inline-flex items-center gap-1 text-red-600"><span className="h-2 w-2 rounded-full bg-red-500" />{relayCounts.nosoz} nosoz</span>
+                     </div>
                   </div>
             </div>
           )}
