@@ -146,7 +146,7 @@ export function JournalMonthSelectModal({
                 key={monthName}
                 onClick={() => !isDisabled && onSelect(getJournalMonthKey(index, year), index)}
                 disabled={isDisabled}
-                className={`group flex min-h-[108px] flex-col justify-between gap-3 rounded-2xl border p-4 text-left shadow-sm transition-all ${isDisabled
+                className={`group flex min-h-[108px] flex-col justify-center items-center gap-2 rounded-2xl border p-4 sm:p-5 text-center shadow-sm transition-all ${isDisabled
                     ? 'border-slate-100 bg-slate-50 cursor-not-allowed opacity-60'
                     : isCurrent
                       ? 'border-purple-300 bg-purple-50 shadow-purple-500/10 active:scale-[0.98]'
@@ -157,7 +157,7 @@ export function JournalMonthSelectModal({
                   <span className={`text-[10px] font-black uppercase tracking-widest ${isDisabled ? 'text-slate-300' : 'text-slate-400'}`}>
                     {String(index + 1).padStart(2, '0')}-oy
                   </span>
-                  <h4 className={`mt-1 text-lg font-black uppercase tracking-tight ${isDisabled
+                  <h4 className={`mt-0.5 text-lg font-black uppercase tracking-tight ${isDisabled
                       ? 'text-slate-300'
                       : isCurrent
                         ? 'text-purple-700'
@@ -167,17 +167,12 @@ export function JournalMonthSelectModal({
                   </h4>
                 </div>
                 {isFuture && (
-                  <span className="w-fit max-w-full truncate rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-red-600">
+                  <span className="shrink-0 w-fit max-w-full truncate rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-red-600">
                     Hali kelmagan
                   </span>
                 )}
-                {isPast && (
-                  <span className="w-fit max-w-full truncate rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-amber-600">
-                    Faqat o&apos;qish
-                  </span>
-                )}
                 {isCurrent && (
-                  <span className="w-fit max-w-full truncate rounded-md border border-purple-200 bg-purple-50 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-purple-600">
+                  <span className="shrink-0 w-fit max-w-full truncate rounded-md border border-purple-200 bg-purple-50 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-purple-600">
                     Joriy oy
                   </span>
                 )}

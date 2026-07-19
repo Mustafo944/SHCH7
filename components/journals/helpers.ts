@@ -23,6 +23,16 @@ export function isMonthInPast(month: string): boolean {
   return mMonth < cMonth
 }
 
+export function isFutureDate(sanaStr?: string): boolean {
+  if (!sanaStr) return false
+  const [d, m, y] = sanaStr.split(/[-.]/)
+  if (!d || !m || !y) return false
+  const rowDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d))
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  return rowDate > now
+}
+
 export function getJournalMonthLabel(month: string): string {
   const [year, rawMonth] = month.split('-')
   const monthIndex = Number(rawMonth) - 1
@@ -31,6 +41,20 @@ export function getJournalMonthLabel(month: string): string {
 
 export function getJournalMonthKey(monthIndex: number, year = new Date().getFullYear()): string {
   return `${year}-${String(monthIndex + 1).padStart(2, '0')}`
+}
+
+/**
+ * Ro'yxat OXIRIDAGI bo'sh qatorlarni olib tashlaydi (bazaga yozishdan oldin).
+ * UI da qulay bo'lishi uchun ko'rsatiladigan bo'sh qatorlar bazaga yozilmasligi
+ * kerak — aks holda ular boshqa foydalanuvchilarda ham "haqiqiy" qator bo'lib
+ * chiqadi va o'chirilganda qaytib kelaveradi. Faqat OXIRIDAN olib tashlanadi,
+ * chunki saqlash mantiqʼi qatorlarni indeks bo'yicha taqqoslaydi — o'rtadan
+ * olib tashlash indekslarni surib yuborar edi.
+ */
+export function trimTrailingEmpty<T>(list: T[], isEmpty: (e: T) => boolean): T[] {
+  let end = list.length
+  while (end > 0 && isEmpty(list[end - 1])) end--
+  return list.slice(0, end)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

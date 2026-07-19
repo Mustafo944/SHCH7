@@ -16,7 +16,7 @@ import {
   type DbWorkReportRow
 } from '@/lib/supabase-db'
 import { safeStorage } from '@/lib/utils/storage'
-import { getRelayStatusCounts, RELE_SITE_URL, type RelayStatusCounts } from '@/lib/relenazorat'
+import { getRelayStatusCounts, type RelayStatusCounts } from '@/lib/relenazorat'
 import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription, useHardwareBack } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
@@ -42,6 +42,7 @@ const WorkerTasksModal = dynamic(() => import('@/components/worker/WorkerTasksMo
 import IncidentsView from '@/components/worker/IncidentsView'
 import { LibraryView } from '@/components/library/LibraryView'
 const StationEquipmentsModal = dynamic(() => import('@/components/StationEquipmentsModal').then(mod => mod.StationEquipmentsModal), { ssr: false, loading: () => <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-md"><div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-blue-500" /></div> })
+const RelayListModal = dynamic(() => import('@/components/worker/RelayListModal').then(mod => mod.RelayListModal), { ssr: false, loading: () => <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-md"><div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-amber-500" /></div> })
 import {
   FileText,
   Map as MapIcon,
@@ -88,14 +89,17 @@ export default function WorkerPage() {
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
   const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false)
   const [workerModal, setWorkerModal] = useState<'bugunBajarilgan' | 'qolibKetgan' | 'sababliBajarilmagan' | null>(null)
+  const [relayModalOpen, setRelayModalOpen] = useState(false)
   
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
-  const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen
+  const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen || relayModalOpen
   const handleHardwareBack = useCallback(() => {
     if (isSignOutModalOpen) {
       setIsSignOutModalOpen(false)
+    } else if (relayModalOpen) {
+      setRelayModalOpen(false)
     } else if (selectedJournalType !== null) {
       setSelectedJournalType(null)
     } else if (workerModal !== null) {
@@ -103,7 +107,7 @@ export default function WorkerPage() {
     } else if (view !== 'home') {
       setView('home')
     }
-  }, [view, workerModal, selectedJournalType, isSignOutModalOpen])
+  }, [view, workerModal, selectedJournalType, isSignOutModalOpen, relayModalOpen])
 
   useHardwareBack(isSubViewActive, handleHardwareBack)
 
@@ -538,9 +542,9 @@ export default function WorkerPage() {
                      </p>
                   </div>
 
-                  {/* Relelar Holati (Rele-nazorat loyihasiga o'tish) */}
+                  {/* Relelar Holati — ro'yxat shu ilova ichida ochiladi (tashqi saytga o'tish va alohida login YO'Q) */}
                   <div
-                    onClick={() => { window.location.href = RELE_SITE_URL }}
+                    onClick={() => setRelayModalOpen(true)}
                     className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/35 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-amber-100 hover:shadow-[0_20px_40px_-20px_rgba(217,119,6,0.35)] active:scale-[0.98]"
                   >
                      <div className="flex items-center justify-between gap-4">
@@ -970,6 +974,13 @@ export default function WorkerPage() {
               }}
               onTasksUpdated={() => refreshData(session!.id, session!.stationIds || [])}
               stationName={stationName}
+            />
+          )}
+
+          {relayModalOpen && stationName && (
+            <RelayListModal
+              stationName={stationName}
+              onClose={() => setRelayModalOpen(false)}
             />
           )}
         </main>

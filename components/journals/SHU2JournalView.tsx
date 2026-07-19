@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
 import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
 import type { SHU2Entry } from '@/types'
 import { Plus, Trash2, CheckCircle2, Download, ChevronLeft, ChevronRight, Calendar, LayoutGrid, List } from 'lucide-react'
-import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel } from './helpers'
+import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel, trimTrailingEmpty, isFutureDate } from './helpers'
+import { MicButton } from './MicButton'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // LOCAL COMPONENTS
@@ -15,14 +16,20 @@ import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel } from './h
 
 const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck, lang }: any) => {
   const [val, setVal] = useState(value)
+  const onChangeRef = useRef(onChange)
+
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
+
   useEffect(() => setVal(value), [value])
 
   useEffect(() => {
     if (val !== value) {
-      const timer = setTimeout(() => onChange(val), 50)
+      const timer = setTimeout(() => onChangeRef.current(val), 50)
       return () => clearTimeout(timer)
     }
-  }, [val, value, onChange])
+  }, [val, value])
 
   return (
     <textarea
@@ -40,14 +47,20 @@ const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck,
 
 const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
   const [val, setVal] = useState(value)
+  const onChangeRef = useRef(onChange)
+
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
+
   useEffect(() => setVal(value), [value])
 
   useEffect(() => {
     if (val !== value) {
-      const timer = setTimeout(() => onChange(val), 50)
+      const timer = setTimeout(() => onChangeRef.current(val), 50)
       return () => clearTimeout(timer)
     }
-  }, [val, value, onChange])
+  }, [val, value])
 
   return (
     <input
@@ -74,6 +87,33 @@ const EMPTY_SHU2 = (): SHU2Entry => ({
   dispetcherQabulQildi: false,
 })
 
+// Qator amalda bo'shmi — bunday qatorlar bazaga yozilmaydi (faqat UI uchun).
+// Aks holda ekrandagi 7 ta bo'sh qator ham saqlanib, boshqa foydalanuvchilarda
+// chiqar va o'chirilganda qaytib kelar edi.
+const isEmptyShu2Row = (e: SHU2Entry): boolean =>
+  !e.yozuv?.trim() && !e.tasdiqlandi && !e.yuborildi
+
+// _isNew/_isEdited — faqat shu sessiyada Kunlik filtrda qator yashirinib
+// qolmasligi uchun vaqtinchalik UI bayroqlari (DU-46 dagi bilan bir xil usul).
+// Bazaga HECH QACHON yozilmaydi.
+function stripSessionFlags(e: SHU2Entry): SHU2Entry {
+  if (!(e as any)._isNew && !(e as any)._isEdited) return e
+  const copy: any = { ...e }
+  delete copy._isNew
+  delete copy._isEdited
+  return copy
+}
+
+/** Bugungi sana bilan boshlang'ich bo'sh qatorlar yaratadi */
+function createEmptyRows(count: number): SHU2Entry[] {
+  const now = new Date()
+  const day = String(now.getDate()).padStart(2, '0')
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const year = String(now.getFullYear())
+  const todaySana = `${day}.${month}.${year}`
+  return Array.from({ length: count }, (_, i) => ({ ...EMPTY_SHU2(), nomber: String(i + 1), sana: todaySana }))
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SHU-2 JURNAL KO'RINISHI
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -97,7 +137,7 @@ export function SHU2JournalView({
   onAccepted?: (isDone?: boolean, isInProgress?: boolean) => void
   initialData?: { text: string; date: string }
 }) {
-  const [entries, setEntries] = useState<SHU2Entry[]>(Array.from({ length: 7 }, (_, i) => ({ ...EMPTY_SHU2(), nomber: String(i + 1) })))
+  const [entries, setEntries] = useState<SHU2Entry[]>([])
   const [allEntries, setAllEntries] = useState<SHU2Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<string | null>(null)
@@ -116,8 +156,10 @@ export function SHU2JournalView({
       if (j && j.entries.length > 0) {
         const loadedAllEntries = j.entries as SHU2Entry[]
         setAllEntries(loadedAllEntries)
-        
-        const monthEntries = loadedAllEntries.filter(e => e.journalMonth === journalMonth)
+        // Faqat haqiqiy (yozuvi bor yoki tasdiqlangan) qatorlarni olamiz
+        const monthEntries = loadedAllEntries.filter(
+          e => e.journalMonth === journalMonth && !isEmptyShu2Row(e)
+        )
         
         if (monthEntries.length > 0) {
           setEntries(prev => {
@@ -139,7 +181,7 @@ export function SHU2JournalView({
           setEntries(prev => {
             const hasLocalEdits = prev.some(p => (p.sana || p.yozuv) && !p.tasdiqlandi)
             if (hasLocalEdits && prev.length > 0) return prev
-            return Array.from({ length: 7 }, (_, i) => ({ ...EMPTY_SHU2(), nomber: String(i + 1) }))
+            return []
           })
         }
       } else {
@@ -147,7 +189,7 @@ export function SHU2JournalView({
         setEntries(prev => {
           const hasLocalEdits = prev.some(p => (p.sana || p.yozuv) && !p.tasdiqlandi)
           if (hasLocalEdits && prev.length > 0) return prev
-          return Array.from({ length: 7 }, (_, i) => ({ ...EMPTY_SHU2(), nomber: String(i + 1) }))
+          return []
         })
       }
     } catch (err) {
@@ -207,15 +249,69 @@ export function SHU2JournalView({
   const update = (i: number, field: keyof SHU2Entry, val: string) => {
     const n = [...entries]
     n[i] = { ...n[i], [field]: val }
+    // Yozilayotgan qator Kunlik filtrda (sana hali to'liq/mos emasligi sababli)
+    // yashirinib qolmasligi uchun sessiya belgisi qo'yamiz
+    ;(n[i] as any)._isEdited = true
     setEntries(n)
   }
 
-  const addRow = () => setEntries([...entries, { ...EMPTY_SHU2(), nomber: String(entries.length + 1) }])
+  const addRow = () => {
+    const now = new Date()
+    const day = String(viewMode === 'kunlik' ? selectedDateFilter : now.getDate()).padStart(2, '0')
+    const [jY, jM] = (journalMonth || '').split('-')
+    const month = jM || String(now.getMonth() + 1).padStart(2, '0')
+    const year = jY || String(now.getFullYear())
+    const targetSana = `${day}.${month}.${year}`
+
+    const maxNomber = allEntries.length > 0 ? Math.max(...allEntries.map(x => parseInt(x.nomber || '0') || 0)) : 0;
+    const currentNewCount = entries.filter(x => (x as any)._isNew).length;
+    const newNomber = String(maxNomber + currentNewCount + 1);
+
+    const newRow: any = { ...EMPTY_SHU2(), nomber: newNomber, sana: targetSana }
+    // Yangi qator qaysi sana yozilishidan qat'i nazar shu sessiyada ko'rinib turishi uchun
+    newRow._isNew = true
+    setEntries([...entries, newRow])
+  }
+
   const removeRow = () => {
-    if (entries.length <= 1) return
+    if (entries.length === 0) return
     const last = entries[entries.length - 1]
-    if (last.tasdiqlandi || last.sana || last.yozuv) return
-    setEntries(entries.slice(0, -1))
+
+    // Tasdiqlangan/yuborilgan qator o'chirilmaydi (jurnal tarixi buzilmasligi uchun)
+    if (last.tasdiqlandi || last.yuborildi) {
+      setMsg("Tasdiqlangan qatorni o'chirib bo'lmaydi")
+      setTimeout(() => setMsg(null), 2500)
+      return
+    }
+
+    if (last.yozuv && last.yozuv.trim() !== '') {
+      setMsg("Yozuv kiritilgan qatorni o'chirib bo'lmaydi")
+      setTimeout(() => setMsg(null), 2500)
+      return
+    }
+
+    const prev = [...entries]
+    const prevAll = allEntries
+    const updated = entries.slice(0, -1)
+    setEntries(updated)
+
+    // O'chirishni BAZAGA HAM yozamiz — avval faqat ekrandan olib tashlanardi,
+    // natijada sahifa yangilanganda/realtime kelganda qator qaytib kelar edi.
+    const updatedWithMonth = trimTrailingEmpty(updated, isEmptyShu2Row).map(e => ({ ...stripSessionFlags(e), journalMonth }))
+    const otherMonths = allEntries.filter(e => e.journalMonth !== journalMonth)
+    let newAllEntries = [...otherMonths, ...updatedWithMonth]
+    // Bazadagi himoya triggeri butunlay bo'sh massivni rad etadi — bitta bo'sh
+    // qator qoldiramiz (keyingi saqlashda baribir trim bo'ladi)
+    if (newAllEntries.length === 0) newAllEntries = [{ ...EMPTY_SHU2(), journalMonth }]
+    setAllEntries(newAllEntries)
+
+    upsertJournal(stationId, 'shu2', newAllEntries, userName).catch(err => {
+      console.error('❌ SHU-2 qator o\'chirish xatosi:', err)
+      setEntries(prev)
+      setAllEntries(prevAll)
+      setMsg(err instanceof Error ? err.message : 'Xatolik')
+      setTimeout(() => setMsg(null), 3000)
+    })
   }
 
   const handleTasdiqlash = async (i: number) => {
@@ -232,7 +328,9 @@ export function SHU2JournalView({
       }
       setEntries(updated)
 
-      const updatedWithMonth = updated.map(e => ({ ...e, journalMonth }))
+      // Oxiridagi bo'sh qatorlar bazaga yozilmaydi (faqat UI da qoladi);
+      // _isNew/_isEdited sessiya bayroqlari ham bazaga tushmasligi kerak
+      const updatedWithMonth = trimTrailingEmpty(updated, isEmptyShu2Row).map(e => ({ ...stripSessionFlags(e), journalMonth }))
       const otherMonths = allEntries.filter(e => e.journalMonth !== journalMonth)
       const newAllEntries = [...otherMonths, ...updatedWithMonth]
       setAllEntries(newAllEntries)
@@ -297,6 +395,22 @@ export function SHU2JournalView({
     doc.save(`SHU-2_${stationName}_${dateStr.replace(/\./g, '-')}.pdf`)
   }
 
+  // Ko'rinish yoki kun almashtirilganda sessiya bayroqlari tozalanadi —
+  // aks holda tahrirlangan qator boshqa kunlar filtrida ham ko'rinib qolaveradi
+  const clearSessionFlags = () => {
+    setEntries(prev => prev.map(e => stripSessionFlags(e)))
+  }
+
+  const changeViewMode = (mode: 'kunlik' | 'jadval') => {
+    setViewMode(mode)
+    clearSessionFlags()
+  }
+
+  const changeDateFilter = (updater: (prev: number) => number) => {
+    setSelectedDateFilter(updater)
+    clearSessionFlags()
+  }
+
   const validEntries = entries.filter(e => e.sana?.trim() || e.yozuv?.trim())
   const hasAnyEntry = validEntries.length > 0
   const hasPending = validEntries.some(e => e.yuborildi && !e.dispetcherQabulQildi)
@@ -350,13 +464,13 @@ export function SHU2JournalView({
         <div className="mb-4 flex flex-col items-center gap-4">
           <div className="flex items-center gap-2 rounded-2xl bg-slate-100/50 p-1.5 shadow-inner border border-slate-200/60 self-start">
             <button
-              onClick={() => setViewMode('kunlik')}
+              onClick={() => changeViewMode('kunlik')}
               className={`flex items-center gap-2 rounded-xl px-5 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${viewMode === 'kunlik' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-400 hover:text-slate-700 hover:bg-white/50'}`}
             >
               <LayoutGrid size={14} /> Kunlik
             </button>
             <button
-              onClick={() => setViewMode('jadval')}
+              onClick={() => changeViewMode('jadval')}
               className={`flex items-center gap-2 rounded-xl px-5 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${viewMode === 'jadval' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-400 hover:text-slate-700 hover:bg-white/50'}`}
             >
               <List size={14} /> To&apos;liq jadval
@@ -367,7 +481,7 @@ export function SHU2JournalView({
             <div className="flex justify-center w-full pb-2">
               <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm animate-fade-in">
                 <button
-                  onClick={() => setSelectedDateFilter(p => Math.max(1, p - 1))}
+                  onClick={() => changeDateFilter(p => Math.max(1, p - 1))}
                   disabled={selectedDateFilter <= 1}
                   className="p-2 rounded-xl text-slate-400 hover:bg-purple-50 hover:text-purple-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all"
                 >
@@ -378,7 +492,7 @@ export function SHU2JournalView({
                   <span className="text-sm font-black text-slate-700 tracking-tight">{selectedDateFilter} - {journalMonthLabel.split(' ')[0]}</span>
                 </div>
                 <button
-                  onClick={() => setSelectedDateFilter(p => Math.min(daysInMonth, p + 1))}
+                  onClick={() => changeDateFilter(p => Math.min(daysInMonth, p + 1))}
                   disabled={selectedDateFilter >= daysInMonth}
                   className="p-2 rounded-xl text-slate-400 hover:bg-purple-50 hover:text-purple-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all"
                 >
@@ -401,14 +515,14 @@ export function SHU2JournalView({
             </thead>
             <tbody>
               {entries.map((e, i) => {
-                // Kunlik filtr: jadval rejimida bo'lmasa, faqat tanlangan sanani ko'rsatish
-                const isEmpty = !e.sana && !e.yozuv && !e.tasdiqlandi
-                if (viewMode === 'kunlik' && !isEmpty) {
-                  const selDayStr = String(selectedDateFilter).padStart(2, '0')
-                  const dDot = `${selDayStr}.${selectedMonth}.${selectedYear}`
-                  const val = (e.sana || '').trim()
-                  if (val !== dDot && val !== `${selDayStr}.${selectedMonth}`) {
-                    return null // Bu qator tanlangan kun emas — yashirish
+                if (viewMode === 'kunlik') {
+                  const isSessionRow = (e as any)._isEdited || (e as any)._isNew
+                  if (!isSessionRow) {
+                    const selDayStr = String(selectedDateFilter).padStart(2, '0')
+                    const valDay = (e.sana || '').trim().split('.')[0]
+                    if (valDay !== selDayStr) {
+                      return null // Agar sana mos kelmasa yoki kiritilmagan bo'lsa yashirish
+                    }
                   }
                 }
                 
@@ -432,7 +546,7 @@ export function SHU2JournalView({
                       <LocalInput
                         value={displaySana}
                         onChange={(val: string) => update(i, 'sana', val)}
-                        readOnly={isLocked || isDispatcher}
+                        readOnly={true}
                         className={`w-full rounded bg-transparent px-2 py-2 text-center font-bold outline-none transition-all focus:bg-white ${isLocked ? 'text-slate-400' : 'text-slate-900'}`}
                         placeholder="kk.oo.yyyy"
                       />
@@ -441,15 +555,25 @@ export function SHU2JournalView({
                       {isDispatcher ? (
                         <div className="px-2 py-2 min-h-[40px] text-slate-700">{displayYozuv || <span className="text-slate-300">—</span>}</div>
                       ) : (
-                        <LocalTextarea
-                          value={displayYozuv}
-                          onChange={(val: string) => update(i, 'yozuv', val)}
-                          readOnly={isLocked}
-                          rows={2}
-                          spellCheck={false}
-                          lang="uz"
-                          className={`w-full resize-y rounded bg-transparent px-2 py-2 outline-none transition-all focus:bg-white focus:shadow-inner ${isLocked ? 'text-slate-400' : 'text-slate-700'}`}
-                        />
+                        <div className="relative">
+                          <LocalTextarea
+                            value={displayYozuv}
+                            onChange={(val: string) => update(i, 'yozuv', val)}
+                            readOnly={isLocked}
+                            rows={2}
+                            spellCheck={false}
+                            lang="uz"
+                            className={`w-full resize-y rounded bg-transparent px-2 py-2 pr-8 outline-none transition-all focus:bg-white focus:shadow-inner ${isLocked ? 'text-slate-400' : 'text-slate-700'}`}
+                          />
+                          {!isLocked && (
+                            <div className="absolute top-1 right-1">
+                              <MicButton
+                                baseText={displayYozuv}
+                                onChange={(val) => update(i, 'yozuv', val)}
+                              />
+                            </div>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="p-2 text-center">
@@ -463,8 +587,9 @@ export function SHU2JournalView({
                         {!e.tasdiqlandi && isWorker && !isMonthInPast(journalMonth) && e.yozuv && (
                           <button
                             onClick={() => handleTasdiqlash(i)}
-                            disabled={!e.sana || !e.yozuv}
-                            className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${(!e.sana || !e.yozuv) ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'btn-gradient'}`}
+                            disabled={!e.sana || !e.yozuv || isFutureDate(e.sana)}
+                            title={isFutureDate(e.sana) ? "Kelajakdagi sana uchun tasdiqlash mumkin emas" : "Bajarildi"}
+                            className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${(!e.sana || !e.yozuv || isFutureDate(e.sana)) ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'btn-gradient'}`}
                           >
                             Bajarildi
                           </button>

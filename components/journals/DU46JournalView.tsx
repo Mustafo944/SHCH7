@@ -7,10 +7,10 @@ import { getJournal, upsertJournal } from '@/lib/supabase-db'
 import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
 import type { DU46Entry } from '@/types'
 import { Plus, Trash2, CheckCircle2, Download, ChevronLeft, ChevronRight, Calendar, LayoutGrid, List } from 'lucide-react'
-import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel } from './helpers'
+import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel, trimTrailingEmpty, isFutureDate } from './helpers'
 import { DateInput, TimeInput } from './JournalSelectModal'
-import { TaskSelectModal } from './TaskSelectModal'
 import { ApprovalChainModal } from './ApprovalChainModal'
+import { MicButton } from './MicButton'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // LOCAL COMPONENTS (PREVENT EXCESSIVE RE-RENDERS)
@@ -110,6 +110,22 @@ function stripSessionFlags(e: DU46Entry): DU46Entry {
   return copy
 }
 
+// Qator "amalda bo'sh"mi — bazaga yozishga arzimaydimi?
+// oyKun1/soatMinut1/nomber HISOBGA OLINMAYDI: ular "Qator qo'shish" va
+// taskContext'da avtomatik to'ldiriladi, qator esa hali haqiqiy ma'lumotsiz.
+// Bunday qatorlar bazaga yozilsa, boshqa foydalanuvchilarda ham ko'rinib,
+// "o'chirsam yana paydo bo'ladi" muammosini keltirib chiqarar edi.
+function isEmptyDu46Row(e: DU46Entry): boolean {
+  return (
+    !e.kamchilik?.trim() && !e.bartarafInfo?.trim() &&
+    !e.kamchilikBajarildi && !e.bartarafBajarildi &&
+    !e.oyKun2 && !e.soatMinut2 && !e.xabarUsuli &&
+    !e.oyKun3 && !e.soatMinut3 && !e.dspImzo &&
+    !e.oyKun4 && !e.soatMinut4 &&
+    !e.linkedReportId
+  )
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // DU-46 JURNAL KO'RINISHI
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -138,11 +154,10 @@ export function DU46JournalView({
     taskText?: string
   }
 }) {
-  const [entries, setEntries] = useState<DU46Entry[]>(() => Array.from({ length: 5 }, () => EMPTY_DU46(journalMonth)))
+  const [entries, setEntries] = useState<DU46Entry[]>([])
   const [allEntries, setAllEntries] = useState<DU46Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<string | null>(null)
-  const [taskModalIdx, setTaskModalIdx] = useState<number | null>(null)
   const [viewMode, setViewMode] = useState<'kunlik' | 'jadval'>('kunlik')
   const [selectedDateFilter, setSelectedDateFilter] = useState<number>(new Date().getDate())
 
@@ -197,13 +212,8 @@ export function DU46JournalView({
         )
 
         if (monthEntries.length > 0) {
-          const allSubmitted = monthEntries.every(e => e.yuborildi)
           setEntries(prev => {
             const merged = [...monthEntries]
-            if (allSubmitted) {
-              // Bug #16 fix: yangi bo'sh qatorlarga joriy oy beriladi
-              merged.push(EMPTY_DU46(journalMonth), EMPTY_DU46(journalMonth), EMPTY_DU46(journalMonth))
-            }
             for (let i = 0; i < merged.length; i++) {
               const dbRow = merged[i]
               const localRow = prev[i]
@@ -232,8 +242,7 @@ export function DU46JournalView({
           setEntries(prev => {
             const hasLocalEdits = prev.some(p => p.kamchilik || p.oyKun1 || p.bartarafInfo)
             if (hasLocalEdits && prev.length > 0) return prev
-            // Bug #16 fix: bo'sh qatorlarga joriy oy beriladi
-            return Array.from({ length: 5 }, () => EMPTY_DU46(journalMonth))
+            return []
           })
         }
       } else {
@@ -241,8 +250,7 @@ export function DU46JournalView({
         setEntries(prev => {
           const hasLocalEdits = prev.some(p => p.kamchilik || p.oyKun1 || p.bartarafInfo)
           if (hasLocalEdits && prev.length > 0) return prev
-          // Bug #16 fix: bo'sh qatorlarga joriy oy beriladi
-          return Array.from({ length: 5 }, () => EMPTY_DU46(journalMonth))
+          return []
         })
       }
     } catch (err) {
@@ -507,7 +515,19 @@ export function DU46JournalView({
       const newEntry = EMPTY_DU46(journalMonth);
       const selDayStr = String(viewMode === 'kunlik' ? selectedDateFilter : today.getDate()).padStart(2, '0');
       newEntry.oyKun1 = `${selDayStr}-${selectedMonth}-${selectedYear}`;
-      
+
+      // Umumiy jurnalda nechinchi yozuv bor bo'lsa o'shandan keyingi son chiqadi
+      const maxNomber = allEntries.length > 0 ? Math.max(...allEntries.map(x => parseInt(x.nomber || '0') || 0)) : 0;
+      const currentNewCount = entries.filter(x => (x as any)._isNew).length;
+      newEntry.nomber = String(maxNomber + currentNewCount + 1);
+
+      // Kim qo'shganini darhol belgilaymiz
+      if (isYulUstasi) newEntry.createdByRole = 'yul_ustasi';
+      else if (isEchXodimi) newEntry.createdByRole = 'ech_xodimi';
+      else if (isElektromexanik) newEntry.createdByRole = 'worker';
+      else if (isBekatNavbatchisi) newEntry.createdByRole = 'bekat_navbatchisi';
+      else if (isBekatBoshlighi) newEntry.createdByRole = 'bekat_boshlighi';
+
       // Yangi qo'shilgan qator qaysi sana yozilishidan qat'i nazar shu sessiyada ko'rinib turishi uchun
       (newEntry as any)._isNew = true;
 
@@ -518,7 +538,7 @@ export function DU46JournalView({
   }
 
   const removeRow = () => {
-    if (entries.length <= 1) return
+    if (entries.length === 0) return
     const lastIdx = entries.length - 1
     const last = entries[lastIdx]
 
@@ -528,11 +548,12 @@ export function DU46JournalView({
       return
     }
 
-    // Ma'lumot yozilgan bo'lsa, faqat uni yaratgan odamgina o'chira oladi
-    const hasData = last.kamchilik || last.bartarafInfo || last.oyKun1 || last.soatMinut1
-    if (hasData && !isCreator(last)) {
-      showMsg("Faqat yozuv kiritgan xodim o'chira oladi", 3000)
-      return
+    // 2-ustun (soatMinut1) va 3-ustun (kamchilik) bo'sh bo'lmasa o'chirib bo'lmaydi
+    const hasTime = !!last.soatMinut1?.trim()
+    const hasTask = !!last.kamchilik?.trim()
+    if (hasTime || hasTask) {
+       showMsg("Soat yoki ish kiritilgan qatorni o'chirib bo'lmaydi", 3000)
+       return
     }
 
     const newEntries = entries.slice(0, -1)
@@ -552,8 +573,16 @@ export function DU46JournalView({
       const latestJournal = await getJournal(stationId, 'du46')
       const latestAllEntries = (latestJournal?.entries as DU46Entry[]) || []
 
-      // 2. DB dagi joriy oydagi qatorlarni ajratish
-      const dbMonthEntries = latestAllEntries.filter(e => e.journalMonth === journalMonth)
+      // 2. DB dagi joriy oydagi qatorlarni ajratish.
+      // MUHIM: loadJournalData bilan BIR XIL qoida — journalMonth'siz eski
+      // qatorlar (migratsiyadan avval saqlanganlar) ham "joriy oy" hisoblanadi,
+      // agar bazada umuman oy belgisi bo'lgan qator bo'lmasa. Aks holda bunday
+      // jurnalni saqlaganda eski qatorlar "boshqa oy" deb qayta qo'shilib,
+      // dublikat va "o'chirgan qator qaytib keladi" muammosi chiqar edi.
+      const hasAnyMonthTag = latestAllEntries.some(x => x.journalMonth)
+      const isCurrentMonthRow = (e: DU46Entry) =>
+        e.journalMonth === journalMonth || (!e.journalMonth && !hasAnyMonthTag)
+      const dbMonthEntries = latestAllEntries.filter(isCurrentMonthRow)
 
       // Agar qator qasddan o'chirilgan bo'lsa, uni DB'dagi ro'yxatdan olib tashlaymiz
       if (options?.deletedIndex !== undefined && options.deletedIndex < dbMonthEntries.length) {
@@ -624,9 +653,24 @@ export function DU46JournalView({
       }
 
       // Boshqa oylardagi qatorlarni ham DB dan olib saqlaymiz
-      const otherMonths = latestAllEntries.filter(e => e.journalMonth !== journalMonth)
-      const mergedWithMonth = mergedMonthEntries.map(e => ({ ...e, journalMonth }))
-      const newAllEntries = [...otherMonths, ...mergedWithMonth]
+      // (isCurrentMonthRow bilan aynan teskari to'plam — eski journalMonth'siz
+      // qatorlar ikki marta hisobga olinmaydi)
+      const otherMonths = latestAllEntries.filter(e => !isCurrentMonthRow(e))
+
+      // Oxiridagi bo'sh qatorlar bazaga YOZILMAYDI (UI da ko'rinaveradi) —
+      // ular saqlansa boshqa foydalanuvchilarda ham chiqib, o'chirilganda
+      // qaytib kelaverar edi.
+      const mergedWithMonth = trimTrailingEmpty(mergedMonthEntries, isEmptyDu46Row)
+        .map(e => ({ ...e, journalMonth }))
+      let newAllEntries = [...otherMonths, ...mergedWithMonth]
+
+      // Bazadagi himoya triggeri (prevent_journal_wipe) butunlay bo'sh massivni
+      // rad etadi. Oxirgi qator ham o'chirilganda saqlash xato bilan qaytmasligi
+      // uchun bitta bo'sh qator qoldiramiz — u keyingi saqlashda baribir
+      // trim qilinadi va hech qanday hisobga ta'sir qilmaydi.
+      if (newAllEntries.length === 0) {
+        newAllEntries = [EMPTY_DU46(journalMonth)]
+      }
 
       setAllEntries(newAllEntries)
       setEntries(mergedMonthEntries)
@@ -1053,26 +1097,21 @@ export function DU46JournalView({
             </thead>
             <tbody>
               {entries.map((e, i) => {
-                // Kunlik filtr: agar jadval rejimida bo'lmasa, faqat tanlangan sanadagi qatorlar yoki bo'sh qatorlar ko'rsatiladi
-                const isEmpty = !e.kamchilik && !e.bartarafInfo && !e.oyKun1 && !e.soatMinut1 && !e.kamchilikBajarildi
-                if (viewMode === 'kunlik' && !isEmpty) {
-                  const selDayStr = String(selectedDateFilter).padStart(2, '0')
-                  const val = (e.oyKun1 || '').trim()
-                  const valDay = val.split('-')[0].split('.')[0]
-
-                  // Faqatgina 2 ta raqam to'liq yozilgan bo'lsa va u tanlangan kunga teng bo'lmasa yashiramiz.
-                  // Foydalanuvchi hozir qo'shgan yoki tahrirlayotgan qatorlar Kun o'zgartirilganda tozalangan bo'ladi (clearSessionFlags orqali).
+                if (viewMode === 'kunlik') {
                   const isSessionActive = (e as any)._isNew || (e as any)._isEdited
-                  
-                  if (!isSessionActive && valDay.length >= 2 && valDay !== selDayStr) {
-                    return null // Bu qator tanlangan kun emas — yashirish
+                  if (!isSessionActive) {
+                    const selDayStr = String(selectedDateFilter).padStart(2, '0')
+                    const val = (e.oyKun1 || '').trim()
+                    const valDay = val.split('-')[0].split('.')[0]
+                    // Agar sana kiritilmagan bo'lsa yoki tanlangan kunga teng bo'lmasa, yashiramiz
+                    if (valDay !== selDayStr) return null
                   }
                 }
                 const iAmRoleCreator = isCreator(e)
                 const isExactCreator = e.kamchilikImzo ? e.kamchilikImzo === userName : iAmRoleCreator
                 const hasRightToFix = isExactCreator || (e.approvalChain && e.approvalChain.includes(userRole))
 
-                const hasNoCreator = !e.createdByRole && !e.kamchilik && !e.oyKun1 && !e.soatMinut1
+                const hasNoCreator = !e.createdByRole && !e.kamchilik && !e.soatMinut1
                 const canWriteCol3 = isCurrentMonth && !e.kamchilikBajarildi && !isDispatcher
 
                 // Bug #5 fix: o'tgan oylar uchun 12-ustun ham yopiq bo'lishi kerak
@@ -1093,12 +1132,12 @@ export function DU46JournalView({
                       />
                     </td>
 
-                    {/* ── Ustun 1: Oy va kun ─────────────────── */}
+                    {/* ── Ustun 1: Oy va kun (avtomatik to'ldiriladi) ─────────────────── */}
                     <td className="border-r border-slate-200 p-0.5">
                       <DateInput
                         value={e.oyKun1 || ''}
                         onChange={val => update(i, 'oyKun1', val)}
-                        readOnly={!canWriteCol3}
+                        readOnly={true}
                       />
                     </td>
 
@@ -1144,9 +1183,12 @@ export function DU46JournalView({
                               className="w-full resize-y rounded bg-transparent px-3 py-2 text-[11px] font-medium text-slate-700 outline-none transition-all focus:bg-white focus:shadow-inner"
                             />
                             {canWriteCol3 && e.oyKun1 && e.soatMinut1 && (
-                              <button onClick={() => setTaskModalIdx(i)} className="absolute top-1 right-1 p-1.5 rounded-lg bg-purple-50 text-purple-600 opacity-0 group-hover/text:opacity-100 transition-all hover:bg-purple-600 hover:text-white shadow-sm border border-purple-100">
-                                <Plus size={10} strokeWidth={3} />
-                              </button>
+                              <div className="absolute top-1 right-1 flex items-center gap-1">
+                                <MicButton
+                                  baseText={e.kamchilik || ''}
+                                  onChange={(val) => update(i, 'kamchilik', val)}
+                                />
+                              </div>
                             )}
                           </div>
                         )}
@@ -1323,12 +1365,22 @@ export function DU46JournalView({
                         )}
                       </div>
 
+                      {!isDispatcher && canWriteCol12 && (
+                        <div className="absolute top-1 right-1">
+                          <MicButton
+                            baseText={e.bartarafInfo || ''}
+                            onChange={(val) => update(i, 'bartarafInfo', val)}
+                          />
+                        </div>
+                      )}
+
                       <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
                         {e.bartarafInfo?.trim() && hasRightToFix && !isBekatNavbatchisi && !e.bartarafBajarildi && !isMonthInPast(journalMonth) && (
                           <button
                             onClick={() => handleBartarafBajarildiClick(i)}
-                            disabled={!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi}
-                            className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${(!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi) ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'btn-gradient'}`}
+                            disabled={!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi || isFutureDate(e.oyKun4)}
+                            title={isFutureDate(e.oyKun4) ? "Kelajakdagi sana uchun tugatish mumkin emas" : "Tugadi"}
+                            className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${(!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi || isFutureDate(e.oyKun4)) ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'btn-gradient'}`}
                           >
                             Tugadi
                           </button>
@@ -1428,9 +1480,7 @@ export function DU46JournalView({
 
         {/* ——— Qator qo'shish / o'chirish ————————————————— */}
         {isEditor && (() => {
-          const last = entries[entries.length - 1]
-          const lastHasData = last.kamchilik || last.bartarafInfo
-          const canRemove = entries.length > 1 && !lastHasData && !isMonthInPast(journalMonth)
+          const canRemove = entries.length > 1 && !isMonthInPast(journalMonth)
           return (
             <div className="mt-6 flex flex-wrap items-center gap-3">
               {!isMonthInPast(journalMonth) && (
@@ -1453,17 +1503,6 @@ export function DU46JournalView({
         })()}
 
       </div>
-
-      {/* Vazifa tanlash modal */}
-      {taskModalIdx !== null && (
-        <TaskSelectModal
-          onSelect={(text) => {
-            update(taskModalIdx as number, 'kamchilik', text)
-            setTaskModalIdx(null)
-          }}
-          onClose={() => setTaskModalIdx(null)}
-        />
-      )}
 
       {/* ═══ Tasdiqlash Zanjiri Modali ═══ */}
       {approvalChainModal !== null && (

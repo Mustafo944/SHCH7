@@ -89,6 +89,12 @@ $$ LANGUAGE plpgsql;
 -- ─────────────────────────────────────────────────────────────────────
 -- 3. TARIXGA YOZISH TRIGGER FUNKSIYASI (entries o'zgargandagina)
 -- ─────────────────────────────────────────────────────────────────────
+-- SECURITY DEFINER SHART: bu trigger station_journals_history'ga yozadi,
+-- u jadvalda esa faqat dispatcher uchun SELECT siyosati bor (INSERT siyosati
+-- yo'q — atayin, faqat trigger yozishi kerak). SECURITY INVOKER bo'lganda
+-- chaqiruvchi foydalanuvchining o'zi RLS bo'yicha bu INSERT'ni bajara olmay,
+-- "new row violates row-level security policy for table station_journals_history"
+-- xatosi bilan BUTUN UPDATE (masalan oddiy "Saqlash") bekor bo'lib qolar edi.
 CREATE OR REPLACE FUNCTION archive_journal_before_update()
 RETURNS trigger AS $$
 BEGIN
@@ -98,7 +104,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 
 -- ─────────────────────────────────────────────────────────────────────
