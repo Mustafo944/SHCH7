@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { User, WorkReport, StationSchema, ReportEntry, GrafikTuri, StationJournal, JournalType, DU46Entry, SHU2Entry, ALSNEntry, YerlatgichEntry, AlsnKodEntry, MpsFriksionEntry, Incident, IncidentSeverity } from '@/types';
+import { getCreator, getNextApproverRole } from './journals/du46Approval';
 
 // Stations
 import { getStations, getStation } from './store';
@@ -1077,48 +1078,15 @@ export async function getPendingJournalCounts(
           const ents = (row.entries || []) as DU46Entry[]
           let count = 0
 
-          const getCreator = (e: DU46Entry) => e.createdByRole || 'worker'
-
-          const getNextRole = (e: DU46Entry, col: 3 | 12): string | null => {
-            const isBoshlandi = col === 3 ? e.kamchilikBajarildi : e.bartarafBajarildi
-            if (!isBoshlandi) return null
-            const chain = e.approvalChain || []
-            const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
-
-            if (col === 3) {
-              if (approvals.length < chain.length) return chain[approvals.length]
-              // Bekat boshlig'i ham bekat navbatchisi tomonidan tasdiqlanadi
-              if (!e.kamchilikBBTasdiqladi) return 'DSP'
-              return null
-            } else {
-              const creatorRole = getCreator(e)
-              const col3Participants = new Set<string>()
-
-              // Bekat boshlig'i ham zanjirga qo'shiladi
-              col3Participants.add(creatorRole)
-              chain.forEach(r => col3Participants.add(r))
-
-              const writerRole = e.bartarafByRole || getCreator(e)
-              const requiredChainFor12 = Array.from(col3Participants).filter(r => r !== writerRole)
-
-              const nextRequiredRole = requiredChainFor12.find(r => !approvals.some(a => {
-                if (r === 'worker' && ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(a.role)) return true
-                return a.role === r
-              }))
-
-              if (nextRequiredRole) return nextRequiredRole
-              // Faqat bekat_navbatchisi o'zi Tugadi bossa, qayta tasdiqlamaydi
-              const writerRoleVal = e.bartarafByRole || getCreator(e)
-              if (writerRoleVal !== 'bekat_navbatchisi' && !e.bartarafBBTasdiqladi) return 'DSP'
-              return null
-            }
-          }
-
           for (const e of ents) {
             if (e.yuborildi) continue
 
-            const next3 = getNextRole(e, 3)
-            const next12 = getNextRole(e, 12)
+            // Du46Approval.getNextApproverRole — DU46JournalView.tsx dagi UI bilan
+            // bir xil manba (ilgari bu yerda mustaqil, eskiroq nusxa bor edi va
+            // ular orasidagi farq "kutilmoqda" belgisini noto'g'ri ko'rsatishiga
+            // sabab bo'lgan).
+            const next3 = getNextApproverRole(e, 3)
+            const next12 = getNextApproverRole(e, 12)
             const userRoleToCheck = position || role
 
             let isMyTurn = false

@@ -104,16 +104,6 @@ function stripSessionFlags(e: SHU2Entry): SHU2Entry {
   return copy
 }
 
-/** Bugungi sana bilan boshlang'ich bo'sh qatorlar yaratadi */
-function createEmptyRows(count: number): SHU2Entry[] {
-  const now = new Date()
-  const day = String(now.getDate()).padStart(2, '0')
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const year = String(now.getFullYear())
-  const todaySana = `${day}.${month}.${year}`
-  return Array.from({ length: count }, (_, i) => ({ ...EMPTY_SHU2(), nomber: String(i + 1), sana: todaySana }))
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // SHU-2 JURNAL KO'RINISHI
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -273,82 +263,143 @@ export function SHU2JournalView({
     setEntries([...entries, newRow])
   }
 
+  // "Qator o'chirish" tugmasi bosilganda qaysi qator o'chirilishi kerakligini
+  // aniqlaydi. `entries` BUTUN OYNING qatorlarini saqlaydi (kunlar bo'yicha
+  // alohida emas) — Kunlik va To'liq jadval faqat SHU massiv ustidagi ikki xil
+  // KO'RSATISH filtri (renderdagi bilan bir xil mantiq). Shuning uchun oddiy
+  // "oxirgi elementni olish" Kunlik rejimda ekranda ko'rinmayotgan, boshqa
+  // kunga tegishli qatorni o'chirib yuborishi mumkin edi.
+  const findLastVisibleIndex = (): number => {
+    if (viewMode === 'jadval') return entries.length - 1
+    const selDayStr = String(selectedDateFilter).padStart(2, '0')
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const e = entries[i] as any
+      if (e._isNew || e._isEdited) return i
+      const valDay = (e.sana || '').trim().split('.')[0]
+      if (valDay === selDayStr) return i
+    }
+    return -1
+  }
+
+  // Saqlashning umumiy yo'li — o'chirish ham, tasdiqlash ham shundan foydalanadi.
+  // DU-46 dagi bilan bir xil mantiq: saqlashdan OLDIN bazadagi eng so'nggi
+  // holatni qayta o'qib, mahalliy o'zgarish bilan qator-ma-qator birlashtiradi.
+  // Bu ikki xodim bir bekatda bir vaqtda ishlaganda, birining yozuvi
+  // ikkinchisining saqlashida yo'qolib ketishining (yoki o'chirilgan qatorning
+  // qaytib kelishining) oldini oladi.
+  const persistEntries = async (
+    updated: SHU2Entry[],
+    prevSnapshot: SHU2Entry[],
+    options?: { deletedIndex?: number }
+  ) => {
+    const prevAllSnapshot = allEntries
+    setEntries(updated)
+
+    try {
+      const latestJournal = await getJournal(stationId, 'shu2')
+      const latestAllEntries = (latestJournal?.entries as SHU2Entry[]) || []
+      const dbMonthEntries = latestAllEntries.filter(e => e.journalMonth === journalMonth)
+
+      if (options?.deletedIndex !== undefined && options.deletedIndex < dbMonthEntries.length) {
+        dbMonthEntries.splice(options.deletedIndex, 1)
+      }
+
+      const merged = [...updated]
+      for (let i = 0; i < Math.max(merged.length, dbMonthEntries.length); i++) {
+        const local = merged[i]
+        const db = dbMonthEntries[i]
+        if (!local && db) {
+          // Boshqa xodim qo'shgan qator — saqlab qolamiz
+          merged.push(db)
+        } else if (local && db) {
+          let row = { ...local }
+          // Tasdiqlash holatini DB'dan himoyalaymiz (false → true yo'nalishda) —
+          // boshqa xodim shu orada tasdiqlagan bo'lsa, lokal eskirgan holat
+          // ustidan yozib yubormaymiz.
+          if (!local.tasdiqlandi && db.tasdiqlandi) {
+            row = {
+              ...row,
+              tasdiqlandi: db.tasdiqlandi,
+              tasdiqlaganImzo: db.tasdiqlaganImzo,
+              imzo: db.imzo,
+              yuborildi: db.yuborildi,
+              dispetcherQabulQildi: db.dispetcherQabulQildi,
+            }
+            if (!local.sana && db.sana) row.sana = db.sana
+            if (!local.yozuv && db.yozuv) row.yozuv = db.yozuv
+          }
+          if (!local.dispetcherQabulQildi && db.dispetcherQabulQildi) {
+            row.dispetcherQabulQildi = db.dispetcherQabulQildi
+          }
+          merged[i] = row
+        }
+      }
+
+      const otherMonths = latestAllEntries.filter(e => e.journalMonth !== journalMonth)
+      const mergedWithMonth = trimTrailingEmpty(merged, isEmptyShu2Row).map(e => ({ ...stripSessionFlags(e), journalMonth }))
+      let newAllEntries = [...otherMonths, ...mergedWithMonth]
+      // Bazadagi himoya triggeri butunlay bo'sh massivni rad etadi — bitta bo'sh
+      // qator qoldiramiz (keyingi saqlashda baribir trim bo'ladi)
+      if (newAllEntries.length === 0) newAllEntries = [{ ...EMPTY_SHU2(), journalMonth }]
+
+      setAllEntries(newAllEntries)
+      setEntries(merged)
+
+      await upsertJournal(stationId, 'shu2', newAllEntries, userName)
+    } catch (err) {
+      console.error('❌ SHU-2 saqlash xatosi:', err)
+      setEntries(prevSnapshot)
+      setAllEntries(prevAllSnapshot)
+      setMsg(err instanceof Error ? err.message : 'Xatolik')
+      setTimeout(() => setMsg(null), 3000)
+      throw err
+    }
+  }
+
   const removeRow = () => {
-    if (entries.length === 0) return
-    const last = entries[entries.length - 1]
+    const idx = findLastVisibleIndex()
+    if (idx === -1) {
+      setMsg("Bu kunda o'chiriladigan qator yo'q")
+      setTimeout(() => setMsg(null), 2500)
+      return
+    }
+    const target = entries[idx]
 
     // Tasdiqlangan/yuborilgan qator o'chirilmaydi (jurnal tarixi buzilmasligi uchun)
-    if (last.tasdiqlandi || last.yuborildi) {
+    if (target.tasdiqlandi || target.yuborildi) {
       setMsg("Tasdiqlangan qatorni o'chirib bo'lmaydi")
       setTimeout(() => setMsg(null), 2500)
       return
     }
 
-    if (last.yozuv && last.yozuv.trim() !== '') {
+    if (target.yozuv && target.yozuv.trim() !== '') {
       setMsg("Yozuv kiritilgan qatorni o'chirib bo'lmaydi")
       setTimeout(() => setMsg(null), 2500)
       return
     }
 
-    const prev = [...entries]
-    const prevAll = allEntries
-    const updated = entries.slice(0, -1)
-    setEntries(updated)
-
-    // O'chirishni BAZAGA HAM yozamiz — avval faqat ekrandan olib tashlanardi,
-    // natijada sahifa yangilanganda/realtime kelganda qator qaytib kelar edi.
-    const updatedWithMonth = trimTrailingEmpty(updated, isEmptyShu2Row).map(e => ({ ...stripSessionFlags(e), journalMonth }))
-    const otherMonths = allEntries.filter(e => e.journalMonth !== journalMonth)
-    let newAllEntries = [...otherMonths, ...updatedWithMonth]
-    // Bazadagi himoya triggeri butunlay bo'sh massivni rad etadi — bitta bo'sh
-    // qator qoldiramiz (keyingi saqlashda baribir trim bo'ladi)
-    if (newAllEntries.length === 0) newAllEntries = [{ ...EMPTY_SHU2(), journalMonth }]
-    setAllEntries(newAllEntries)
-
-    upsertJournal(stationId, 'shu2', newAllEntries, userName).catch(err => {
-      console.error('❌ SHU-2 qator o\'chirish xatosi:', err)
-      setEntries(prev)
-      setAllEntries(prevAll)
-      setMsg(err instanceof Error ? err.message : 'Xatolik')
-      setTimeout(() => setMsg(null), 3000)
-    })
+    const updated = [...entries.slice(0, idx), ...entries.slice(idx + 1)]
+    persistEntries(updated, entries, { deletedIndex: idx }).catch(() => { /* xabar persistEntries ichida ko'rsatiladi */ })
   }
 
   const handleTasdiqlash = async (i: number) => {
     const prev = [...entries]
+    const updated = [...entries]
+    updated[i] = {
+      ...updated[i],
+      tasdiqlandi: true,
+      tasdiqlaganImzo: userName,
+      imzo: userName,
+      yuborildi: true,
+      dispetcherQabulQildi: true,
+    }
+
     try {
-      const updated = [...entries]
-      updated[i] = {
-        ...updated[i],
-        tasdiqlandi: true,
-        tasdiqlaganImzo: userName,
-        imzo: userName,
-        yuborildi: true,
-        dispetcherQabulQildi: true,
-      }
-      setEntries(updated)
-
-      // Oxiridagi bo'sh qatorlar bazaga yozilmaydi (faqat UI da qoladi);
-      // _isNew/_isEdited sessiya bayroqlari ham bazaga tushmasligi kerak
-      const updatedWithMonth = trimTrailingEmpty(updated, isEmptyShu2Row).map(e => ({ ...stripSessionFlags(e), journalMonth }))
-      const otherMonths = allEntries.filter(e => e.journalMonth !== journalMonth)
-      const newAllEntries = [...otherMonths, ...updatedWithMonth]
-      setAllEntries(newAllEntries)
-
+      await persistEntries(updated, prev)
       onAccepted?.(true, false)
       setMsg('Tasdiqlandi!')
       setTimeout(() => setMsg(null), 2000)
-
-      upsertJournal(stationId, 'shu2', newAllEntries, userName).catch(err => {
-        console.error('❌ SHU-2 Tasdiqlash xatosi:', err)
-        setEntries(prev)
-        setMsg(err instanceof Error ? err.message : 'Xatolik')
-        setTimeout(() => setMsg(null), 3000)
-      })
-    } catch (err) {
-      console.error('❌ SHU-2 Local state xatosi:', err)
-      setEntries(prev)
-    }
+    } catch { /* persistEntries allaqachon rollback va xabarni ko'rsatdi */ }
   }
 
   const handleDownload = async () => {

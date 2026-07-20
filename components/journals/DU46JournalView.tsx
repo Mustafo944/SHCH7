@@ -11,6 +11,7 @@ import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel, trimTraili
 import { DateInput, TimeInput } from './JournalSelectModal'
 import { ApprovalChainModal } from './ApprovalChainModal'
 import { MicButton } from './MicButton'
+import { getCreator, getNextApproverRole } from '@/lib/journals/du46Approval'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // LOCAL COMPONENTS (PREVENT EXCESSIVE RE-RENDERS)
@@ -326,8 +327,6 @@ export function DU46JournalView({
     !!stationId && !!journalMonth
   )
 
-  const getCreator = (e: DU46Entry): string => e.createdByRole || 'worker'
-
   /** Joriy foydalanuvchi qatorni yaratgani (yozuvchi)mi?
    * Bug #4 fix: bekat_navbatchisi faqat tasdiqlovchi — creator emas.
    * Creator aniqlash uchun userRole ni to'g'ridan-to'g'ri tekshiramiz.
@@ -343,91 +342,9 @@ export function DU46JournalView({
     return creator === 'worker' && isWorker
   }
 
-  // ── Yangi Dinamik Tasdiqlash Mantiqi ──
-  const getNextApproverRole = (e: DU46Entry, col: 3 | 12): string | null => {
-    const isBoshlandi = col === 3 ? e.kamchilikBajarildi : e.bartarafBajarildi
-    if (!isBoshlandi) return null
-
-    const chain = e.approvalChain || []
-    const approvals = col === 3 ? (e.approvalsCol3 || []) : (e.approvalsCol12 || [])
-
-    if (col === 3) {
-      if (approvals.length < chain.length) return chain[approvals.length]
-
-      const creatorRole = getCreator(e)
-      if (creatorRole === 'bekat_navbatchisi') return null
-
-      // Boshqalar yaratgan bo'lsa bekat navbatchisi tomonidan tasdiqlanadi
-      const isBBTasdiqladi = e.kamchilikBBTasdiqladi
-      if (!isBBTasdiqladi) return 'DSP'
-
-      return null
-    } else {
-      // ═══════════════════════════════════════════════════════════════════
-      // 12-USTUN TASDIQLASH MANTIQI
-      // ═══════════════════════════════════════════════════════════════════
-      //
-      // Qoidalar:
-      // 1) 3-ustunda kim qatnashgan bo'lsa (creator + chain), 12-ustunda ham shu rollar
-      //    "Tugadi" tugmasini bosishi va tasdiqlashi mumkin.
-      // 2) Kim "Tugadi" bosgan bo'lsa — o'sha rol pastdan qaytib tasdiqlamaydi.
-      // 3) Qolgan rollar chain tartibida tasdiqlaydi.
-      // 4) Eng OXIRIDA doim BEKAT NAVBATCHISI tasdiqlaydi
-      //    (agar BB o'zi Tugadi bosmagan bo'lsa).
-      // ═══════════════════════════════════════════════════════════════════
-
-      const creatorRole = getCreator(e)
-      const tugadiRole = e.bartarafByRole || creatorRole  // haqiqiy rol: 'katta_elektromexanik'
-      const tugadiName = e.bartarafImzo || ''              // ism: 'Olimov Olim'
-      const creatorName = e.kamchilikImzo || ''             // 3-ustunni boshlagan ism
-
-      // "Tugadi" bosgan odam = creator mi? (ism orqali aniqlash, chunki createdByRole='worker' ga map qilingan)
-      const creatorIsTugadiPresser =
-        creatorRole === tugadiRole ||
-        (creatorName !== '' && tugadiName !== '' && creatorName === tugadiName)
-
-      // Chain a'zo = Tugadi bosgan odam mi? (exact match — chain haqiqiy rollarni saqlaydi)
-      const isChainMemberTugadi = (role: string): boolean => role === tugadiRole
-
-      // Col12 uchun tasdiqlash kerak bo'lgan rollar ro'yxatini tuzamiz (tartib saqlanadi)
-      const requiredApprovers: string[] = []
-
-      // Creator (agar Tugadi bosmagan bo'lsa — bekat_boshlighi ham tasdiqlash zanjirida bo'ladi)
-      // Bekat navbatchisi zanjirga oddiy a'zo sifatida kirmaydi, u oxirida alohida 'DSP' sifatida tasdiqlaydi.
-      if (!creatorIsTugadiPresser && creatorRole !== 'bekat_navbatchisi') {
-        requiredApprovers.push(creatorRole)
-      }
-
-      // Chain a'zolari (Tugadi bosgan roldan boshqalari)
-      chain.forEach(r => {
-        if (!isChainMemberTugadi(r) && !requiredApprovers.includes(r)) {
-          requiredApprovers.push(r)
-        }
-      })
-
-      // Worker guruhi rollarini moslashtirish uchun yordamchi
-      const workerGroupRoles = ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik']
-
-      // Hali tasdiqlamagan keyingi rolni topamiz
-      const nextRequired = requiredApprovers.find(r => {
-        return !approvals.some(a => {
-          // 'worker' sifatida saqlangan creator uchun — worker guruhidagi har qanday rol mos keladi
-          if (workerGroupRoles.includes(r) && workerGroupRoles.includes(a.role)) return true
-          return a.role === r
-        })
-      })
-
-      if (nextRequired) return nextRequired
-
-      // Barcha chain ishtirokchilari tasdiqladi — endi bekat navbatchisi tasdiqlaydi
-      // Agar bekat_navbatchisi o'zi "Tugadi" bosgan bo'lsa — qayta tasdiqlamaydi
-      // Bekat boshlig'i Tugadi bossa ham, bekat navbatchisi tasdiqlashi kerak
-      if (tugadiRole !== 'bekat_navbatchisi' && !e.bartarafBBTasdiqladi) return 'DSP'
-
-      return null
-    }
-  }
-
+  // getNextApproverRole endi lib/journals/du46Approval.ts dan import qilinadi —
+  // bosh sahifadagi "kutilmoqda" hisobi (getPendingJournalCounts) bilan bir xil
+  // manbadan foydalanish uchun (ilgari ikkalasi mustaqil yozilgan va farqlanib ketgan edi).
 
   const isFinalApprover = (e: DU46Entry, col: 3 | 12): boolean => {
     const nextRole = getNextApproverRole(e, col)
@@ -537,27 +454,49 @@ export function DU46JournalView({
     }
   }
 
+  // "Qator o'chirish" tugmasi bosilganda qaysi qator o'chirilishi kerakligini
+  // aniqlaydi. `entries` BUTUN OYNING qatorlarini saqlaydi (kunlar bo'yicha
+  // alohida emas) — Kunlik va To'liq jadval faqat SHU massiv ustidagi ikki xil
+  // KO'RSATISH filtri (renderdagi bilan bir xil mantiq). Shuning uchun oddiy
+  // "oxirgi elementni olish" Kunlik rejimda ekranda ko'rinmayotgan, boshqa
+  // kunga tegishli qatorni o'chirib yuborishi mumkin edi.
+  const findLastVisibleIndex = (): number => {
+    if (viewMode === 'jadval') return entries.length - 1
+    const selDayStr = String(selectedDateFilter).padStart(2, '0')
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const e = entries[i] as any
+      if (e._isNew || e._isEdited) return i
+      const val = (e.oyKun1 || '').trim()
+      const valDay = val.split('-')[0].split('.')[0]
+      if (valDay === selDayStr) return i
+    }
+    return -1
+  }
+
   const removeRow = () => {
-    if (entries.length === 0) return
-    const lastIdx = entries.length - 1
-    const last = entries[lastIdx]
+    const idx = findLastVisibleIndex()
+    if (idx === -1) {
+      showMsg("Bu kunda o'chiriladigan qator yo'q", 3000)
+      return
+    }
+    const target = entries[idx]
 
     // Boshlandi bosilgan bo'lsa o'chirib bo'lmaydi
-    if (last.kamchilikBajarildi) {
+    if (target.kamchilikBajarildi) {
       showMsg("Boshlandi bosilgan qatorni o'chirib bo'lmaydi", 3000)
       return
     }
 
     // 2-ustun (soatMinut1) va 3-ustun (kamchilik) bo'sh bo'lmasa o'chirib bo'lmaydi
-    const hasTime = !!last.soatMinut1?.trim()
-    const hasTask = !!last.kamchilik?.trim()
+    const hasTime = !!target.soatMinut1?.trim()
+    const hasTask = !!target.kamchilik?.trim()
     if (hasTime || hasTask) {
        showMsg("Soat yoki ish kiritilgan qatorni o'chirib bo'lmaydi", 3000)
        return
     }
 
-    const newEntries = entries.slice(0, -1)
-    saveEntries(newEntries, entries, { deletedIndex: lastIdx })
+    const newEntries = [...entries.slice(0, idx), ...entries.slice(idx + 1)]
+    saveEntries(newEntries, entries, { deletedIndex: idx })
   }
 
   // ── Saqlash (optimistik & xavfsiz) ─────────────────────────────────────────────
@@ -704,8 +643,9 @@ export function DU46JournalView({
     const prev = [...entries]
     const updated = [...entries]
     const e = updated[idx]
+    const isEdit = approvalChainModal?.isEdit
 
-    if (approvalChainModal?.isEdit) {
+    if (isEdit) {
       updated[idx] = { ...e, approvalChain: chain }
     } else {
       updated[idx] = {
@@ -723,7 +663,12 @@ export function DU46JournalView({
     }
 
     try {
-      const isEdit = approvalChainModal?.isEdit
+      // MUHIM: bazaga saqlash tasdiqlanmaguncha modal yopilmaydi va onAccepted()
+      // chaqirilmaydi — aks holda saqlash xato bilan tugasa, tashqi tomon
+      // (ish rejasidagi vazifa) allaqachon "jarayonda/bajarildi" deb
+      // belgilanib, modal yopilib ulguradi va foydalanuvchi xatoni ko'rmay qoladi.
+      await saveEntries(updated, prev)
+
       setApprovalChainModal(null)
       showMsg(isEdit ? 'Tasdiqlash zanjiri yangilandi!' : 'Boshlandi belgilandi!')
 
@@ -740,9 +685,11 @@ export function DU46JournalView({
       } else if (!isEdit) {
         onAccepted?.(true, false)
       }
-
-      await saveEntries(updated, prev)
-    } catch { /* */ }
+    } catch {
+      // saveEntries xato xabarini allaqachon ko'rsatdi — orqadagi xabar
+      // ko'rinishi uchun kichik tasdiqlash-zanjiri modalini yopamiz
+      setApprovalChainModal(null)
+    }
   }
 
   const handleKamchilikTasdiqlash = async (i: number) => {
@@ -783,7 +730,7 @@ export function DU46JournalView({
   // USTUN 12: BAJARILDI + TASDIQLASH
   // ══════════════════════════════════════════════════════════════════════════════
 
-  const handleBartarafBajarildiClick = (i: number) => {
+  const handleBartarafBajarildiClick = async (i: number) => {
     const prev = [...entries]
     const updated = [...entries]
     const e = updated[i]
@@ -800,22 +747,28 @@ export function DU46JournalView({
     }
     updated[i] = updatedEntry
 
-    // "Tugadi" bosilishi oylik ish reja checklisti uchun yetarli hisoblanadi —
-    // DU-46ning o'z ichidagi tasdiqlash zanjiri (bekat navbatchisigacha) mustaqil davom etadi,
-    // lekin oylik vazifani endi bloklamaydi.
-    if (onAccepted) onAccepted(true, false)
+    try {
+      // MUHIM: bazaga saqlash tasdiqlanmaguncha onAccepted() chaqirilmaydi —
+      // aks holda saqlash tarmoq xatosi bilan tugasa, oylik ish rejasidagi
+      // vazifa allaqachon "bajarildi" deb belgilanib, jurnal oynasi yopilib
+      // ulguradi va foydalanuvchi xatoni ko'rmay qoladi.
+      await saveEntries(updated, prev)
+      showMsg('Bajarildi belgilandi!')
 
-    const activeReportId = updatedEntry.linkedReportId || taskContext?.reportId
-    const activeTaskType = updatedEntry.linkedTaskType || taskContext?.taskType
-    const activeEntryIndex = updatedEntry.linkedEntryIndex ?? taskContext?.entryIndex
-    if (activeReportId && activeTaskType && activeEntryIndex !== undefined) {
-      import('@/lib/supabase-db').then(db => {
-        db.updateReportEntryInProgress(activeReportId, activeEntryIndex, activeTaskType, false)
-      }).catch(err => console.error("In progress clear error:", err))
-    }
+      // "Tugadi" bosilishi oylik ish reja checklisti uchun yetarli hisoblanadi —
+      // DU-46ning o'z ichidagi tasdiqlash zanjiri (bekat navbatchisigacha) mustaqil davom etadi,
+      // lekin oylik vazifani endi bloklamaydi.
+      if (onAccepted) onAccepted(true, false)
 
-    showMsg('Bajarildi belgilandi!')
-    saveEntries(updated, prev).catch(() => { })
+      const activeReportId = updatedEntry.linkedReportId || taskContext?.reportId
+      const activeTaskType = updatedEntry.linkedTaskType || taskContext?.taskType
+      const activeEntryIndex = updatedEntry.linkedEntryIndex ?? taskContext?.entryIndex
+      if (activeReportId && activeTaskType && activeEntryIndex !== undefined) {
+        import('@/lib/supabase-db').then(db => {
+          db.updateReportEntryInProgress(activeReportId, activeEntryIndex, activeTaskType, false)
+        }).catch(err => console.error("In progress clear error:", err))
+      }
+    } catch { /* saveEntries ichida xato xabari ko'rsatiladi */ }
   }
 
   const handleBartarafTasdiqlash = async (i: number) => {
