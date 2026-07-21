@@ -79,6 +79,11 @@ const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) 
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const EMPTY_SHU2 = (): SHU2Entry => ({
+  // Qator yaratilgan ZAHOTI barqaror _id beramiz (server kutmasdan) —
+  // aks holda, tarmoq sekinligi/qayta bosish sabab bitta "Tasdiqlash" amali
+  // ikki marta jo'natilsa, har safar serverda YANGI _id olib, bitta yozuv
+  // o'rniga ikkita mustaqil (duplikat) qator paydo bo'lar edi.
+  _id: crypto.randomUUID(),
   nomber: '',
   sana: '', yozuv: '', imzo: '',
   tasdiqlandi: false,

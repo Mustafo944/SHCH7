@@ -10,6 +10,7 @@ import { Plus, Trash2, CheckCircle2, Download, ChevronLeft, ChevronRight, Calend
 import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel, trimTrailingEmpty, isFutureDate } from './helpers'
 import { DateInput, TimeInput } from './JournalSelectModal'
 import { ApprovalChainModal } from './ApprovalChainModal'
+import { TaskSelectModal } from './TaskSelectModal'
 import { MicButton } from './MicButton'
 import { getCreator, getNextApproverRole } from '@/lib/journals/du46Approval'
 
@@ -83,6 +84,11 @@ const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) 
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const EMPTY_DU46 = (month?: string): DU46Entry => ({
+  // Qator yaratilgan ZAHOTI barqaror _id beramiz (server kutmasdan) —
+  // aks holda, tarmoq sekinligi/qayta bosish sabab bitta "Boshlandi" amali
+  // ikki marta jo'natilsa, har safar serverda YANGI _id olib, bitta yozuv
+  // o'rniga ikkita mustaqil (duplikat) qator paydo bo'lar edi.
+  _id: crypto.randomUUID(),
   nomber: '',
   oyKun1: '', soatMinut1: '', kamchilik: '',
   oyKun2: '', soatMinut2: '', xabarUsuli: '',
@@ -164,6 +170,8 @@ export function DU46JournalView({
 
   // Tasdiqlash zanjirini tanlash modali
   const [approvalChainModal, setApprovalChainModal] = useState<{ index: number, isEdit: boolean, currentChain: string[] } | null>(null)
+  // Standart vazifalar ro'yxatidan tanlash modali (3-ustun)
+  const [taskModalIdx, setTaskModalIdx] = useState<number | null>(null)
 
   // Bugungi sana va tanlangan oy
   const today = new Date()
@@ -1137,6 +1145,14 @@ export function DU46JournalView({
                             />
                             {canWriteCol3 && e.oyKun1 && e.soatMinut1 && (
                               <div className="absolute top-1 right-1 flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setTaskModalIdx(i)}
+                                  title="Standart vazifalar ro'yxatidan tanlash"
+                                  className="flex items-center justify-center rounded-lg bg-purple-50 p-1.5 text-purple-600 shadow-sm border border-purple-100 transition-all hover:bg-purple-600 hover:text-white"
+                                >
+                                  <Plus size={12} strokeWidth={3} />
+                                </button>
                                 <MicButton
                                   baseText={e.kamchilik || ''}
                                   onChange={(val) => update(i, 'kamchilik', val)}
@@ -1465,6 +1481,17 @@ export function DU46JournalView({
           creatorRole={userRole}
           onCancel={() => setApprovalChainModal(null)}
           onSave={(chain) => handleSaveApprovalChain(approvalChainModal.index, chain)}
+        />
+      )}
+
+      {/* ═══ Standart vazifa tanlash modali (3-ustun) ═══ */}
+      {taskModalIdx !== null && (
+        <TaskSelectModal
+          onSelect={(text) => {
+            update(taskModalIdx, 'kamchilik', text)
+            setTaskModalIdx(null)
+          }}
+          onClose={() => setTaskModalIdx(null)}
         />
       )}
     </div>
