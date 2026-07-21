@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { X, Save, Edit3, Plus, Trash2, Printer, Download, AlertTriangle, Loader2, ArrowRightLeft, Target, ChevronLeft, ChevronRight, Clock, History } from 'lucide-react';
+import { X, Save, Edit3, Plus, Trash2, Printer, Download, AlertTriangle, Loader2, ArrowRightLeft, Target, ChevronLeft, ChevronRight, Clock, History, Calendar, User, QrCode } from 'lucide-react';
 import { StationEquipments, EquipmentCategory } from '@/types';
 import { getStationEquipments, upsertStationEquipments, getStationTaskScans, type TaskScan } from '@/lib/supabase-db';
 import { useToast } from '@/lib/hooks/useToast';
@@ -37,10 +37,18 @@ function colorStyle(color: string): CategoryColorStyle {
   return COLOR_STYLES[color] || COLOR_STYLES.blue;
 }
 
-// Skaner sana/vaqtini butun modal bo'ylab bir xil formatda ko'rsatish uchun
-function formatScanDate(iso: string): string {
-  return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+// Skaner vaqtini soat:daqiqa ko'rinishida
+function formatScanTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 }
+
+// Sanani mahalliy vaqt bo'yicha YYYY-MM-DD kalitiga aylantiradi (kalendar guruhlash uchun)
+function toDayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const WEEKDAYS_UZ = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
+const MONTHS_UZ = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
 
 // Eski ma'lumotlarda equipmentType bitta string edi (masalan "machtali"),
 // yangi formatda esa massiv (bir nechta toifa bog'lanishi mumkin). Ikkalasini
@@ -74,16 +82,241 @@ function EmptyHint({ icon: Icon, text }: { icon: React.ElementType; text: string
   );
 }
 
-function BackHeader({ title, onBack }: { title: string; onBack: () => void }) {
+// QR qiymatidan tiklanadigan uskuna ma'lumoti (nomi + tegishli toifa)
+interface EquipmentMeta { name: string; categoryId: string; categoryName: string; color: string }
+
+// ─── Skaner tarixi kalendar ko'rinishi ───────────────────────────────
+// Skaner zichligiga qarab kun katakchasining rangi (bir hil binafsha,
+// ochiqdan → to'qgacha — heatmap uslubida).
+function dayDensityClass(count: number, isSelected: boolean, isToday: boolean): string {
+  if (isSelected) return 'bg-gradient-to-br from-purple-600 to-violet-600 text-white shadow-lg shadow-purple-500/30 scale-[1.03]';
+  const ring = isToday ? ' ring-2 ring-blue-400 ring-offset-1' : '';
+  if (count === 0) return 'text-slate-400 hover:bg-slate-100' + ring;
+  if (count <= 2) return 'bg-purple-100 text-purple-700 hover:bg-purple-200 font-black' + ring;
+  if (count <= 5) return 'bg-purple-300 text-purple-900 hover:bg-purple-400 font-black' + ring;
+  return 'bg-purple-500 text-white hover:bg-purple-600 font-black' + ring;
+}
+
+const ScanHistoryCalendar = memo(function ScanHistoryCalendar({
+  scans,
+  equipmentMetaByQr,
+}: {
+  scans: TaskScan[];
+  equipmentMetaByQr: Map<string, EquipmentMeta>;
+}) {
+  // Skanerlarni mahalliy kun bo'yicha guruhlaymiz
+  const scansByDay = useMemo(() => {
+    const map = new Map<string, TaskScan[]>();
+    scans.forEach(s => {
+      const key = toDayKey(new Date(s.scanned_at));
+      const list = map.get(key);
+      if (list) list.push(s);
+      else map.set(key, [s]);
+    });
+    return map;
+  }, [scans]);
+
+  // Boshlang'ich: eng so'nggi skaner qilingan oy va kun (scans yangi→eski saralangan)
+  const latestIso = scans[0]?.scanned_at;
+  const [viewYear, setViewYear] = useState(() => (latestIso ? new Date(latestIso) : new Date()).getFullYear());
+  const [viewMonth, setViewMonth] = useState(() => (latestIso ? new Date(latestIso) : new Date()).getMonth());
+  const [selectedDay, setSelectedDay] = useState<string | null>(() => latestIso ? toDayKey(new Date(latestIso)) : null);
+
+  const todayKey = toDayKey(new Date());
+
+  // Joriy oy katakchalari (dushanba boshlanadigan hafta)
+  const cells = useMemo(() => {
+    const firstWeekday = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const arr: (number | null)[] = [];
+    for (let i = 0; i < firstWeekday; i++) arr.push(null);
+    for (let d = 1; d <= daysInMonth; d++) arr.push(d);
+    return arr;
+  }, [viewYear, viewMonth]);
+
+  // Shu oydagi jami skanerlar va faol kunlar soni
+  const monthStats = useMemo(() => {
+    let total = 0, activeDays = 0;
+    scansByDay.forEach((list, key) => {
+      const [y, m] = key.split('-').map(Number);
+      if (y === viewYear && m === viewMonth + 1) { total += list.length; activeDays++; }
+    });
+    return { total, activeDays };
+  }, [scansByDay, viewYear, viewMonth]);
+
+  const goPrev = () => {
+    setViewMonth(m => { if (m === 0) { setViewYear(y => y - 1); return 11; } return m - 1; });
+  };
+  const goNext = () => {
+    setViewMonth(m => { if (m === 11) { setViewYear(y => y + 1); return 0; } return m + 1; });
+  };
+
+  const resolveMeta = (qr: string) => equipmentMetaByQr.get(qr) || null;
+
+  // Tanlangan kun skanerlari — vaqt bo'yicha (ertadan kechga) saralangan
+  const dayScans = useMemo(() => {
+    if (!selectedDay) return [];
+    return [...(scansByDay.get(selectedDay) || [])].sort(
+      (a, b) => new Date(a.scanned_at).getTime() - new Date(b.scanned_at).getTime()
+    );
+  }, [selectedDay, scansByDay]);
+
+  const selectedLabel = useMemo(() => {
+    if (!selectedDay) return '';
+    const [y, m, d] = selectedDay.split('-').map(Number);
+    const wd = WEEKDAYS_UZ[(new Date(y, m - 1, d).getDay() + 6) % 7];
+    return `${d} ${MONTHS_UZ[m - 1]}, ${y} · ${wd}`;
+  }, [selectedDay]);
+
+  if (scans.length === 0) {
+    return <EmptyHint icon={History} text="Hali hech qanday qurilma skaner qilinmagan" />;
+  }
+
   return (
-    <div className="mb-1 flex items-center gap-3">
-      <button onClick={onBack} className="shrink-0 rounded-xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition hover:bg-slate-50">
-        <ChevronLeft size={18} />
-      </button>
-      <h3 className="truncate text-base font-black tracking-tight text-slate-900">{title}</h3>
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,360px)_1fr]">
+      {/* ── Kalendar ── */}
+      <div className="rounded-3xl border border-purple-100 bg-white/80 p-4 shadow-sm">
+        {/* Oy navigatsiyasi */}
+        <div className="mb-3 flex items-center justify-between">
+          <button onClick={goPrev} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-purple-600">
+            <ChevronLeft size={18} />
+          </button>
+          <div className="text-center">
+            <p className="flex items-center justify-center gap-1.5 text-sm font-black tracking-tight text-slate-900">
+              <Calendar size={15} className="text-purple-500" /> {MONTHS_UZ[viewMonth]} {viewYear}
+            </p>
+            <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              {monthStats.total} skaner · {monthStats.activeDays} kun
+            </p>
+          </div>
+          <button onClick={goNext} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-purple-600">
+            <ChevronRight size={18} />
+          </button>
+        </div>
+
+        {/* Hafta kunlari */}
+        <div className="mb-1 grid grid-cols-7 gap-1">
+          {WEEKDAYS_UZ.map(w => (
+            <div key={w} className="py-1 text-center text-[10px] font-black uppercase tracking-wide text-slate-400">{w}</div>
+          ))}
+        </div>
+
+        {/* Kunlar */}
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((day, i) => {
+            if (day === null) return <div key={`e${i}`} />;
+            const key = toDayKey(new Date(viewYear, viewMonth, day));
+            const count = scansByDay.get(key)?.length || 0;
+            const isSelected = selectedDay === key;
+            const isToday = key === todayKey;
+            return (
+              <button
+                key={key}
+                onClick={() => setSelectedDay(key)}
+                disabled={count === 0}
+                className={`relative flex aspect-square items-center justify-center rounded-xl text-sm font-bold transition-all disabled:cursor-default ${dayDensityClass(count, isSelected, isToday)}`}
+              >
+                {day}
+                {count > 0 && !isSelected && (
+                  <span className="absolute right-1 top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-white/90 px-0.5 text-[8px] font-black text-purple-600 shadow-sm">
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Zichlik izohi (legend) */}
+        <div className="mt-3 flex items-center justify-end gap-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-400">
+          Kam
+          <span className="h-3 w-3 rounded bg-purple-100" />
+          <span className="h-3 w-3 rounded bg-purple-300" />
+          <span className="h-3 w-3 rounded bg-purple-500" />
+          Ko&apos;p
+        </div>
+      </div>
+
+      {/* ── Tanlangan kun tafsilotlari ── */}
+      <div className="rounded-3xl border border-slate-200 bg-white/80 p-4 shadow-sm">
+        {!selectedDay ? (
+          <div className="flex h-full min-h-[200px] items-center justify-center">
+            <p className="text-sm font-bold uppercase tracking-widest text-slate-300">Kalendardan kun tanlang</p>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
+                  <Calendar size={17} />
+                </div>
+                <p className="truncate text-sm font-black tracking-tight text-slate-900">{selectedLabel}</p>
+              </div>
+              <span className="shrink-0 rounded-lg border border-purple-100 bg-purple-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-purple-600">
+                {dayScans.length} skaner
+              </span>
+            </div>
+
+            {dayScans.length === 0 ? (
+              <EmptyHint icon={QrCode} text="Bu kuni skaner qilinmagan" />
+            ) : (
+              // Vaqt bo'yicha tartiblangan timeline
+              <div className="relative space-y-2 pl-1">
+                {dayScans.map((scan, idx) => {
+                  const meta = resolveMeta(scan.equipment_name);
+                  const catStyle = meta ? colorStyle(meta.color) : null;
+                  return (
+                  <div key={scan.id} className="relative flex gap-3">
+                    {/* Timeline chizig'i + nuqta */}
+                    <div className="flex flex-col items-center">
+                      <div className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-purple-500 ring-4 ring-purple-100" />
+                      {idx < dayScans.length - 1 && <div className="w-px flex-1 bg-slate-200" />}
+                    </div>
+                    {/* Skaner kartasi */}
+                    <div className="mb-1 flex-1 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-purple-200 hover:shadow-md">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          {/* Qaysi toifadagi qurilma — masalan "Strelkalar" */}
+                          {meta && (
+                            <span className={`mb-1 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${catStyle?.iconBg || 'bg-slate-100 text-slate-500'}`}>
+                              {meta.categoryName || 'Toifa'}
+                            </span>
+                          )}
+                          <p className="text-sm font-black text-slate-800 break-words">
+                            {meta?.name || scan.equipment_name}
+                          </p>
+                          {!meta && (
+                            <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-500">
+                              Bu qurilma ro&apos;yxatdan o&apos;chirilgan bo&apos;lishi mumkin
+                            </p>
+                          )}
+                        </div>
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-blue-50 px-2 py-1 text-[11px] font-black text-blue-600">
+                          <Clock size={11} /> {formatScanTime(scan.scanned_at)}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600">
+                          <User size={12} className="text-slate-400" /> {scan.scanned_by}
+                        </span>
+                        {scan.task_nsh && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-purple-500">
+                            {scan.task_nsh}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
-}
+});
 
 // ─── DebouncedInput: local state bilan ishlaydi, blur/Enter da parent'ga uzatadi ─
 
@@ -280,10 +513,6 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
   const [selectedTaskNsh, setSelectedTaskNsh] = useState<string | null>(null);
   const [selectedBolim, setSelectedBolim] = useState<number | null>(null);
 
-  // Skaner tarixi — uch bosqichli navigatsiya: Toifa → Uskuna → Skaner tarixi
-  const [selectedHistoryCategoryId, setSelectedHistoryCategoryId] = useState<string | null>(null);
-  const [selectedHistoryItemId, setSelectedHistoryItemId] = useState<string | null>(null);
-
   // QR chop etish — xuddi shu naqshdagi uch bosqichli navigatsiya: Toifa → Uskuna → bitta QR kod
   const [selectedPrintCategoryId, setSelectedPrintCategoryId] = useState<string | null>(null);
   const [selectedPrintItemId, setSelectedPrintItemId] = useState<string | null>(null);
@@ -298,55 +527,12 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
 
   // Xom QR qiymatini ("smart-shch-...") uskunaning o'qiladigan nomi va toifasiga moslashtiramiz
   const equipmentMetaByQr = useMemo(() => {
-    const map = new Map<string, { name: string; categoryId: string }>();
+    const map = new Map<string, EquipmentMeta>();
     categories.forEach(cat => (cat.items || []).forEach(item => {
-      map.set(buildEquipmentQrValue(stationId, item.id), { name: item.name, categoryId: cat.id });
+      map.set(buildEquipmentQrValue(stationId, item.id), { name: item.name, categoryId: cat.id, categoryName: cat.name, color: cat.color });
     }));
     return map;
   }, [categories, stationId]);
-
-  // Skanerlarni uskuna bo'yicha guruhlaymiz (so'rov allaqachon eng yangisidan eskisiga saralangan)
-  const scansByEquipmentQr = useMemo(() => {
-    const map = new Map<string, TaskScan[]>();
-    (scanHistory || []).forEach(scan => {
-      const list = map.get(scan.equipment_name);
-      if (list) list.push(scan);
-      else map.set(scan.equipment_name, [scan]);
-    });
-    return map;
-  }, [scanHistory]);
-
-  const scanCountByCategory = useMemo(() => {
-    const counts = new Map<string, number>();
-    scansByEquipmentQr.forEach((scans, qr) => {
-      const meta = equipmentMetaByQr.get(qr);
-      if (meta) counts.set(meta.categoryId, (counts.get(meta.categoryId) || 0) + scans.length);
-    });
-    return counts;
-  }, [scansByEquipmentQr, equipmentMetaByQr]);
-
-  const selectedHistoryCategory = useMemo(
-    () => categories.find(c => c.id === selectedHistoryCategoryId) || null,
-    [categories, selectedHistoryCategoryId]
-  );
-
-  const historyCategoryItems = useMemo(() => {
-    if (!selectedHistoryCategory) return [];
-    return (selectedHistoryCategory.items || []).map(item => {
-      const scans = scansByEquipmentQr.get(buildEquipmentQrValue(stationId, item.id)) || [];
-      return { item, scanCount: scans.length, lastScan: scans[0] || null };
-    });
-  }, [selectedHistoryCategory, scansByEquipmentQr, stationId]);
-
-  const selectedHistoryItem = useMemo(
-    () => (selectedHistoryCategory?.items || []).find(i => i.id === selectedHistoryItemId) || null,
-    [selectedHistoryCategory, selectedHistoryItemId]
-  );
-
-  const selectedHistoryItemScans = useMemo(() => {
-    if (!selectedHistoryItem) return [];
-    return scansByEquipmentQr.get(buildEquipmentQrValue(stationId, selectedHistoryItem.id)) || [];
-  }, [scansByEquipmentQr, stationId, selectedHistoryItem]);
 
   const selectedPrintCategory = useMemo(
     () => categories.find(c => c.id === selectedPrintCategoryId) || null,
@@ -361,16 +547,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
 
   const openHistoryTab = useCallback(() => {
     setActiveTab('history');
-    setSelectedHistoryCategoryId(null);
-    setSelectedHistoryItemId(null);
   }, []);
-
-  const backToHistoryCategories = useCallback(() => {
-    setSelectedHistoryCategoryId(null);
-    setSelectedHistoryItemId(null);
-  }, []);
-
-  const backToHistoryItems = useCallback(() => setSelectedHistoryItemId(null), []);
 
   const openPrintingView = useCallback(() => {
     setIsPrinting(true);
@@ -1002,93 +1179,13 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
               )}
 
               {activeTab === 'history' && (
-                <div className="flex flex-col gap-3">
-                  {isScanHistoryLoading ? (
-                    <div className="flex h-40 items-center justify-center">
-                      <Loader2 className="animate-spin text-blue-500" size={32} />
-                    </div>
-                  ) : !selectedHistoryCategory ? (
-                    // BOSQICH 1 — Toifalar
-                    categories.length === 0 ? (
-                      <EmptyHint icon={History} text="Hali toifa qo'shilmagan" />
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {categories.map(category => (
-                          <button
-                            key={category.id}
-                            onClick={() => setSelectedHistoryCategoryId(category.id)}
-                            className="premium-card flex items-center gap-4 p-4 sm:p-5 text-left"
-                          >
-                            <CategoryAvatar name={category.name} color={category.color} />
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-black text-slate-900 tracking-tight truncate">{category.name || 'Nomsiz toifa'}</h4>
-                              <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">{scanCountByCategory.get(category.id) || 0} marta skaner qilingan</p>
-                            </div>
-                            <ChevronRight size={20} className="shrink-0 text-slate-300" />
-                          </button>
-                        ))}
-                      </div>
-                    )
-                  ) : !selectedHistoryItem ? (
-                    // BOSQICH 2 — Toifadagi uskunalar
-                    <>
-                      <BackHeader title={selectedHistoryCategory.name || 'Toifa'} onBack={backToHistoryCategories} />
-                      {historyCategoryItems.length === 0 ? (
-                        <EmptyHint icon={History} text="Bu toifada uskuna yo'q" />
-                      ) : (
-                        <div className="flex flex-col gap-3">
-                          {historyCategoryItems.map(({ item, scanCount, lastScan }) => (
-                            <button
-                              key={item.id}
-                              onClick={() => setSelectedHistoryItemId(item.id)}
-                              className="premium-card flex items-center justify-between gap-3 p-4 text-left"
-                            >
-                              <div className="min-w-0">
-                                <p className="font-bold text-slate-800 truncate">{item.name}</p>
-                                <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                  {scanCount > 0 ? `${scanCount} marta skaner qilingan` : 'Hali skaner qilinmagan'}
-                                </p>
-                              </div>
-                              <div className="flex shrink-0 items-center gap-3">
-                                {lastScan && (
-                                  <div className="text-right">
-                                    <p className="text-xs font-bold text-slate-600">{lastScan.scanned_by}</p>
-                                    <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-400 font-medium">
-                                      <Clock size={10} /> {formatScanDate(lastScan.scanned_at)}
-                                    </p>
-                                  </div>
-                                )}
-                                <ChevronRight size={18} className="text-slate-300" />
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    // BOSQICH 3 — Tanlangan uskunaning to'liq skaner tarixi
-                    <>
-                      <BackHeader title={selectedHistoryItem.name || 'Uskuna'} onBack={backToHistoryItems} />
-                      {selectedHistoryItemScans.length === 0 ? (
-                        <EmptyHint icon={History} text="Bu uskuna hali skaner qilinmagan" />
-                      ) : (
-                        <div className="flex flex-col gap-3">
-                          {selectedHistoryItemScans.map((scan: TaskScan) => (
-                            <div key={scan.id} className="premium-card flex items-center justify-between gap-3 p-4">
-                              <div className="min-w-0">
-                                <p className="text-[10px] font-bold text-purple-500 uppercase tracking-widest truncate">{scan.task_nsh}</p>
-                                <p className="mt-1 text-xs font-bold text-slate-600">{scan.scanned_by}</p>
-                              </div>
-                              <p className="shrink-0 flex items-center gap-1 text-[10px] text-slate-400 font-medium">
-                                <Clock size={10} /> {formatScanDate(scan.scanned_at)}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
+                isScanHistoryLoading ? (
+                  <div className="flex h-40 items-center justify-center">
+                    <Loader2 className="animate-spin text-blue-500" size={32} />
+                  </div>
+                ) : (
+                  <ScanHistoryCalendar scans={scanHistory || []} equipmentMetaByQr={equipmentMetaByQr} />
+                )
               )}
             </>
           )}

@@ -179,7 +179,7 @@ export function MpsFriksionJournalView({
             <h4 className="font-bold">MSP turidagi elektrodvigatellarni friksion tokini o&apos;lchash</h4>
             <p className="text-sm text-slate-500">Bajarilish muddati: 3 oyda bir marotaba yoki el. o&apos;tkazgich, friksion baraban va dvigatellar almashtirilganda.</p>
           </div>
-          <div className="overflow-x-auto pb-4">
+          <div className="overflow-x-auto overscroll-x-contain pb-4">
             <table className="w-full min-w-[800px] border-collapse bg-white shadow-sm ring-1 ring-slate-200 rounded-xl">
             <thead>
               <tr className="bg-purple-50 text-[10px] font-black uppercase text-purple-700 border-b border-slate-200">

@@ -294,6 +294,7 @@ export function DU46JournalView({
           if (emptyIndex !== -1) {
             n[emptyIndex] = {
               ...n[emptyIndex],
+              nomber: n[emptyIndex].nomber || getNextNomber(n),
               oyKun1: todayStr,
               soatMinut1: timeStr,
               linkedReportId: taskContext.reportId,
@@ -304,6 +305,7 @@ export function DU46JournalView({
           } else {
             // Append a new row if no empty rows
             const newRow = EMPTY_DU46(journalMonth)
+            newRow.nomber = getNextNomber(n)
             newRow.oyKun1 = todayStr
             newRow.soatMinut1 = timeStr
             newRow.linkedReportId = taskContext.reportId
@@ -435,29 +437,56 @@ export function DU46JournalView({
 
   // ── Qator boshqaruvi ─────────────────────────────────────────────────────────
   // Bug #16 fix: yangi qatorlarga journalMonth ni uzatamiz
+  // Berilgan (hozirgi eng so'nggi) ro'yxat asosida keyingi "№" raqamini
+  // hisoblaydi — DB'dagi (allEntries) VA shu ro'yxatdagi eng katta raqamdan
+  // kelib chiqadi.
+  // MUHIM: bu funksiya HAR DOIM `setEntries(prev => ...)` ICHIDA, `prev`
+  // argumenti bilan chaqirilishi kerak — tashqi `entries` o'zgaruvchisidan
+  // emas. Aks holda: "Qator qo'shish" tez-tez (ketma-ket) bosilsa, React
+  // hali qayta render qilib ulgurmasdan ikkinchi bosish ham ESKIRGAN
+  // `entries`ni ko'radi (birinchi bosishda qo'shilgan qatorni "ko'rmaydi"),
+  // natijada ikkinchi qatorga birinchisidan KATTA emas, KICHIK raqam
+  // (masalan 2 dan keyin yana 1) berilib qolar edi.
+  const getNextNomber = (localEntries: DU46Entry[]): string => {
+    // Jadvalda "№" ustuni `nomber` bo'sh bo'lsa qator pozitsiyasini (i+1)
+    // placeholder sifatida ko'rsatadi. Shuning uchun keyingi raqamni ham xuddi
+    // shu "amalda ko'rinadigan" raqamdan hisoblaymiz — aks holda `nomber`i
+    // bazada bo'sh saqlangan qatorlar 0 deb olinib, yangi qatorga ekranda
+    // allaqachon band bo'lgan raqam (masalan yana "1") berilib qolar edi.
+    const effectiveMax = (list: DU46Entry[]) =>
+      list.reduce((max, x, i) => Math.max(max, parseInt(x.nomber || '') || (i + 1)), 0)
+    // allEntries BARCHA oylarni saqlaydi, raqamlash esa har oy 1 dan boshlanadi
+    // (jadval ham oy bo'yicha filtrlangan ro'yxatni ko'rsatadi) — shuning uchun
+    // faqat joriy oy qatorlarini olamiz (loadJournalData'dagi filtr bilan bir xil).
+    const monthDbEntries = allEntries.filter(
+      e => e.journalMonth === journalMonth || (!e.journalMonth && !allEntries.some(x => x.journalMonth))
+    )
+    return String(Math.max(effectiveMax(monthDbEntries), effectiveMax(localEntries)) + 1)
+  }
+
   const addRow = () => {
     if (isCurrentMonth) {
-      const newEntry = EMPTY_DU46(journalMonth);
       const selDayStr = String(viewMode === 'kunlik' ? selectedDateFilter : today.getDate()).padStart(2, '0');
-      newEntry.oyKun1 = `${selDayStr}-${selectedMonth}-${selectedYear}`;
-
-      // Umumiy jurnalda nechinchi yozuv bor bo'lsa o'shandan keyingi son chiqadi
-      const maxNomber = allEntries.length > 0 ? Math.max(...allEntries.map(x => parseInt(x.nomber || '0') || 0)) : 0;
-      const currentNewCount = entries.filter(x => (x as any)._isNew).length;
-      newEntry.nomber = String(maxNomber + currentNewCount + 1);
+      const oyKun1 = `${selDayStr}-${selectedMonth}-${selectedYear}`;
 
       // Kim qo'shganini darhol belgilaymiz
-      if (isYulUstasi) newEntry.createdByRole = 'yul_ustasi';
-      else if (isEchXodimi) newEntry.createdByRole = 'ech_xodimi';
-      else if (isElektromexanik) newEntry.createdByRole = 'worker';
-      else if (isBekatNavbatchisi) newEntry.createdByRole = 'bekat_navbatchisi';
-      else if (isBekatBoshlighi) newEntry.createdByRole = 'bekat_boshlighi';
-
-      // Yangi qo'shilgan qator qaysi sana yozilishidan qat'i nazar shu sessiyada ko'rinib turishi uchun
-      (newEntry as any)._isNew = true;
+      let createdByRole: DU46Entry['createdByRole'] | undefined;
+      if (isYulUstasi) createdByRole = 'yul_ustasi';
+      else if (isEchXodimi) createdByRole = 'ech_xodimi';
+      else if (isElektromexanik) createdByRole = 'worker';
+      else if (isBekatNavbatchisi) createdByRole = 'bekat_navbatchisi';
+      else if (isBekatBoshlighi) createdByRole = 'bekat_boshlighi';
 
       startTransition(() => {
-        setEntries([...entries, newEntry]);
+        setEntries(prev => {
+          const newEntry = EMPTY_DU46(journalMonth);
+          newEntry.oyKun1 = oyKun1;
+          newEntry.nomber = getNextNomber(prev);
+          if (createdByRole) newEntry.createdByRole = createdByRole;
+          // Yangi qo'shilgan qator qaysi sana yozilishidan qat'i nazar shu sessiyada ko'rinib turishi uchun
+          (newEntry as any)._isNew = true;
+          return [...prev, newEntry];
+        });
       })
     }
   }
@@ -1027,7 +1056,7 @@ export function DU46JournalView({
         </div>
 
         {/* --- Jadval --- */}
-        <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
+        <div className="overflow-x-auto overscroll-x-contain rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
           <table className="w-full border-collapse text-[11px] text-slate-700">
             <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-tight text-slate-500 border-b-2 border-slate-200">
               <tr>
@@ -1132,7 +1161,7 @@ export function DU46JournalView({
                             {e.kamchilik || <span className="text-slate-300">—</span>}
                           </div>
                         ) : (
-                          <div className="relative group/text">
+                          <div>
                             <LocalTextarea
                               value={e.kamchilik || ''}
                               onChange={(val: string) => update(i, 'kamchilik', val)}
@@ -1144,7 +1173,7 @@ export function DU46JournalView({
                               className="w-full resize-y rounded bg-transparent px-3 py-2 text-[11px] font-medium text-slate-700 outline-none transition-all focus:bg-white focus:shadow-inner"
                             />
                             {canWriteCol3 && e.oyKun1 && e.soatMinut1 && (
-                              <div className="absolute top-1 right-1 flex items-center gap-1">
+                              <div className="mt-1 flex items-center justify-end gap-1">
                                 <button
                                   type="button"
                                   onClick={() => setTaskModalIdx(i)}
@@ -1316,32 +1345,33 @@ export function DU46JournalView({
                             {e.bartarafInfo || <span className="text-slate-300">—</span>}
                           </div>
                         ) : (
-                          <LocalTextarea
-                            value={e.bartarafInfo || ''}
-                            onChange={(val: string) => update(i, 'bartarafInfo', val)}
-                            readOnly={!canWriteCol12}
-                            rows={3}
-                            spellCheck={false}
-                            lang="uz"
-                            className={`w-full resize-y rounded px-3 py-2 text-[11px] font-medium outline-none transition-all ${!canWriteCol12 && !e.bartarafInfo
-                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                : canWriteCol12
-                                  ? 'bg-transparent focus:bg-white focus:shadow-inner text-slate-700'
-                                  : 'bg-transparent text-slate-700 cursor-not-allowed'
-                              }`}
-                            placeholder={!isCol3Finished(e) ? '3-ustun tasdiqlanishi kerak...' : ''}
-                          />
+                          <>
+                            <LocalTextarea
+                              value={e.bartarafInfo || ''}
+                              onChange={(val: string) => update(i, 'bartarafInfo', val)}
+                              readOnly={!canWriteCol12}
+                              rows={3}
+                              spellCheck={false}
+                              lang="uz"
+                              className={`w-full resize-y rounded px-3 py-2 text-[11px] font-medium outline-none transition-all ${!canWriteCol12 && !e.bartarafInfo
+                                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                  : canWriteCol12
+                                    ? 'bg-transparent focus:bg-white focus:shadow-inner text-slate-700'
+                                    : 'bg-transparent text-slate-700 cursor-not-allowed'
+                                }`}
+                              placeholder={!isCol3Finished(e) ? '3-ustun tasdiqlanishi kerak...' : ''}
+                            />
+                            {canWriteCol12 && (
+                              <div className="mt-1 flex items-center justify-end">
+                                <MicButton
+                                  baseText={e.bartarafInfo || ''}
+                                  onChange={(val) => update(i, 'bartarafInfo', val)}
+                                />
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
-
-                      {!isDispatcher && canWriteCol12 && (
-                        <div className="absolute top-1 right-1">
-                          <MicButton
-                            baseText={e.bartarafInfo || ''}
-                            onChange={(val) => update(i, 'bartarafInfo', val)}
-                          />
-                        </div>
-                      )}
 
                       <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
                         {e.bartarafInfo?.trim() && hasRightToFix && !isBekatNavbatchisi && !e.bartarafBajarildi && !isMonthInPast(journalMonth) && (

@@ -317,6 +317,9 @@ export default function DispatcherPage() {
   const { todayReja, allQolibKetgan, allSababliBajarilmagan } = useMemo(() => {
     type TaskObj = {
       reportId: string
+      // Jurnal yozuvlari (masalan DU-46 dagi linkedEntryIndex) aynan shu indeks
+      // orqali vazifaga bog'lanadi — Tafsilotlar oynasida kerak
+      entryIndex: number
       stationId: string
       stationName: string
       workerName: string
@@ -338,7 +341,7 @@ export default function DispatcherPage() {
       .filter(r => !!r.confirmedAt)
       .forEach(r => {
         const isCurrentMonth = r.month === currentMonthStr
-        r.entries.forEach(e => {
+        r.entries.forEach((e, entryIndex) => {
           const taskDay = parseInt((e.ragat || '').trim(), 10)
           if (isNaN(taskDay)) return
 
@@ -355,6 +358,7 @@ export default function DispatcherPage() {
 
             const taskObj = {
               reportId: r.id,
+              entryIndex,
               stationId: r.stationId,
               stationName: r.stationName,
               workerName: r.workerName,

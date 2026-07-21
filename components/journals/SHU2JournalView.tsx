@@ -258,14 +258,21 @@ export function SHU2JournalView({
     const year = jY || String(now.getFullYear())
     const targetSana = `${day}.${month}.${year}`
 
-    const maxNomber = allEntries.length > 0 ? Math.max(...allEntries.map(x => parseInt(x.nomber || '0') || 0)) : 0;
-    const currentNewCount = entries.filter(x => (x as any)._isNew).length;
-    const newNomber = String(maxNomber + currentNewCount + 1);
-
-    const newRow: any = { ...EMPTY_SHU2(), nomber: newNomber, sana: targetSana }
-    // Yangi qator qaysi sana yozilishidan qat'i nazar shu sessiyada ko'rinib turishi uchun
-    newRow._isNew = true
-    setEntries([...entries, newRow])
+    // MUHIM: raqam `setEntries(prev => ...)` ICHIDA, `prev`ga qarab
+    // hisoblanadi — tashqi `entries`dan emas. Aks holda "Qator qo'shish" tez
+    // ketma-ket bosilsa, React hali qayta render qilib ulgurmasdan ikkinchi
+    // bosish ham ESKIRGAN `entries`ni ko'radi (birinchisi qo'shgan qatorni
+    // "ko'rmaydi"), natijada ikkinchi qatorga birinchisidan KICHIK raqam
+    // berilib qolar edi (masalan 2 dan keyin yana 1).
+    setEntries(prev => {
+      const maxFromDb = allEntries.length > 0 ? Math.max(...allEntries.map(x => parseInt(x.nomber || '0') || 0)) : 0;
+      const maxFromLocal = prev.length > 0 ? Math.max(...prev.map(x => parseInt(x.nomber || '0') || 0)) : 0;
+      const newNomber = String(Math.max(maxFromDb, maxFromLocal) + 1);
+      const newRow: any = { ...EMPTY_SHU2(), nomber: newNomber, sana: targetSana }
+      // Yangi qator qaysi sana yozilishidan qat'i nazar shu sessiyada ko'rinib turishi uchun
+      newRow._isNew = true
+      return [...prev, newRow]
+    })
   }
 
   // "Qator o'chirish" tugmasi bosilganda qaysi qator o'chirilishi kerakligini
@@ -559,7 +566,7 @@ export function SHU2JournalView({
           )}
         </div>
 
-        <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
+        <div className="overflow-x-auto overscroll-x-contain rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
           <table className="w-full min-w-[700px] border-collapse text-[12px] text-slate-700">
             <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-tight text-slate-500 border-b-2 border-slate-200">
               <tr>
@@ -611,7 +618,7 @@ export function SHU2JournalView({
                       {isDispatcher ? (
                         <div className="px-2 py-2 min-h-[40px] text-slate-700">{displayYozuv || <span className="text-slate-300">—</span>}</div>
                       ) : (
-                        <div className="relative">
+                        <div>
                           <LocalTextarea
                             value={displayYozuv}
                             onChange={(val: string) => update(i, 'yozuv', val)}
@@ -619,10 +626,10 @@ export function SHU2JournalView({
                             rows={2}
                             spellCheck={false}
                             lang="uz"
-                            className={`w-full resize-y rounded bg-transparent px-2 py-2 pr-8 outline-none transition-all focus:bg-white focus:shadow-inner ${isLocked ? 'text-slate-400' : 'text-slate-700'}`}
+                            className={`w-full resize-y rounded bg-transparent px-2 py-2 outline-none transition-all focus:bg-white focus:shadow-inner ${isLocked ? 'text-slate-400' : 'text-slate-700'}`}
                           />
                           {!isLocked && (
-                            <div className="absolute top-1 right-1">
+                            <div className="mt-1 flex items-center justify-end">
                               <MicButton
                                 baseText={displayYozuv}
                                 onChange={(val) => update(i, 'yozuv', val)}

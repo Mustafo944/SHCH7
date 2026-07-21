@@ -129,7 +129,7 @@ export function RelayListModal({
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
+          <div className="overflow-x-auto overscroll-x-contain rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
             <table className="w-full min-w-[720px] border-collapse text-[12px] text-slate-700">
               <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500 border-b-2 border-slate-200">
                 <tr>

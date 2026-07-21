@@ -735,7 +735,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
           <div className="sm:hidden absolute top-0 right-0 bg-purple-500 text-white text-[10px] px-2 py-1 z-10 rounded-bl-lg font-bold">
             O&apos;ngga suring →
           </div>
-          <div className="overflow-x-auto overflow-y-hidden">
+          <div className="overflow-x-auto overflow-y-hidden overscroll-x-contain">
             <table style={{ minWidth: "1200px" }} className="w-full table-fixed border-collapse text-left text-[11px] text-slate-700">
               <thead className="border-b-2 border-purple-500/30 bg-slate-50 font-bold text-slate-600">
                 <tr>

@@ -24,7 +24,7 @@ import { AppSidebar, type SidebarNavItem } from '@/components/AppSidebar'
 import type { WorkReport, ReportEntry, Incident, JournalType } from '@/types'
 import { MONTHS } from '@/lib/constants'
 import dynamic from 'next/dynamic'
-import { JournalSelectModal, JournalMonthSelectModal } from '@/components/journals/JournalSelectModal'
+import { JournalMonthSelectModal } from '@/components/journals/JournalSelectModal'
 
 const DU46JournalView = dynamic(() => import('@/components/journals/DU46JournalView').then(mod => mod.DU46JournalView), { ssr: false })
 const SHU2JournalView = dynamic(() => import('@/components/journals/SHU2JournalView').then(mod => mod.SHU2JournalView), { ssr: false })
@@ -687,19 +687,57 @@ export default function WorkerPage() {
             <WorkerGraphicsView />
           </div>
           {view === 'journalSelect' && (
-            <JournalSelectModal
-              onSelect={(type) => {
-                setSelectedJournalType(type)
-                if (type === 'boshqa') {
-                  setView('boshqaJurnallar')
-                } else {
-                  setView('journalMonthSelect')
-                }
-              }}
-              onClose={() => setView('home')}
-              du46Count={pendingCounts.du46}
-              shu2Count={pendingCounts.shu2}
-            />
+            <div className="space-y-6 animate-fade-up">
+              <HeaderCard title="Ish Jurnallari" subtitle={stationName} />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 w-full">
+                <button
+                  onClick={() => { setSelectedJournalType('du46'); setView('journalMonthSelect') }}
+                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/40 backdrop-blur-md p-6 text-left transition-all hover:border-purple-300 hover:shadow-xl hover:shadow-purple-500/5 active:scale-95"
+                >
+                  {pendingCounts.du46 > 0 && (
+                    <div className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-[11px] font-black text-white shadow-lg shadow-red-500/30">
+                      {pendingCounts.du46 > 9 ? '9+' : pendingCounts.du46}
+                    </div>
+                  )}
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 transition-all group-hover:bg-white border border-transparent group-hover:border-purple-100 shadow-sm">
+                    <BookOpen size={28} />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900 tracking-tight">DU-46</h4>
+                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">Ko&apos;rik, tekshiruvlar tahlili va nosozliklar jurnali</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => { setSelectedJournalType('shu2'); setView('journalMonthSelect') }}
+                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/40 backdrop-blur-md p-6 text-left transition-all hover:border-amber-300 hover:shadow-xl hover:shadow-amber-500/5 active:scale-95"
+                >
+                  {pendingCounts.shu2 > 0 && (
+                    <div className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-[11px] font-black text-white shadow-lg shadow-red-500/30">
+                      {pendingCounts.shu2 > 9 ? '9+' : pendingCounts.shu2}
+                    </div>
+                  )}
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 transition-all group-hover:bg-white border border-transparent group-hover:border-amber-100 shadow-sm">
+                    <BookOpen size={28} />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900 tracking-tight">SHU-2</h4>
+                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">SMB va aloqa obyektlarida bajarilgan ishlar jurnali</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => { setSelectedJournalType('boshqa'); setView('boshqaJurnallar') }}
+                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/40 backdrop-blur-md p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
+                >
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
+                    <BookOpen size={28} />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900 tracking-tight">Boshqa jurnallar</h4>
+                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">Tez kunda yangi jurnallar ro&apos;yxati qo&apos;shiladi</p>
+                  </div>
+                </button>
+              </div>
+            </div>
           )}
           {view === 'journalMonthSelect' && selectedJournalType && (
             <JournalMonthSelectModal
@@ -756,7 +794,7 @@ export default function WorkerPage() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full">
                 <button
                   onClick={() => setView('alsnMonthSelect')}
-                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/[0.25] backdrop-blur-3xl p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
+                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/40 backdrop-blur-md p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
                 >
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
                     <BookOpen size={28} />
@@ -768,7 +806,7 @@ export default function WorkerPage() {
                 </button>
                 <button
                   onClick={() => setView('yerlatgichMonthSelect')}
-                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/[0.25] backdrop-blur-3xl p-6 text-left transition-all hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-500/5 active:scale-95"
+                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/40 backdrop-blur-md p-6 text-left transition-all hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-500/5 active:scale-95"
                 >
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-all group-hover:bg-white border border-transparent group-hover:border-emerald-100 shadow-sm">
                     <BookOpen size={28} />
@@ -780,7 +818,7 @@ export default function WorkerPage() {
                 </button>
                 <button
                   onClick={() => setView('alsnKodMonthSelect')}
-                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/[0.25] backdrop-blur-3xl p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
+                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/40 backdrop-blur-md p-6 text-left transition-all hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 active:scale-95"
                 >
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-all group-hover:bg-white border border-transparent group-hover:border-blue-100 shadow-sm">
                     <BookOpen size={28} />
@@ -792,7 +830,7 @@ export default function WorkerPage() {
                 </button>
                 <button
                   onClick={() => setView('mpsFriksionMonthSelect')}
-                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/[0.25] backdrop-blur-3xl p-6 text-left transition-all hover:border-violet-300 hover:shadow-xl hover:shadow-violet-500/5 active:scale-95"
+                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/40 backdrop-blur-md p-6 text-left transition-all hover:border-violet-300 hover:shadow-xl hover:shadow-violet-500/5 active:scale-95"
                 >
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 transition-all group-hover:bg-white border border-transparent group-hover:border-violet-100 shadow-sm">
                     <BookOpen size={28} />
@@ -804,7 +842,7 @@ export default function WorkerPage() {
                 </button>
                 <button
                   onClick={() => setView('dgaNazoratMonthSelect')}
-                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/[0.25] backdrop-blur-3xl p-6 text-left transition-all hover:border-amber-400 hover:shadow-xl hover:shadow-amber-500/5 active:scale-95"
+                  className="group relative flex items-center gap-5 rounded-[32px] border border-white/60 bg-white/40 backdrop-blur-md p-6 text-left transition-all hover:border-amber-400 hover:shadow-xl hover:shadow-amber-500/5 active:scale-95"
                 >
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 transition-all group-hover:bg-white border border-transparent group-hover:border-amber-100 shadow-sm">
                     <BookOpen size={28} />
