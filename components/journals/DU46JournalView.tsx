@@ -12,7 +12,7 @@ import { DateInput, TimeInput } from './JournalSelectModal'
 import { ApprovalChainModal } from './ApprovalChainModal'
 import { TaskSelectModal } from './TaskSelectModal'
 import { MicButton } from './MicButton'
-import { getCreator, getNextApproverRole } from '@/lib/journals/du46Approval'
+import { getCreator, getNextApproverRole, DU46_WORKER_GROUP_ROLES } from '@/lib/journals/du46Approval'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // LOCAL COMPONENTS (PREVENT EXCESSIVE RE-RENDERS)
@@ -1099,7 +1099,14 @@ export function DU46JournalView({
                 }
                 const iAmRoleCreator = isCreator(e)
                 const isExactCreator = e.kamchilikImzo ? e.kamchilikImzo === userName : iAmRoleCreator
-                const hasRightToFix = isExactCreator || (e.approvalChain && e.approvalChain.includes(userRole))
+                // Elektromexanik/elektromontyor/katta_elektromexanik guruhidagi xodimlar
+                // bir-birining (shu guruhdagi boshqa xodim yaratgan) yozuvini ham 12-ustunda
+                // tugata olishi kerak — aynan o'sha odamning o'zi bo'lishi shart emas.
+                // Boshqa rollar (bekat_boshlighi, yul_ustasi, ech_xodimi, bekat_navbatchisi)
+                // uchun bu qoida ishlamaydi — ular uchun avvalgidek faqat aniq ijrochi.
+                const isCrossWorkerGroupFix =
+                  DU46_WORKER_GROUP_ROLES.includes(getCreator(e)) && DU46_WORKER_GROUP_ROLES.includes(userRole)
+                const hasRightToFix = isExactCreator || isCrossWorkerGroupFix || (e.approvalChain && e.approvalChain.includes(userRole))
 
                 const hasNoCreator = !e.createdByRole && !e.kamchilik && !e.soatMinut1
                 const canWriteCol3 = isCurrentMonth && !e.kamchilikBajarildi && !isDispatcher

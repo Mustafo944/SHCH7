@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2, Clock } from 'lucide-react'
 import type { Incident } from '@/types'
 import { markIncidentAsRead } from '@/lib/supabase-db'
 import { INCIDENT_SEVERITY_META, INCIDENT_SEVERITY_ORDER } from '@/lib/constants'
-import { IncidentStatsSummary } from '@/components/IncidentStatsSummary'
+import { IncidentStatsSummary, type IncidentSeverityFilter } from '@/components/IncidentStatsSummary'
 
 const UZ_MONTHS_MAP: Record<string, string> = {
   '01': 'Yanvar', '02': 'Fevral', '03': 'Mart', '04': 'Aprel',
@@ -70,6 +70,81 @@ export default function IncidentsView({
   const UZ_FULL_MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr']
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null)
 
+  // Statistika kartasi orqali tanlangan og'irlik filtri (null = barchasi)
+  const [filterSeverity, setFilterSeverity] = useState<IncidentSeverityFilter | null>(null)
+
+  // Tanlangan darajaga mos barcha hodisalar — eng yangisidan boshlab
+  const filteredIncidents = useMemo(() => {
+    if (!filterSeverity) return []
+    return incidents
+      .filter(inc => filterSeverity === 'uncategorized' ? !inc.severity : inc.severity === filterSeverity)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  }, [incidents, filterSeverity])
+
+  // Bitta hodisa kartasi — filtr ro'yxatida ham, oylik ro'yxatda ham ishlatiladi
+  const renderIncidentCard = (inc: Incident) => {
+    const isRead = readIds.has(inc.id)
+    const isMarking = marking === inc.id
+    return (
+      <div
+        key={inc.id}
+        className={`relative rounded-2xl border p-4 sm:p-5 transition-colors ${
+          isRead
+            ? 'border-emerald-100 bg-emerald-50/20'
+            : 'border-amber-100 bg-amber-50/30 hover:bg-amber-50/50'
+        }`}
+      >
+        <div className="flex flex-wrap justify-between items-start gap-2 mb-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+              <Clock size={12} />
+              {formatDateUz(inc.createdAt)}
+            </p>
+            {inc.severity && (
+              <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border ${INCIDENT_SEVERITY_META[inc.severity].badgeClass}`}>
+                {INCIDENT_SEVERITY_META[inc.severity].label}
+              </span>
+            )}
+          </div>
+          <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border ${
+            isRead ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+          }`}>
+            {isRead ? 'Tanishilgan' : 'Yangi'}
+          </span>
+        </div>
+        <p className="text-sm sm:text-base text-slate-800 whitespace-pre-wrap leading-relaxed mb-4 break-words overflow-hidden">
+          {inc.content}
+        </p>
+
+        <div className="flex items-center justify-between mt-4 border-t border-slate-100/50 pt-3">
+          <p className="text-[10px] font-bold text-slate-400">
+            Kiritdi: <span className="text-slate-600">Mehnat muhofazasi muhandisi</span>
+          </p>
+
+          {!isRead ? (
+            <button
+              onClick={() => handleMarkRead(inc.id)}
+              disabled={isMarking}
+              className="btn-gradient flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-sm active:scale-95 disabled:opacity-50"
+            >
+              {isMarking ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+              ) : (
+                <CheckCircle2 size={16} />
+              )}
+              <span>Tanishdim</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs font-bold">
+              <CheckCircle2 size={14} />
+              <span>Tanishilgan</span>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 animate-fade-up w-full mx-auto max-w-4xl">
       <div className="flex items-center gap-4 border-b border-slate-200/60 pb-4">
@@ -82,9 +157,31 @@ export default function IncidentsView({
         </div>
       </div>
 
-      <IncidentStatsSummary incidents={incidents} />
+      <IncidentStatsSummary incidents={incidents} activeSeverity={filterSeverity} onSelectSeverity={setFilterSeverity} />
 
-      {allYears.map(year => (
+      {filterSeverity ? (
+        // ── Tanlangan og'irlik darajasi bo'yicha barcha hodisalar ──
+        <div className="animate-fade-up">
+          <div className="mb-3 flex items-center gap-2">
+            <p className="text-xs font-black uppercase tracking-widest text-slate-500">
+              {filterSeverity === 'uncategorized' ? 'Toifalanmagan' : INCIDENT_SEVERITY_META[filterSeverity].label} hodisalar
+            </p>
+            <span className="rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-black text-slate-500">
+              {filteredIncidents.length} ta
+            </span>
+          </div>
+          {filteredIncidents.length > 0 ? (
+            <div className="space-y-4">
+              {filteredIncidents.map(renderIncidentCard)}
+            </div>
+          ) : (
+            <div className="premium-card p-8 text-center bg-white/80">
+              <CheckCircle2 size={40} className="mx-auto text-emerald-300 mb-3" />
+              <p className="text-sm font-bold text-slate-400">Bu turdagi hodisa qayd qilinmagan</p>
+            </div>
+          )}
+        </div>
+      ) : allYears.map(year => (
         <div key={year}>
           <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">📅 {year}-yil</p>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 mb-4">
@@ -159,69 +256,7 @@ export default function IncidentsView({
               )}
               {(grouped[expandedMonth]?.length || 0) > 0 ? (
                 <div className="space-y-4">
-                  {grouped[expandedMonth].map(inc => {
-                    const isRead = readIds.has(inc.id)
-                    const isMarking = marking === inc.id
-
-                    return (
-                      <div
-                        key={inc.id}
-                        className={`relative rounded-2xl border p-4 sm:p-5 transition-colors ${
-                          isRead
-                            ? 'border-emerald-100 bg-emerald-50/20'
-                            : 'border-amber-100 bg-amber-50/30 hover:bg-amber-50/50'
-                        }`}
-                      >
-                        <div className="flex flex-wrap justify-between items-start gap-2 mb-3">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-                              <Clock size={12} />
-                              {formatDateUz(inc.createdAt)}
-                            </p>
-                            {inc.severity && (
-                              <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border ${INCIDENT_SEVERITY_META[inc.severity].badgeClass}`}>
-                                {INCIDENT_SEVERITY_META[inc.severity].label}
-                              </span>
-                            )}
-                          </div>
-                          <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border ${
-                            isRead ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
-                          }`}>
-                            {isRead ? 'Tanishilgan' : 'Yangi'}
-                          </span>
-                        </div>
-                        <p className="text-sm sm:text-base text-slate-800 whitespace-pre-wrap leading-relaxed mb-4 break-words overflow-hidden">
-                          {inc.content}
-                        </p>
-
-                        <div className="flex items-center justify-between mt-4 border-t border-slate-100/50 pt-3">
-                          <p className="text-[10px] font-bold text-slate-400">
-                            Kiritdi: <span className="text-slate-600">Mehnat muhofazasi muhandisi</span>
-                          </p>
-
-                          {!isRead ? (
-                            <button
-                              onClick={() => handleMarkRead(inc.id)}
-                              disabled={isMarking}
-                              className="btn-gradient flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-sm active:scale-95 disabled:opacity-50"
-                            >
-                              {isMarking ? (
-                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-                              ) : (
-                                <CheckCircle2 size={16} />
-                              )}
-                              <span>Tanishdim</span>
-                            </button>
-                          ) : (
-                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs font-bold">
-                              <CheckCircle2 size={14} />
-                              <span>Tanishilgan</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
+                  {grouped[expandedMonth].map(renderIncidentCard)}
                 </div>
               ) : (
                 <div className="text-center py-8">
