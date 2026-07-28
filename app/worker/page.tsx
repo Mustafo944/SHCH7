@@ -678,33 +678,18 @@ export default function WorkerPage() {
 
                 {/* BEKAT MA'LUMOTLARI */}
                 <div className="mt-5 sm:mt-8 mb-4 px-1 sm:px-2">
-                  <div className="flex items-center justify-between mb-4 sm:mb-6 px-1">
-                    <div className="flex items-center gap-2 text-[#26449c]">
-                      <Server className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
-                      <h3 className="text-[10px] sm:text-[13px] font-black uppercase tracking-widest">BEKAT MA'LUMOTLARI</h3>
-                    </div>
-                    <button onClick={() => setView('qurilmalar')} className="text-[9px] sm:text-[11px] font-bold text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-1">
-                      Barchasini ko'rish <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" strokeWidth={2.5} />
-                    </button>
-                  </div>
-
                   <div
                     onClick={() => setView('qurilmalar')}
                     className="cursor-pointer rounded-[24px] sm:rounded-[32px] bg-white/60 backdrop-blur-2xl p-4 sm:p-6 shadow-[0_8px_32px_rgba(31,38,135,0.07)] transition-all hover:-translate-y-1 hover:shadow-xl border border-white/60"
                   >
                     <div className="flex items-center justify-between mb-4 sm:mb-6">
-                      <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
-                        <div className="flex h-11 w-11 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[16px] sm:rounded-[20px] bg-gradient-to-br from-[#26449c] to-[#16225c] text-white shadow-[0_4px_15px_rgba(38,68,156,0.3)]">
+                      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                        <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[16px] sm:rounded-[20px] bg-gradient-to-br from-[#26449c] to-[#16225c] text-white shadow-[0_4px_15px_rgba(38,68,156,0.3)]">
                           <Server className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
                         </div>
-                        <div className="flex flex-col min-w-0">
-                          <p className="text-[9px] sm:text-[11px] font-black uppercase tracking-widest text-slate-500 leading-tight">BEKAT PASPORTI</p>
-                          <p className="text-[20px] sm:text-[26px] font-black text-[#1e293b] leading-none mt-1">
-                            {passportTotalDevices} <span className="text-[10px] sm:text-[12px] font-bold text-slate-400 uppercase tracking-wide">ta qurilma</span>
-                          </p>
-                        </div>
+                        <h3 className="text-[14px] sm:text-[18px] font-black uppercase tracking-widest text-[#1e293b]">BEKAT PASPORTI</h3>
                       </div>
-                      <ChevronRight size={16} className="text-slate-300 shrink-0" />
+                      <ChevronRight size={20} className="text-slate-300 shrink-0" />
                     </div>
 
                     {stationPassport.length === 0 ? (
@@ -712,9 +697,9 @@ export default function WorkerPage() {
                     ) : (
                       <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                         {stationPassport.map(section => (
-                          <div key={section.id} className="flex items-center justify-between gap-2 rounded-[20px] bg-white p-3 sm:p-4 border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)]">
-                            <span className="text-[11px] sm:text-[13px] font-bold text-slate-700 truncate">{section.name}</span>
-                            <span className="text-[12px] sm:text-[14px] font-black text-[#26449c] shrink-0">{passportSectionDeviceCount(section)} ta</span>
+                          <div key={section.id} className="flex items-center justify-between gap-2 rounded-[20px] bg-white p-3 sm:p-4 border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-blue-100 transition-colors">
+                            <span className="text-[12px] sm:text-[14px] font-bold text-slate-700 truncate">{section.name}</span>
+                            <span className="text-[14px] sm:text-[16px] font-black text-[#26449c] shrink-0">{passportSectionDeviceCount(section)} ta</span>
                           </div>
                         ))}
                       </div>
