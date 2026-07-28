@@ -553,7 +553,13 @@ export default function WorkerPage() {
                           <p className="text-[28px] sm:text-[36px] font-black text-[#1e293b] leading-none mt-1">{bugunReja.length}</p>
                         </div>
                       </div>
-                      <ChevronRight size={16} className="text-slate-300 shrink-0" />
+                      {bugunReja.length > 0 && bugunReja.filter(b => b.done).length === bugunReja.length ? (
+                        <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-500 shadow-sm animate-fade-in">
+                          <CheckCircle2 className="w-4 h-4 sm:w-4 sm:h-4" strokeWidth={3} />
+                        </div>
+                      ) : (
+                        <ChevronRight size={16} className="text-slate-300 shrink-0 transition-transform group-hover:translate-x-1" />
+                      )}
                     </div>
                     <div>
                       <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 mb-2 truncate">{bugunReja.length > 0 ? `${bugunReja.length} ta reja, ${bugunReja.filter(b => b.done).length} ta bajarildi` : "Bugun uchun ish yo'q"}</p>
@@ -706,9 +712,9 @@ export default function WorkerPage() {
                     ) : (
                       <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                         {stationPassport.map(section => (
-                          <div key={section.id} className="flex items-center justify-between gap-2 rounded-2xl bg-white p-2.5 sm:p-3 border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)]">
-                            <span className="text-[9.5px] sm:text-[11px] font-bold text-slate-600 truncate">{section.name}</span>
-                            <span className="text-[10px] sm:text-[11px] font-black text-[#26449c] shrink-0">{passportSectionDeviceCount(section)} ta</span>
+                          <div key={section.id} className="flex items-center justify-between gap-2 rounded-[20px] bg-white p-3 sm:p-4 border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)]">
+                            <span className="text-[11px] sm:text-[13px] font-bold text-slate-700 truncate">{section.name}</span>
+                            <span className="text-[12px] sm:text-[14px] font-black text-[#26449c] shrink-0">{passportSectionDeviceCount(section)} ta</span>
                           </div>
                         ))}
                       </div>
