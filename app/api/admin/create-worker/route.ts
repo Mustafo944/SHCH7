@@ -9,6 +9,7 @@ type CreateWorkerBody = {
   role: 'worker' | 'bekat_boshlighi' | 'elektromexanik' | 'elektromontyor' | 'bekat_navbatchisi' | 'yul_ustasi' | 'ech_xodimi' | 'mehnat_muhofazasi'
   stationIds: string[]
   position: string
+  photoUrl?: string
 }
 
 export async function POST(req: Request) {
@@ -103,6 +104,7 @@ export async function POST(req: Request) {
         position: body.position,
         station_ids: body.stationIds,
         phone: body.phone,
+        photo_url: body.photoUrl || null,
       })
       .select()
       .single()

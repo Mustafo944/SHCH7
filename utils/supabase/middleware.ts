@@ -83,8 +83,10 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith(route)
   )
 
-  // Himoyalanmagan sahifa — darhol ruxsat (auth so'roviga hojat yo'q)
-  if (!matchedRoute) return supabaseResponse
+  const isLoginPage = pathname === '/'
+
+  // Himoyalanmagan sahifa (va login sahifasi emas) — darhol ruxsat (auth so'roviga hojat yo'q)
+  if (!matchedRoute && !isLoginPage) return supabaseResponse
 
   // ── XAVFSIZLIK ANKORI ──
   // getUser() JWT ni Auth serverida tekshiradi (getSession()'dan farqli).
@@ -92,8 +94,9 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Login qilinmagan — login sahifasiga
+  // Login qilinmagan — login sahifasida qolsin, boshqa joydan loginga o'tsin
   if (!user) {
+    if (isLoginPage) return supabaseResponse
     return redirectTo(request, supabaseResponse, '/')
   }
 
@@ -123,14 +126,21 @@ export async function updateSession(request: NextRequest) {
   supabaseResponse.cookies.set('user-role', '', { maxAge: 0, path: '/' })
 
   if (!userRole) {
+    if (isLoginPage) return supabaseResponse
     return redirectTo(request, supabaseResponse, '/')
   }
 
-  const allowedRoles = PROTECTED_ROUTES[matchedRoute] || []
+  const correctPath = ROLE_HOME[userRole] || '/'
+
+  // Tizimga kirgan foydalanuvchi loginga kirmoqchi bo'lsa, o'z sahifasiga yo'naltiramiz
+  if (isLoginPage) {
+    return redirectTo(request, supabaseResponse, correctPath)
+  }
+
+  const allowedRoles = PROTECTED_ROUTES[matchedRoute!] || []
 
   // Rol mos kelmasa — o'z sahifasiga qaytaramiz
   if (!allowedRoles.includes(userRole)) {
-    const correctPath = ROLE_HOME[userRole] || '/'
     return redirectTo(request, supabaseResponse, correctPath)
   }
 

@@ -1,18 +1,62 @@
-import React from 'react'
-import { X } from 'lucide-react'
+import React, { useRef } from 'react'
+import { X, Camera } from 'lucide-react'
 import { Role, Station } from '@/types'
 import { FormGroup } from './ui'
 
 export function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations, message, setFormMsg }: {
   onSubmit: (e: React.FormEvent) => void
   onCancel: () => void
-  form: { fullName: string; login: string; password?: string; phone: string; role: Exclude<Role, 'dispatcher'>; stationIds: string[] }
-  setForm: React.Dispatch<React.SetStateAction<{ fullName: string; login: string; password?: string; phone: string; role: Exclude<Role, 'dispatcher'>; stationIds: string[] }>>
+  form: { fullName: string; login: string; password?: string; phone: string; role: Exclude<Role, 'dispatcher'>; stationIds: string[]; photoFile?: File | null; photoPreview?: string | null }
+  setForm: React.Dispatch<React.SetStateAction<{ fullName: string; login: string; password?: string; phone: string; role: Exclude<Role, 'dispatcher'>; stationIds: string[]; photoFile?: File | null; photoPreview?: string | null }>>
   isEdit: boolean
   stations: { id: string; name: string }[]
   message: { type: 'ok' | 'err'; text: string } | null
   setFormMsg: (msg: { type: 'ok' | 'err'; text: string } | null) => void
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+
+        // 150x150 kvadrat
+        canvas.width = 150
+        canvas.height = 150
+
+        // Kvadrat ichiga kesish (object-cover effekti)
+        const size = Math.min(img.width, img.height)
+        const x = (img.width - size) / 2
+        const y = (img.height - size) / 2
+
+        ctx.drawImage(img, x, y, size, size, 0, 0, 150, 150)
+
+        // Compress
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                type: 'image/webp',
+                lastModified: Date.now(),
+              })
+              setForm(prev => ({ ...prev, photoFile: compressedFile, photoPreview: canvas.toDataURL('image/webp', 0.8) }))
+            }
+          },
+          'image/webp',
+          0.8
+        )
+      }
+      img.src = event.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }
   return (
     <form onSubmit={onSubmit} className="premium-card p-8">
       <div className="mb-8 flex items-center justify-between">
@@ -23,6 +67,34 @@ export function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations
         <button type="button" onClick={onCancel} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 transition-colors">
           <X size={24} />
         </button>
+      </div>
+
+      <div className="mb-8 flex justify-center">
+        <div className="relative">
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleImageChange}
+          />
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            className="h-24 w-24 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer overflow-hidden group hover:border-blue-400 transition-colors"
+          >
+            {form.photoPreview ? (
+              <img src={form.photoPreview} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <div className="flex flex-col items-center text-slate-400 group-hover:text-blue-500 transition-colors">
+                <Camera size={28} />
+                <span className="text-[10px] font-bold mt-1">Rasm</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera className="text-white" size={28} />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

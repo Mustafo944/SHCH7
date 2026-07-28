@@ -21,6 +21,7 @@ interface AppSidebarProps {
   onToggleCollapse: () => void
   userName?: string
   userRole?: string
+  userPhotoUrl?: string
 }
 
 export function AppSidebar({
@@ -32,6 +33,7 @@ export function AppSidebar({
   onToggleCollapse,
   userName,
   userRole,
+  userPhotoUrl,
 }: AppSidebarProps) {
   return (
     <>
@@ -41,7 +43,7 @@ export function AppSidebar({
       )}
 
       <aside
-        className={`fixed lg:relative inset-y-0 left-0 z-50 lg:z-20 flex flex-col shrink-0 bg-white/40 backdrop-blur-md border-r border-white/40 shadow-2xl lg:shadow-sm transform transition-[width,transform] duration-300 ease-in-out ${
+        className={`fixed lg:relative inset-y-0 left-0 h-full z-50 lg:z-20 flex flex-col shrink-0 bg-white/40 backdrop-blur-md border-r border-white/40 shadow-2xl lg:shadow-sm transform transition-[width,transform] duration-300 ease-in-out ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0 ${isCollapsed ? 'w-[260px] lg:w-[88px]' : 'w-[260px]'}`}
       >
@@ -118,22 +120,23 @@ export function AppSidebar({
             </button>
           ))}
 
-          {/* Sign out */}
-          <div className="mt-auto pt-2 border-t border-white/40">
-            <button
-              title="Chiqish"
-              onClick={() => { onMobileClose(); onSignOut(); }}
-              className={`group w-full flex items-center gap-3 rounded-xl p-2.5 pr-3 text-[15px] font-bold text-rose-600 hover:bg-rose-50/60 transition-colors duration-150 overflow-hidden ${
-                isCollapsed ? 'lg:justify-center lg:px-0' : ''
-              }`}
-            >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-50/70 text-rose-500 group-hover:bg-rose-100/80 transition-colors duration-150">
-                <LogOut size={19} strokeWidth={2} />
-              </span>
-              <span className={`whitespace-nowrap ${isCollapsed ? 'lg:hidden' : ''}`}>Chiqish</span>
-            </button>
-          </div>
         </nav>
+
+        {/* Sign out */}
+        <div className="px-3 pb-3 pt-2 border-t border-white/40 shrink-0">
+          <button
+            title="Chiqish"
+            onClick={() => { onMobileClose(); onSignOut(); }}
+            className={`group w-full flex items-center gap-3 rounded-xl p-2.5 pr-3 text-[15px] font-bold text-rose-600 hover:bg-rose-50/60 transition-colors duration-150 overflow-hidden ${
+              isCollapsed ? 'lg:justify-center lg:px-0' : ''
+            }`}
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-50/70 text-rose-500 group-hover:bg-rose-100/80 transition-colors duration-150">
+              <LogOut size={19} strokeWidth={2} />
+            </span>
+            <span className={`whitespace-nowrap ${isCollapsed ? 'lg:hidden' : ''}`}>Chiqish</span>
+          </button>
+        </div>
 
         {/* Train image & user card */}
         <div
@@ -161,8 +164,12 @@ export function AppSidebar({
               }`}
             >
               <div className="relative shrink-0">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 text-white font-black text-sm shadow-md shadow-blue-600/25">
-                  {userName?.charAt(0) || 'U'}
+                <div className="flex h-10 w-10 overflow-hidden items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 text-white font-black text-sm shadow-md shadow-blue-600/25">
+                  {userPhotoUrl ? (
+                    <img src={userPhotoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    userName?.charAt(0) || 'U'
+                  )}
                 </div>
                 <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-400 border-2 border-white" />
               </div>

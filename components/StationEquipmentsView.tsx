@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { X, Save, Edit3, Plus, Trash2, Printer, Download, AlertTriangle, Loader2, ArrowRightLeft, Target, ChevronLeft, ChevronRight, Clock, History, Calendar, User, QrCode } from 'lucide-react';
-import { StationEquipments, EquipmentCategory } from '@/types';
+import { X, Save, Edit3, Plus, Trash2, Printer, Download, AlertTriangle, Loader2, ArrowRightLeft, Target, ChevronLeft, ChevronRight, Clock, History, Calendar, User, QrCode, Server } from 'lucide-react';
+import { StationEquipments, EquipmentCategory, PassportSection, PassportSubSection, PassportDevice } from '@/types';
 import { getStationEquipments, upsertStationEquipments, getStationTaskScans, type TaskScan } from '@/lib/supabase-db';
 import { useToast } from '@/lib/hooks/useToast';
 import useSWR from 'swr';
@@ -451,6 +451,150 @@ const CategoryCard = memo(function CategoryCard({
   );
 });
 
+// ─── Bekat pasporti: bo'lim / kichik bo'lim / qurilma kartalari ──────
+
+/** Qurilmalar jadvali qatori: nomi, o'rnatilgan yili, ekspluatatsion davri */
+const PassportDeviceRow = memo(function PassportDeviceRow({
+  device,
+  isEditing,
+  onUpdate,
+  onRemove,
+}: {
+  device: PassportDevice;
+  isEditing: boolean;
+  onUpdate: (key: keyof Omit<PassportDevice, 'id'>, value: string) => void;
+  onRemove: () => void;
+}) {
+  if (!isEditing) {
+    return (
+      <div className="grid grid-cols-[1fr_auto_auto] gap-3 sm:gap-4 items-center py-2.5 border-b border-slate-100 last:border-0">
+        <span className="text-sm font-bold text-slate-800 truncate">{device.name || 'Nomsiz qurilma'}</span>
+        <span className="text-xs font-bold text-slate-500 text-right whitespace-nowrap">{device.installedYear || '—'}</span>
+        <span className="text-xs font-bold text-slate-500 text-right whitespace-nowrap w-24 sm:w-28">{device.serviceLife || '—'}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center py-1.5">
+      <DebouncedInput
+        value={device.name}
+        onChange={(v) => onUpdate('name', v)}
+        placeholder="Qurilma turi"
+        className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-800 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+      />
+      <DebouncedInput
+        value={device.installedYear}
+        onChange={(v) => onUpdate('installedYear', v)}
+        placeholder="O'rnatilgan yili"
+        className="sm:w-32 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-800 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+      />
+      <DebouncedInput
+        value={device.serviceLife}
+        onChange={(v) => onUpdate('serviceLife', v)}
+        placeholder="Ekspluatatsion davri"
+        className="sm:w-36 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-800 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+      />
+      <button onClick={onRemove} className="shrink-0 p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors self-end sm:self-center">
+        <Trash2 size={16} />
+      </button>
+    </div>
+  );
+});
+
+function PassportDeviceList({
+  devices,
+  isEditing,
+  onUpdate,
+  onRemove,
+  onAdd,
+}: {
+  devices: PassportDevice[];
+  isEditing: boolean;
+  onUpdate: (deviceId: string, key: keyof Omit<PassportDevice, 'id'>, value: string) => void;
+  onRemove: (deviceId: string) => void;
+  onAdd: () => void;
+}) {
+  return (
+    <div className="mt-2">
+      {devices.length > 0 && !isEditing && (
+        <div className="grid grid-cols-[1fr_auto_auto] gap-3 sm:gap-4 pb-1.5 mb-1 border-b border-slate-200">
+          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Qurilma turi</span>
+          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 text-right whitespace-nowrap">O&apos;rnatilgan yili</span>
+          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 text-right whitespace-nowrap w-24 sm:w-28">Ekspluatatsion davri</span>
+        </div>
+      )}
+      {devices.length === 0 && !isEditing && (
+        <p className="text-xs font-bold text-slate-300 uppercase tracking-widest py-1">Qurilma kiritilmagan</p>
+      )}
+      <div className={isEditing ? 'flex flex-col gap-2' : ''}>
+        {devices.map(device => (
+          <PassportDeviceRow
+            key={device.id}
+            device={device}
+            isEditing={isEditing}
+            onUpdate={(key, value) => onUpdate(device.id, key, value)}
+            onRemove={() => onRemove(device.id)}
+          />
+        ))}
+      </div>
+      {isEditing && (
+        <button onClick={onAdd} className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-purple-600 hover:text-purple-700 transition-colors">
+          <Plus size={14} /> Qurilma qo&apos;shish
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Bo'lim/kichik bo'lim ro'yxatidagi bosiladigan qator — nomi, qurilmalar soni, kirish (drill-down) */
+function PassportRow({
+  name,
+  count,
+  isEditing,
+  onClick,
+  onUpdateName,
+  onRemove,
+  placeholder,
+}: {
+  name: string;
+  count: number;
+  isEditing: boolean;
+  onClick: () => void;
+  onUpdateName: (name: string) => void;
+  onRemove: () => void;
+  placeholder: string;
+}) {
+  return (
+    <div
+      onClick={onClick}
+      className="premium-card w-full flex items-center gap-3 sm:gap-4 p-4 sm:p-5 text-left cursor-pointer group transition-all hover:border-indigo-200"
+    >
+      <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600">
+        <Server size={18} />
+      </div>
+      <div className="flex-1 min-w-0" onClick={(e) => { if (isEditing) e.stopPropagation(); }}>
+        {isEditing ? (
+          <DebouncedInput
+            value={name}
+            onChange={onUpdateName}
+            placeholder={placeholder}
+            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm sm:text-base font-black text-slate-900 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+          />
+        ) : (
+          <h5 className="font-black text-slate-900 text-sm sm:text-base tracking-tight truncate">{name || "Nomsiz bo'lim"}</h5>
+        )}
+      </div>
+      <span className="shrink-0 rounded-lg bg-indigo-50 text-indigo-600 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black whitespace-nowrap">{count} ta</span>
+      {isEditing && (
+        <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="shrink-0 p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">
+          <Trash2 size={16} />
+        </button>
+      )}
+      <ChevronRight size={18} className="text-slate-300 shrink-0" />
+    </div>
+  );
+}
+
 // ─── PDF uchun canvas matn chizuvchi yordamchi ──────────────────────
 
 function wrapCanvasText(ctx2d: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
@@ -479,10 +623,10 @@ interface Props {
   isDispatcher?: boolean; // Aloqa dispetcheri bo'lsa true — "QR Chop etish" faqat shu rolga ko'rinadi
   canEditTaskMappings?: boolean; // Katta elektromexanik bo'lsa true — "QR kodni bog'lash" faqat shu rolga ko'rinadi
   userName: string;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
-export function StationEquipmentsModal({ stationId, stationName, canEdit, isDispatcher = false, canEditTaskMappings = false, userName, onClose }: Props) {
+export function StationEquipmentsView({ stationId, stationName, canEdit, isDispatcher = false, canEditTaskMappings = false, userName, onClose }: Props) {
   const toast = useToast();
   const { data: swrData, isLoading, mutate } = useSWR(
     `equipments_${stationId}`,
@@ -496,6 +640,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingMappings, setIsEditingMappings] = useState(false);
+  const [isEditingPassport, setIsEditingPassport] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
@@ -503,10 +648,14 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
 
   const [categories, setCategories] = useState<EquipmentCategory[]>([]);
   const [taskMappings, setTaskMappings] = useState<TaskQRMapping[]>([]);
+  const [passport, setPassport] = useState<PassportSection[]>([]);
+  // Bekat pasporti navigatsiyasi: Bo'limlar ro'yxati → (bosilsa) Bo'lim ichi → (bosilsa) Kichik bo'lim ichi
+  const [selectedPassportSectionId, setSelectedPassportSectionId] = useState<string | null>(null);
+  const [selectedPassportSubSectionId, setSelectedPassportSubSectionId] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [deleteConfirmCategoryId, setDeleteConfirmCategoryId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'passport' | 'equipments' | 'tasks' | 'history'>('passport');
 
-  const [activeTab, setActiveTab] = useState<'equipments' | 'tasks' | 'history'>('equipments');
   const [searchQuery, setSearchQuery] = useState('');
 
   const [selectedPlanType, setSelectedPlanType] = useState<'tort' | 'yillik' | null>(null);
@@ -563,20 +712,14 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
 
   // ─── Ma'lumotlarni sinxronlashtirish ──────────────────────────────
 
-  // Modal ochiq turganda orqadagi sahifa scroll bo'lib, ikkalasi bir vaqtda tortilib friz bo'lib ko'rinishining oldini oladi
   useEffect(() => {
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prevOverflow; };
-  }, []);
-
-  useEffect(() => {
-    if (swrData && !isEditing && !isEditingMappings) {
+    if (swrData && !isEditing && !isEditingMappings && !isEditingPassport) {
       setEquipments(swrData);
       setCategories(swrData.categories || []);
       setTaskMappings(normalizeTaskMappings(swrData.taskMappings));
+      setPassport(swrData.passport || []);
     }
-  }, [swrData, isEditing, isEditingMappings]);
+  }, [swrData, isEditing, isEditingMappings, isEditingPassport]);
 
   // ─── Saqlash logikasi ─────────────────────────────────────────────
 
@@ -596,11 +739,12 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
         items: (c.items || []).filter(item => item && item.name && item.name.trim() !== '')
       }));
 
-      const data = await upsertStationEquipments(stationId, cleanCategories, taskMappings, userName, equipments?.updatedAt ?? null);
+      const data = await upsertStationEquipments(stationId, cleanCategories, taskMappings, passport, userName, equipments?.updatedAt ?? null);
       if (data) {
         toast.success("O'zgarishlar muvaffaqiyatli saqlandi!");
         setIsEditing(false);
         setIsEditingMappings(false);
+        setIsEditingPassport(false);
         mutate(data); // Keshni yangilaymiz
       }
     } catch (err) {
@@ -611,6 +755,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
         // qayta yuklaydi (aks holda keyingi urinish ham eskirgan updatedAt bilan yana ziddiyatga uchraydi)
         setIsEditing(false);
         setIsEditingMappings(false);
+        setIsEditingPassport(false);
         mutate();
       } else {
         toast.error(message);
@@ -618,7 +763,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
     } finally {
       setSaving(false);
     }
-  }, [categories, taskMappings, stationId, userName, equipments?.updatedAt, toast, mutate]);
+  }, [categories, taskMappings, passport, stationId, userName, equipments?.updatedAt, toast, mutate]);
 
   const handleSave = useCallback(async () => {
     const cleanCategories = categories.map(c => ({
@@ -701,6 +846,78 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
     }
   }, [swrData]);
 
+  // ─── Bekat pasporti (bo'lim → kichik bo'lim → qurilma) tahrirlash handlerlari ──
+  // Faqat 1 daraja ichma-ich bo'lim: Bo'lim ichida ham to'g'ridan-to'g'ri qurilma,
+  // ham kichik bo'lim (u ham o'z qurilmalariga ega) bo'lishi mumkin.
+
+  const genId = (prefix: string) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+  const addPassportSection = useCallback(() => {
+    setIsEditingPassport(true);
+    setPassport(prev => [...prev, { id: genId('sec'), name: '', devices: [], subSections: [] }]);
+  }, []);
+
+  const updatePassportSectionName = useCallback((sectionId: string, name: string) => {
+    setPassport(prev => prev.map(s => s.id === sectionId ? { ...s, name } : s));
+  }, []);
+
+  const removePassportSection = useCallback((sectionId: string) => {
+    setPassport(prev => prev.filter(s => s.id !== sectionId));
+  }, []);
+
+  const addPassportSubSection = useCallback((sectionId: string) => {
+    setPassport(prev => prev.map(s => s.id === sectionId
+      ? { ...s, subSections: [...s.subSections, { id: genId('sub'), name: '', devices: [] }] }
+      : s
+    ));
+  }, []);
+
+  const updatePassportSubSectionName = useCallback((sectionId: string, subId: string, name: string) => {
+    setPassport(prev => prev.map(s => s.id === sectionId
+      ? { ...s, subSections: s.subSections.map(sub => sub.id === subId ? { ...sub, name } : sub) }
+      : s
+    ));
+  }, []);
+
+  const removePassportSubSection = useCallback((sectionId: string, subId: string) => {
+    setPassport(prev => prev.map(s => s.id === sectionId
+      ? { ...s, subSections: s.subSections.filter(sub => sub.id !== subId) }
+      : s
+    ));
+  }, []);
+
+  const addPassportDevice = useCallback((sectionId: string, subSectionId?: string) => {
+    const newDevice: PassportDevice = { id: genId('dev'), name: '', installedYear: '', serviceLife: '' };
+    setPassport(prev => prev.map(s => {
+      if (s.id !== sectionId) return s;
+      if (!subSectionId) return { ...s, devices: [...s.devices, newDevice] };
+      return { ...s, subSections: s.subSections.map(sub => sub.id === subSectionId ? { ...sub, devices: [...sub.devices, newDevice] } : sub) };
+    }));
+  }, []);
+
+  const updatePassportDevice = useCallback((sectionId: string, subSectionId: string | undefined, deviceId: string, key: keyof Omit<PassportDevice, 'id'>, value: string) => {
+    setPassport(prev => prev.map(s => {
+      if (s.id !== sectionId) return s;
+      if (!subSectionId) return { ...s, devices: s.devices.map(d => d.id === deviceId ? { ...d, [key]: value } : d) };
+      return { ...s, subSections: s.subSections.map(sub => sub.id === subSectionId ? { ...sub, devices: sub.devices.map(d => d.id === deviceId ? { ...d, [key]: value } : d) } : sub) };
+    }));
+  }, []);
+
+  const removePassportDevice = useCallback((sectionId: string, subSectionId: string | undefined, deviceId: string) => {
+    setPassport(prev => prev.map(s => {
+      if (s.id !== sectionId) return s;
+      if (!subSectionId) return { ...s, devices: s.devices.filter(d => d.id !== deviceId) };
+      return { ...s, subSections: s.subSections.map(sub => sub.id === subSectionId ? { ...sub, devices: sub.devices.filter(d => d.id !== deviceId) } : sub) };
+    }));
+  }, []);
+
+  const handleCancelEditingPassport = useCallback(() => {
+    setIsEditingPassport(false);
+    if (swrData) {
+      setPassport(swrData.passport || []);
+    }
+  }, [swrData]);
+
   // ─── PDF yuklab olish ─────────────────────────────────────────────
 
   const handleDownloadSingleQr = useCallback(async (item: { id: string; name: string }, categoryName: string) => {
@@ -710,17 +927,11 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
       if (!qrCanvas) throw new Error('QR kod topilmadi');
       const qrDataUrl = qrCanvas.toDataURL('image/png');
 
-      // "№" kabi belgilar jsPDF ning standart shriftida (WinAnsi) yo'q va "!" bo'lib chiqadi.
-      // Shuning uchun matnni jsPDF shrifti bilan emas, brauzer canvas'ida chizib, rasm sifatida
-      // PDF'ga qo'shamiz — canvas har qanday Unicode belgini (shu jumladan №) to'g'ri chizadi
-
       const labelWidthPx = 900;
       const maxTextWidth = labelWidthPx - 80;
       const measureCtx = document.createElement('canvas').getContext('2d');
       if (!measureCtx) throw new Error('Canvas ochilmadi');
 
-      // Uzoq nomlar bir qatorga sig'may qolsa avval qatorlarga bo'linadi, hali ham sig'masa
-      // shrift kichraytiriladi — nom hech qachon canvas chetidan chiqib ketmasligi uchun
       let itemFontSize = 84;
       measureCtx.font = `bold ${itemFontSize}px Arial, sans-serif`;
       let nameLines = wrapCanvasText(measureCtx, item.name, maxTextWidth);
@@ -730,7 +941,6 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
         nameLines = wrapCanvasText(measureCtx, item.name, maxTextWidth);
       }
 
-      // Toifa nomi ham qurilma nomi bilan bir xil kattalikda chiziladi
       let categoryFontSize = 84;
       measureCtx.font = `bold ${categoryFontSize}px Arial, sans-serif`;
       let categoryLines = wrapCanvasText(measureCtx, categoryName.toUpperCase(), maxTextWidth);
@@ -824,7 +1034,6 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
           </div>
         </div>
 
-        {/* BOSQICH 1 va 2 — Toifa va uskuna tanlash (faqat ekranda, chop etilmaydi) */}
         {!selectedPrintItem && (
           <div className="p-4 max-w-3xl mx-auto sm:p-8 print:hidden">
             {!selectedPrintCategory ? (
@@ -869,7 +1078,6 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
           </div>
         )}
 
-        {/* BOSQICH 3 — Tanlangan uskunaning QR kodi (chop etiladigan qism) */}
         {selectedPrintItem && selectedPrintCategory && (
           <div id="qr-print-content" className="flex items-center justify-center p-4 sm:p-8 print:p-8">
             <div className="flex w-full max-w-md min-w-0 flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 rounded-2xl sm:p-12 print:p-8 print:border-4">
@@ -881,14 +1089,12 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
           </div>
         )}
 
-        {/* PDF eksport uchun ko'rinmas canvas — FAQAT tanlangan qurilma uchun (avval BARCHA qurilmalar uchun render qilinar edi) */}
         {selectedPrintItem && (
           <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }} aria-hidden="true">
             <QRCodeCanvas id={`qr-pdf-canvas-${selectedPrintItem.id}`} value={buildEquipmentQrValue(stationId, selectedPrintItem.id)} size={600} />
           </div>
         )}
 
-        {/* CSS for print — #qr-print-content ID orqali aniq maqsadga mo'ljallangan */}
         <style dangerouslySetInnerHTML={{
           __html: `
           @media print {
@@ -902,61 +1108,209 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
     );
   }
 
-  // ─── Tablar ───────────────────────────────────────────────────────
-
-  // "QR kodni bog'lash" faqat Katta elektromexanikka ko'rinadi
-  const tabs: { id: 'equipments' | 'tasks' | 'history'; label: string; onClick: () => void }[] = [
+  const tabs: { id: 'passport' | 'equipments' | 'tasks' | 'history'; label: string; onClick: () => void }[] = [
+    { id: 'passport', label: "Bekat pasporti", onClick: () => { setActiveTab('passport'); setSelectedPassportSectionId(null); setSelectedPassportSubSectionId(null); } },
     { id: 'equipments', label: "Uskunalar ro'yxati va QR", onClick: () => setActiveTab('equipments') },
     ...(canEditTaskMappings ? [{ id: 'tasks' as const, label: "QR kodni bog'lash", onClick: () => { setActiveTab('tasks'); setSelectedPlanType(null); setSelectedTaskNsh(null); } }] : []),
     { id: 'history', label: 'Skaner tarixi', onClick: openHistoryTab },
   ];
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-2 sm:p-4 backdrop-blur-md">
-      <div className="flex h-[95vh] sm:h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl sm:rounded-[32px] border border-white/60 bg-white/80 shadow-2xl backdrop-blur-xl">
+  // onClose beriladigan joyda (masalan dispetcher) — floating modal ko'rinishida;
+  // onClose bo'lmasa (masalan worker sahifasi) — sahifaning o'zига tabiiy singib ketadigan ko'rinishda
+  const isModal = !!onClose;
 
-        {/* Header */}
-        <div className="flex items-start sm:items-center justify-between border-b border-purple-100/60 px-4 py-4 sm:px-8 sm:py-6 gap-4 bg-gradient-to-r from-white/60 to-purple-50/30">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg sm:text-xl font-black text-slate-900 break-words leading-tight">
-              {stationName} - Bekat qurilmalari
-            </h3>
-            <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-4 mt-3">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={tab.onClick}
-                  className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 sm:py-1 rounded-xl sm:rounded-full transition-all text-center flex-1 sm:flex-none ${activeTab === tab.id ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-500 bg-white/70 hover:bg-white border border-purple-100/50 hover:border-purple-200/60'}`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+  return (
+    <>
+      <div className={isModal
+        ? "flex flex-col h-full w-full bg-white/40 shadow-sm relative overflow-hidden rounded-[32px] border border-white/60"
+        : "flex flex-col w-full gap-4 sm:gap-6 animate-fade-up"}>
+
+      {/* Header */}
+      <div className={isModal
+        ? "flex items-start sm:items-center justify-between border-b border-purple-100/60 px-4 py-4 sm:px-8 sm:py-6 gap-4 bg-gradient-to-r from-white/80 to-purple-50/50 backdrop-blur-xl shrink-0"
+        : "flex items-start sm:items-center justify-between rounded-[24px] sm:rounded-[32px] border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.05)] px-4 py-4 sm:px-8 sm:py-6 gap-4 bg-gradient-to-r from-white/80 to-purple-50/50 backdrop-blur-xl shrink-0"}>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg sm:text-2xl font-black text-slate-900 break-words leading-tight flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
+              <Server size={20} />
             </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 mt-0.5">
-            {/* QR Chop etish faqat Aloqa dispetcherida ko'rinadi */}
-            {isDispatcher && (
+            {stationName}
+            <span className="text-slate-300 font-medium hidden sm:inline">—</span>
+            <span className="hidden sm:inline text-slate-500 font-bold text-lg">Bekat qurilmalari</span>
+          </h3>
+          <div className="grid grid-cols-2 sm:flex sm:flex-nowrap gap-2 sm:gap-4 mt-4">
+            {tabs.map(tab => (
               <button
-                onClick={openPrintingView}
-                disabled={!equipments}
-                className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
+                key={tab.id}
+                onClick={tab.onClick}
+                className={`text-[9.5px] sm:text-xs font-black uppercase tracking-widest leading-tight px-2.5 py-2.5 sm:px-4 sm:py-2 rounded-xl transition-all text-center w-full sm:w-auto sm:flex-none ${activeTab === tab.id ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-lg shadow-purple-500/30 sm:scale-105' : 'text-slate-500 bg-white hover:bg-slate-50 border border-slate-200/60 hover:border-purple-200/60'}`}
               >
-                <Printer size={16} className="sm:w-[18px] sm:h-[18px]" /> <span className="hidden sm:inline">QR Chop etish</span>
+                {tab.label}
               </button>
-            )}
-            <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-2 sm:p-3 text-slate-400 hover:text-slate-900 transition-all duration-200 shadow-sm">
-              <X size={24} />
-            </button>
+            ))}
           </div>
         </div>
+        <div className="flex shrink-0 items-center gap-2 mt-0.5">
+          {/* QR Chop etish faqat Aloqa dispetcherida ko'rinadi */}
+          {isDispatcher && activeTab === 'equipments' && (
+            <button
+              onClick={openPrintingView}
+              disabled={!equipments}
+              className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/30 transition hover:scale-105 disabled:opacity-50 whitespace-nowrap"
+            >
+              <Printer size={18} /> <span className="hidden sm:inline">QR Chop etish</span>
+            </button>
+          )}
+          {onClose && (
+            <button onClick={onClose} className="rounded-xl bg-white border border-slate-200 p-2 sm:p-3 text-slate-400 hover:text-slate-900 transition-all shadow-sm">
+              <X size={24} />
+            </button>
+          )}
+        </div>
+      </div>
 
-        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:p-8 custom-scrollbar">
+      <div className={isModal ? "flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:p-8 custom-scrollbar" : ""}>
           {(!swrData && isLoading) ? (
             <div className="flex h-40 items-center justify-center">
               <Loader2 className="animate-spin text-blue-500" size={32} />
             </div>
           ) : (
             <>
+              {activeTab === 'passport' && (() => {
+                const selectedSection = passport.find(s => s.id === selectedPassportSectionId) || null;
+                const selectedSubSection = selectedSection?.subSections.find(sub => sub.id === selectedPassportSubSectionId) || null;
+                const sectionDeviceCount = (s: PassportSection) => s.devices.length + s.subSections.reduce((sum, sub) => sum + sub.devices.length, 0);
+
+                return (
+                  <div className="flex flex-col gap-4 animate-fade-in">
+                    {/* Sarlavha + orqaga tugmasi */}
+                    <div className="flex items-center gap-3">
+                      {selectedSection && (
+                        <button
+                          onClick={() => {
+                            if (selectedSubSection) setSelectedPassportSubSectionId(null);
+                            else setSelectedPassportSectionId(null);
+                          }}
+                          className="shrink-0 rounded-xl border border-slate-200/60 bg-white p-2.5 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm"
+                        >
+                          <ChevronLeft size={18} />
+                        </button>
+                      )}
+                      <div className="min-w-0">
+                        <h4 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight truncate">
+                          {selectedSubSection ? (selectedSubSection.name || "Nomsiz kichik bo'lim")
+                            : selectedSection ? (selectedSection.name || "Nomsiz bo'lim")
+                            : `Bekat Pasporti: ${stationName}`}
+                        </h4>
+                        {!selectedSection && (
+                          <p className="text-xs sm:text-sm font-medium text-slate-500 mt-1">Bo&apos;limlar, kichik bo&apos;limlar va ularga tegishli qurilmalar</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {selectedSubSection && selectedSection ? (
+                      /* 3-daraja: kichik bo'lim ichidagi qurilmalar */
+                      <div className="premium-card p-4 sm:p-6">
+                        {isEditingPassport && (
+                          <DebouncedInput
+                            value={selectedSubSection.name}
+                            onChange={(v) => updatePassportSubSectionName(selectedSection.id, selectedSubSection.id, v)}
+                            placeholder="Kichik bo'lim nomi"
+                            className="mb-4 w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-black text-slate-900 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+                          />
+                        )}
+                        <PassportDeviceList
+                          devices={selectedSubSection.devices}
+                          isEditing={isEditingPassport}
+                          onUpdate={(deviceId, key, value) => updatePassportDevice(selectedSection.id, selectedSubSection.id, deviceId, key, value)}
+                          onRemove={(deviceId) => removePassportDevice(selectedSection.id, selectedSubSection.id, deviceId)}
+                          onAdd={() => addPassportDevice(selectedSection.id, selectedSubSection.id)}
+                        />
+                      </div>
+                    ) : selectedSection ? (
+                      /* 2-daraja: bo'limga to'g'ridan-to'g'ri tegishli qurilmalar + kichik bo'limlar */
+                      <div className="flex flex-col gap-4">
+                        {isEditingPassport && (
+                          <div className="premium-card p-4 sm:p-6">
+                            <DebouncedInput
+                              value={selectedSection.name}
+                              onChange={(v) => updatePassportSectionName(selectedSection.id, v)}
+                              placeholder="Bo'lim nomi"
+                              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-black text-slate-900 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+                            />
+                          </div>
+                        )}
+
+                        {(selectedSection.devices.length > 0 || isEditingPassport) && (
+                          <div className="premium-card p-4 sm:p-6">
+                            <h6 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Bo&apos;limga tegishli qurilmalar</h6>
+                            <PassportDeviceList
+                              devices={selectedSection.devices}
+                              isEditing={isEditingPassport}
+                              onUpdate={(deviceId, key, value) => updatePassportDevice(selectedSection.id, undefined, deviceId, key, value)}
+                              onRemove={(deviceId) => removePassportDevice(selectedSection.id, undefined, deviceId)}
+                              onAdd={() => addPassportDevice(selectedSection.id)}
+                            />
+                          </div>
+                        )}
+
+                        {(selectedSection.subSections.length > 0 || isEditingPassport) && (
+                          <div className="flex flex-col gap-3">
+                            {selectedSection.subSections.length > 0 && (
+                              <h6 className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Kichik bo&apos;limlar</h6>
+                            )}
+                            {selectedSection.subSections.map(sub => (
+                              <PassportRow
+                                key={sub.id}
+                                name={sub.name}
+                                count={sub.devices.length}
+                                isEditing={isEditingPassport}
+                                onClick={() => setSelectedPassportSubSectionId(sub.id)}
+                                onUpdateName={(v) => updatePassportSubSectionName(selectedSection.id, sub.id, v)}
+                                onRemove={() => removePassportSubSection(selectedSection.id, sub.id)}
+                                placeholder="Kichik bo'lim nomi"
+                              />
+                            ))}
+                            {isEditingPassport && (
+                              <button onClick={() => addPassportSubSection(selectedSection.id)} className="flex items-center justify-center gap-2 text-sm font-bold text-indigo-600 bg-white border-2 border-dashed border-indigo-200 hover:bg-indigo-50 px-4 py-3 rounded-2xl transition-colors">
+                                <Plus size={16} /> Kichik bo&apos;lim qo&apos;shish
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      /* 1-daraja: bo'limlar ro'yxati */
+                      <>
+                        {passport.length === 0 && !isEditingPassport ? (
+                          <EmptyHint icon={Server} text="Hali bo'lim qo'shilmagan" />
+                        ) : (
+                          <div className="flex flex-col gap-3">
+                            {passport.map(section => (
+                              <PassportRow
+                                key={section.id}
+                                name={section.name}
+                                count={sectionDeviceCount(section)}
+                                isEditing={isEditingPassport}
+                                onClick={() => setSelectedPassportSectionId(section.id)}
+                                onUpdateName={(v) => updatePassportSectionName(section.id, v)}
+                                onRemove={() => removePassportSection(section.id)}
+                                placeholder="Bo'lim nomi"
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {isEditingPassport && (
+                          <button onClick={addPassportSection} className="flex items-center justify-center gap-2 text-sm font-bold text-indigo-600 bg-white border-2 border-dashed border-indigo-200 hover:bg-indigo-50 px-4 py-4 rounded-2xl transition-colors">
+                            <Plus size={18} /> Yangi bo&apos;lim qo&apos;shish
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+
               {activeTab === 'equipments' && (
                 <>
                   {/* TOIFALAR — har biri alohida memoized komponent */}
@@ -1191,9 +1545,11 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
           )}
         </div>
 
-        {/* Footer Actions — "Uskunalar ro'yxati va QR" va "QR kodni bog'lash" bo'limlarida (ikkalasi ham Katta elektromexanikka tegishli), yoki tahrirlash davom etayotganda ko'rinadi */}
-        {(isEditing || isEditingMappings || activeTab === 'equipments' || (activeTab === 'tasks' && canEditTaskMappings)) && (
-          <div className="border-t border-purple-100/60 px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-white/60 to-purple-50/30">
+        {/* Footer Actions — "Bekat pasporti", "Uskunalar ro'yxati va QR" va "QR kodni bog'lash" bo'limlarida (barchasi Katta elektromexanikka tegishli), yoki tahrirlash davom etayotganda ko'rinadi */}
+        {(isEditing || isEditingMappings || isEditingPassport || activeTab === 'equipments' || (activeTab === 'tasks' && canEditTaskMappings) || (activeTab === 'passport' && canEdit)) && (
+          <div className={isModal
+            ? "border-t border-purple-100/60 px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-white/60 to-purple-50/30"
+            : "rounded-[24px] sm:rounded-[32px] border border-purple-100/60 shadow-sm px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-white/60 to-purple-50/30"}>
             {isEditing || isEditingMappings ? (
               <>
                 <button
@@ -1205,6 +1561,23 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
                 </button>
                 <button
                   onClick={handleSave}
+                  disabled={saving}
+                  className="w-full sm:flex-1 sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold text-sm hover:from-emerald-600 hover:to-green-600 transition shadow-lg shadow-emerald-500/25 whitespace-nowrap"
+                >
+                  {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} Saqlash
+                </button>
+              </>
+            ) : isEditingPassport ? (
+              <>
+                <button
+                  onClick={handleCancelEditingPassport}
+                  disabled={saving}
+                  className="w-full sm:w-auto flex items-center justify-center px-6 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition whitespace-nowrap"
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  onClick={performSave}
                   disabled={saving}
                   className="w-full sm:flex-1 sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold text-sm hover:from-emerald-600 hover:to-green-600 transition shadow-lg shadow-emerald-500/25 whitespace-nowrap"
                 >
@@ -1223,7 +1596,15 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
               ) : (
                 <div className="text-[11px] sm:text-xs font-bold text-slate-400 text-center sm:text-left">Tahrirlash huquqi faqat Katta elektromexanikda</div>
               )
-            ) : (
+            ) : activeTab === 'passport' ? (
+              <button
+                onClick={() => setIsEditingPassport(true)}
+                disabled={!swrData}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 text-white font-bold text-sm hover:from-purple-700 hover:to-violet-700 transition shadow-lg shadow-purple-500/25 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Edit3 size={18} /> O&apos;zgartirish
+              </button>
+            ) : activeTab === 'tasks' ? (
               <button
                 onClick={() => setIsEditingMappings(true)}
                 disabled={!swrData}
@@ -1231,7 +1612,7 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
               >
                 <Edit3 size={18} /> O&apos;zgartirish
               </button>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -1289,6 +1670,6 @@ export function StationEquipmentsModal({ stationId, stationName, canEdit, isDisp
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

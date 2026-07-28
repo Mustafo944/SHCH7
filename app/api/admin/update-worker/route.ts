@@ -10,6 +10,7 @@ type UpdateWorkerBody = {
   role?: 'worker' | 'bekat_boshlighi' | 'elektromexanik' | 'elektromontyor' | 'bekat_navbatchisi' | 'yul_ustasi' | 'ech_xodimi' | 'mehnat_muhofazasi'
   stationIds?: string[]
   position?: string
+  photoUrl?: string
 }
 
 export async function POST(req: Request) {
@@ -54,6 +55,7 @@ export async function POST(req: Request) {
     if (body.position !== undefined) updatePayload.position = body.position
     if (body.stationIds !== undefined) updatePayload.station_ids = body.stationIds
     if (body.phone !== undefined) updatePayload.phone = body.phone
+    if (body.photoUrl !== undefined) updatePayload.photo_url = body.photoUrl
 
     const { data, error } = await supabaseAdmin
       .from('users')

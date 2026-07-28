@@ -15,6 +15,7 @@ export interface User {
   position: Position;
   stationIds: string[]; // worker: max 5, bekat_boshlighi: max 3, yul_ustasi/ech_xodimi/others: max 1
   phone: string;
+  photoUrl?: string;
   createdAt: string;
 }
 
@@ -42,10 +43,34 @@ export interface TaskQRMapping {
   equipmentType: string[]; // bir nechta uskuna toifasi bog'lanishi mumkin
 }
 
+// Bekat pasporti — erkin qo'shiladigan bo'limlar va ularga tegishli qurilmalar.
+// Har bir bekat o'zi xohlagan sondagi va nomdagi bo'lim/kichik bo'lim/qurilma qo'shishi mumkin.
+// Qurilmalarning o'rnatilgan yili va ekspluatatsion davri keyinchalik statistika uchun saqlanadi.
+export interface PassportDevice {
+  id: string;
+  name: string; // Qurilma turi
+  installedYear: string; // O'rnatilgan yili
+  serviceLife: string; // Ekspluatatsion davri
+}
+
+export interface PassportSubSection {
+  id: string;
+  name: string;
+  devices: PassportDevice[];
+}
+
+export interface PassportSection {
+  id: string;
+  name: string;
+  devices: PassportDevice[]; // bo'limga to'g'ridan-to'g'ri tegishli qurilmalar
+  subSections: PassportSubSection[]; // faqat 1 daraja ichma-ich bo'lim
+}
+
 export interface StationEquipments {
   stationId: string;
   categories: EquipmentCategory[];
   taskMappings?: TaskQRMapping[];
+  passport?: PassportSection[];
   updatedAt: string;
   updatedByName: string;
 }

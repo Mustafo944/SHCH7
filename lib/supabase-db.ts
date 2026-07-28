@@ -8,7 +8,7 @@ import { safeStorage } from './utils/storage';
 export { getStations, getStation };
 
 // DB SELECT konstantalari (takrorlanishni kamaytirish)
-const USER_COLUMNS = 'id, login, full_name, role, position, station_ids, phone, created_at' as const;
+const USER_COLUMNS = 'id, login, full_name, role, position, station_ids, phone, photo_url, created_at' as const;
 
 const WORK_REPORT_COLUMNS = 'id, worker_id, worker_name, worker_phone, station_id, station_name, week_label, month, year, entries, submitted_at, confirmed_at, confirmed_by, rejected_at, rejected_by, is_submitted' as const;
 
@@ -27,6 +27,7 @@ interface DbUserRow {
   position: User['position'];
   station_ids: string[] | null;
   phone: string | null;
+  photo_url: string | null;
   created_at: string;
 }
 
@@ -190,6 +191,7 @@ function mapDbUserToUser(row: DbUserRow): User {
     position: row.position,
     stationIds: row.station_ids || [],
     phone: row.phone || '',
+    photoUrl: row.photo_url || undefined,
     createdAt: row.created_at,
   };
 }
@@ -255,7 +257,27 @@ export async function updateWorker(
     throw new Error(result.message || 'Update worker failed');
   }
 
-  return result.data ? mapDbUserToUser(result.data as DbUserRow) : null;
+  return mapDbUserToUser(result.data as DbUserRow);
+}
+
+export async function uploadAvatar(file: File, userId: string): Promise<string> {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${userId}-${Date.now()}.${fileExt}`;
+  const filePath = `${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+
+  if (uploadError) {
+    throw new Error(`Rasm yuklashda xatolik: ${uploadError.message}`);
+  }
+
+  const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+  return data.publicUrl;
 }
 
 export async function deleteWorker(id: string): Promise<void> {
@@ -1305,7 +1327,7 @@ export async function getJournalsByStationId(stationId: string): Promise<Station
 
   return (data || []).map((row: DbJournalRow) => mapDbJournal(row))
 }
-import { EquipmentCategory, StationEquipments, QRScanRecord } from '@/types';
+import { EquipmentCategory, StationEquipments, QRScanRecord, PassportSection } from '@/types';
 import { buildEquipmentQrValue, stringToUuid } from '@/lib/utils/qr';
 
 // ==========================================
@@ -1385,6 +1407,25 @@ function mapEquipmentsRow(stationId: string, row: { entries: unknown; updated_at
   const entries = row.entries as any[];
   const taskMappings = entries.find(e => e.type === 'taskMappings')?.items || [];
 
+  // Eskirgan (bo'lim/qurilma tuzilmasidan oldingi, tekis {id,label,value} shaklidagi)
+  // yozuvlarni tashlab yuboramiz — subSections/devices massivlari yo'q bo'lgani uchun
+  // ular UI'ni buzadi. Faqat yangi shakldagi bo'limlar saqlanadi.
+  const rawPassport = entries.find(e => e.type === 'passport')?.data;
+  const passport: PassportSection[] = Array.isArray(rawPassport)
+    ? rawPassport
+        .filter((s: any) => s && Array.isArray(s.devices) && Array.isArray(s.subSections))
+        .map((s: any) => ({
+          id: s.id,
+          name: s.name || '',
+          devices: s.devices,
+          subSections: s.subSections.map((sub: any) => ({
+            id: sub.id,
+            name: sub.name || '',
+            devices: Array.isArray(sub.devices) ? sub.devices : [],
+          })),
+        }))
+    : [];
+
   let categories: EquipmentCategory[] = [];
   const categoriesEntry = entries.find(e => e.type === 'categories');
   if (categoriesEntry) {
@@ -1402,6 +1443,7 @@ function mapEquipmentsRow(stationId: string, row: { entries: unknown; updated_at
     stationId,
     categories,
     taskMappings,
+    passport,
     updatedAt: row.updated_at,
     updatedByName: row.updated_by || 'Tizim'
   };
@@ -1430,13 +1472,15 @@ export async function upsertStationEquipments(
   stationId: string,
   categories: EquipmentCategory[],
   taskMappings: any[],
+  passport: PassportSection[],
   updatedByName: string,
   expectedUpdatedAt?: string | null
 ): Promise<StationEquipments> {
 
   const entries = [
     { type: 'categories', data: categories },
-    { type: 'taskMappings', items: taskMappings }
+    { type: 'taskMappings', items: taskMappings },
+    { type: 'passport', data: passport }
   ];
 
   const { data: existing } = await supabase
@@ -1517,5 +1561,5 @@ export async function updateEquipmentScanHistory(
 
   if (!hasChanges) return equipments;
 
-  return upsertStationEquipments(stationId, newCategories, equipments.taskMappings || [], updatedByName, equipments.updatedAt);
+  return upsertStationEquipments(stationId, newCategories, equipments.taskMappings || [], equipments.passport || [], updatedByName, equipments.updatedAt);
 }

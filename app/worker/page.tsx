@@ -12,11 +12,14 @@ import {
   getIncidents,
   getReadIncidentIds,
   getPendingJournalCounts,
+  getStationEquipments,
   mapDbReport,
   type DbWorkReportRow
 } from '@/lib/supabase-db'
+import type { PassportSection } from '@/types'
 import { safeStorage } from '@/lib/utils/storage'
 import { getRelayStatusCounts, type RelayStatusCounts } from '@/lib/relenazorat'
+import { getMonitorStationForName } from '@/lib/monosxema/stations'
 import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription, useHardwareBack } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
@@ -41,8 +44,9 @@ const WorkerSchemasView = dynamic(() => import('@/components/worker/WorkerSchema
 const WorkerTasksModal = dynamic(() => import('@/components/worker/WorkerTasksModal').then(mod => mod.WorkerTasksModal), { ssr: false, loading: () => <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-md"><div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-purple-500" /></div> })
 import IncidentsView from '@/components/worker/IncidentsView'
 import { LibraryView } from '@/components/library/LibraryView'
-const StationEquipmentsModal = dynamic(() => import('@/components/StationEquipmentsModal').then(mod => mod.StationEquipmentsModal), { ssr: false, loading: () => <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-md"><div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-blue-500" /></div> })
+const StationEquipmentsView = dynamic(() => import('@/components/StationEquipmentsView').then(mod => mod.StationEquipmentsView), { ssr: false, loading: () => <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-md"><div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-blue-500" /></div> })
 const RelayListModal = dynamic(() => import('@/components/worker/RelayListModal').then(mod => mod.RelayListModal), { ssr: false, loading: () => <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-md"><div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-amber-500" /></div> })
+const StationScheme = dynamic(() => import('@/components/worker/monosxema/StationScheme').then(mod => mod.StationScheme), { ssr: false })
 import {
   FileText,
   Map as MapIcon,
@@ -57,8 +61,46 @@ import {
   BarChart2,
   Library,
   Server,
-  Zap
+  Zap,
+  Calendar,
+  Clock,
+  User,
+  ShieldCheck,
+  ChevronRight,
+  TrendingUp,
+  Activity,
+  X
 } from 'lucide-react'
+
+const LiveClock = () => {
+  const [time, setTime] = useState(new Date())
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+  
+  const days = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba']
+  const dateStr = time.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const timeStr = time.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  const dayName = days[time.getDay()]
+  
+  return (
+    <>
+      <div className="flex flex-col items-center p-3 sm:p-5 rounded-[20px] sm:rounded-[28px] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100 transition-transform hover:-translate-y-1">
+        <div className="mb-2 sm:mb-4 flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-slate-50 text-slate-500"><Calendar className="w-4 h-4 sm:w-6 sm:h-6" strokeWidth={2.5} /></div>
+        <p className="text-[7.5px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 sm:mb-2 text-center leading-tight">Bugungi sana</p>
+        <p className="text-[10px] sm:text-[14px] font-black text-slate-800 tracking-tight text-center">{dateStr}</p>
+        <p className="text-[8px] sm:text-[10px] font-medium text-slate-400 mt-1 text-center">{dayName}</p>
+      </div>
+      <div className="flex flex-col items-center p-3 sm:p-5 rounded-[20px] sm:rounded-[28px] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100 transition-transform hover:-translate-y-1">
+        <div className="mb-2 sm:mb-4 flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-500"><Clock className="w-4 h-4 sm:w-6 sm:h-6" strokeWidth={2.5} /></div>
+        <p className="text-[7.5px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 sm:mb-2 text-center leading-tight">Joriy vaqt</p>
+        <p className="text-[11px] sm:text-[16px] font-black text-slate-800 tracking-tight text-center">{timeStr}</p>
+        <p className="text-[8px] sm:text-[10px] font-medium text-slate-400 mt-1 text-center leading-tight">Toshkent vaqti</p>
+      </div>
+    </>
+  )
+}
 
 
 
@@ -79,6 +121,7 @@ export default function WorkerPage() {
   const [selectedReport, _setSelectedReport] = useState<WorkReport | null>(null)
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
   const [relayCounts, setRelayCounts] = useState<RelayStatusCounts>({ soz: 0, nosoz: 0, muddatiKelgan: 0 })
+  const [stationPassport, setStationPassport] = useState<PassportSection[]>([])
   const relayTotal = relayCounts.soz + relayCounts.muddatiKelgan + relayCounts.nosoz
   const relaySafeTotal = relayTotal || 1
   const relaySozPct = (relayCounts.soz / relaySafeTotal) * 100
@@ -93,11 +136,14 @@ export default function WorkerPage() {
   
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false)
 
-  const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen || relayModalOpen
+  const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen || relayModalOpen || isMoreMenuOpen
   const handleHardwareBack = useCallback(() => {
     if (isSignOutModalOpen) {
       setIsSignOutModalOpen(false)
+    } else if (isMoreMenuOpen) {
+      setIsMoreMenuOpen(false)
     } else if (relayModalOpen) {
       setRelayModalOpen(false)
     } else if (selectedJournalType !== null) {
@@ -221,6 +267,15 @@ export default function WorkerPage() {
     if (!name) { setRelayCounts({ soz: 0, nosoz: 0, muddatiKelgan: 0 }); return }
     let cancelled = false
     getRelayStatusCounts(name).then(counts => { if (!cancelled) setRelayCounts(counts) })
+    return () => { cancelled = true }
+  }, [activeStationId])
+
+  useEffect(() => {
+    if (!activeStationId) { setStationPassport([]); return }
+    let cancelled = false
+    getStationEquipments(activeStationId)
+      .then(data => { if (!cancelled) setStationPassport(data?.passport || []) })
+      .catch(() => { if (!cancelled) setStationPassport([]) })
     return () => { cancelled = true }
   }, [activeStationId])
 
@@ -383,6 +438,7 @@ export default function WorkerPage() {
 
   const station = activeStationId ? getStation(activeStationId) : null
   const stationName = station?.name || '...'
+  const monitorStation = getMonitorStationForName(stationName)
 
   const sidebarItems: SidebarNavItem[] = [
     { key: 'home', label: 'Bosh sahifa', icon: Home, active: view === 'home' || view === 'selectStation', onClick: () => setView('home') },
@@ -399,58 +455,60 @@ export default function WorkerPage() {
     <div className="relative flex h-dvh overflow-hidden bg-slate-50 text-slate-900 selection:bg-blue-500/10 font-sans">
       <AuroraMeshBackground />
 
-      <AppSidebar
-        items={sidebarItems}
-        onSignOut={() => setIsSignOutModalOpen(true)}
-        isMobileOpen={isMobileSidebarOpen}
-        onMobileClose={() => setIsMobileSidebarOpen(false)}
-        isCollapsed={isDesktopSidebarCollapsed}
-        onToggleCollapse={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)}
-        userName={session?.fullName}
-        userRole={session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : session?.role === 'elektromexanik' ? 'Elektromexanik' : session?.role === 'elektromontyor' ? 'Elektromontyor' : 'Katta Elektromexanik'}
-      />
+      <div className="hidden lg:block h-full">
+        <AppSidebar
+          items={sidebarItems}
+          onSignOut={() => setIsSignOutModalOpen(true)}
+          isMobileOpen={isMobileSidebarOpen}
+          onMobileClose={() => setIsMobileSidebarOpen(false)}
+          isCollapsed={isDesktopSidebarCollapsed}
+          onToggleCollapse={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)}
+          userName={session?.fullName}
+          userRole={session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : session?.role === 'elektromexanik' ? 'Elektromexanik' : session?.role === 'elektromontyor' ? 'Elektromontyor' : 'Katta Elektromexanik'}
+          userPhotoUrl={session?.photoUrl}
+        />
+      </div>
 
       {/* Main Content Area */}
       <div className="relative flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-30 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-[1600px] print:hidden">
-          <div className="flex w-full items-center justify-between bg-white/10 backdrop-blur-xl px-3 sm:px-5 py-2 sm:py-3 rounded-[24px] sm:rounded-[32px] border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <button onClick={() => setIsMobileSidebarOpen(true)} className="lg:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-white/20 backdrop-blur-md p-2 shadow-sm border border-white/30 text-slate-600 hover:bg-slate-50 transition-all active:scale-95">
-                <Menu size={20} />
-              </button>
-              {/* UTY Logo */}
-              <div className="hidden sm:flex relative h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-[16px] bg-white/20 backdrop-blur-md p-2 shadow-sm border border-white/30">
-                <Image src="/uty-logo.png" alt="UTY" fill className="object-contain p-2 drop-shadow-sm" />
+        {view !== 'home' && (
+          <header className="sticky top-0 z-30 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-[1600px] print:hidden">
+            <div className="flex w-full items-center justify-between bg-white/10 backdrop-blur-xl px-3 sm:px-5 py-2 sm:py-3 rounded-[24px] sm:rounded-[32px] border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              <div className="flex items-center gap-3 sm:gap-4">
+                {/* UTY Logo */}
+                <div className="hidden sm:flex relative h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-[16px] bg-white/20 backdrop-blur-md p-2 shadow-sm border border-white/30">
+                  <Image src="/uty-logo.png" alt="UTY" fill className="object-contain p-2 drop-shadow-sm" />
+                </div>
+                <div className="min-w-0 flex flex-col justify-center">
+                  <h1 className="text-[15px] sm:text-[18px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
+                  {(session?.stationIds?.length || 0) > 1 ? (
+                    <button
+                      onClick={() => setView('selectStation')}
+                      className="text-[8px] sm:text-[9.5px] font-black text-purple-600 truncate uppercase tracking-widest mt-1 drop-shadow-sm text-left hover:underline"
+                    >
+                      {stationName !== '...' ? `${stationName} BEKATI` : 'SMART CONTROL TIZIMI'} · O&apos;zgartirish
+                    </button>
+                  ) : (
+                    <p className="text-[8px] sm:text-[9.5px] font-black text-purple-600 truncate uppercase tracking-widest mt-1 drop-shadow-sm">{stationName !== '...' ? `${stationName} BEKATI` : 'SMART CONTROL TIZIMI'}</p>
+                  )}
+                  <p className="text-[10px] font-black text-slate-400 truncate uppercase tracking-tight mt-0.5 sm:hidden">{session?.fullName}</p>
+                </div>
               </div>
-              <div className="min-w-0 flex flex-col justify-center">
-                <h1 className="text-[15px] sm:text-[18px] font-black uppercase tracking-tight text-slate-900 leading-none">SMART SHCH</h1>
-                {(session?.stationIds?.length || 0) > 1 ? (
-                  <button
-                    onClick={() => setView('selectStation')}
-                    className="text-[8px] sm:text-[9.5px] font-black text-purple-600 truncate uppercase tracking-widest mt-1 drop-shadow-sm text-left hover:underline"
-                  >
-                    {stationName !== '...' ? `${stationName} BEKATI` : 'SMART CONTROL TIZIMI'} · O&apos;zgartirish
-                  </button>
-                ) : (
-                  <p className="text-[8px] sm:text-[9.5px] font-black text-purple-600 truncate uppercase tracking-widest mt-1 drop-shadow-sm">{stationName !== '...' ? `${stationName} BEKATI` : 'SMART CONTROL TIZIMI'}</p>
-                )}
-                <p className="text-[10px] font-black text-slate-400 truncate uppercase tracking-tight mt-0.5 sm:hidden">{session?.fullName}</p>
+
+              <div className="flex items-center gap-2 sm:gap-4">
+                <div className="hidden sm:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/20 border border-white/30 shadow-sm backdrop-blur-md">
+                  <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
+                  <span className="text-[11px] font-black text-slate-700 tracking-widest uppercase">{session?.fullName || 'Elektromexanik'}</span>
+                </div>
+                <button onClick={() => setIsMuted(!isMuted)} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-slate-500 hover:bg-slate-50 hover:text-purple-600 transition-all shadow-sm active:scale-95">
+                  {isMuted ? <VolumeX size={20} strokeWidth={2.5} /> : <Volume2 size={20} strokeWidth={2.5} />}
+                </button>
               </div>
             </div>
+          </header>
+        )}
 
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className="hidden sm:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/20 border border-white/30 shadow-sm backdrop-blur-md">
-                <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
-                <span className="text-[11px] font-black text-slate-700 tracking-widest uppercase">{session?.fullName || 'Elektromexanik'}</span>
-              </div>
-              <button onClick={() => setIsMuted(!isMuted)} className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-slate-500 hover:bg-slate-50 hover:text-purple-600 transition-all shadow-sm active:scale-95">
-                {isMuted ? <VolumeX size={20} strokeWidth={2.5} /> : <Volume2 size={20} strokeWidth={2.5} />}
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-y-auto pt-2 sm:pt-8 px-3 sm:px-4 lg:px-8 pb-4 sm:pb-8 custom-scrollbar">
+        <main className={`flex-1 overflow-y-auto overflow-x-hidden ${view !== 'home' ? 'pt-2 sm:pt-8 px-3 sm:px-4 lg:px-8' : ''} bg-transparent pb-28 lg:pb-8 custom-scrollbar relative`}>
           {view === 'selectStation' && (
             <div className="grid gap-6 sm:grid-cols-2 pt-4">
               {session?.stationIds?.length === 0 ? (
@@ -474,8 +532,37 @@ export default function WorkerPage() {
           )}
 
           {view === 'home' && (
-            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-3 sm:mt-0 animate-fade-up">
-                  {/* Bugun Bajarilishi Kerak Bo'lgan Ishlar */}
+            <div className="animate-fade-up pb-12 w-full lg:max-w-[1200px] xl:max-w-[1400px] lg:mx-auto min-h-screen lg:px-6">
+              {/* SLIM HERO SECTION */}
+              <div className="relative mx-3 lg:mx-0 mt-3 lg:mt-4 rounded-xl sm:rounded-2xl bg-white/40 backdrop-blur-xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-[0_4px_24px_rgba(31,38,135,0.05)] border border-white/60 flex items-center justify-between">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <button 
+                    onClick={() => setView('selectStation')}
+                    className="relative h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-white/50 backdrop-blur-md p-1.5 shadow-sm border border-white/60 hover:bg-white/80 transition-colors active:scale-95"
+                  >
+                    <Image src="/uty-logo.png" alt="UTY" fill className="object-contain p-1.5 drop-shadow-sm" />
+                  </button>
+                  <div className="min-w-0 flex flex-col justify-center cursor-pointer" onClick={() => setView('selectStation')}>
+                    <h2 className="text-[11px] sm:text-[13px] font-black tracking-wider text-[#0a1128] leading-none uppercase truncate drop-shadow-sm">
+                      {stationName !== '...' ? `${stationName} BEKATI` : 'SMART CONTROL'}
+                    </h2>
+                    <p className="text-[8.5px] sm:text-[9.5px] font-bold text-slate-500 truncate tracking-widest uppercase mt-1 leading-none">
+                      {session?.fullName}
+                    </p>
+                  </div>
+                </div>
+
+                <button onClick={() => setIsMuted(!isMuted)} className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-white text-blue-600 border border-white/80 hover:bg-slate-50 transition-all shadow-sm active:scale-95">
+                  {isMuted ? <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} /> : <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />}
+                </button>
+              </div>
+
+              {monitorStation && <StationScheme station={monitorStation} />}
+
+              {/* 3 CARDS GRID */}
+              <div className="relative z-20 mt-3 lg:mt-5 px-3 sm:px-4 lg:px-0">
+                <div className="grid gap-2 sm:gap-4 grid-cols-2 lg:grid-cols-3">
+                  {/* Bugungi Ishlar */}
                   <div
                     onClick={() => {
                       const today = new Date()
@@ -483,101 +570,194 @@ export default function WorkerPage() {
                       setSelectedMonth(today.getMonth())
                       setView('journal')
                     }}
-                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/35 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-blue-100 hover:shadow-[0_20px_40px_-20px_rgba(37,99,235,0.35)] active:scale-[0.98]"
+                    className="col-span-2 lg:col-span-1 cursor-pointer group flex flex-col justify-between overflow-hidden rounded-[24px] sm:rounded-[32px] bg-white/60 backdrop-blur-2xl p-3.5 sm:p-5 shadow-[0_8px_32px_rgba(31,38,135,0.07)] transition-all hover:-translate-y-1 hover:shadow-xl border border-white/60"
                   >
-                     <div className="flex items-center gap-4">
-                       <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30 transition-transform duration-300 group-hover:scale-110">
-                         <FileText size={26} strokeWidth={2.5} />
-                         {bugunReja.length > 0 && bugunReja.filter(b => b.done).length === bugunReja.length && (
-                           <div className="absolute -top-1.5 -right-1.5 bg-emerald-500 rounded-full p-0.5 border-2 border-white">
-                             <CheckCircle2 size={12} className="text-white" />
-                           </div>
-                         )}
-                       </div>
-                       <div>
-                         <p className="text-xs font-black uppercase tracking-widest text-slate-400">Bugungi ishlar</p>
-                         <p className="text-3xl font-black text-slate-900 mt-1">{bugunReja.length}</p>
-                       </div>
-                     </div>
-                     <p className="mt-2 sm:mt-4 text-sm font-medium text-slate-500">
-                        {bugunReja.length > 0 ? `${bugunReja.length} ta reja, ${bugunReja.filter(b => b.done).length} ta bajarildi` : "Bugun uchun ish yo'q"}
-                     </p>
+                    <div className="flex items-start justify-between mb-3 sm:mb-5">
+                      <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+                        <div className="flex h-11 w-11 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[16px] sm:rounded-[20px] bg-gradient-to-br from-[#4f75ff] to-[#3b5bdb] text-white shadow-[0_4px_15px_rgba(59,130,246,0.3)]">
+                          <FileText className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <p className="text-[9px] sm:text-[11px] font-black uppercase tracking-widest text-slate-500 leading-tight">BUGUNGI ISHLAR</p>
+                          <p className="text-[28px] sm:text-[36px] font-black text-[#1e293b] leading-none mt-1">{bugunReja.length}</p>
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-slate-300 shrink-0" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 mb-2 truncate">{bugunReja.length > 0 ? `${bugunReja.length} ta reja, ${bugunReja.filter(b => b.done).length} ta bajarildi` : "Bugun uchun ish yo'q"}</p>
+                      <div className="h-1 sm:h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                        <div className="h-full bg-[#4f75ff] transition-all rounded-full" style={{ width: bugunReja.length > 0 ? `${(bugunReja.filter(b => b.done).length / bugunReja.length) * 100}%` : '0%' }} />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Bajarilmagan Ishlar */}
                   <div
                     onClick={() => setWorkerModal('qolibKetgan')}
-                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/35 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-red-100 hover:shadow-[0_20px_40px_-20px_rgba(220,38,38,0.35)] active:scale-[0.98]"
+                    className="cursor-pointer group flex flex-col justify-between overflow-hidden rounded-[24px] sm:rounded-[32px] bg-white/60 backdrop-blur-2xl p-3.5 sm:p-5 shadow-[0_8px_32px_rgba(31,38,135,0.07)] transition-all hover:-translate-y-1 hover:shadow-xl border border-white/60"
                   >
-                     <div className="flex items-center gap-4">
-                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/30 transition-transform duration-300 group-hover:scale-110">
-                         <AlertTriangle size={26} strokeWidth={2.5} />
-                       </div>
-                       <div>
-                         <p className="text-xs font-black uppercase tracking-widest text-slate-400">Bajarilmagan ishlar</p>
-                         <p className="text-3xl font-black text-slate-900 mt-1">{qolibKetgan.length}</p>
-                       </div>
-                     </div>
-                     <p className="mt-2 sm:mt-4 text-sm font-medium text-slate-500">
-                        {qolibKetgan.length > 0 ? "Izoxsiz qolib ketgan ishlar" : "Barcha ishlar bajarilgan"}
-                     </p>
+                    <div className="flex items-start justify-between mb-3 sm:mb-5">
+                      <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+                        <div className="flex h-11 w-11 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[16px] sm:rounded-[20px] bg-gradient-to-br from-[#ff4b6b] to-[#e63956] text-white shadow-[0_4px_15px_rgba(239,68,68,0.3)]">
+                          <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 leading-tight">BAJARILMAGAN ISHLAR</p>
+                          <p className="text-[28px] sm:text-[36px] font-black text-[#1e293b] leading-none mt-1">{qolibKetgan.length}</p>
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-slate-300 shrink-0" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 truncate mb-1">{qolibKetgan.length > 0 ? "Muddat o'tgan ishlar bor" : "Barcha ishlar bajarilgan"}</p>
+                    </div>
                   </div>
 
-                  {/* Sababli Bajarilmagan Ishlar */}
+                  {/* Sababli Qoldirilgan */}
                   <div
                     onClick={() => setWorkerModal('sababliBajarilmagan')}
-                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/35 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-orange-100 hover:shadow-[0_20px_40px_-20px_rgba(234,88,12,0.35)] active:scale-[0.98]"
+                    className="cursor-pointer group flex flex-col justify-between overflow-hidden rounded-[24px] sm:rounded-[32px] bg-white/60 backdrop-blur-2xl p-3.5 sm:p-5 shadow-[0_8px_32px_rgba(31,38,135,0.07)] transition-all hover:-translate-y-1 hover:shadow-xl border border-white/60"
                   >
-                     <div className="flex items-center gap-4">
-                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30 transition-transform duration-300 group-hover:scale-110">
-                         <BookOpen size={26} strokeWidth={2.5} />
-                       </div>
-                       <div>
-                         <p className="text-xs font-black uppercase tracking-widest text-slate-400">Sababli qoldirilgan</p>
-                         <p className="text-3xl font-black text-slate-900 mt-1">{sababliBajarilmagan.length}</p>
-                       </div>
-                     </div>
-                     <p className="mt-2 sm:mt-4 text-sm font-medium text-slate-500">
-                        {sababliBajarilmagan.length > 0 ? "Sabab ko'rsatilgan ishlar" : "Bunday ishlar yo'q"}
-                     </p>
+                    <div className="flex items-start justify-between mb-3 sm:mb-5">
+                      <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+                        <div className="flex h-11 w-11 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[16px] sm:rounded-[20px] bg-gradient-to-br from-[#ff8c00] to-[#e07b00] text-white shadow-[0_4px_15px_rgba(249,115,22,0.3)]">
+                          <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 leading-tight">SABABLI QOLDIRILGAN ISHLAR</p>
+                          <p className="text-[28px] sm:text-[36px] font-black text-[#1e293b] leading-none mt-1">{sababliBajarilmagan.length}</p>
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-slate-300 shrink-0" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 truncate mb-1">{sababliBajarilmagan.length > 0 ? "Boshqa kunga o'tkazilgan" : "Bunday ishlar yo'q"}</p>
+                    </div>
                   </div>
+                </div>
+              </div>
 
-                  {/* Relelar Holati — ro'yxat shu ilova ichida ochiladi (tashqi saytga o'tish va alohida login YO'Q) */}
+              {/* BIG RELE BLOCK */}
+                <div 
+                  onClick={() => setRelayModalOpen(true)}
+                  className="mx-3 lg:mx-0 mt-4 sm:mt-6 lg:mt-5 cursor-pointer rounded-[32px] bg-gradient-to-br from-indigo-50/90 via-white/80 to-blue-50/90 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(31,38,135,0.07)] relative overflow-hidden group transition-all hover:-translate-y-1 hover:shadow-xl border border-white/80 flex flex-col items-center"
+                >
+                  <div className="absolute top-0 right-0 -mt-10 -mr-10 h-40 w-40 rounded-full bg-blue-400/10 blur-3xl" />
+                  <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-purple-400/10 blur-3xl" />
+                  
+                  <div className="w-full text-left relative z-10">
+                    <h3 className="text-[10px] sm:text-[12px] font-black uppercase tracking-widest text-slate-500 mb-4 sm:mb-6">RELELAR HOLATI</h3>
+                  </div>
+                  
+                  <div className="flex flex-col w-full items-center relative z-10">
+                    {/* Circle Progress */}
+                    <div className="relative flex h-[110px] w-[110px] sm:h-[130px] sm:w-[130px] shrink-0 items-center justify-center rounded-full mb-6 sm:mb-8">
+                       <svg className="absolute inset-0 h-full w-full -rotate-90 transform drop-shadow-md" viewBox="0 0 100 100">
+                         <defs>
+                           <linearGradient id="relayGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                             <stop offset="0%" stopColor="#8b5cf6" />
+                             <stop offset="100%" stopColor="#00f2fe" />
+                           </linearGradient>
+                         </defs>
+                         <circle className="text-indigo-100" strokeWidth="8" stroke="currentColor" fill="transparent" r="42" cx="50" cy="50" />
+                         <circle className="text-[#00f2fe]" strokeWidth="8" strokeLinecap="round" stroke="url(#relayGradient)" fill="transparent" r="42" cx="50" cy="50" strokeDasharray={`${2 * Math.PI * 42}`} strokeDashoffset={`${2 * Math.PI * 42 * (1 - (relaySozPct || 100)/100)}`} />
+                       </svg>
+                      <div className="text-center">
+                        <p className="text-[32px] sm:text-[38px] font-black text-slate-800 leading-none tracking-tight">{relayTotal}</p>
+                        <p className="text-[8px] sm:text-[9.5px] font-bold uppercase tracking-widest text-slate-500 mt-1">TA RELE</p>
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="flex w-full items-center justify-between gap-2 sm:gap-4">
+                      <div className="flex-1 rounded-[20px] bg-white p-2.5 sm:p-4 shadow-[0_4px_15px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col items-center justify-center min-h-[64px] sm:min-h-[76px] transition-transform group-hover:scale-[1.02]">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1 text-emerald-500">
+                          <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
+                          <p className="text-[16px] sm:text-[20px] font-black text-slate-800">{relayCounts.soz}</p>
+                        </div>
+                        <p className="text-[7px] sm:text-[8.5px] font-black uppercase tracking-widest text-slate-400">SOZ</p>
+                      </div>
+
+                      <div className="flex-1 rounded-[20px] bg-white p-2.5 sm:p-4 shadow-[0_4px_15px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col items-center justify-center min-h-[64px] sm:min-h-[76px] transition-transform group-hover:scale-[1.02] delay-75">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1 text-amber-500">
+                          <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
+                          <p className="text-[16px] sm:text-[20px] font-black text-slate-800">{relayCounts.muddatiKelgan}</p>
+                        </div>
+                        <p className="text-[7px] sm:text-[8.5px] font-black uppercase tracking-widest text-slate-400 text-center leading-tight">MUDDATI<br className="sm:hidden"/> KELGAN</p>
+                      </div>
+
+                      <div className="flex-1 rounded-[20px] bg-white p-2.5 sm:p-4 shadow-[0_4px_15px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col items-center justify-center min-h-[64px] sm:min-h-[76px] transition-transform group-hover:scale-[1.02] delay-150">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1 text-rose-500">
+                          <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
+                          <p className="text-[16px] sm:text-[20px] font-black text-slate-800">{relayCounts.nosoz}</p>
+                        </div>
+                        <p className="text-[7px] sm:text-[8.5px] font-black uppercase tracking-widest text-slate-400">NOSOZ</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* BEKAT PASPORTI (bekat uchun erkin qo'shilgan maydonlar) */}
+                {stationPassport.length > 0 && (
                   <div
-                    onClick={() => setRelayModalOpen(true)}
-                    className="cursor-pointer group relative overflow-hidden rounded-3xl border border-white/60 bg-white/35 p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_10px_26px_-16px_rgba(15,23,42,0.15)] transition-all duration-300 hover:-translate-y-1 hover:border-amber-100 hover:shadow-[0_20px_40px_-20px_rgba(217,119,6,0.35)] active:scale-[0.98]"
+                    onClick={() => { setView('qurilmalar'); setIsMoreMenuOpen(false) }}
+                    className="mt-4 sm:mt-6 cursor-pointer rounded-[28px] sm:rounded-[36px] bg-white/40 backdrop-blur-3xl border border-white/60 p-5 sm:p-6 shadow-[0_8px_32px_rgba(31,38,135,0.04)] relative overflow-hidden group transition-transform hover:scale-[1.01]"
                   >
-                     <div className="flex items-center justify-between gap-4">
-                       <div className="flex items-center gap-4">
-                         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 text-white shadow-lg shadow-amber-500/30 transition-transform duration-300 group-hover:scale-110">
-                           <Zap size={26} strokeWidth={2.5} />
-                         </div>
-                         <div>
-                           <p className="text-xs font-black uppercase tracking-widest text-slate-400">Relelar holati</p>
-                           <p className="text-3xl font-black text-slate-900 mt-1">{relayTotal}<span className="text-sm font-bold text-slate-400 ml-1">ta rele</span></p>
-                         </div>
-                       </div>
-                     </div>
-
-                     <div className="mt-4 flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                        {relayTotal > 0 ? (
-                          <>
-                            <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${relaySozPct}%` }} />
-                            <div className="h-full bg-amber-500 transition-all duration-500" style={{ width: `${relayWarnPct}%` }} />
-                            <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${relayBadPct}%` }} />
-                          </>
-                        ) : (
-                          <div className="h-full w-full bg-slate-200" />
-                        )}
-                     </div>
-
-                     <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{relayCounts.soz} soz</span>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 ring-1 ring-inset ring-amber-200"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />{relayCounts.muddatiKelgan} muddati kelgan</span>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-700 ring-1 ring-inset ring-red-200"><span className="h-1.5 w-1.5 rounded-full bg-red-500" />{relayCounts.nosoz} nosoz</span>
-                     </div>
+                    <div className="flex items-center justify-between mb-4 sm:mb-5">
+                      <div className="flex items-center gap-2 text-[#26449c]">
+                        <Server className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
+                        <h3 className="text-[10px] sm:text-[12px] font-black uppercase tracking-widest">BEKAT PASPORTI</h3>
+                      </div>
+                      <ChevronRight size={16} className="text-slate-300 shrink-0" />
+                    </div>
+                    <div className="flex gap-2.5 sm:gap-3 overflow-x-auto pb-1 -mx-1 px-1 custom-scrollbar">
+                      {stationPassport.map(section => {
+                        const deviceCount = section.devices.length + section.subSections.reduce((sum, sub) => sum + sub.devices.length, 0)
+                        return (
+                          <div key={section.id} className="shrink-0 min-w-[120px] sm:min-w-[140px] rounded-[16px] sm:rounded-[20px] bg-white/70 border border-white p-3 sm:p-4 shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
+                            <p className="text-[7.5px] sm:text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 truncate">{section.name || 'Nomsiz bo\'lim'}</p>
+                            <p className="text-[13px] sm:text-[15px] font-black text-[#0a1128] truncate">{deviceCount} ta qurilma</p>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-            </div>
+                )}
+
+                {/* TEZKOR MA'LUMOTLAR */}
+                <div className="mt-5 sm:mt-8 mb-4 px-1 sm:px-2">
+                  <div className="flex items-center justify-between mb-4 sm:mb-6 px-1">
+                    <div className="flex items-center gap-2 text-[#26449c]">
+                      <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
+                      <h3 className="text-[10px] sm:text-[13px] font-black uppercase tracking-widest">TEZKOR MA'LUMOTLAR</h3>
+                    </div>
+                    <button className="text-[9px] sm:text-[11px] font-bold text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-1">
+                      Barchasini ko'rish <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" strokeWidth={2.5} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-5">
+                    <LiveClock />
+                    
+                    <div className="flex flex-col items-center p-3 sm:p-5 rounded-[20px] sm:rounded-[28px] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100 transition-transform hover:-translate-y-1">
+                      <div className="mb-2 sm:mb-4 flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-[#f3e8ff] text-[#9333ea]"><User className="w-4 h-4 sm:w-6 sm:h-6" strokeWidth={2.5} /></div>
+                      <p className="text-[7.5px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 sm:mb-2 text-center leading-tight">Foydalanuvchi</p>
+                      <p className="text-[10px] sm:text-[14px] font-black text-[#1e293b] tracking-tight text-center leading-tight whitespace-nowrap overflow-hidden text-ellipsis w-full">
+                        {session?.fullName?.split(' ')[0]} {session?.fullName?.split(' ')[1]?.[0]}.
+                      </p>
+                      <p className="text-[8px] sm:text-[10px] font-medium text-slate-400 mt-1 uppercase">ID: {session?.id.substring(0,5)}</p>
+                    </div>
+
+                    <div className="flex flex-col items-center p-3 sm:p-5 rounded-[20px] sm:rounded-[28px] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100 transition-transform hover:-translate-y-1">
+                      <div className="mb-2 sm:mb-4 flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-[#e0f2fe] text-[#0284c7]"><ShieldCheck className="w-4 h-4 sm:w-6 sm:h-6" strokeWidth={2.5} /></div>
+                      <p className="text-[7.5px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 sm:mb-2 text-center leading-tight">Tizim holati</p>
+                      <p className="text-[10px] sm:text-[14px] font-black text-emerald-500 tracking-tight text-center leading-tight">Faoliyatda</p>
+                      <p className="text-[8px] sm:text-[10px] font-medium text-slate-400 mt-1 flex items-center gap-1.5 justify-center whitespace-nowrap"><span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span> Internet ulangan</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
           )}
 
           {view === 'selectMonth' && (
@@ -976,13 +1156,12 @@ export default function WorkerPage() {
 
           {view === 'qurilmalar' && (
             activeStationId ? (
-              <StationEquipmentsModal
+              <StationEquipmentsView
                 stationId={activeStationId}
                 stationName={stationName}
                 canEdit={session?.role === 'katta_elektromexanik' || session?.position === 'katta_elektromexanik'}
                 canEditTaskMappings={session?.role === 'katta_elektromexanik' || session?.position === 'katta_elektromexanik'}
                 userName={session?.fullName || 'Foydalanuvchi'}
-                onClose={() => setView('home')}
               />
             ) : (
               <div className="flex flex-col items-center justify-center rounded-[32px] border border-slate-200 bg-white p-16 text-center shadow-sm">
@@ -1022,6 +1201,86 @@ export default function WorkerPage() {
             />
           )}
         </main>
+
+        {/* Mobile Bottom Navigation */}
+        <div className="lg:hidden fixed bottom-4 left-4 right-4 z-40 bg-white/60 backdrop-blur-3xl border border-white/60 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.08)]">
+          <div className="flex items-center justify-around px-1 py-2">
+            {[
+              { key: 'home', label: 'Asosiy', icon: Home, active: view === 'home' || view === 'selectStation', onClick: () => { setView('home'); setIsMoreMenuOpen(false); } },
+              { key: 'reja', label: 'Ish reja', icon: FileText, active: ['selectMonth', 'viewReport', 'journal'].includes(view), onClick: () => { setView('selectMonth'); setIsMoreMenuOpen(false); } },
+              { key: 'jurnallar', label: 'Jurnallar', icon: BookOpen, active: ['journalSelect', 'journalMonthSelect', 'du46', 'shu2', 'boshqaJurnallar', 'alsn', 'yerlatgich', 'alsnKod', 'mpsFriksion', 'dgaNazorat'].includes(view), onClick: () => { setView('journalSelect'); setIsMoreMenuOpen(false); } },
+            ].map(item => (
+              <button key={item.key} onClick={item.onClick} className={`flex flex-col items-center justify-center w-[76px] h-14 rounded-2xl transition-all active:scale-95 ${item.active ? 'text-purple-600' : 'text-slate-500 hover:text-slate-700'}`}>
+                <div className={`mb-1 p-1.5 rounded-xl ${item.active ? 'bg-purple-100/80 shadow-sm' : 'bg-white/30'}`}>
+                  <item.icon size={22} strokeWidth={item.active ? 2.5 : 2} />
+                </div>
+                <span className={`text-[10px] font-bold ${item.active ? 'text-purple-700' : 'text-slate-600'}`}>{item.label}</span>
+              </button>
+            ))}
+            <button onClick={() => setIsMoreMenuOpen(true)} className={`flex flex-col items-center justify-center w-[76px] h-14 rounded-2xl transition-all active:scale-95 ${isMoreMenuOpen ? 'text-purple-600' : 'text-slate-500 hover:text-slate-700'}`}>
+              <div className={`mb-1 p-1.5 rounded-xl ${isMoreMenuOpen ? 'bg-purple-100/80 shadow-sm' : 'bg-white/30'}`}>
+                <Menu size={22} strokeWidth={isMoreMenuOpen ? 2.5 : 2} />
+              </div>
+              <span className={`text-[10px] font-bold ${isMoreMenuOpen ? 'text-purple-700' : 'text-slate-600'}`}>Ko'proq</span>
+            </button>
+          </div>
+        </div>
+
+        {/* More Menu Bottom Sheet */}
+        {isMoreMenuOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-fade-in" onClick={() => setIsMoreMenuOpen(false)} />
+            <div className="relative w-full bg-white/60 backdrop-blur-3xl rounded-t-[36px] p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] animate-fade-up border-t border-white/60 pb-safe">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 overflow-hidden items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 text-white font-black text-sm shadow-md shadow-blue-600/25">
+                    {session?.photoUrl ? (
+                      <img src={session.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      session?.fullName?.charAt(0) || 'U'
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-800 tracking-tight leading-tight">{session?.fullName || 'Foydalanuvchi'}</h3>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      {session?.role === 'bekat_boshlighi' ? "Bekat Boshlig'i" : session?.role === 'elektromexanik' ? 'Elektromexanik' : session?.role === 'elektromontyor' ? 'Elektromontyor' : 'Katta Elektromexanik'}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setIsMoreMenuOpen(false)} className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 active:scale-95 transition-all">
+                  <X size={16} strokeWidth={3} />
+                </button>
+              </div>
+              <div className="mb-4">
+                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-3">Qo'shimcha bo'limlar</h3>
+              </div>
+              <div className="grid grid-cols-4 gap-4 mb-4">
+                {[
+                  { key: 'sxemalar', label: 'Sxemalar', icon: MapIcon, active: view === 'sxemalar', onClick: () => { setView('sxemalar'); setIsMoreMenuOpen(false); } },
+                  { key: 'grafiklar', label: 'Grafiklar', icon: BarChart2, active: view === 'grafiklar', onClick: () => { setView('grafiklar'); setIsMoreMenuOpen(false); } },
+                  { key: 'incidents', label: 'Hodisalar', icon: AlertTriangle, active: view === 'incidents', onClick: () => { setView('incidents'); setIsMoreMenuOpen(false); } },
+                  { key: 'kutubxona', label: 'Kutubxona', icon: Library, active: view === 'kutubxona', onClick: () => { setView('kutubxona'); setIsMoreMenuOpen(false); } },
+                  { key: 'qurilmalar', label: 'Qurilmalar', icon: Server, active: view === 'qurilmalar', onClick: () => { setView('qurilmalar'); setIsMoreMenuOpen(false); } },
+                ].map(item => (
+                  <button key={item.key} onClick={item.onClick} className="flex flex-col items-center gap-2">
+                    <div className={`flex items-center justify-center w-14 h-14 rounded-2xl border ${item.active ? 'bg-purple-50 border-purple-200 text-purple-600' : 'bg-slate-50 border-slate-100 text-slate-500'} transition-all active:scale-95 shadow-sm`}>
+                      <item.icon size={22} strokeWidth={item.active ? 2.5 : 2} />
+                    </div>
+                    <span className="text-[9.5px] font-bold text-slate-600 text-center leading-tight truncate w-full">{item.label}</span>
+                  </button>
+                ))}
+                
+                {/* Chiqish */}
+                <button onClick={() => { setIsMoreMenuOpen(false); setIsSignOutModalOpen(true); }} className="flex flex-col items-center gap-2">
+                  <div className="flex items-center justify-center w-14 h-14 rounded-2xl border bg-red-50 border-red-100 text-red-500 transition-all active:scale-95 shadow-sm">
+                    <LogOut size={22} strokeWidth={2.5} />
+                  </div>
+                  <span className="text-[9.5px] font-bold text-red-600 text-center leading-tight truncate w-full">Chiqish</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* SIGN OUT MODAL */}

@@ -8,6 +8,7 @@ import {
   getStations,
 } from '@/lib/store'
 import { safeStorage } from '@/lib/utils/storage'
+import { getMonitorStationForName } from '@/lib/monosxema/stations'
 import {
   getWorkers,
   addWorker,
@@ -24,6 +25,7 @@ import {
   deleteGlobalGraphicFile,
   getDispatcherJournalSummary,
   mapDbReport,
+  uploadAvatar,
   type DbWorkReportRow
 } from '@/lib/supabase-db'
 import { useSessionGuard, useToast, useRealtimeSubscription, useHardwareBack } from '@/lib/hooks'
@@ -62,7 +64,8 @@ import {
 import { StatCard, BigActionCard, WorkerForm, ReportList, SchemasView, ArchiveView, DownloadCard, WorkersModal, TodayTasksModal } from './components'
 import { LibraryView } from '@/components/library/LibraryView'
 import IncidentsView from '@/components/worker/IncidentsView'
-const StationEquipmentsModal = dynamic(() => import('@/components/StationEquipmentsModal').then(mod => mod.StationEquipmentsModal), { ssr: false })
+const StationEquipmentsView = dynamic(() => import('@/components/StationEquipmentsView').then(mod => mod.StationEquipmentsView), { ssr: false })
+const StationScheme = dynamic(() => import('@/components/worker/monosxema/StationScheme').then(mod => mod.StationScheme), { ssr: false })
 
 type Tab = 'bekatlar' | 'arxiv' | 'grafiklar' | 'baxtsiz_hodisalar' | 'kutubxona'
 
@@ -110,12 +113,14 @@ export default function DispatcherPage() {
   useHardwareBack(isSubViewActive, handleHardwareBack)
 
   const [form, setForm] = useState<{
-    fullName: string;
-    login: string;
-    password?: string;
-    phone: string;
-    role: Exclude<Role, 'dispatcher'>;
-    stationIds: string[];
+    fullName: string
+    login: string
+    password?: string
+    phone: string
+    role: Exclude<Role, 'dispatcher'>
+    stationIds: string[]
+    photoFile?: File | null
+    photoPreview?: string | null
   }>({
     fullName: '',
     login: '',
@@ -123,6 +128,8 @@ export default function DispatcherPage() {
     phone: '',
     role: 'worker',
     stationIds: [],
+    photoFile: null,
+    photoPreview: null
   })
   const [editingWorkerId, setEditingWorkerId] = useState<string | null>(null)
   const [formMsg, setFormMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
@@ -404,6 +411,12 @@ export default function DispatcherPage() {
     }
 
     try {
+      let finalPhotoUrl: string | undefined = form.photoPreview || undefined;
+      if (form.photoFile) {
+        // Rasm yuklash
+        finalPhotoUrl = await uploadAvatar(form.photoFile, form.login);
+      }
+
       if (editingWorkerId) {
         await updateWorker(editingWorkerId, {
           fullName: form.fullName,
@@ -412,7 +425,8 @@ export default function DispatcherPage() {
           ...(form.password ? { password: form.password } : {}),
           role: form.role,
           position: form.role === 'worker' ? 'katta_elektromexanik' : form.role,
-          stationIds: form.stationIds
+          stationIds: form.stationIds,
+          photoUrl: finalPhotoUrl
         })
         setFormMsg({ type: 'ok', text: "Muvaffaqiyatli yangilandi" })
       } else {
@@ -423,11 +437,12 @@ export default function DispatcherPage() {
           phone: form.phone,
           role: form.role,
           position: form.role === 'worker' ? 'katta_elektromexanik' : form.role,
-          stationIds: form.stationIds
+          stationIds: form.stationIds,
+          photoUrl: finalPhotoUrl
         })
         setFormMsg({ type: 'ok', text: "Yangi ishchi qo'shildi" })
       }
-      setForm({ fullName: '', login: '', password: '', phone: '', role: 'worker', stationIds: [] })
+      setForm({ fullName: '', login: '', password: '', phone: '', role: 'worker', stationIds: [], photoFile: null, photoPreview: null })
       setEditingWorkerId(null)
       refreshData()
       setTimeout(() => setFormMsg(null), 3000)
@@ -530,6 +545,7 @@ export default function DispatcherPage() {
         onToggleCollapse={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)}
         userName={session?.fullName}
         userRole="Aloqa dispetcheri"
+        userPhotoUrl={session?.photoUrl}
       />
 
       {/* Main Content Area */}
@@ -616,7 +632,7 @@ export default function DispatcherPage() {
             <div className="mb-10 animate-scale-in">
               <WorkerForm
                 onSubmit={handleAddWorker}
-                onCancel={() => { setShowAddWorker(false); setEditingWorkerId(null); setForm({ fullName: '', login: '', password: '', phone: '', role: 'worker', stationIds: [] }) }}
+                onCancel={() => { setShowAddWorker(false); setEditingWorkerId(null); setForm({ fullName: '', login: '', password: '', phone: '', role: 'worker', stationIds: [], photoFile: null, photoPreview: null }) }}
                 form={form}
                 setForm={setForm}
                 isEdit={!!editingWorkerId}
@@ -700,6 +716,11 @@ export default function DispatcherPage() {
                           </div>
                         </div>
                       </div>
+
+                      {(() => {
+                        const monitorStation = getMonitorStationForName(stations.find(s => s.id === selectedStation)?.name)
+                        return monitorStation && <StationScheme station={monitorStation} />
+                      })()}
 
                       <div className="min-h-[400px]">
                         {selectedReportType === 'oylik' && (
@@ -977,15 +998,17 @@ export default function DispatcherPage() {
           workers={workers}
           stations={stations}
           onClose={() => setShowWorkersModal(false)}
-          onEdit={(w: User) => {
-            setEditingWorkerId(w.id)
+          onEdit={(user: User) => {
+            setEditingWorkerId(user.id)
             setForm({
-              fullName: w.fullName,
-              login: w.login,
+              fullName: user.fullName,
+              login: user.login,
+              phone: user.phone || '',
+              role: user.role as Exclude<Role, 'dispatcher'>,
+              stationIds: user.stationIds || [],
               password: '',
-              phone: w.phone || '',
-              role: (['worker', 'bekat_boshlighi', 'elektromexanik', 'elektromontyor', 'bekat_navbatchisi', 'yul_ustasi', 'ech_xodimi'].includes(w.role) ? w.role : 'worker') as typeof form.role,
-              stationIds: w.stationIds || []
+              photoFile: null,
+              photoPreview: user.photoUrl || null
             })
             setShowAddWorker(true)
             setShowWorkersModal(false)
@@ -996,14 +1019,18 @@ export default function DispatcherPage() {
       )}
 
       {selectedReportType === 'qurilmalar' && selectedStation && (
-        <StationEquipmentsModal
-          stationId={selectedStation}
-          stationName={stations.find(s => s.id === selectedStation)?.name || ''}
-          canEdit={false} // Dispetcher uskunalar ro'yxatini tahrirlamaydi
-          isDispatcher // QR Chop etish faqat shu rolga ko'rinadi
-          userName={session?.fullName || 'Dispetcher'}
-          onClose={() => setSelectedReportType(null)}
-        />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-2 sm:p-4 md:p-8 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-7xl h-[95vh] sm:h-[85vh]">
+            <StationEquipmentsView
+              stationId={selectedStation}
+              stationName={stations.find(s => s.id === selectedStation)?.name || ''}
+              canEdit={false} // Dispetcher uskunalar ro'yxatini tahrirlamaydi
+              isDispatcher // QR Chop etish faqat shu rolga ko'rinadi
+              userName={session?.fullName || 'Dispetcher'}
+              onClose={() => setSelectedReportType(null)}
+            />
+          </div>
+        </div>
       )}
 
       {/* O'chirish tasdiqlash modali */}

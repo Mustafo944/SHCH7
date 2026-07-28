@@ -78,6 +78,7 @@ export default function MehnatMuhofazasiPage() {
         onToggleCollapse={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)}
         userName={session?.fullName}
         userRole="MM Muhandisi"
+        userPhotoUrl={session?.photoUrl}
       />
 
       <div className="relative flex-1 flex flex-col min-w-0">

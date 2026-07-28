@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { signIn, getCachedSession } from '@/lib/supabase-db'
+import { signIn } from '@/lib/supabase-db'
 import { safeStorage } from '@/lib/utils/storage'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import { User, Eye, EyeOff, Lock, ArrowRight } from 'lucide-react'
@@ -25,7 +25,6 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [navigating, setNavigating] = useState(false)
-  const [checkingSession, setCheckingSession] = useState(true)
   const [error, setError] = useState('')
   const router = useRouter()
 
@@ -37,32 +36,12 @@ export default function LoginPage() {
         setLogin(savedLogin)
         setRememberMe(true)
       }
+      
+      // Agar login sahifasiga kirgan bo'lsa (SSR orqali shu yerga keldikmi, demak tizimda emas),
+      // eskirgan profile keshni tozalash
+      safeStorage.removeItem('user-profile')
     } catch { /* ignore */ }
   }, [])
-
-  useEffect(() => {
-    let active = true
-
-    // Tezlashish uchun darhol formani ko'rsatamiz
-    setCheckingSession(false)
-
-    // Orqa fonda Supabase sessiyani ham tekshiramiz (cookie bilan qayta kirgan bo'lishi mumkin)
-    async function verifySession() {
-      const session = await getCachedSession()
-      if (!active) return
-
-      if (session) {
-        setNavigating(true)
-        router.replace(getRoleHome(session.role))
-      } else {
-        // Sessiya yo'q bo'lsa, qolib ketgan eskirgan cache larni tozalaymiz
-        safeStorage.removeItem('user-profile')
-      }
-    }
-    verifySession()
-
-    return () => { active = false }
-  }, [router])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -92,16 +71,6 @@ export default function LoginPage() {
     }
   }
 
-  if (checkingSession) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-4 animate-fade-up">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
-          <p className="text-sm font-semibold uppercase tracking-widest text-blue-600 animate-pulse">Tizimga kirilmoqda...</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 p-4">
