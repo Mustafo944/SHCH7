@@ -698,32 +698,6 @@ export default function WorkerPage() {
                   </div>
                 </div>
 
-                {/* BEKAT PASPORTI (bekat uchun erkin qo'shilgan maydonlar) */}
-                {stationPassport.length > 0 && (
-                  <div
-                    onClick={() => { setView('qurilmalar'); setIsMoreMenuOpen(false) }}
-                    className="mt-4 sm:mt-6 cursor-pointer rounded-[28px] sm:rounded-[36px] bg-white/40 backdrop-blur-3xl border border-white/60 p-5 sm:p-6 shadow-[0_8px_32px_rgba(31,38,135,0.04)] relative overflow-hidden group transition-transform hover:scale-[1.01]"
-                  >
-                    <div className="flex items-center justify-between mb-4 sm:mb-5">
-                      <div className="flex items-center gap-2 text-[#26449c]">
-                        <Server className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
-                        <h3 className="text-[10px] sm:text-[12px] font-black uppercase tracking-widest">BEKAT PASPORTI</h3>
-                      </div>
-                      <ChevronRight size={16} className="text-slate-300 shrink-0" />
-                    </div>
-                    <div className="flex gap-2.5 sm:gap-3 overflow-x-auto pb-1 -mx-1 px-1 custom-scrollbar">
-                      {stationPassport.map(section => {
-                        const deviceCount = section.devices.length + section.subSections.reduce((sum, sub) => sum + sub.devices.length, 0)
-                        return (
-                          <div key={section.id} className="shrink-0 min-w-[120px] sm:min-w-[140px] rounded-[16px] sm:rounded-[20px] bg-white/70 border border-white p-3 sm:p-4 shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
-                            <p className="text-[7.5px] sm:text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 truncate">{section.name || 'Nomsiz bo\'lim'}</p>
-                            <p className="text-[13px] sm:text-[15px] font-black text-[#0a1128] truncate">{deviceCount} ta qurilma</p>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
 
                 {/* TEZKOR MA'LUMOTLAR */}
                 <div className="mt-5 sm:mt-8 mb-4 px-1 sm:px-2">
