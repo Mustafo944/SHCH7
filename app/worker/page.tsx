@@ -62,47 +62,10 @@ import {
   Library,
   Server,
   Zap,
-  Calendar,
-  Clock,
-  User,
-  ShieldCheck,
   ChevronRight,
-  TrendingUp,
   Activity,
   X
 } from 'lucide-react'
-
-const LiveClock = () => {
-  const [time, setTime] = useState(new Date())
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
-  
-  const days = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba']
-  const dateStr = time.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  const timeStr = time.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-  const dayName = days[time.getDay()]
-  
-  return (
-    <>
-      <div className="flex flex-col items-center p-3 sm:p-5 rounded-[20px] sm:rounded-[28px] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100 transition-transform hover:-translate-y-1">
-        <div className="mb-2 sm:mb-4 flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-slate-50 text-slate-500"><Calendar className="w-4 h-4 sm:w-6 sm:h-6" strokeWidth={2.5} /></div>
-        <p className="text-[7.5px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 sm:mb-2 text-center leading-tight">Bugungi sana</p>
-        <p className="text-[10px] sm:text-[14px] font-black text-slate-800 tracking-tight text-center">{dateStr}</p>
-        <p className="text-[8px] sm:text-[10px] font-medium text-slate-400 mt-1 text-center">{dayName}</p>
-      </div>
-      <div className="flex flex-col items-center p-3 sm:p-5 rounded-[20px] sm:rounded-[28px] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100 transition-transform hover:-translate-y-1">
-        <div className="mb-2 sm:mb-4 flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-500"><Clock className="w-4 h-4 sm:w-6 sm:h-6" strokeWidth={2.5} /></div>
-        <p className="text-[7.5px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 sm:mb-2 text-center leading-tight">Joriy vaqt</p>
-        <p className="text-[11px] sm:text-[16px] font-black text-slate-800 tracking-tight text-center">{timeStr}</p>
-        <p className="text-[8px] sm:text-[10px] font-medium text-slate-400 mt-1 text-center leading-tight">Toshkent vaqti</p>
-      </div>
-    </>
-  )
-}
-
-
 
 export default function WorkerPage() {
   const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'])
@@ -278,6 +241,14 @@ export default function WorkerPage() {
       .catch(() => { if (!cancelled) setStationPassport([]) })
     return () => { cancelled = true }
   }, [activeStationId])
+
+  const passportSectionDeviceCount = useCallback((section: PassportSection) => (
+    section.devices.length + section.subSections.reduce((sum, sub) => sum + sub.devices.length, 0)
+  ), [])
+
+  const passportTotalDevices = useMemo(() => (
+    stationPassport.reduce((sum, section) => sum + passportSectionDeviceCount(section), 0)
+  ), [stationPassport, passportSectionDeviceCount])
 
   const realtimeConfigs = useMemo(() => {
     const configs = []
@@ -699,36 +670,49 @@ export default function WorkerPage() {
                 </div>
 
 
-                {/* TEZKOR MA'LUMOTLAR */}
+                {/* BEKAT MA'LUMOTLARI */}
                 <div className="mt-5 sm:mt-8 mb-4 px-1 sm:px-2">
                   <div className="flex items-center justify-between mb-4 sm:mb-6 px-1">
                     <div className="flex items-center gap-2 text-[#26449c]">
-                      <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
-                      <h3 className="text-[10px] sm:text-[13px] font-black uppercase tracking-widest">TEZKOR MA'LUMOTLAR</h3>
+                      <Server className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
+                      <h3 className="text-[10px] sm:text-[13px] font-black uppercase tracking-widest">BEKAT MA'LUMOTLARI</h3>
                     </div>
-                    <button className="text-[9px] sm:text-[11px] font-bold text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-1">
+                    <button onClick={() => setView('qurilmalar')} className="text-[9px] sm:text-[11px] font-bold text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-1">
                       Barchasini ko'rish <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" strokeWidth={2.5} />
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-5">
-                    <LiveClock />
-                    
-                    <div className="flex flex-col items-center p-3 sm:p-5 rounded-[20px] sm:rounded-[28px] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100 transition-transform hover:-translate-y-1">
-                      <div className="mb-2 sm:mb-4 flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-[#f3e8ff] text-[#9333ea]"><User className="w-4 h-4 sm:w-6 sm:h-6" strokeWidth={2.5} /></div>
-                      <p className="text-[7.5px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 sm:mb-2 text-center leading-tight">Foydalanuvchi</p>
-                      <p className="text-[10px] sm:text-[14px] font-black text-[#1e293b] tracking-tight text-center leading-tight whitespace-nowrap overflow-hidden text-ellipsis w-full">
-                        {session?.fullName?.split(' ')[0]} {session?.fullName?.split(' ')[1]?.[0]}.
-                      </p>
-                      <p className="text-[8px] sm:text-[10px] font-medium text-slate-400 mt-1 uppercase">ID: {session?.id.substring(0,5)}</p>
+                  <div
+                    onClick={() => setView('qurilmalar')}
+                    className="cursor-pointer rounded-[24px] sm:rounded-[32px] bg-white/60 backdrop-blur-2xl p-4 sm:p-6 shadow-[0_8px_32px_rgba(31,38,135,0.07)] transition-all hover:-translate-y-1 hover:shadow-xl border border-white/60"
+                  >
+                    <div className="flex items-center justify-between mb-4 sm:mb-6">
+                      <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+                        <div className="flex h-11 w-11 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[16px] sm:rounded-[20px] bg-gradient-to-br from-[#26449c] to-[#16225c] text-white shadow-[0_4px_15px_rgba(38,68,156,0.3)]">
+                          <Server className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <p className="text-[9px] sm:text-[11px] font-black uppercase tracking-widest text-slate-500 leading-tight">BEKAT PASPORTI</p>
+                          <p className="text-[20px] sm:text-[26px] font-black text-[#1e293b] leading-none mt-1">
+                            {passportTotalDevices} <span className="text-[10px] sm:text-[12px] font-bold text-slate-400 uppercase tracking-wide">ta qurilma</span>
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-slate-300 shrink-0" />
                     </div>
 
-                    <div className="flex flex-col items-center p-3 sm:p-5 rounded-[20px] sm:rounded-[28px] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100 transition-transform hover:-translate-y-1">
-                      <div className="mb-2 sm:mb-4 flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-[#e0f2fe] text-[#0284c7]"><ShieldCheck className="w-4 h-4 sm:w-6 sm:h-6" strokeWidth={2.5} /></div>
-                      <p className="text-[7.5px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 sm:mb-2 text-center leading-tight">Tizim holati</p>
-                      <p className="text-[10px] sm:text-[14px] font-black text-emerald-500 tracking-tight text-center leading-tight">Faoliyatda</p>
-                      <p className="text-[8px] sm:text-[10px] font-medium text-slate-400 mt-1 flex items-center gap-1.5 justify-center whitespace-nowrap"><span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span> Internet ulangan</p>
-                    </div>
+                    {stationPassport.length === 0 ? (
+                      <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 text-center py-4">Hali bo&apos;lim qo&apos;shilmagan</p>
+                    ) : (
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                        {stationPassport.map(section => (
+                          <div key={section.id} className="flex items-center justify-between gap-2 rounded-2xl bg-white p-2.5 sm:p-3 border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)]">
+                            <span className="text-[9.5px] sm:text-[11px] font-bold text-slate-600 truncate">{section.name}</span>
+                            <span className="text-[10px] sm:text-[11px] font-black text-[#26449c] shrink-0">{passportSectionDeviceCount(section)} ta</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

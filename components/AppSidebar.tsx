@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client'
 
+import Image from 'next/image'
 import type { LucideIcon } from 'lucide-react'
 import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
 
@@ -71,8 +72,8 @@ export function AppSidebar({
             isCollapsed ? 'lg:justify-center lg:px-0 gap-3 p-5' : 'gap-3.5 p-5'
           }`}
         >
-          <div className="flex h-12 w-12 items-center justify-center shrink-0">
-            <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
+          <div className="relative flex h-12 w-12 items-center justify-center shrink-0">
+            <Image src="/uty-logo.png" alt="UTY" fill className="object-contain" />
           </div>
           <div
             className={`flex flex-col justify-center overflow-hidden transition-all duration-300 ${

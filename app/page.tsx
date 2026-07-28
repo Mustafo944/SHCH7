@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { signIn } from '@/lib/supabase-db'
 import { safeStorage } from '@/lib/utils/storage'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
@@ -84,7 +85,7 @@ export default function LoginPage() {
             <div className="relative flex h-24 w-24 items-center justify-center">
               <div className="absolute inset-0 animate-ping rounded-full bg-blue-400/30" />
               <div className="absolute inset-2 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
-              <img src="/uty-logo.png" alt="UTY" className="h-10 w-10 object-contain animate-pulse" />
+              <Image src="/uty-logo.png" alt="UTY" width={40} height={40} className="h-10 w-10 object-contain animate-pulse" />
             </div>
             <div className="flex flex-col items-center gap-2 text-center">
               <h2 className="text-base sm:text-xl font-black uppercase tracking-wider sm:tracking-widest text-slate-800">Ma&apos;lumotlar tekshirilmoqda</h2>
@@ -124,8 +125,8 @@ export default function LoginPage() {
           <div className="w-full md:w-[55%] p-8 sm:p-10 md:p-12 flex flex-col justify-center">
             {/* Logo and title */}
             <div className="mb-8 text-center sm:mb-10">
-              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center sm:h-24 sm:w-24 drop-shadow-md">
-                <img src="/uty-logo.png" alt="UTY" className="h-full w-full object-contain" />
+              <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center sm:h-24 sm:w-24 drop-shadow-md">
+                <Image src="/uty-logo.png" alt="UTY" fill priority className="object-contain" />
               </div>
               <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900 sm:text-3xl">
                 O'ZBEKISTON TEMIR YO'LLARI

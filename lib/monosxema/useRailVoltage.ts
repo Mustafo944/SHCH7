@@ -1,11 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { monosxemaSupabase } from './client'
 import { normalizeSignalName } from './signalNames'
 import type { RailVoltageAlarm, RailVoltageLimit, RailVoltageRow, StationDef } from './types'
 
+// Realtime hali ulanmagan/uzilgan paytda tez-tez so'raladi
 const POLL_INTERVAL_MS = 5000
+// Realtime ulangandan keyin faqat zaxira sifatida (WorkerTasksModal'dagi 30s fallback bilan bir xil mantiq)
+const SAFETY_POLL_INTERVAL_MS = 30000
 
 // qorlitog_server loyihasidagi RailVoltageModal.jsx ichidagi ma'lumot yuklash
 // mantig'i portlangan — rels zanjirlari kuchlanishi + ogohlantirishlar tarixi.
@@ -14,6 +17,7 @@ export function useRailVoltage(station: StationDef) {
   const [limits, setLimits] = useState<Record<string, RailVoltageLimit>>({})
   const [alarms, setAlarms] = useState<RailVoltageAlarm[]>([])
   const [error, setError] = useState<string | null>(null)
+  const isOnlineRef = useRef(false)
 
   useEffect(() => {
     const supabase = monosxemaSupabase
@@ -73,17 +77,25 @@ export function useRailVoltage(station: StationDef) {
         if (!row) return
         setAlarms((prev) => [row, ...prev].slice(0, 50))
       })
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') isOnlineRef.current = true
+        else if (['CLOSED', 'CHANNEL_ERROR', 'TIMED_OUT'].includes(status)) isOnlineRef.current = false
+      })
 
-    const pollTimer = setInterval(() => {
-      load()
-      loadAlarms()
-    }, POLL_INTERVAL_MS)
+    // Realtime asosiy manba. Poll faqat zaxira: ulanish hali tasdiqlanmagan
+    // bo'lsa tez-tez (5s), ulangandan keyin esa kam-kam (30s).
+    let pollTimeoutId: NodeJS.Timeout
+    const scheduleNextPoll = () => {
+      pollTimeoutId = setTimeout(() => {
+        Promise.all([load(), loadAlarms()]).finally(scheduleNextPoll)
+      }, isOnlineRef.current ? SAFETY_POLL_INTERVAL_MS : POLL_INTERVAL_MS)
+    }
+    scheduleNextPoll()
 
     return () => {
       disposed = true
       supabase.removeChannel(channel)
-      clearInterval(pollTimer)
+      clearTimeout(pollTimeoutId)
     }
   }, [station.id])
 

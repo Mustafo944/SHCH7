@@ -7,7 +7,10 @@ import { stationSignalNames } from './stations'
 import type { ArchiveEntry, ConnStatus, SignalState, StationDef } from './types'
 
 const ARCHIVE_QUERY_LIMIT = 2000
+// Realtime hali ulanmagan/uzilgan paytda tez-tez so'raladi
 const POLL_INTERVAL_MS = 4000
+// Realtime ulangandan keyin faqat zaxira sifatida (WorkerTasksModal'dagi 30s fallback bilan bir xil mantiq)
+const SAFETY_POLL_INTERVAL_MS = 30000
 
 function buildInitialStates(station: StationDef): Record<string, SignalState> {
   const out: Record<string, SignalState> = {}
@@ -32,6 +35,8 @@ export function useLiveSignals(station: StationDef) {
   useEffect(() => {
     archiveModeRef.current = isArchiveMode
   }, [isArchiveMode])
+
+  const isOnlineRef = useRef(false)
 
   const applySignalData = useCallback(
     (signals: Record<string, string> | null | undefined) => {
@@ -127,15 +132,29 @@ export function useLiveSignals(station: StationDef) {
         setArchiveList((prev) => [payload.new as ArchiveEntry, ...prev])
       })
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') setConnStatus('online')
-        else if (['CLOSED', 'CHANNEL_ERROR', 'TIMED_OUT'].includes(status)) setConnStatus('reconnecting')
+        if (status === 'SUBSCRIBED') {
+          isOnlineRef.current = true
+          setConnStatus('online')
+        } else if (['CLOSED', 'CHANNEL_ERROR', 'TIMED_OUT'].includes(status)) {
+          isOnlineRef.current = false
+          setConnStatus('reconnecting')
+        }
       })
 
-    const pollTimer = setInterval(() => loadStatus(), POLL_INTERVAL_MS)
+    // Realtime asosiy manba. Poll faqat zaxira: ulanish hali 'online' bo'lmasa
+    // tez-tez (4s), ulangandan keyin esa kam-kam (30s) — har safar bir xil
+    // chastotada 2000 qatorli arxivni qayta so'rab, tarmoqni band qilmaslik uchun.
+    let pollTimeoutId: NodeJS.Timeout
+    const scheduleNextPoll = () => {
+      pollTimeoutId = setTimeout(() => {
+        loadStatus().finally(scheduleNextPoll)
+      }, isOnlineRef.current ? SAFETY_POLL_INTERVAL_MS : POLL_INTERVAL_MS)
+    }
+    scheduleNextPoll()
 
     return () => {
       supabase.removeChannel(channel)
-      clearInterval(pollTimer)
+      clearTimeout(pollTimeoutId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [station.id])
