@@ -1273,15 +1273,21 @@ export function DU46JournalView({
                             </div>
                           )
                         })() : (
-                          // Tasdiqlash tugmasi yo'q bo'lsa, lekin u ushbu zanjirda qatnashayotgan bo'lsa
-                          (!isMonthInPast(journalMonth) && e.approvalChain?.includes(userRole) && !(e.approvalsCol3 || []).some(a => a.role === userRole)) && (
-                            <div className="w-full rounded-xl bg-orange-50 px-2 py-1.5 border border-orange-100 mt-1 flex flex-col items-center">
-                              <span className="text-[8px] font-bold uppercase text-orange-400">Navbat kutilmoqda</span>
-                              <span className="text-[9px] font-black text-orange-600 text-center leading-tight">
-                                Avval {getWaitingForRole(e, 3)} tasdiqlashi kerak
-                              </span>
-                            </div>
-                          )
+                          // Tasdiqlash tugmasi yo'q bo'lsa, hamma ko'rishi uchun navbat kutilayotgan shaxsni chiqaramiz
+                          (() => {
+                            const waitingFor = getWaitingForRole(e, 3)
+                            if (!isMonthInPast(journalMonth) && waitingFor) {
+                              return (
+                                <div className="w-full rounded-xl bg-orange-50 px-2 py-1.5 border border-orange-100 mt-1 flex flex-col items-center">
+                                  <span className="text-[8px] font-bold uppercase text-orange-400">Navbat kutilmoqda</span>
+                                  <span className="text-[9px] font-black text-orange-600 text-center leading-tight">
+                                    Avval {waitingFor} tasdiqlashi kerak
+                                  </span>
+                                </div>
+                              )
+                            }
+                            return null
+                          })()
                         )}
                       </div>
                     </td>
@@ -1443,25 +1449,15 @@ export function DU46JournalView({
                             </div>
                           )
                         })() : (
-                          // "Navbat kutilmoqda" — faqat: zanjirda qatnashuvchi, hali tasdiqlamagan, "Tugadi" bosmaganlar uchun
+                          // Hamma foydalanuvchilarga keyingi navbat kimdaligini ko'rsatish
                           (() => {
-                            const tugadiRole = e.bartarafByRole
-                            const workerRoles = ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik']
-                            const iAmTugadiUser = tugadiRole &&
-                              (tugadiRole === userRole || (workerRoles.includes(tugadiRole) && isWorker))
-                            const alreadyApproved = (e.approvalsCol12 || []).some(a => a.role === userRole)
-                            const inChain = e.approvalChain?.includes(userRole) || isBekatNavbatchisi
-                            if (
-                              !isMonthInPast(journalMonth) &&
-                              inChain &&
-                              !alreadyApproved &&
-                              !iAmTugadiUser
-                            ) {
+                            const waitingFor = getWaitingForRole(e, 12)
+                            if (!isMonthInPast(journalMonth) && waitingFor) {
                               return (
                                 <div className="w-full rounded-xl bg-orange-50 px-2 py-1.5 border border-orange-100 mt-1 flex flex-col items-center">
                                   <span className="text-[8px] font-bold uppercase text-orange-400">Navbat kutilmoqda</span>
                                   <span className="text-[9px] font-black text-orange-600 text-center leading-tight">
-                                    Avval {getWaitingForRole(e, 12)} tasdiqlashi kerak
+                                    Avval {waitingFor} tasdiqlashi kerak
                                   </span>
                                 </div>
                               )
