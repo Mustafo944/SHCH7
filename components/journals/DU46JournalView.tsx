@@ -395,8 +395,8 @@ export function DU46JournalView({
     if (!nextRole) return false
     // DSP = faqat bekat navbatchisi tasdiqlaydi (bekat boshlig'i emas)
     if (nextRole === 'DSP') return isBekatNavbatchisi
-    // Xavfsizlik: 12-ustunda "Tugadi" bosgan odam hech qachon tasdiqlay olmaydi
-    if (col === 12 && e.bartarafByRole === userRole) return false
+    // Xavfsizlik: 12-ustunda "Tugadi" bosgan odam hech qachon tasdiqlay olmaydi (ism bo'yicha tekshiramiz)
+    if (col === 12 && e.bartarafImzo === userName) return false
     if (nextRole === 'worker') return isWorker
     return userRole === nextRole
   }
@@ -1450,7 +1450,7 @@ export function DU46JournalView({
                             const iAmTugadiUser = tugadiRole &&
                               (tugadiRole === userRole || (workerRoles.includes(tugadiRole) && isWorker))
                             const alreadyApproved = (e.approvalsCol12 || []).some(a => a.role === userRole)
-                            const inChain = e.approvalChain?.includes(userRole)
+                            const inChain = e.approvalChain?.includes(userRole) || isBekatNavbatchisi
                             if (
                               !isMonthInPast(journalMonth) &&
                               inChain &&

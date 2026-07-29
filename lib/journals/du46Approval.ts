@@ -78,8 +78,13 @@ export function getNextApproverRole(e: ApprovalEntryLike, col: 3 | 12): string |
     const tugadiName = e.bartarafImzo || ''              // ism: 'Olimov Olim'
     const creatorName = e.kamchilikImzo || ''             // 3-ustunni boshlagan ism
 
+    // Barcha worker guruhidagi rollarni bir xil darajada ko'ramiz (masalan, bir elektromexanik boshlagan ishni boshqasi tugatsa ham)
+    const isBothWorkerGroup = DU46_WORKER_GROUP_ROLES.includes(creatorRole) && DU46_WORKER_GROUP_ROLES.includes(tugadiRole)
+
     // "Tugadi" bosgan odam = creator mi? (ism orqali aniqlash, chunki createdByRole='worker' ga map qilingan)
+    // Workerlar guruhida bo'lsa, ularni avtomatik tarzda yaratuvchi vazifasini to'laqonli bajardi deb hisoblaymiz.
     const creatorIsTugadiPresser =
+      isBothWorkerGroup ||
       creatorRole === tugadiRole ||
       (creatorName !== '' && tugadiName !== '' && creatorName === tugadiName)
 
