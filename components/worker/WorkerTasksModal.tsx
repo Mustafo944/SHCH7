@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import {
   X, CheckCircle2,
@@ -12,10 +12,11 @@ import {
   QrCode,
   ClipboardCheck
 } from 'lucide-react'
-import { getStationEquipments, getTaskScans, insertTaskScan, autoFillShu2Entry, type TaskScan } from '@/lib/supabase-db'
+import { getTaskScans, insertTaskScan, autoFillShu2Entry, type TaskScan } from '@/lib/supabase-db'
 import { supabase } from '@/lib/supabase'
 import type { User, ReportEntry } from '@/types'
 import { useToast } from '@/lib/hooks/useToast'
+import { useStationEquipments } from '@/lib/hooks/useStationEquipments'
 import dynamic from 'next/dynamic'
 import { QRScannerModal } from '../QRScannerModal'
 import { buildEquipmentQrValue, stringToUuid, getEntryDateStr } from '@/lib/utils/qr'
@@ -368,7 +369,7 @@ export function WorkerTasksModal({ type, bugun, qolib, sababli, onClose, onTaskC
    TaskCompletionModal — ishni bajarish modali (jurnal bilan bog'langan)
    ═══════════════════════════════════════════════════════════════════════ */
 
-export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session, stationId, stationName, journalMonth, onComplete, onScanProgress, onJournalVisited, onClose, preloadedStationEq }: {
+export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, session, stationId, stationName, journalMonth, onComplete, onScanProgress, onJournalVisited, onClose }: {
   entry: ReportEntry
   entryIndex: number
   reportId: string
@@ -380,26 +381,19 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   onScanProgress?: (scans: any[], taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy') => void
   onJournalVisited?: (taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy', journalName: string) => void
   onClose: () => void
-  preloadedStationEq?: any
 }) {
   const [activeJournal, setActiveJournal] = useState<'du46' | 'shu2' | 'yerlatgich' | 'alsnKod' | 'mpsFriksion' | 'dgaNazorat' | null>(null)
   const [selectedTaskType, setSelectedTaskType] = useState<'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy' | null>(null)
   const [localProgress, setLocalProgress] = useState<Record<string, boolean>>({})
-  const [stationEq, setStationEq] = useState<any>(preloadedStationEq || null)
   const [dbScans, setDbScans] = useState<TaskScan[]>([])
   const [isScanningDb, setIsScanningDb] = useState(false)
   const toast = useToast()
 
-  // Agar tashqaridan berilmagan bo'lsa, o'zi yuklaydi
-  useEffect(() => {
-    if (preloadedStationEq) {
-      setStationEq(preloadedStationEq)
-      return
-    }
-    getStationEquipments(stationId).then((data) => {
-      if (data) setStationEq(data)
-    }).catch(console.error)
-  }, [stationId, preloadedStationEq])
+  // Umumiy SWR keshi. `preloadedStationEq` propi olib tashlandi — JournalForm
+  // xuddi shu kalitni ishlatgani uchun kesh modal ochilishidan oldin allaqachon
+  // to'lgan bo'ladi, ya'ni yuklanish "sakrashi" ham bo'lmaydi va prop orqali
+  // qo'lda uzatishga ehtiyoj qolmaydi.
+  const { data: stationEq } = useStationEquipments(stationId)
 
   const extractJurnal = (text: string): string => {
     const match = text.match(/Jurnal:\s*(.+)$/m)
@@ -446,7 +440,20 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     };
     loadScans();
 
-    // Boshqa ishchining skanini realtime orqali olamiz (5 soniyalik polling o'rniga —
+    // Zaxira yo'l: task_scans hali realtime publication'ga qo'shilmagan bo'lsa
+    // (supabase/migrations/add_worker_pending_rpc_and_task_scans_realtime.sql
+    // ishga tushirilmagan holat), 30 soniyalik sekin polling ishlaydi.
+    // MUHIM: realtime muvaffaqiyatli ulanishi bilan polling TO'XTAYDI — ilgari
+    // ikkalasi parallel ishlab, keraksiz so'rovlar yuborilar edi.
+    let fallbackInterval: ReturnType<typeof setInterval> | null = setInterval(loadScans, 30000);
+    const stopFallbackPolling = () => {
+      if (fallbackInterval !== null) {
+        clearInterval(fallbackInterval);
+        fallbackInterval = null;
+      }
+    };
+
+    // Boshqa ishchining skanini realtime orqali olamiz (polling o'rniga —
     // tarmoq yuki keskin kamayadi). task_scans jadvaliga faqat INSERT bo'ladi.
     const channel = supabase
       .channel(`task_scans_${stationId}_${selectedTaskType}`)
@@ -460,16 +467,13 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
         },
         () => loadScans()
       )
-      .subscribe();
-
-    // Zaxira yo'l: task_scans hali realtime publication'ga qo'shilmagan bo'lsa
-    // (supabase/migrations/add_worker_pending_rpc_and_task_scans_realtime.sql
-    // ishga tushirilmagan holat), 30 soniyalik sekin polling baribir ishlaydi.
-    const fallbackInterval = setInterval(loadScans, 30000);
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') stopFallbackPolling();
+      });
 
     return () => {
       supabase.removeChannel(channel);
-      clearInterval(fallbackInterval);
+      stopFallbackPolling();
     };
   }, [selectedTaskType, stationId, taskTextStr, journalMonth, entry.ragat]);
 
@@ -532,6 +536,13 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     return dbScans.map(s => s.equipment_name);
   }, [dbScans]);
 
+  // `handleScanSuccess` ichida `insertTaskScan` ni KUTAMIZ — shu oraliqda realtime
+  // boshqa ishchining skanini qo'shib qayta render qilishi mumkin. Closure'dagi
+  // `dbScans` esa o'sha eski render qiymatida qolib ketadi va birlashtirishda
+  // yangi skan yo'qolardi. Ref har renderda yangilanadi → doim so'nggi holat.
+  const dbScansRef = useRef<TaskScan[]>(dbScans);
+  dbScansRef.current = dbScans;
+
   const [scannerListOpen, setScannerListOpen] = useState(false);
   const [specificScanItem, setSpecificScanItem] = useState<{ id: string, name: string } | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -550,12 +561,22 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
         station_id: stationId,
         task_nsh: taskNshStr,
         task_date: taskDateStr,
-        equipment_id: stringToUuid(decodedText),
+        // Xom QR qiymati — `stringToUuid()` xeshi EMAS. Xesh 32-bitli edi va
+        // `Math.abs()` ishorani yo'qotgani uchun ikki xil qurilma bir xil id
+        // olishi mumkin edi. Bu ustun kod bo'ylab hech qayerda o'qilmaydi
+        // (solishtirishlar `equipment_name` bo'yicha), shuning uchun xom
+        // qiymatni saqlash ham xavfsiz, ham kolliziyasiz.
+        // Talab qiladi: supabase/migrations/task_scans_schema_and_dedupe.sql
+        equipment_id: decodedText,
         equipment_name: decodedText,
         scanned_by: session?.fullName || 'Ishchi',
       });
 
-      const updatedDbScans = [...dbScans, newScan];
+      // ID bo'yicha birlashtiramiz: realtime shu skanni allaqachon qo'shgan bo'lsa
+      // dublikat paydo bo'lmasin, boshqa ishchining skani ham yo'qolmasin.
+      const merged = new Map<string, TaskScan>(dbScansRef.current.map(s => [s.id, s] as const));
+      merged.set(newScan.id, newScan);
+      const updatedDbScans = Array.from(merged.values());
       setDbScans(updatedDbScans);
 
       const newScansArray = updatedDbScans.map(s => ({
@@ -946,7 +967,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
           isOpen={scannerOpen}
           onClose={() => { setScannerOpen(false); setSpecificScanItem(null); }}
           onScanSuccess={handleScanSuccess}
-          expectedPrefix={buildEquipmentQrValue(stationId, specificScanItem.id)}
+          expectedValue={buildEquipmentQrValue(stationId, specificScanItem.id)}
           existingScans={currentScans}
           title={`${specificScanItem.name} ni skanerlang`}
         />

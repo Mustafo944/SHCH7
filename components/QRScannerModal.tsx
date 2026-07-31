@@ -6,21 +6,73 @@ interface QRScannerModalProps {
   onClose: () => void;
   onScanSuccess: (decodedText: string) => void;
   title?: string;
-  expectedPrefix?: string;
+  /**
+   * Qabul qilinadigan YAGONA QR qiymati (aniq tenglik bilan tekshiriladi).
+   * Berilmasa — har qanday QR qabul qilinadi.
+   */
+  expectedValue?: string;
   existingScans?: string[];
 }
 
-// BarcodeDetector brauzerda mavjudligini bir marta aniqlaymiz (SSR-xavfsiz)
-const hasBarcodeDetector = () =>
+// ─── Konstantalar ────────────────────────────────────────────────────
+
+/** Kadrlarni aniqlash chastotasi (~15 fps). Har video kadrida (60 fps)
+ *  `detect()` chaqirish telefonda protsessor va batareyani bekorga yeydi,
+ *  15 fps esa qo'lda ushlab turilgan QR uchun mo'l-ko'l. */
+const DETECT_INTERVAL_MS = 66;
+
+/** Bir xil rad etilgan kodni takror ishlamaslik muddati (xato spamini to'sadi). */
+const REJECT_COOLDOWN_MS = 1500;
+
+/** Muvaffaqiyatli belgisi ko'rinib turishi uchun kechikish. */
+const SUCCESS_HANDOFF_MS = 450;
+
+/** Xato xabari avtomatik yo'qolish muddati. */
+const ERROR_AUTO_HIDE_MS = 2500;
+
+/**
+ * html5-qrcode `Html5QrcodeScannerState` enum qiymatlari.
+ * Kutubxona dinamik import qilinadi (asosiy bundle'ga tushmasligi uchun),
+ * shuning uchun enum'ni bu yerda takrorlaymiz.
+ */
+const H5_STATE = { NOT_STARTED: 1, SCANNING: 2, PAUSED: 3 } as const;
+
+/** Har renderda yangi massiv yaratilmasligi uchun barqaror bo'sh qiymat
+ *  (`= []` default qiymati har renderda yangi havola yasab, effektni
+ *  bekorga qayta ishga tushirardi). */
+const NO_SCANS: string[] = [];
+
+// ─── Dvigatel aniqlash ───────────────────────────────────────────────
+
+const hasBarcodeDetectorApi = () =>
   typeof window !== 'undefined' && 'BarcodeDetector' in window;
+
+/**
+ * `BarcodeDetector` mavjudligi QR formatini qo'llab-quvvatlashini KAFOLATLAMAYDI:
+ * ba'zi Android/Chrome build'larida API bor, lekin `qr_code` formati yo'q.
+ * Bunday holatda konstruktor xato bermaydi, `detect()` esa hech narsa topmaydi —
+ * ya'ni skaner "jimgina" ishlamay qoladi. Shuning uchun formatni aniq tekshiramiz.
+ */
+async function supportsQrDetection(): Promise<boolean> {
+  if (!hasBarcodeDetectorApi()) return false;
+  try {
+    const BD = (window as any).BarcodeDetector;
+    const formats: string[] = await BD.getSupportedFormats();
+    return Array.isArray(formats) && formats.includes('qr_code');
+  } catch {
+    return false;
+  }
+}
+
+// ─── Komponent ───────────────────────────────────────────────────────
 
 export function QRScannerModal({
   isOpen,
   onClose,
   onScanSuccess,
   title = "QR Kodni Skanerlang",
-  expectedPrefix,
-  existingScans = []
+  expectedValue,
+  existingScans = NO_SCANS
 }: QRScannerModalProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -39,13 +91,29 @@ export function QRScannerModal({
   const [torchSupported, setTorchSupported] = useState(false);
   // Faol dvigatel: native BarcodeDetector yoki html5-qrcode fallback.
   // Native ishlamay qolsa runtime'da fallback'ga o'tamiz.
-  const [engine, setEngine] = useState<'native' | 'fallback'>(() => hasBarcodeDetector() ? 'native' : 'fallback');
+  const [engine, setEngine] = useState<'native' | 'fallback'>(() => hasBarcodeDetectorApi() ? 'native' : 'fallback');
+
+  // ── Timer'larni markazlashgan tozalash ──
+  // Modal yopilganda kutayotgan `setTimeout`lar bekor qilinishi SHART: aks holda
+  // yopilgandan keyin `onScanSuccess` ishlab, skaner bazaga yozilib qolardi.
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const schedule = useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(() => {
+      timersRef.current = timersRef.current.filter(t => t !== id);
+      if (mountedRef.current) fn();
+    }, ms);
+    timersRef.current.push(id);
+  }, []);
+  const clearTimers = useCallback(() => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+  }, []);
 
   // Stabil ref lar
-  const expectedPrefixRef = useRef(expectedPrefix);
+  const expectedValueRef = useRef(expectedValue);
   const existingScansRef = useRef(existingScans);
   const onScanSuccessRef = useRef(onScanSuccess);
-  useEffect(() => { expectedPrefixRef.current = expectedPrefix; }, [expectedPrefix]);
+  useEffect(() => { expectedValueRef.current = expectedValue; }, [expectedValue]);
   useEffect(() => { existingScansRef.current = existingScans; }, [existingScans]);
   useEffect(() => { onScanSuccessRef.current = onScanSuccess; }, [onScanSuccess]);
 
@@ -62,8 +130,12 @@ export function QRScannerModal({
       const decoder = html5Ref.current;
       html5Ref.current = null;
       try {
-        // isScanning bo'lsa to'xtatamiz, keyin tozalaymiz
-        if (decoder.getState && decoder.getState() === 2 /* SCANNING */) {
+        // SCANNING va PAUSED — ikkalasida ham kamera oqimi OCHIQ turadi,
+        // shuning uchun ikkalasida ham `stop()` chaqirilishi shart. Ilgari
+        // faqat SCANNING tekshirilar edi va pauza holatida kamera indikatori
+        // modal yopilgandan keyin ham yonib turardi.
+        const state = decoder.getState?.();
+        if (state === H5_STATE.SCANNING || state === H5_STATE.PAUSED) {
           decoder.stop().then(() => { try { decoder.clear(); } catch { /* */ } }).catch(() => { /* */ });
         } else {
           try { decoder.clear(); } catch { /* */ }
@@ -82,23 +154,26 @@ export function QRScannerModal({
   const handleDetected = useCallback((decodedText: string) => {
     if (scanLockRef.current) return;
 
-    const wrongPrefix = !!expectedPrefixRef.current && !decodedText.startsWith(expectedPrefixRef.current);
+    // ANIQ tenglik: `startsWith` ishlatish xavfli edi — uskuna id'lari
+    // `item_<ms>_<0..999>` ko'rinishida bo'lgani uchun (random qism to'ldirilmagan),
+    // `..._5` kutilayotganda `..._50` skanerlansa prefiks tekshiruvi O'TARDI va
+    // BOSHQA qurilma "to'g'ri" deb qabul qilinardi.
+    const wrongCode = !!expectedValueRef.current && decodedText !== expectedValueRef.current;
     const duplicate = existingScansRef.current.includes(decodedText);
 
-    if (wrongPrefix || duplicate) {
+    if (wrongCode || duplicate) {
       // Rad etilgan kod — skaner TO'XTAMAYDI, tekshirishda davom etadi.
-      // Bir xil noto'g'ri kod har kadrda takror ishlanmasin (titrash/xato spam bo'lmasin):
-      // shu qiymatni qisqa muddat (1.5s) e'tiborsiz qoldiramiz.
+      // Bir xil noto'g'ri kod har kadrda takror ishlanmasin (titrash/xato spam bo'lmasin).
       const now = Date.now();
       const last = lastRejectRef.current;
-      if (last && last.text === decodedText && now - last.at < 1500) return;
+      if (last && last.text === decodedText && now - last.at < REJECT_COOLDOWN_MS) return;
       lastRejectRef.current = { text: decodedText, at: now };
 
-      setError(wrongPrefix
+      setError(wrongCode
         ? 'Xato: Bu QR kod boshqa bekat yoki qurilmaga tegishli.'
         : 'Xato: Siz bu qurilmani oldin skaner qilgansiz!');
       try { navigator.vibrate?.([60, 40, 60]); } catch { /* */ }
-      setTimeout(() => setError(null), 2500);
+      schedule(() => setError(null), ERROR_AUTO_HIDE_MS);
       return;
     }
 
@@ -109,17 +184,27 @@ export function QRScannerModal({
     try { navigator.vibrate?.(120); } catch { /* */ }
     stopCamera();
 
-    setTimeout(() => {
-      onScanSuccessRef.current(decodedText);
-    }, 450);
-  }, [stopCamera]);
+    schedule(() => onScanSuccessRef.current(decodedText), SUCCESS_HANDOFF_MS);
+  }, [stopCamera, schedule]);
 
+  /**
+   * Fonarni yoqish/o'chirish. Ikki dvigatel uchun ham ishlaydi:
+   *  - native: kamera oqimini o'zimiz ushlab turamiz → track'ga to'g'ridan-to'g'ri constraint;
+   *  - fallback: oqim html5-qrcode ichida → uning `applyVideoConstraints()` API'si orqali.
+   * Ilgari faqat native yo'l qo'llab-quvvatlangan edi, natijada iOS Safari
+   * (BarcodeDetector yo'q → doim fallback) foydalanuvchilari fonarsiz qolar edi.
+   */
   const toggleTorch = useCallback(async () => {
-    const track = streamRef.current?.getVideoTracks?.()[0];
-    if (!track) return;
+    const next = !torchOn;
     try {
-      const next = !torchOn;
-      await track.applyConstraints({ advanced: [{ torch: next }] } as any);
+      const track = streamRef.current?.getVideoTracks?.()[0];
+      if (track) {
+        await track.applyConstraints({ advanced: [{ torch: next }] } as any);
+      } else if (html5Ref.current?.applyVideoConstraints) {
+        await html5Ref.current.applyVideoConstraints({ advanced: [{ torch: next }] } as any);
+      } else {
+        return;
+      }
       setTorchOn(next);
     } catch { /* qurilma qo'llab-quvvatlamasa jim o'tamiz */ }
   }, [torchOn]);
@@ -129,16 +214,59 @@ export function QRScannerModal({
 
     mountedRef.current = true;
     scanLockRef.current = false;
+    lastRejectRef.current = null;
     setError(null);
     setSuccess(null);
     setIsLoading(true);
     setTorchOn(false);
     setTorchSupported(false);
 
-    const useNative = hasBarcodeDetector();
-    setEngine(useNative ? 'native' : 'fallback');
+    // ——— Fallback: html5-qrcode o'zining optimizatsiyalangan kamera skaneri ———
+    const startFallback = async () => {
+      try {
+        const { Html5Qrcode } = await import('html5-qrcode');
+        if (!mountedRef.current) return;
 
-    // ——— Native BarcodeDetector: kamera + har kadrda aniqlash (eng tez) ———
+        // Native oqim ishlagan bo'lsa uni to'xtatamiz (html5-qrcode o'zi kamera oladi)
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(t => t.stop());
+          streamRef.current = null;
+        }
+        if (videoRef.current) videoRef.current.srcObject = null;
+
+        const decoder = new Html5Qrcode('qr-reader-region', { verbose: false } as any);
+        html5Ref.current = decoder;
+
+        await decoder.start(
+          { facingMode: 'environment' },
+          {
+            fps: 15,
+            qrbox: { width: 240, height: 240 },
+            aspectRatio: 1.333,
+            disableFlip: false
+          },
+          (decodedText: string) => { handleDetected(decodedText); },
+          () => { /* har kadrdagi "topilmadi" xatolari — e'tiborsiz */ }
+        );
+
+        if (!mountedRef.current) return;
+
+        // Fonar (torch) qo'llab-quvvatlanishini html5-qrcode orqali tekshiramiz
+        try {
+          const caps: any = decoder.getRunningTrackCapabilities?.();
+          if (caps && 'torch' in caps && caps.torch) setTorchSupported(true);
+        } catch { /* */ }
+
+        setIsLoading(false);
+      } catch {
+        if (mountedRef.current) {
+          setError("QR kod o'qish kutubxonasi yuklanmadi.");
+          setIsLoading(false);
+        }
+      }
+    };
+
+    // ——— Native BarcodeDetector: kamera + throttle'langan aniqlash (eng tez) ———
     const startNative = async () => {
       try {
         let stream: MediaStream;
@@ -195,6 +323,7 @@ export function QRScannerModal({
         }
 
         const supportsVFC = !!video && 'requestVideoFrameCallback' in video;
+        let lastDetectAt = 0;
 
         const scheduleNext = () => {
           if (!mountedRef.current || scanLockRef.current) return;
@@ -208,6 +337,14 @@ export function QRScannerModal({
         const tick = async () => {
           if (!mountedRef.current || scanLockRef.current || !videoRef.current) return;
           if (videoRef.current.readyState < 2) { scheduleNext(); return; }
+
+          // Throttle: `requestVideoFrameCallback` 30-60 fps da ishlaydi, lekin
+          // aniqlashni ~15 fps bilan cheklaymiz — sifat bir xil, protsessor va
+          // batareya sarfi esa 2-4 barobar kam.
+          const now = performance.now();
+          if (now - lastDetectAt < DETECT_INTERVAL_MS) { scheduleNext(); return; }
+          lastDetectAt = now;
+
           try {
             const barcodes = await detector.detect(videoRef.current);
             if (barcodes.length > 0 && barcodes[0].rawValue) {
@@ -229,51 +366,21 @@ export function QRScannerModal({
       }
     };
 
-    // ——— Fallback: html5-qrcode o'zining optimizatsiyalangan kamera skaneri ———
-    const startFallback = async () => {
-      try {
-        const { Html5Qrcode } = await import('html5-qrcode');
-        if (!mountedRef.current) return;
-
-        // Native oqim ishlagan bo'lsa uni to'xtatamiz (html5-qrcode o'zi kamera oladi)
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(t => t.stop());
-          streamRef.current = null;
-        }
-        if (videoRef.current) videoRef.current.srcObject = null;
-
-        const decoder = new Html5Qrcode('qr-reader-region', { verbose: false } as any);
-        html5Ref.current = decoder;
-
-        await decoder.start(
-          { facingMode: 'environment' },
-          {
-            fps: 15,
-            qrbox: { width: 240, height: 240 },
-            aspectRatio: 1.333,
-            disableFlip: false
-          },
-          (decodedText: string) => { handleDetected(decodedText); },
-          () => { /* har kadrdagi "topilmadi" xatolari — e'tiborsiz */ }
-        );
-
-        if (mountedRef.current) setIsLoading(false);
-      } catch {
-        if (mountedRef.current) {
-          setError("QR kod o'qish kutubxonasi yuklanmadi.");
-          setIsLoading(false);
-        }
-      }
-    };
-
-    if (useNative) startNative();
-    else startFallback();
+    // Dvigatelni tanlash: formatni ASINXRON tekshirgandan keyin.
+    void (async () => {
+      const useNative = await supportsQrDetection();
+      if (!mountedRef.current) return;
+      setEngine(useNative ? 'native' : 'fallback');
+      if (useNative) startNative();
+      else startFallback();
+    })();
 
     return () => {
       mountedRef.current = false;
+      clearTimers();
       stopCamera();
     };
-  }, [isOpen, handleDetected, stopCamera]);
+  }, [isOpen, handleDetected, stopCamera, clearTimers]);
 
   if (!isOpen) return null;
 
@@ -354,7 +461,7 @@ export function QRScannerModal({
         </div>
 
         {/* Status */}
-        <div className="px-5 py-4 space-y-2">
+        <div className="px-5 py-4 space-y-2" aria-live="polite">
           {error && (
             <div className="w-full p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-bold flex items-center gap-2">
               <AlertTriangle size={16} className="shrink-0" /> {error}

@@ -2,7 +2,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Download, X, CheckCircle2, Clock, Plus, ChevronLeft, ChevronRight, ArrowRight, AlertTriangle, LayoutGrid, List, Calendar, Loader2 } from 'lucide-react'
-import { upsertReport, updateReportEntries, getStationEquipments, updateEquipmentScanHistory } from '@/lib/supabase-db'
+import { upsertReport, updateReportEntries, updateEquipmentScanHistory } from '@/lib/supabase-db'
+import { useStationEquipments } from '@/lib/hooks/useStationEquipments'
 import type { User, WorkReport, ReportEntry, TaskQRMapping } from '@/types'
 import { YILLIK_REJA, TORT_HAFTALIK_REJA, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA_FLAT, taskDisplayKey, type ParsedTaskItem } from '@/lib/reja-data'
 import { MONTHS } from '@/lib/constants'
@@ -173,13 +174,10 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
   const [knownSubmittedAt, setKnownSubmittedAt] = useState<string | null>(null)
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
-  // Bekat uskunalari — oldindan yuklanadi (QR tekshirish uchun)
-  const [stationEq, setStationEq] = useState<any>(null)
-  useEffect(() => {
-    getStationEquipments(stationId).then((data) => {
-      if (data) setStationEq(data)
-    }).catch(console.error)
-  }, [stationId])
+  // Bekat uskunalari (QR bog'lanishlari uchun) — umumiy SWR keshidan.
+  // Xuddi shu kalitni worker sahifasi, WorkerTasksModal va StationEquipmentsView
+  // ham ishlatadi, shuning uchun so'rov faqat BIR marta ketadi.
+  const { data: stationEq } = useStationEquipments(stationId)
   const stationTaskMappings: TaskQRMapping[] = useMemo(() => stationEq?.taskMappings || [], [stationEq])
 
   useEffect(() => {
@@ -878,7 +876,6 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
             }
           }}
           onClose={() => setCompletionIdx(null)}
-          preloadedStationEq={stationEq}
         />
       )}
 

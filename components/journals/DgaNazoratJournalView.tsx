@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { DgaNazoratEntry } from '@/types'
 import { X, Plus, Trash2, Download } from 'lucide-react'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
@@ -70,7 +70,6 @@ export function DgaNazoratJournalView({
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
-  const saveTimeout = useRef<NodeJS.Timeout | null>(null)
 
   const isWorker = ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(userRole)
 

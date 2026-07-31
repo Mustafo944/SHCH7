@@ -42,3 +42,7 @@ next-env.d.ts
 output*.txt
 step*.txt
 temp_dev.log
+
+# Vaqtinchalik diff/patch fayllari
+diff.txt
+*.patch

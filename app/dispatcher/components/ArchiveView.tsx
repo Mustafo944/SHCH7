@@ -95,13 +95,6 @@ export function ArchiveView({ stations, onConfirm, onConfirmEntry, onReject }: {
     ? `${selYear}-${String(selMonth + 1).padStart(2, '0')}`
     : null
 
-  // Bekatning har bir jurnal turi uchun bitta qator saqlanadi (barcha oylar shu bitta
-  // qatorning entries ro'yxati ichida, har bir yozuv o'zining journalMonth'iga ega).
-  // Shuning uchun oy bo'yicha filtrlash qatorning updatedAt vaqtiga emas, balki
-  // ichidagi yozuvlar aslida shu oyga tegishlimi — shunga qarab qilinishi kerak.
-  const journalHasMonth = (j: StationJournal, mk: string) =>
-    (j.entries as { journalMonth?: string }[]).some(e => e.journalMonth === mk)
-
   // ── Faqat QABUL QILINGAN hisobotlar (rad etilganlar chiqmaydi) ─
   const archiveReports = useMemo(() => {
     if (!selStation || !monthKey) return []
@@ -113,6 +106,10 @@ export function ArchiveView({ stations, onConfirm, onConfirmEntry, onReject }: {
   }, [selStation, monthKey, stationReports])
 
   // ── Yordamchi: Yozuv tanlangan oyga tegishlimi? ──
+  // Bekatning har bir jurnal turi uchun bitta qator saqlanadi (barcha oylar shu bitta
+  // qatorning entries ro'yxati ichida, har bir yozuv o'zining journalMonth'iga ega).
+  // Shuning uchun oy bo'yicha filtrlash qatorning updatedAt vaqtiga emas, balki
+  // ichidagi yozuvlar aslida shu oyga tegishlimi — shunga qarab qilinishi kerak.
   const isEntryInMonth = useCallback((e: any, mk: string, updatedAt: string) => {
     if (e.journalMonth === mk) return true;
 
@@ -335,7 +332,6 @@ export function ArchiveView({ stations, onConfirm, onConfirmEntry, onReject }: {
             stationName={selStationName}
             selectedMonthKey={monthKey || viewJournal.updatedAt.slice(0, 7)}
             onClose={() => setViewJournal(null)}
-            monthKey={monthKey!}
           />
         </div>
       )}
@@ -347,12 +343,13 @@ export function ArchiveView({ stations, onConfirm, onConfirmEntry, onReject }: {
 // JOURNAL FULL VIEW — har qanday jurnal turini to'liq ekranda ochadi
 // ─────────────────────────────────────────────────────────────────
 
-function JournalFullView({ journal, stationName, selectedMonthKey, onClose, monthKey }: {
+// `monthKey` propi olib tashlandi: u `selectedMonthKey` bilan bir xil qiymatni
+// (fallback bilan) tashiydi va komponent ichida hech qachon ishlatilmagan.
+function JournalFullView({ journal, stationName, selectedMonthKey, onClose }: {
   journal: StationJournal
   stationName: string
   selectedMonthKey: string
   onClose: () => void
-  monthKey?: string
 }) {
   const commonProps = {
     stationId: journal.stationId,

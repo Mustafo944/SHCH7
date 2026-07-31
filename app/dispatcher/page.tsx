@@ -140,7 +140,7 @@ export default function DispatcherPage() {
   // SWRProvider'dagi revalidateIfStale:false sozlamasi bu bo'sh massivni "haqiqiy
   // ma'lumot" deb hisoblab, birinchi (keshsiz) ochilishda serverdan hech qachon
   // yangi ma'lumot so'ramay qo'yadi.
-  const getFallback = (key: string, def: any) => {
+  const getFallback = (key: string) => {
     if (typeof window !== 'undefined') {
       const cached = safeStorage.getItem(key)
       if (cached) { try { return JSON.parse(cached) } catch { /* ignore */ } }
@@ -152,7 +152,7 @@ export default function DispatcherPage() {
     const w = await getWorkers()
     return w.filter(user => user.role !== 'dispatcher')
   }, {
-    fallbackData: getFallback('dispatcher_workers_cache', []),
+    fallbackData: getFallback('dispatcher_workers_cache'),
     onSuccess: (data) => safeStorage.setItemDebounced('dispatcher_workers_cache', JSON.stringify(data))
   })
   
@@ -171,23 +171,23 @@ export default function DispatcherPage() {
       return getReportsByMonths([cur, prev])
     },
     {
-      fallbackData: getFallback('dispatcher_reports_cache_v2', []),
+      fallbackData: getFallback('dispatcher_reports_cache_v2'),
       onSuccess: (data) => safeStorage.setItemDebounced('dispatcher_reports_cache_v2', JSON.stringify(data)),
     }
   )
   
   const { data: allIncidents = [], mutate: mutateIncidents } = useSWR(session ? 'dispatcher_incidents' : null, getIncidents, {
-    fallbackData: getFallback('dispatcher_incidents_cache', []),
+    fallbackData: getFallback('dispatcher_incidents_cache'),
     onSuccess: (data) => safeStorage.setItemDebounced('dispatcher_incidents_cache', JSON.stringify(data))
   })
   
   const { data: globalGraphics = [], mutate: mutateGraphics } = useSWR(session ? 'dispatcher_graphics' : null, getGlobalGraphics, {
-    fallbackData: getFallback('dispatcher_graphics_cache', []),
+    fallbackData: getFallback('dispatcher_graphics_cache'),
     onSuccess: (data) => safeStorage.setItemDebounced('dispatcher_graphics_cache', JSON.stringify(data))
   })
   
   const { data: journalSummary = {}, mutate: mutateJournalSummary } = useSWR(session ? 'dispatcher_journals' : null, getDispatcherJournalSummary, {
-    fallbackData: getFallback('dispatcher_journals_cache', {}),
+    fallbackData: getFallback('dispatcher_journals_cache'),
     onSuccess: (data) => safeStorage.setItemDebounced('dispatcher_journals_cache', JSON.stringify(data))
   })
 
@@ -195,7 +195,7 @@ export default function DispatcherPage() {
     session ? `dispatcher_read_incidents_${session.login}` : null,
     () => getReadIncidentIds(session!.id),
     {
-      fallbackData: getFallback(`dispatcher_read_incidents_cache_${session?.id}`, []),
+      fallbackData: getFallback(`dispatcher_read_incidents_cache_${session?.id}`),
       onSuccess: (data) => safeStorage.setItemDebounced(`dispatcher_read_incidents_cache_${session?.id}`, JSON.stringify(data))
     }
   )
@@ -216,6 +216,10 @@ export default function DispatcherPage() {
       {
         channelName: 'dispatcher_work_reports',
         table: 'work_reports',
+        // Bu handler `payload.new` ni inkremental birlashtiradi — hodisalar
+        // birlashtirilsa (debounce), bir vaqtda o'zgargan boshqa hisobotlarning
+        // payload'i tashlanib ketib, ular ro'yxatda eskirib qolardi.
+        coalesce: false,
         onEvent: (payload: any) => {
           if (payload.new && Object.keys(payload.new).length > 0) {
             mutateReports((prev: WorkReport[] | undefined) => {

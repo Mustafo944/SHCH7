@@ -83,6 +83,9 @@ export function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations
             className="h-24 w-24 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer overflow-hidden group hover:border-blue-400 transition-colors"
           >
             {form.photoPreview ? (
+              // `next/image` ataylab ishlatilmaydi: bu manba tanlangan faylning
+              // lokal blob/data URL'i — Next optimizatori uni qayta ishlay olmaydi.
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={form.photoPreview} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
               <div className="flex flex-col items-center text-slate-400 group-hover:text-blue-500 transition-colors">

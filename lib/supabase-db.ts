@@ -408,13 +408,29 @@ export async function getReportByWorkerAndMonth(workerId: string, month: string)
   return mapDbReport(data as DbWorkReportRow);
 }
 
+/**
+ * `upsertReport` javobi — saqlangan qatorning faqat metadata'si.
+ *
+ * To'liq qator (ayniqsa `entries` JSONB) ataylab QAYTARILMAYDI: chaqiruvchida
+ * u allaqachon bor. Ilgari `.select()` argumentsiz chaqirilgani uchun butun
+ * oylik reja tarmoqdan QAYTIB ham kelardi — natijada avtosaqlash har 1.5
+ * sekundda payload'ni ikki barobar oshirardi.
+ */
+export interface UpsertReportResult {
+  id: string;
+  submittedAt: string | null;
+}
+
+/** `upsertReport` javobi uchun yetarli ustunlar (to'liq qator emas). */
+const UPSERT_RESULT_COLUMNS = 'id, submitted_at' as const;
+
 export async function upsertReport(
   report: Omit<WorkReport, 'id' | 'submittedAt' | 'confirmedAt' | 'confirmedBy' | 'rejectedAt' | 'rejectedBy' | 'isSubmitted'> & { id?: string },
   isSubmitted?: boolean,
   // Chaqiruvchi oxirgi ko'rgan submitted_at qiymati — agar berilgan bo'lsa va bazadagisidan
   // farq qilsa, demak shu orada boshqa joyda saqlangan; ustidan yozib yubormaymiz.
   expectedSubmittedAt?: string | null
-): Promise<WorkReport> {
+): Promise<UpsertReportResult> {
   const payload: Record<string, unknown> = {
     worker_id: report.workerId,
     worker_name: report.workerName,
@@ -457,19 +473,19 @@ export async function upsertReport(
       .from('work_reports')
       .update(payload)
       .eq('id', existing.id)
-      .select()
+      .select(UPSERT_RESULT_COLUMNS)
       .single();
     if (error || !data) throw new Error(error?.message ?? 'Upsert failed');
-    return mapDbReport(data as DbWorkReportRow);
+    return { id: data.id, submittedAt: data.submitted_at };
   }
 
   const { data, error } = await supabase
     .from('work_reports')
     .insert(payload)
-    .select()
+    .select(UPSERT_RESULT_COLUMNS)
     .single();
   if (error || !data) throw new Error(error?.message ?? 'Upsert failed');
-  return mapDbReport(data as DbWorkReportRow);
+  return { id: data.id, submittedAt: data.submitted_at };
 }
 
 export async function confirmReport(reportId: string, dispatcherName: string): Promise<WorkReport | null> {
@@ -583,7 +599,7 @@ export async function markReportEntryDoneFromJournal(
   reportId: string,
   entryIndex: number,
   taskType: 'haftalik' | 'yillik' | 'yangi' | 'kmo' | 'majburiy',
-  workerName: string
+  _workerName: string
 ): Promise<void> {
   const MAX_RETRIES = 3;
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -1043,7 +1059,13 @@ export async function getJournal(
   }
 
   // Optimistic locking uchun bazani eslab qolamiz
-  _journalBaseUpdatedAt.set(journalKey(stationId, journalType), data.updated_at)
+  // Agar offline bo'lsak, ma'lumot SW keshidan kelgani aniq.
+  // Eski keshdagi updated_at saqlashda ziddiyat (conflict) keltirib chiqarmasligi uchun null qilamiz.
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    _journalBaseUpdatedAt.set(journalKey(stationId, journalType), null)
+  } else {
+    _journalBaseUpdatedAt.set(journalKey(stationId, journalType), data.updated_at)
+  }
 
   return mapDbJournal(data as DbJournalRow)
 }
@@ -1366,11 +1388,27 @@ export async function getTaskScans(stationId: string, taskNsh: string, taskDate:
   return data as TaskScan[];
 }
 
+/**
+ * Skanerni qayd etadi. IDEMPOTENT: xuddi shu skaner allaqachon yozilgan
+ * bo'lsa (boshqa ishchi ayni damda skaner qilib ulgurgan), xato o'rniga
+ * MAVJUD qator qaytariladi.
+ *
+ * Sabab: `task_scans_unique_scan` indeksi (station_id, task_nsh, task_date,
+ * equipment_name) dublikatni baza darajasida to'sadi. Bu holat XATO EMAS —
+ * qurilma haqiqatan ham skaner qilingan, faqat boshqa xodim tomonidan.
+ * Ishchiga "duplicate key value violates unique constraint..." degan xom
+ * Postgres xabarini ko'rsatish noto'g'ri bo'lardi.
+ *
+ * Indeks hali yaratilmagan bo'lsa (migratsiya ishga tushirilmagan) bu shox
+ * hech qachon ishlamaydi — kod ikkala holatda ham to'g'ri ishlaydi.
+ */
 export async function insertTaskScan(scan: Omit<TaskScan, 'id' | 'scanned_at'>): Promise<TaskScan> {
+  const stationUuid = stringToUuid(scan.station_id);
+
   const { data, error } = await supabase
     .from('task_scans')
     .insert({
-      station_id: stringToUuid(scan.station_id),
+      station_id: stationUuid,
       task_nsh: scan.task_nsh,
       task_date: scan.task_date,
       equipment_id: scan.equipment_id,
@@ -1380,10 +1418,23 @@ export async function insertTaskScan(scan: Omit<TaskScan, 'id' | 'scanned_at'>):
     .select()
     .single();
 
-  if (error) {
-    throw new Error(error.message);
+  if (!error) return data as TaskScan;
+
+  // 23505 = unique_violation
+  if (error.code === '23505') {
+    const { data: existing } = await supabase
+      .from('task_scans')
+      .select('*')
+      .eq('station_id', stationUuid)
+      .eq('task_nsh', scan.task_nsh)
+      .eq('task_date', scan.task_date)
+      .eq('equipment_name', scan.equipment_name)
+      .maybeSingle();
+
+    if (existing) return existing as TaskScan;
   }
-  return data as TaskScan;
+
+  throw new Error(error.message);
 }
 
 // Bekat bo'yicha barcha skaner tarixi (kim, qachon, qaysi vazifa uchun skaner qilgani) — arxiv ko'rinishi uchun

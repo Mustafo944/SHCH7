@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { X, Save, Edit3, Plus, Trash2, Printer, Download, AlertTriangle, Loader2, ArrowRightLeft, Target, ChevronLeft, ChevronRight, Clock, History, Calendar, User, QrCode, Server } from 'lucide-react';
-import { StationEquipments, EquipmentCategory, PassportSection, PassportSubSection, PassportDevice } from '@/types';
-import { getStationEquipments, upsertStationEquipments, getStationTaskScans, type TaskScan } from '@/lib/supabase-db';
+import { StationEquipments, EquipmentCategory, PassportSection, PassportDevice } from '@/types';
+import { upsertStationEquipments, getStationTaskScans, type TaskScan } from '@/lib/supabase-db';
 import { useToast } from '@/lib/hooks/useToast';
+import { useStationEquipments } from '@/lib/hooks/useStationEquipments';
 import useSWR from 'swr';
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import { TORT_HAFTALIK_REJA_FLAT, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA, YILLIK_REJA, taskDisplayKey } from '@/lib/reja-data';
@@ -362,7 +363,7 @@ const EquipmentBadge = memo(function EquipmentBadge({ name, color }: { name: str
 });
 
 /** Tahrirlash rejimidagi bitta qurilma qatori */
-const EditableItem = memo(function EditableItem({ itemId, name, onUpdate, onRemove }: { itemId: string; name: string; onUpdate: (name: string) => void; onRemove: () => void }) {
+const EditableItem = memo(function EditableItem({ name, onUpdate, onRemove }: { name: string; onUpdate: (name: string) => void; onRemove: () => void }) {
   return (
     <div className="relative group flex items-center gap-2">
       <DebouncedInput
@@ -437,7 +438,6 @@ const CategoryCard = memo(function CategoryCard({
           isEditing ? (
             <EditableItem
               key={item.id}
-              itemId={item.id}
               name={item.name}
               onUpdate={(name) => onUpdateItem(category.id, item.id, name)}
               onRemove={() => onRemoveItem(category.id, item.id)}
@@ -628,14 +628,10 @@ interface Props {
 
 export function StationEquipmentsView({ stationId, stationName, canEdit, isDispatcher = false, canEditTaskMappings = false, userName, onClose }: Props) {
   const toast = useToast();
-  const { data: swrData, isLoading, mutate } = useSWR(
-    `equipments_${stationId}`,
-    () => getStationEquipments(stationId),
-    {
-      revalidateOnFocus: false, // Don't refetch on window focus to prevent overriding edits
-      dedupingInterval: 60000, // 1 minute cache
-    }
-  );
+  // Umumiy hook — kalit va sozlamalar `useStationEquipments` ichida.
+  // Boshqa uch joy (worker sahifasi, JournalForm, WorkerTasksModal) ham xuddi
+  // shu kalitdan foydalanadi, ya'ni bu yerda saqlagach ular ham yangilanadi.
+  const { data: swrData, isLoading, mutate } = useStationEquipments(stationId);
 
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -1004,7 +1000,10 @@ export function StationEquipmentsView({ stationId, stationName, canEdit, isDispa
     } finally {
       setIsDownloadingPdf(false);
     }
-  }, [stationId, stationName, toast]);
+    // `stationId` bu funksiya tanasida ishlatilmaydi (QR canvas'i DOM'dan
+    // item id bo'yicha olinadi) — keraksiz dep har bekat o'zgarishida
+    // callback'ni bekorga qayta yaratardi.
+  }, [stationName, toast]);
 
   // ─── Chop etish sahifasi ──────────────────────────────────────────
 

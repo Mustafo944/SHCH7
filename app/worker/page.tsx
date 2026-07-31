@@ -12,7 +12,6 @@ import {
   getIncidents,
   getReadIncidentIds,
   getPendingJournalCounts,
-  getStationEquipments,
   mapDbReport,
   type DbWorkReportRow
 } from '@/lib/supabase-db'
@@ -20,7 +19,7 @@ import type { PassportSection } from '@/types'
 import { safeStorage } from '@/lib/utils/storage'
 import { getRelayStatusCounts, type RelayStatusCounts } from '@/lib/relenazorat'
 import { getMonitorStationForName } from '@/lib/monosxema/stations'
-import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription, useHardwareBack } from '@/lib/hooks'
+import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription, useHardwareBack, useStationEquipments } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import { AppSidebar, type SidebarNavItem } from '@/components/AppSidebar'
@@ -61,9 +60,7 @@ import {
   BarChart2,
   Library,
   Server,
-  Zap,
   ChevronRight,
-  Activity,
   X
 } from 'lucide-react'
 
@@ -84,12 +81,9 @@ export default function WorkerPage() {
   const [selectedReport, _setSelectedReport] = useState<WorkReport | null>(null)
   const [pendingCounts, setPendingCounts] = useState({ du46: 0, shu2: 0 })
   const [relayCounts, setRelayCounts] = useState<RelayStatusCounts>({ soz: 0, nosoz: 0, muddatiKelgan: 0 })
-  const [stationPassport, setStationPassport] = useState<PassportSection[]>([])
   const relayTotal = relayCounts.soz + relayCounts.muddatiKelgan + relayCounts.nosoz
   const relaySafeTotal = relayTotal || 1
   const relaySozPct = (relayCounts.soz / relaySafeTotal) * 100
-  const relayWarnPct = (relayCounts.muddatiKelgan / relaySafeTotal) * 100
-  const relayBadPct = (relayCounts.nosoz / relaySafeTotal) * 100
   const { isMuted, setIsMuted } = useNotificationSound(pendingCounts.du46)
   const [selectedJournalType, setSelectedJournalType] = useState<JournalType | null>(null)
   const [selectedJournalMonth, setSelectedJournalMonth] = useState<string>('')
@@ -116,7 +110,11 @@ export default function WorkerPage() {
     } else if (view !== 'home') {
       setView('home')
     }
-  }, [view, workerModal, selectedJournalType, isSignOutModalOpen, relayModalOpen])
+    // `isMoreMenuOpen` dep massivda YO'Q edi: `useHardwareBack` callback'ni ref'da
+    // saqlagani uchun eski closure (`isMoreMenuOpen === false`) qotib qolar edi va
+    // "Yana" menyusi ochiqligida Android "orqaga" tugmasi menyuni yopmasdan
+    // to'g'ridan-to'g'ri bosh sahifaga o'tib ketardi.
+  }, [view, workerModal, selectedJournalType, isSignOutModalOpen, relayModalOpen, isMoreMenuOpen])
 
   useHardwareBack(isSubViewActive, handleHardwareBack)
 
@@ -141,13 +139,16 @@ export default function WorkerPage() {
 
   const loadWorkReports = useCallback(async (stationIds: string[]) => {
     try {
-      // Faqat kerakli oylar yuklanadi: joriy yilning 12 oyi (JournalForm faqat
-      // joriy yil oylarini ochadi) + yanvarda o'tgan yil dekabri ("o'tgan oy"
-      // statistikasi uchun). Shu bilan payload yillar o'tsa ham o'smaydi.
+      // Keshni yengillashtirish uchun faqat 2 oy yuklanadi: joriy oy va o'tgan oy.
       const now = new Date()
       const y = now.getFullYear()
-      const months = Array.from({ length: 12 }, (_, i) => `${y}-${String(i + 1).padStart(2, '0')}`)
-      if (now.getMonth() === 0) months.push(`${y - 1}-12`)
+      const m = now.getMonth() + 1
+      const currentMonth = `${y}-${String(m).padStart(2, '0')}`
+      
+      const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const lastMonth = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`
+
+      const months = [currentMonth, lastMonth]
 
       const r = await getReportsByStationsAndMonths(stationIds, months)
       setReports(r)
@@ -162,6 +163,19 @@ export default function WorkerPage() {
       setReportsLoaded(true)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  /** Faqat "o'qilgan" belgilarini yangilaydi — hodisalar ro'yxatiga tegmaydi. */
+  const loadReadIncidentIds = useCallback(async (userId: string) => {
+    try {
+      const readIds = await getReadIncidentIds(userId)
+      setReadIncidentIds(new Set(readIds))
+      if (typeof window !== 'undefined') {
+        safeStorage.setItemDebounced(`worker_read_inc_cache_${userId}`, JSON.stringify(readIds))
+      }
+    } catch {
+      console.warn("O'qilgan hodisalarni yuklashda xatolik")
+    }
   }, [])
 
   const loadIncidents = useCallback(async (userId: string) => {
@@ -233,22 +247,14 @@ export default function WorkerPage() {
     return () => { cancelled = true }
   }, [activeStationId])
 
-  useEffect(() => {
-    if (!activeStationId) { setStationPassport([]); return }
-    let cancelled = false
-    getStationEquipments(activeStationId)
-      .then(data => { if (!cancelled) setStationPassport(data?.passport || []) })
-      .catch(() => { if (!cancelled) setStationPassport([]) })
-    return () => { cancelled = true }
-  }, [activeStationId])
+  // Bekat pasporti — umumiy SWR keshidan (JournalForm, WorkerTasksModal va
+  // StationEquipmentsView ham xuddi shu kalitni ishlatadi, so'rov bitta ketadi).
+  const { data: stationEquipments } = useStationEquipments(activeStationId || null)
+  const stationPassport = useMemo(() => stationEquipments?.passport || [], [stationEquipments])
 
   const passportSectionDeviceCount = useCallback((section: PassportSection) => (
     section.devices.length + section.subSections.reduce((sum, sub) => sum + sub.devices.length, 0)
   ), [])
-
-  const passportTotalDevices = useMemo(() => (
-    stationPassport.reduce((sum, section) => sum + passportSectionDeviceCount(section), 0)
-  ), [stationPassport, passportSectionDeviceCount])
 
   const realtimeConfigs = useMemo(() => {
     const configs = []
@@ -272,6 +278,8 @@ export default function WorkerPage() {
           channelName: `worker_reports_${session.id}`,
           table: 'work_reports',
           // Removed worker_id filter so workers receive updates for reports made by other workers at their stations (like Katta Elektromexanik)
+          // `payload.new` inkremental birlashtiriladi — hodisa tashlab ketilmasligi shart.
+          coalesce: false,
           onEvent: (payload: any) => {
             if (payload.new && Object.keys(payload.new).length > 0) {
               setReports(prev => {
@@ -319,13 +327,16 @@ export default function WorkerPage() {
           channelName: `worker_incident_reads_${session.id}`,
           table: 'incident_reads',
           filter: `worker_id=eq.${session.id}`,
-          onEvent: () => loadIncidents(session.id)
+          // Faqat "o'qildi" belgisi o'zgardi — hodisalar ro'yxati o'zgarmagan.
+          // Ilgari bu yerda `loadIncidents` chaqirilar edi va har "o'qildi"
+          // bosilganda 100 ta hodisa bekorga qayta yuklanardi.
+          onEvent: () => loadReadIncidentIds(session.id)
         }
       )
     }
 
     return configs
-  }, [activeStationId, session?.id, session?.role, session?.position, session?.stationIds, loadPendingCounts, loadWorkReports, loadIncidents])
+  }, [activeStationId, session?.id, session?.role, session?.position, session?.stationIds, loadPendingCounts, loadWorkReports, loadIncidents, loadReadIncidentIds])
 
   useRealtimeSubscription(realtimeConfigs, realtimeConfigs.length > 0)
 

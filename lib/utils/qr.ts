@@ -33,6 +33,16 @@ export function getEntryDateStr(journalMonth: string, ragat: string): string {
 
 // task_scans jadvalidagi station_id ustuni uuid bo'lgani uchun,
 // matnli bekat id'larini (masalan "st_1") deterministik uuid'ga o'giradi.
+//
+// ⚠️  FAQAT `station_id` UCHUN. `equipment_id` endi xom QR qiymatini saqlaydi
+//     (task_scans_schema_and_dedupe.sql migratsiyasi ustunni `text` qildi).
+//
+// ⚠️  MA'LUM CHEKLOV: xesh 32-bitli va `Math.abs()` ishorani yo'qotadi, ya'ni
+//     `hash` va `-hash` BIR XIL uuid beradi — real fazo ~2^31. Bekatlar soni
+//     o'nlab bo'lgani uchun amalda xavf yo'q, lekin bu funksiyani YANGI,
+//     ko'p qiymatli maydonlar uchun ishlatmang. Uni butunlay olib tashlash
+//     (station_id ni ham `text` qilish) 4 ta so'rov filtrini o'zgartirishni
+//     va mavjud qatorlarni backfill qilishni talab qiladi.
 export function stringToUuid(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
