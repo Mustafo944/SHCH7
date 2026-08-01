@@ -184,47 +184,52 @@ function TaskSelectionModal({
 }
 
 export function JournalForm({ session, stationId, stationName, month, reports, reportsLoaded = true, onSubmit, onCancel, onReportUpdated, initialDay }: { session: User, stationId: string, stationName: string, month: number, reports: WorkReport[], reportsLoaded?: boolean, onSubmit: () => void, onCancel: () => void, onReportUpdated?: (reportId: string, entries: ReportEntry[]) => void, initialDay?: number }) {
-  const [entries, setEntries] = useState<ReportEntry[]>(Array.from({ length: TOTAL_ROWS }, (_, i) => ({
-    ragat: String(i + 1), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: ''
-  })))
+  const monthStr = `${new Date().getFullYear()}-${String(month + 1).padStart(2, '0')}`
+  const initialDraft = useMemo(() => reports.find(r => r.month === monthStr && r.stationId === stationId), [reports, monthStr, stationId])
+
+  const [entries, setEntries] = useState<ReportEntry[]>(() => {
+    if (initialDraft) {
+      return [...initialDraft.entries].sort((a, b) => parseInt(a.ragat) - parseInt(b.ragat))
+    }
+    return Array.from({ length: TOTAL_ROWS }, (_, i) => ({
+      ragat: String(i + 1), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: ''
+    }))
+  })
   const [submitting, setSubmitting] = useState(false)
   const [formMessage, setFormMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null)
   const [headerError, setHeaderError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalType, setModalType] = useState<'4-haftalik' | 'yillik'>('4-haftalik')
   const [modalIdx, setModalIdx] = useState(0)
-  const [isConfirmed, setIsConfirmed] = useState(false)
-  const [isRejected, setIsRejected] = useState(false)
-  const [rejectedBy, setRejectedBy] = useState<string | null>(null)
-  const [reportId, setReportId] = useState<string | null>(null)
+  const [isConfirmed, setIsConfirmed] = useState(!!initialDraft?.confirmedAt)
+  const [isRejected, setIsRejected] = useState(!!initialDraft?.rejectedAt)
+  const [rejectedBy, setRejectedBy] = useState<string | null>(initialDraft?.rejectedBy || null)
+  const [reportId, setReportId] = useState<string | null>(initialDraft?.id || null)
   const [completionIdx, setCompletionIdx] = useState<number | null>(null)
   const [deleteConfirmIdx, setDeleteConfirmIdx] = useState<number | null>(null)
-  const monthStr = `${new Date().getFullYear()}-${String(month + 1).padStart(2, '0')}`
-  const draftReport = useMemo(() => reports.find(r => r.month === monthStr && r.stationId === stationId), [reports, monthStr, stationId])
+  const draftReport = initialDraft // Fallback to useMemo'd initialDraft
   const canEditPlan = session.position === 'katta_elektromexanik'
   const isPlanEmpty = useMemo(() => entries.every(e => !e.haftalikJadval && !e.yillikJadval && !e.yangiIshlar && !e.kmoBartaraf && !e.majburiyOzgarish), [entries])
-  const [viewMode, setViewMode] = useState<'table' | 'cards' | 'builder'>(isPlanEmpty && canEditPlan ? 'builder' : 'cards')
+  
+  const [viewMode, setViewMode] = useState<'table' | 'cards' | 'builder'>(() => {
+    if (initialDay) return 'cards'
+    return isPlanEmpty && canEditPlan && !initialDraft?.confirmedAt ? 'builder' : 'cards'
+  })
+  
   const [selectedDay, setSelectedDay] = useState<number>(initialDay || new Date().getDate() || 1)
   const [builderDayModal, setBuilderDayModal] = useState<number | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  // Serverda reja boshqa joyda (masalan boshqa tab/qurilmada) allaqachon o'zgargan bo'lsa —
-  // ustidan yozib yubormaymiz, o'rniga foydalanuvchidan sahifani yangilashni so'raymiz.
   const [saveConflict, setSaveConflict] = useState(false)
-  // Optimistik lock uchun "oxirgi ko'rgan submitted_at" — draftReport.submittedAt'dan farqli,
-  // bu HAR BIR muvaffaqiyatli saqlashdan keyin yangilanadi (draftReport esa faqat sahifa
-  // to'liq qayta yuklanganda yangilanadi), aks holda o'zimizning ketma-ket avto-saqlashlarimiz
-  // bir-birini "ziddiyat" deb noto'g'ri belgilab qo'yar edi.
-  const [knownSubmittedAt, setKnownSubmittedAt] = useState<string | null>(null)
+  const [knownSubmittedAt, setKnownSubmittedAt] = useState<string | null>(initialDraft?.submittedAt || null)
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
   // Bekat uskunalari (QR bog'lanishlari uchun) — umumiy SWR keshidan.
-  // Xuddi shu kalitni worker sahifasi, WorkerTasksModal va StationEquipmentsView
-  // ham ishlatadi, shuning uchun so'rov faqat BIR marta ketadi.
   const { data: stationEq } = useStationEquipments(stationId)
   const stationTaskMappings: TaskQRMapping[] = useMemo(() => stationEq?.taskMappings || [], [stationEq])
 
   useEffect(() => {
-    const draft = draftReport
+    // We still need this if `month` prop changes or `reports` update later.
+    const draft = initialDraft
     if (draft) {
       if (!hasUnsavedChanges) {
         setEntries([...draft.entries].sort((a, b) => parseInt(a.ragat) - parseInt(b.ragat)))
@@ -234,6 +239,12 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
       setIsRejected(!!draft.rejectedAt)
       setRejectedBy(draft.rejectedBy || null)
       setReportId(draft.id)
+      
+      // If plan is no longer empty, and we are stuck in empty builder, we should probably switch to cards
+      // but let's just make sure we don't render a blank page.
+      if (viewMode === 'builder' && !!draft.confirmedAt) {
+         setViewMode('cards')
+      }
     } else {
       if (!hasUnsavedChanges) {
         setEntries(Array.from({ length: TOTAL_ROWS }, (_, i) => ({
@@ -245,7 +256,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
       setRejectedBy(null)
       setReportId(null)
     }
-  }, [draftReport, hasUnsavedChanges])
+  }, [initialDraft, hasUnsavedChanges, viewMode])
 
   const addRow = () => {
     setEntries([...entries, {
