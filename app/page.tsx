@@ -148,7 +148,7 @@ export default function LoginPage() {
             <p className="relative z-10 text-sm font-medium text-slate-500 mb-8 px-2">Barmoq izi orqali xavfsiz va tezkor kirish uchun quyidagi tugmani bosing.</p>
             
             <button
-              onClick={handlePasskeyLogin}
+              onClick={() => handlePasskeyLogin()}
               disabled={loading}
               className="relative z-10 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-500 to-blue-500 px-6 py-4 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-95 disabled:opacity-50"
             >
