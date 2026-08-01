@@ -98,58 +98,6 @@ function serializeAssertion(credential: PublicKeyCredential): Record<string, unk
   }
 }
 
-type CreationOptionsJSON = {
-  challenge: string
-  user: { id: string; [key: string]: unknown }
-  excludeCredentials?: Array<{ id: string; type?: string; transports?: string[] }>
-  [key: string]: unknown
-}
-
-function deserializeCreationOptions(options: CreationOptionsJSON): PublicKeyCredentialCreationOptions {
-  const PKC = window.PublicKeyCredential as unknown as {
-    parseCreationOptionsFromJSON?: (o: CreationOptionsJSON) => PublicKeyCredentialCreationOptions
-  }
-  if (typeof PKC?.parseCreationOptionsFromJSON === 'function') {
-    return PKC.parseCreationOptionsFromJSON(options)
-  }
-
-  const { challenge, user, excludeCredentials, ...rest } = options
-  const result = {
-    ...rest,
-    challenge: base64UrlToBuffer(challenge),
-    user: { ...user, id: base64UrlToBuffer(user.id) },
-  } as unknown as PublicKeyCredentialCreationOptions
-
-  if (excludeCredentials?.length) {
-    result.excludeCredentials = excludeCredentials.map((cred) => ({
-      ...cred,
-      id: base64UrlToBuffer(cred.id),
-      type: (cred.type || 'public-key') as 'public-key',
-      transports: cred.transports as AuthenticatorTransport[] | undefined,
-    }))
-  }
-  return result
-}
-
-function serializeAttestation(credential: PublicKeyCredential): Record<string, unknown> {
-  const withJson = credential as unknown as { toJSON?: () => Record<string, unknown> }
-  if (typeof withJson.toJSON === 'function') return withJson.toJSON()
-
-  const response = credential.response as AuthenticatorAttestationResponse
-  return {
-    id: credential.id,
-    rawId: credential.id,
-    response: {
-      attestationObject: bufferToBase64Url(response.attestationObject),
-      clientDataJSON: bufferToBase64Url(response.clientDataJSON),
-    },
-    type: 'public-key',
-    clientExtensionResults: credential.getClientExtensionResults(),
-    authenticatorAttachment:
-      (credential as unknown as { authenticatorAttachment?: string }).authenticatorAttachment ?? undefined,
-  }
-}
-
 // ── Ommaviy API ──────────────────────────────────────────────────────────
 
 export type PasskeyChallenge = {
@@ -188,9 +136,7 @@ export async function fetchPasskeyChallenge(): Promise<PasskeyChallenge> {
 
 /**
  * Challenge hali yaroqlimi? 5 soniya zaxira qoldiramiz — marosim davomida
- * muddati o'tib ketmasligi uchun. Kirish (`PasskeyChallenge`) va
- * ro'yxatdan o'tish (`PasskeyRegistrationChallenge`) challenge'lari uchun
- * umumiy — ikkalasida ham `expiresAt` bor.
+ * muddati o'tib ketmasligi uchun.
  */
 export function isChallengeUsable<T extends { expiresAt: number }>(challenge: T | null): challenge is T {
   return !!challenge && challenge.expiresAt - 5_000 > Date.now()
@@ -223,61 +169,6 @@ export async function loginWithPasskeyChallenge(
   if (!data?.session || !data.user) throw new Error('Sessiya yaratilmadi')
 
   return { userId: data.user.id, accessToken: data.session.access_token }
-}
-
-export type PasskeyRegistrationChallenge = {
-  challengeId: string
-  publicKey: PublicKeyCredentialCreationOptions
-  /** ms-epoch */
-  expiresAt: number
-}
-
-/**
- * Barmoq izini YOQISH uchun challenge — LOGIN bilan bir xil sabab bilan
- * ikki bosqichga bo'lingan: `supabase.auth.registerPasskey()` bitta
- * chaqiruvda challenge oladi VA `navigator.credentials.create()`ni
- * chaqiradi — orasida tarmoq so'rovi (`await`) bo'lgani uchun ba'zi mobil
- * brauzerlar (ayniqsa Android/Chrome) "transient user activation"ni
- * yo'qotilgan deb hisoblab, "A non-webauthn related error has occurred"
- * xatosi bilan rad etadi. Shu sababli bu yerda ham challenge OLDINDAN
- * (tugma bosilishidan oldin) olinadi, tugma bosilganda esa
- * `navigator.credentials.create()` DARHOL chaqiriladi.
- */
-export async function fetchPasskeyRegistrationChallenge(): Promise<PasskeyRegistrationChallenge> {
-  const { data, error } = await supabase.auth.passkey.startRegistration()
-  if (error) throw error
-  if (!data) throw new Error('Passkey ro\'yxatdan o\'tish challenge olinmadi')
-
-  return {
-    challengeId: data.challenge_id,
-    publicKey: deserializeCreationOptions(data.options as unknown as CreationOptionsJSON),
-    expiresAt: normalizeExpiry(data.expires_at),
-  }
-}
-
-/**
- * Ro'yxatdan o'tish marosimini yakunlaydi: barmoq izi oynasini ochadi va
- * natijani serverda tekshiradi.
- */
-export async function registerPasskeyWithChallenge(
-  challenge: PasskeyRegistrationChallenge,
-  signal?: AbortSignal
-): Promise<void> {
-  const credential = (await navigator.credentials.create({
-    publicKey: challenge.publicKey,
-    signal,
-  })) as PublicKeyCredential | null
-
-  if (!credential) {
-    throw new DOMException('Passkey ro\'yxatdan o\'tish bekor qilindi', 'NotAllowedError')
-  }
-
-  const { error } = await supabase.auth.passkey.verifyRegistration({
-    challengeId: challenge.challengeId,
-    credential: serializeAttestation(credential) as never,
-  })
-
-  if (error) throw error
 }
 
 export type PasskeyFailure = 'cancelled' | 'unsupported' | 'network' | 'unknown'
