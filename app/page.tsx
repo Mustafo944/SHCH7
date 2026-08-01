@@ -1,24 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { signIn, cacheUserProfile } from '@/lib/supabase-db'
 import { safeStorage } from '@/lib/utils/storage'
 import { getRoleHome } from '@/lib/auth/roles'
 import { getRoleFromToken } from '@/lib/auth/jwt'
-import {
-  classifyPasskeyError,
-  fetchPasskeyChallenge,
-  isChallengeUsable,
-  isPasskeySupported,
-  loginWithPasskeyChallenge,
-  type PasskeyChallenge,
-} from '@/lib/auth/passkey'
-import { getPasskeyFlagSnapshot, readLastRole, saveLastRole } from '@/lib/auth/login-hints'
+import { saveLastRole } from '@/lib/auth/login-hints'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
-import { User, Eye, EyeOff, Lock, ArrowRight, Fingerprint, X } from 'lucide-react'
+import { User, Eye, EyeOff, Lock, ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
   const [login, setLogin] = useState('')
@@ -27,13 +19,8 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [navigating, setNavigating] = useState(false)
-  const [showPasskeyModal, setShowPasskeyModal] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
-
-  // Oldindan olingan challenge va joriy marosimni bekor qilish uchun boshqaruvchi
-  const challengeRef = useRef<PasskeyChallenge | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     // Agar oldinroq parolni saqlab qo'ygan bo'lsa
@@ -47,34 +34,6 @@ export default function LoginPage() {
     // eskirgan profile keshni tozalash
     safeStorage.removeItem('user-profile')
   }, [])
-
-  const prefetchChallenge = useCallback(async () => {
-    try {
-      challengeRef.current = await fetchPasskeyChallenge()
-    } catch {
-      // Muhim emas — tugma bosilganda qayta urinamiz
-      challengeRef.current = null
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!getPasskeyFlagSnapshot() || !isPasskeySupported()) return
-
-    setShowPasskeyModal(true)
-
-    // Rolga mos sahifani oldindan yuklaymiz. Foydalanuvchi barmoq izini
-    // bosayotgan paytda sahifaning JS chunk'lari fon rejimida kelib bo'ladi,
-    // shuning uchun navigatsiya deyarli bir zumda ko'rinadi.
-    const lastRole = readLastRole()
-    if (lastRole) router.prefetch(getRoleHome(lastRole))
-
-    // Challenge'ni oldindan olamiz — barmoq izi oynasi tugma bosilishi bilan
-    // ochilishi uchun (batafsil izoh: lib/auth/passkey.ts).
-    void prefetchChallenge()
-
-    // Sahifadan chiqilsa, ochiq qolgan marosimni to'xtatamiz
-    return () => abortRef.current?.abort()
-  }, [router, prefetchChallenge])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -96,8 +55,8 @@ export default function LoginPage() {
         safeStorage.removeItem('remembered-login')
       }
 
-      // Tezkor yo'l (passkey bilan bir xil naqsh): profilni FONDA yuklaymiz,
-      // rolni esa JWT claim'idan darhol o'qib, navigatsiyani kutdirmaymiz.
+      // Tezkor yo'l: profilni FONDA yuklaymiz, rolni esa JWT claim'idan
+      // darhol o'qib, navigatsiyani kutdirmaymiz.
       const profilePromise = cacheUserProfile(auth.userId)
       const role = getRoleFromToken(auth.accessToken)
 
@@ -124,145 +83,10 @@ export default function LoginPage() {
     }
   }
 
-  async function handlePasskeyLogin() {
-    if (loading) return
-
-    setLoading(true)
-    setError('')
-
-    // Avvalgi tugab ulgurmagan marosimni to'xtatamiz — aks holda brauzer
-    // ikkinchisini `InvalidStateError` bilan rad etadi.
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    try {
-      // Odatda challenge mount paytida olingan bo'ladi va bu yerda tarmoq
-      // so'rovi bo'lmaydi — barmoq izi oynasi darhol ochiladi.
-      let challenge = challengeRef.current
-      if (!isChallengeUsable(challenge)) {
-        challenge = await fetchPasskeyChallenge()
-      }
-      // Challenge bir martalik — ishlatilgandan keyin qayta ishlatmaymiz
-      challengeRef.current = null
-
-      const { userId, accessToken } = await loginWithPasskeyChallenge(challenge, controller.signal)
-
-      // Profilni keshlashni DARHOL boshlaymiz, lekin kutmaymiz: u sahifa
-      // yuklanishi bilan parallel ketadi.
-      const profilePromise = cacheUserProfile(userId)
-
-      // Rolni JWT claim'idan olamiz — middleware ham aynan shu `user_role`
-      // claim'ini o'qiydi. Demak navigatsiyadan oldin `users` jadvaliga
-      // alohida so'rov yuborish shart emas.
-      const role = getRoleFromToken(accessToken)
-
-      // MUHIM: `router.replace()` (client-side navigatsiya) O'RNIGA
-      // `window.location.href` ishlatamiz. Sababi — passkey (experimental
-      // Supabase API) muvaffaqiyatidan keyin sessiya cookie'si YOZILISHI
-      // bir zumlik kechikishi mumkin. `router.replace()` DARHOL ishlaydi va
-      // middleware hali eski (sessiyasiz) cookie'ni ko'rib, foydalanuvchini
-      // yana login sahifasiga qaytarib yuborishi mumkin edi — bu esa
-      // "cheksiz kirish" (login → tashlanadi → login → ...) holatiga olib
-      // kelardi. Hard navigatsiya esa cookie yozilishini kutib turadigan
-      // yangi HTTP so'rov yuboradi, shuning uchun bu poyga (race) yo'qoladi.
-      if (role) {
-        saveLastRole(role)
-        setNavigating(true)
-        window.location.href = getRoleHome(role)
-        return
-      }
-
-      // Custom Access Token Hook yoqilmagan bo'lsa — eski yo'l: profilni kutamiz
-      const profile = await profilePromise
-      if (!profile) {
-        setError('Profil topilmadi')
-        void prefetchChallenge()
-        return
-      }
-      saveLastRole(profile.role)
-      setNavigating(true)
-      window.location.href = getRoleHome(profile.role)
-    } catch (err) {
-      const kind = classifyPasskeyError(err)
-
-      if (kind === 'cancelled') {
-        setError('')
-      } else if (kind === 'network') {
-        setError("Internet aloqasi yo'q. Qayta urinib ko'ring.")
-      } else if (kind === 'unsupported') {
-        setError("Bu qurilma barmoq izini qo'llab-quvvatlamaydi. Parol bilan kiring.")
-      } else {
-        console.error('Passkey login error:', err)
-        setError('Kirishda xatolik. Iltimos, qaytadan urinib ko\'ring.')
-      }
-
-      // Keyingi urinish yana tez bo'lishi uchun yangi challenge tayyorlaymiz
-      void prefetchChallenge()
-    } finally {
-      // Ilgari bu yerda `if (retryCount === 0)` sharti bor edi va avtomatik
-      // qayta urinish yo'lida `loading` abadiy `true` bo'lib qolar edi —
-      // butun ekranli "Iltimos kuting..." oynasi hech qachon yopilmasdi.
-      setLoading(false)
-    }
-  }
-
-  function closePasskeyModal() {
-    abortRef.current?.abort()
-    setShowPasskeyModal(false)
-    setError('')
-  }
-
-
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 p-4">
       {/* Aurora Mesh Background */}
       <AuroraMeshBackground />
-
-      {/* Avtomatik Passkey Modali */}
-      {showPasskeyModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="relative w-full max-w-sm rounded-[32px] bg-white/70 backdrop-blur-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-white/60 p-8 text-center animate-fade-up overflow-hidden">
-            {/* Bezli yorug'lik */}
-            <div className="absolute -top-20 -left-20 w-40 h-40 bg-blue-400/30 rounded-full blur-3xl"></div>
-            <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-purple-400/30 rounded-full blur-3xl"></div>
-
-            <button 
-              onClick={closePasskeyModal}
-              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100/50 text-slate-500 hover:bg-slate-200 transition-colors active:scale-95 z-10"
-            >
-              <X size={18} strokeWidth={2.5} />
-            </button>
-            
-            <div className="relative z-10 mb-6 flex justify-center">
-              <div className="flex h-24 w-24 items-center justify-center rounded-[28px] bg-gradient-to-br from-blue-500 to-purple-600 shadow-xl shadow-blue-500/30 animate-bounce-slow">
-                <Fingerprint size={48} className="text-white drop-shadow-md" strokeWidth={1.5} />
-              </div>
-            </div>
-            
-            <h3 className="relative z-10 text-xl font-black text-slate-800 tracking-tight mb-2">Tizim sizni taniydi</h3>
-            <p className="relative z-10 text-sm font-medium text-slate-500 mb-8 px-2">Barmoq izi orqali xavfsiz va tezkor kirish uchun quyidagi tugmani bosing.</p>
-            
-            <button
-              onClick={handlePasskeyLogin}
-              disabled={loading}
-              className="relative z-10 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-500 to-blue-500 px-6 py-4 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-            >
-              {loading ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-              ) : (
-                <>
-                  <Fingerprint size={20} />
-                  <span>Barmoq bilan kirish</span>
-                </>
-              )}
-            </button>
-            {error && (
-              <p className="relative z-10 mt-4 text-xs font-bold text-red-500 bg-red-50/50 py-2 rounded-xl border border-red-100">{error}</p>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Full screen loading overlay */}
       {(loading || navigating) && (
@@ -290,10 +114,10 @@ export default function LoginPage() {
 
           {/* ─── CHAP TOMON: Hero illyustratsiya (faqat desktopda) ─── */}
           <div className="hidden md:flex md:w-[45%] relative overflow-hidden rounded-l-[32px] bg-slate-900">
-            <img 
+            <img
               src="/login2.webp"
-              alt="Afrosiyob" 
-              className="w-full h-full object-cover object-center" 
+              alt="Afrosiyob"
+              className="w-full h-full object-cover object-center"
             />
 
             {/* Kontenty */}

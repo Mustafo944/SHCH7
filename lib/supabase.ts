@@ -17,9 +17,4 @@ export const supabase = createBrowserClient(url, anonKey, {
       eventsPerSecond: 10,
     },
   },
-  auth: {
-    experimental: {
-      passkey: true,
-    }
-  }
 })

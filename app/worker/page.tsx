@@ -19,7 +19,7 @@ import type { PassportSection } from '@/types'
 import { safeStorage } from '@/lib/utils/storage'
 import { getRelayStatusCounts, type RelayStatusCounts } from '@/lib/relenazorat'
 import { getMonitorStationForName } from '@/lib/monosxema/stations'
-import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription, useHardwareBack, useStationEquipments, usePasskey } from '@/lib/hooks'
+import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription, useHardwareBack, useStationEquipments } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import { AppSidebar, type SidebarNavItem } from '@/components/AppSidebar'
@@ -61,8 +61,7 @@ import {
   Library,
   Server,
   ChevronRight,
-  X,
-  Fingerprint
+  X
 } from 'lucide-react'
 
 export default function WorkerPage() {
@@ -95,9 +94,6 @@ export default function WorkerPage() {
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false)
-
-  // Yon paneldagi tugma bilan bitta umumiy holatdan foydalanadi
-  const { hasPasskey, loading: passkeyLoading, toggle: handleTogglePasskey } = usePasskey(toast)
 
   const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen || relayModalOpen || isMoreMenuOpen
 
@@ -1234,25 +1230,7 @@ export default function WorkerPage() {
                     <span className="text-[9.5px] font-bold text-slate-600 text-center leading-tight truncate w-full">{item.label}</span>
                   </button>
                 ))}
-                
-                {/* Passkey */}
-                <button 
-                  onClick={() => { setIsMoreMenuOpen(false); handleTogglePasskey(); }} 
-                  disabled={passkeyLoading}
-                  className={`flex flex-col items-center gap-2 ${passkeyLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <div className={`flex items-center justify-center w-14 h-14 rounded-2xl border transition-all active:scale-95 shadow-sm ${
-                    hasPasskey 
-                      ? 'bg-rose-50 border-rose-100 text-rose-500' 
-                      : 'bg-blue-50 border-blue-100 text-blue-500'
-                  }`}>
-                    <Fingerprint size={22} strokeWidth={2.5} />
-                  </div>
-                  <span className={`text-[9.5px] font-bold text-center leading-tight truncate w-full ${hasPasskey ? 'text-rose-600' : 'text-blue-600'}`}>
-                    {hasPasskey ? "O'chirish" : "Barmoq izi"}
-                  </span>
-                </button>
-                
+
                 {/* Chiqish */}
                 <button onClick={() => { setIsMoreMenuOpen(false); setIsSignOutModalOpen(true); }} className="flex flex-col items-center gap-2">
                   <div className="flex items-center justify-center w-14 h-14 rounded-2xl border bg-red-50 border-red-100 text-red-500 transition-all active:scale-95 shadow-sm">

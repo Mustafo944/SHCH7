@@ -2,10 +2,7 @@
 'use client'
 import Image from 'next/image'
 import type { LucideIcon } from 'lucide-react'
-import { ChevronLeft, ChevronRight, LogOut, Fingerprint } from 'lucide-react'
-import { usePasskey } from '@/lib/hooks/usePasskey'
-import { useToast } from '@/lib/hooks/useToast'
-import { ToastContainer } from '@/components/ToastContainer'
+import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
 
 export interface SidebarNavItem {
   key: string
@@ -38,9 +35,6 @@ export function AppSidebar({
   userRole,
   userPhotoUrl,
 }: AppSidebarProps) {
-  const toast = useToast()
-  const { hasPasskey, loading: passkeyLoading, toggle: handleTogglePasskey } = usePasskey(toast)
-
   return (
     <>
       {/* Mobile backdrop */}
@@ -183,30 +177,9 @@ export function AppSidebar({
                 <p className="truncate text-[10.5px] font-bold text-slate-500 uppercase tracking-wide">{userRole}</p>
               </div>
             </div>
-            
-            {!isCollapsed && (
-              <button 
-                onClick={handleTogglePasskey}
-                disabled={passkeyLoading}
-                className={`mt-2 w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest shadow-sm transition active:scale-95 border ${
-                  hasPasskey 
-                    ? 'bg-rose-50 border-rose-100 text-rose-500 hover:bg-rose-100' 
-                    : 'bg-white/60 backdrop-blur-md border-white/50 text-blue-600 hover:bg-white/80'
-                } ${passkeyLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <div className="flex items-center gap-2">
-                  <Fingerprint size={14} /> 
-                  <span>{hasPasskey ? "Barmoq izini o'chirish" : "Barmoq izini ulash"}</span>
-                </div>
-                <div className={`w-6 h-3.5 rounded-full relative transition-colors ${hasPasskey ? 'bg-rose-400' : 'bg-slate-300'}`}>
-                  <div className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all ${hasPasskey ? 'left-3' : 'left-0.5'}`}></div>
-                </div>
-              </button>
-            )}
           </div>
         </div>
       </aside>
-      <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
     </>
   )
 }
