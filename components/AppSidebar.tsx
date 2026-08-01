@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 'use client'
-
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import type { LucideIcon } from 'lucide-react'
 import { ChevronLeft, ChevronRight, LogOut, Fingerprint } from 'lucide-react'
@@ -38,16 +38,55 @@ export function AppSidebar({
   userPhotoUrl,
 }: AppSidebarProps) {
 
-  async function handleRegisterPasskey() {
+  const [hasPasskey, setHasPasskey] = useState(false)
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
+
+  useEffect(() => {
+    checkPasskeyStatus()
+  }, [])
+
+  async function checkPasskeyStatus() {
     try {
-      const { data, error } = await supabase.auth.registerPasskey();
-      if (error) {
-        alert("Barmoq izini ulashda xatolik: " + error.message);
+      const { data, error } = await supabase.auth.passkey.list()
+      if (!error && data && data.length > 0) {
+        setHasPasskey(true)
       } else {
-        alert("Barmoq izi muvaffaqiyatli ulandi! Endi loginga shu orqali kira olasiz.");
+        setHasPasskey(false)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  async function handleTogglePasskey() {
+    if (passkeyLoading) return
+    setPasskeyLoading(true)
+    
+    try {
+      if (hasPasskey) {
+        // O'chirish
+        const { data: passkeys } = await supabase.auth.passkey.list()
+        if (passkeys) {
+          for (const pk of passkeys) {
+            await supabase.auth.passkey.delete({ passkeyId: pk.id })
+          }
+        }
+        setHasPasskey(false)
+        alert("Barmoq izi (Face ID) o'chirildi.")
+      } else {
+        // Ulash
+        const { data, error } = await supabase.auth.registerPasskey()
+        if (error) {
+          alert("Barmoq izini ulashda xatolik: " + error.message)
+        } else {
+          setHasPasskey(true)
+          alert("Barmoq izi muvaffaqiyatli ulandi! Endi loginga shu orqali kira olasiz.")
+        }
       }
     } catch (err: any) {
-      alert("Xatolik yuz berdi: " + err.message);
+      alert("Xatolik yuz berdi: " + err.message)
+    } finally {
+      setPasskeyLoading(false)
     }
   }
 
@@ -196,10 +235,21 @@ export function AppSidebar({
             
             {!isCollapsed && (
               <button 
-                onClick={handleRegisterPasskey}
-                className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl bg-white/60 backdrop-blur-md border border-white/50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-blue-600 shadow-sm transition hover:bg-white/80 active:scale-95"
+                onClick={handleTogglePasskey}
+                disabled={passkeyLoading}
+                className={`mt-2 w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest shadow-sm transition active:scale-95 border ${
+                  hasPasskey 
+                    ? 'bg-rose-50 border-rose-100 text-rose-500 hover:bg-rose-100' 
+                    : 'bg-white/60 backdrop-blur-md border-white/50 text-blue-600 hover:bg-white/80'
+                } ${passkeyLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <Fingerprint size={14} /> Barmoq izini ulash
+                <div className="flex items-center gap-2">
+                  <Fingerprint size={14} /> 
+                  <span>{hasPasskey ? "Barmoq izini o'chirish" : "Barmoq izini ulash"}</span>
+                </div>
+                <div className={`w-6 h-3.5 rounded-full relative transition-colors ${hasPasskey ? 'bg-rose-400' : 'bg-slate-300'}`}>
+                  <div className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all ${hasPasskey ? 'left-3' : 'left-0.5'}`}></div>
+                </div>
               </button>
             )}
           </div>

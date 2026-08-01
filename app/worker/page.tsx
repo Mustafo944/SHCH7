@@ -97,16 +97,53 @@ export default function WorkerPage() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false)
 
-  async function handleRegisterPasskey() {
+  const [hasPasskey, setHasPasskey] = useState(false)
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
+
+  useEffect(() => {
+    checkPasskeyStatus()
+  }, [])
+
+  async function checkPasskeyStatus() {
     try {
-      const { data, error } = await supabase.auth.registerPasskey();
-      if (error) {
-        alert("Barmoq izini ulashda xatolik: " + error.message);
+      const { data, error } = await supabase.auth.passkey.list()
+      if (!error && data && data.length > 0) {
+        setHasPasskey(true)
       } else {
-        alert("Barmoq izi muvaffaqiyatli ulandi! Endi loginga shu orqali kira olasiz.");
+        setHasPasskey(false)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  async function handleTogglePasskey() {
+    if (passkeyLoading) return
+    setPasskeyLoading(true)
+    
+    try {
+      if (hasPasskey) {
+        const { data: passkeys } = await supabase.auth.passkey.list()
+        if (passkeys) {
+          for (const pk of passkeys) {
+            await supabase.auth.passkey.delete({ passkeyId: pk.id })
+          }
+        }
+        setHasPasskey(false)
+        alert("Barmoq izi (Face ID) o'chirildi.")
+      } else {
+        const { data, error } = await supabase.auth.registerPasskey()
+        if (error) {
+          alert("Barmoq izini ulashda xatolik: " + error.message)
+        } else {
+          setHasPasskey(true)
+          alert("Barmoq izi muvaffaqiyatli ulandi! Endi loginga shu orqali kira olasiz.")
+        }
       }
     } catch (err: any) {
-      alert("Xatolik yuz berdi: " + err.message);
+      alert("Xatolik yuz berdi: " + err.message)
+    } finally {
+      setPasskeyLoading(false)
     }
   }
 
@@ -1259,11 +1296,21 @@ export default function WorkerPage() {
                 ))}
                 
                 {/* Passkey */}
-                <button onClick={() => { setIsMoreMenuOpen(false); handleRegisterPasskey(); }} className="flex flex-col items-center gap-2">
-                  <div className="flex items-center justify-center w-14 h-14 rounded-2xl border bg-blue-50 border-blue-100 text-blue-500 transition-all active:scale-95 shadow-sm">
+                <button 
+                  onClick={() => { setIsMoreMenuOpen(false); handleTogglePasskey(); }} 
+                  disabled={passkeyLoading}
+                  className={`flex flex-col items-center gap-2 ${passkeyLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <div className={`flex items-center justify-center w-14 h-14 rounded-2xl border transition-all active:scale-95 shadow-sm ${
+                    hasPasskey 
+                      ? 'bg-rose-50 border-rose-100 text-rose-500' 
+                      : 'bg-blue-50 border-blue-100 text-blue-500'
+                  }`}>
                     <Fingerprint size={22} strokeWidth={2.5} />
                   </div>
-                  <span className="text-[9.5px] font-bold text-blue-600 text-center leading-tight truncate w-full">Barmoq izi</span>
+                  <span className={`text-[9.5px] font-bold text-center leading-tight truncate w-full ${hasPasskey ? 'text-rose-600' : 'text-blue-600'}`}>
+                    {hasPasskey ? "O'chirish" : "Barmoq izi"}
+                  </span>
                 </button>
                 
                 {/* Chiqish */}
