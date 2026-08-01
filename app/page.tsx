@@ -38,6 +38,12 @@ export default function LoginPage() {
         setRememberMe(true)
       }
       
+      // Agar login sahifasiga kirgan bo'lsa (SSR orqali shu yerga keldikmi, demak tizimda emas),
+      // eskirgan profile keshni tozalash
+      safeStorage.removeItem('user-profile')
+    } catch { /* ignore */ }
+  }, [])
+
   // Barmoq izi yoqilgan bo'lsa, avtomatik tizim oynasini chaqiramiz
   useEffect(() => {
     const checkAndPromptPasskey = async () => {
@@ -50,12 +56,7 @@ export default function LoginPage() {
       }
     }
     checkAndPromptPasskey()
-  }, [])
-
-      // Agar login sahifasiga kirgan bo'lsa (SSR orqali shu yerga keldikmi, demak tizimda emas),
-      // eskirgan profile keshni tozalash
-      safeStorage.removeItem('user-profile')
-    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
