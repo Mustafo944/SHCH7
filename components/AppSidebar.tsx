@@ -75,6 +75,7 @@ export function AppSidebar({
           }
         }
         setHasPasskey(false)
+        if (typeof window !== 'undefined') localStorage.removeItem('hasPasskeyEnabled')
         toast.success("Barmoq izi (Face ID) o'chirildi.")
       } else {
         // Ulash
@@ -83,6 +84,7 @@ export function AppSidebar({
           toast.error("Barmoq izini ulashda xatolik: " + error.message)
         } else {
           setHasPasskey(true)
+          if (typeof window !== 'undefined') localStorage.setItem('hasPasskeyEnabled', 'true')
           toast.success("Barmoq izi muvaffaqiyatli ulandi! Endi loginga shu orqali kira olasiz.")
         }
       }
