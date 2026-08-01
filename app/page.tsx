@@ -111,8 +111,9 @@ export default function LoginPage() {
         setError("Xatolik: " + (errMsg || "Passkey orqali ulanishda xatolik yuz berdi"));
       }
     } finally {
-      if (retryCount > 0) return; // qayta urinayotgan bo'lsa loadingni o'chirmaymiz
-      setLoading(false)
+      if (retryCount === 0) {
+        setLoading(false)
+      }
     }
   }
 
