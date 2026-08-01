@@ -79,7 +79,7 @@ export default function LoginPage() {
     }
   }
 
-  async function handlePasskeyLogin() {
+  async function handlePasskeyLogin(retryCount = 0) {
     setLoading(true)
     setError('')
     try {
@@ -92,8 +92,26 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       console.error(err);
-      setError("Xatolik: " + (err.message || "Passkey orqali ulanishda xatolik yuz berdi"));
+      
+      const errMsg = err.message || "";
+      const isCancelled = err.name === 'NotAllowedError' || errMsg.includes('cancelled') || errMsg.includes('NotAllowedError');
+      const isNonWebAuthn = errMsg.includes('Non-Webauthn related error');
+
+      if (isCancelled) {
+        // Foydalanuvchi bekor qildi, xato chiqarmaymiz
+        setError('');
+      } else if (isNonWebAuthn) {
+        if (retryCount === 0) {
+          // 1 marta avtomatik qayta urinib ko'ramiz
+          setTimeout(() => handlePasskeyLogin(1), 500);
+        } else {
+          setError("Iltimos, tugmani yana bir marta bosing.");
+        }
+      } else {
+        setError("Xatolik: " + (errMsg || "Passkey orqali ulanishda xatolik yuz berdi"));
+      }
     } finally {
+      if (retryCount > 0) return; // qayta urinayotgan bo'lsa loadingni o'chirmaymiz
       setLoading(false)
     }
   }
