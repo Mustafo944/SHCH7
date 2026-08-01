@@ -95,7 +95,11 @@ export async function signIn(login: string, password: string): Promise<User | nu
 export async function signInWithPasskeyFunc(): Promise<User | null> {
   const { data: authData, error: authError } = await supabase.auth.signInWithPasskey();
 
-  if (authError || !authData?.user) return null;
+  if (authError) {
+    console.error("Passkey error:", authError);
+    throw new Error(authError.message);
+  }
+  if (!authData?.user) return null;
 
   const user = await getUserProfileById(authData.user.id);
 

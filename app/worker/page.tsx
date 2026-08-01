@@ -61,8 +61,10 @@ import {
   Library,
   Server,
   ChevronRight,
-  X
+  X,
+  Fingerprint
 } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 export default function WorkerPage() {
   const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'])
@@ -94,6 +96,19 @@ export default function WorkerPage() {
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false)
+
+  async function handleRegisterPasskey() {
+    try {
+      const { data, error } = await supabase.auth.registerPasskey();
+      if (error) {
+        alert("Barmoq izini ulashda xatolik: " + error.message);
+      } else {
+        alert("Barmoq izi muvaffaqiyatli ulandi! Endi loginga shu orqali kira olasiz.");
+      }
+    } catch (err: any) {
+      alert("Xatolik yuz berdi: " + err.message);
+    }
+  }
 
   const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen || relayModalOpen || isMoreMenuOpen
 
@@ -1242,6 +1257,14 @@ export default function WorkerPage() {
                     <span className="text-[9.5px] font-bold text-slate-600 text-center leading-tight truncate w-full">{item.label}</span>
                   </button>
                 ))}
+                
+                {/* Passkey */}
+                <button onClick={() => { setIsMoreMenuOpen(false); handleRegisterPasskey(); }} className="flex flex-col items-center gap-2">
+                  <div className="flex items-center justify-center w-14 h-14 rounded-2xl border bg-blue-50 border-blue-100 text-blue-500 transition-all active:scale-95 shadow-sm">
+                    <Fingerprint size={22} strokeWidth={2.5} />
+                  </div>
+                  <span className="text-[9.5px] font-bold text-blue-600 text-center leading-tight truncate w-full">Barmoq izi</span>
+                </button>
                 
                 {/* Chiqish */}
                 <button onClick={() => { setIsMoreMenuOpen(false); setIsSignOutModalOpen(true); }} className="flex flex-col items-center gap-2">

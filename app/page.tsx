@@ -81,10 +81,11 @@ export default function LoginPage() {
         setNavigating(true)
         router.push(getRoleHome(user.role))
       } else {
-        setError("Barmoq izi (Passkey) topilmadi yoki xatolik")
+        setError("Profil topilmadi (User profile not found)")
       }
-    } catch (err) {
-      setError("Passkey orqali ulanishda xatolik yuz berdi")
+    } catch (err: any) {
+      console.error(err);
+      setError("Xatolik: " + (err.message || "Passkey orqali ulanishda xatolik yuz berdi"));
     } finally {
       setLoading(false)
     }
