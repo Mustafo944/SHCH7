@@ -1,10 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 'use client'
-import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import type { LucideIcon } from 'lucide-react'
 import { ChevronLeft, ChevronRight, LogOut, Fingerprint } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { usePasskey } from '@/lib/hooks/usePasskey'
 import { useToast } from '@/lib/hooks/useToast'
 import { ToastContainer } from '@/components/ToastContainer'
 
@@ -40,60 +39,7 @@ export function AppSidebar({
   userPhotoUrl,
 }: AppSidebarProps) {
   const toast = useToast()
-
-  const [hasPasskey, setHasPasskey] = useState(false)
-  const [passkeyLoading, setPasskeyLoading] = useState(false)
-
-  useEffect(() => {
-    checkPasskeyStatus()
-  }, [])
-
-  async function checkPasskeyStatus() {
-    try {
-      const { data, error } = await supabase.auth.passkey.list()
-      if (!error && data && data.length > 0) {
-        setHasPasskey(true)
-      } else {
-        setHasPasskey(false)
-      }
-    } catch (e) {
-      console.error(e)
-    }
-  }
-
-  async function handleTogglePasskey() {
-    if (passkeyLoading) return
-    setPasskeyLoading(true)
-    
-    try {
-      if (hasPasskey) {
-        // O'chirish
-        const { data: passkeys } = await supabase.auth.passkey.list()
-        if (passkeys) {
-          for (const pk of passkeys) {
-            await supabase.auth.passkey.delete({ passkeyId: pk.id })
-          }
-        }
-        setHasPasskey(false)
-        if (typeof window !== 'undefined') localStorage.removeItem('hasPasskeyEnabled')
-        toast.success("Barmoq izi (Face ID) o'chirildi.")
-      } else {
-        // Ulash
-        const { data, error } = await supabase.auth.registerPasskey()
-        if (error) {
-          toast.error("Barmoq izini ulashda xatolik: " + error.message)
-        } else {
-          setHasPasskey(true)
-          if (typeof window !== 'undefined') localStorage.setItem('hasPasskeyEnabled', 'true')
-          toast.success("Barmoq izi muvaffaqiyatli ulandi! Endi loginga shu orqali kira olasiz.")
-        }
-      }
-    } catch (err: any) {
-      toast.error("Xatolik yuz berdi: " + err.message)
-    } finally {
-      setPasskeyLoading(false)
-    }
-  }
+  const { hasPasskey, loading: passkeyLoading, toggle: handleTogglePasskey } = usePasskey(toast)
 
   return (
     <>

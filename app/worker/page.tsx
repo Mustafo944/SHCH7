@@ -19,7 +19,7 @@ import type { PassportSection } from '@/types'
 import { safeStorage } from '@/lib/utils/storage'
 import { getRelayStatusCounts, type RelayStatusCounts } from '@/lib/relenazorat'
 import { getMonitorStationForName } from '@/lib/monosxema/stations'
-import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription, useHardwareBack, useStationEquipments } from '@/lib/hooks'
+import { useSessionGuard, useToast, useNotificationSound, useRealtimeSubscription, useHardwareBack, useStationEquipments, usePasskey } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import { AppSidebar, type SidebarNavItem } from '@/components/AppSidebar'
@@ -64,7 +64,6 @@ import {
   X,
   Fingerprint
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 
 export default function WorkerPage() {
   const { session, loading: sessionLoading, handleSignOut } = useSessionGuard(['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'])
@@ -97,57 +96,8 @@ export default function WorkerPage() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false)
 
-  const [hasPasskey, setHasPasskey] = useState(false)
-  const [passkeyLoading, setPasskeyLoading] = useState(false)
-
-  useEffect(() => {
-    checkPasskeyStatus()
-  }, [])
-
-  async function checkPasskeyStatus() {
-    try {
-      const { data, error } = await supabase.auth.passkey.list()
-      if (!error && data && data.length > 0) {
-        setHasPasskey(true)
-      } else {
-        setHasPasskey(false)
-      }
-    } catch (e) {
-      console.error(e)
-    }
-  }
-
-  async function handleTogglePasskey() {
-    if (passkeyLoading) return
-    setPasskeyLoading(true)
-    
-    try {
-      if (hasPasskey) {
-        const { data: passkeys } = await supabase.auth.passkey.list()
-        if (passkeys) {
-          for (const pk of passkeys) {
-            await supabase.auth.passkey.delete({ passkeyId: pk.id })
-          }
-        }
-        setHasPasskey(false)
-        if (typeof window !== 'undefined') localStorage.removeItem('hasPasskeyEnabled')
-        toast.success("Barmoq izi (Face ID) o'chirildi.")
-      } else {
-        const { data, error } = await supabase.auth.registerPasskey()
-        if (error) {
-          toast.error("Barmoq izini ulashda xatolik: " + error.message)
-        } else {
-          setHasPasskey(true)
-          if (typeof window !== 'undefined') localStorage.setItem('hasPasskeyEnabled', 'true')
-          toast.success("Barmoq izi muvaffaqiyatli ulandi! Endi loginga shu orqali kira olasiz.")
-        }
-      }
-    } catch (err: any) {
-      toast.error("Xatolik yuz berdi: " + err.message)
-    } finally {
-      setPasskeyLoading(false)
-    }
-  }
+  // Yon paneldagi tugma bilan bitta umumiy holatdan foydalanadi
+  const { hasPasskey, loading: passkeyLoading, toggle: handleTogglePasskey } = usePasskey(toast)
 
   const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen || relayModalOpen || isMoreMenuOpen
 

@@ -92,22 +92,23 @@ export async function signIn(login: string, password: string): Promise<User | nu
   return user;
 }
 
-export async function signInWithPasskeyFunc(): Promise<User | null> {
-  const { data: authData, error: authError } = await supabase.auth.signInWithPasskey();
-
-  if (authError) {
-    console.error("Passkey error:", authError);
-    throw new Error(authError.message);
+/**
+ * Profilni yuklab, `user-profile` keshiga yozadi.
+ *
+ * Hech qachon throw QILMAYDI — passkey oqimi buni kutmasdan, sahifa
+ * navigatsiyasi bilan parallel ishga tushiradi (rol JWT claim'idan olinadi,
+ * shuning uchun navigatsiya bu so'rovni kutib turishi shart emas).
+ */
+export async function cacheUserProfile(userId: string): Promise<User | null> {
+  try {
+    const user = await getUserProfileById(userId);
+    if (user && typeof window !== 'undefined') {
+      safeStorage.setItem('user-profile', JSON.stringify(user));
+    }
+    return user;
+  } catch {
+    return null;
   }
-  if (!authData?.user) return null;
-
-  const user = await getUserProfileById(authData.user.id);
-
-  if (user && typeof document !== 'undefined') {
-    safeStorage.setItem('user-profile', JSON.stringify(user));
-  }
-
-  return user;
 }
 
 async function getUserProfileById(userId: string): Promise<User | null> {

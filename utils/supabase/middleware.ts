@@ -1,5 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { ROLE_HOME } from '@/lib/auth/roles'
+import { getRoleFromToken } from '@/lib/auth/jwt'
 
 // Rol → ruxsat etilgan route'lar
 const PROTECTED_ROUTES: Record<string, string[]> = {
@@ -10,45 +12,6 @@ const PROTECTED_ROUTES: Record<string, string[]> = {
   '/yul-ustasi': ['yul_ustasi'],
   '/ech-xodimi': ['ech_xodimi'],
   '/mehnat-muhofazasi': ['mehnat_muhofazasi'],
-}
-
-// Rol → o'z bosh sahifasi
-const ROLE_HOME: Record<string, string> = {
-  dispatcher: '/dispatcher',
-  worker: '/worker',
-  elektromexanik: '/worker',
-  elektromontyor: '/worker',
-  katta_elektromexanik: '/worker',
-  bekat_boshlighi: '/bekat-boshlighi',
-  bekat_navbatchisi: '/bekat-navbatchisi',
-  yul_ustasi: '/yul-ustasi',
-  ech_xodimi: '/ech-xodimi',
-  mehnat_muhofazasi: '/mehnat-muhofazasi',
-}
-
-/**
- * JWT'ning `user_role` claim'ini o'qiydi (Custom Access Token Hook qo'shadi).
- *   - `string`    → rol topildi (DB so'roviga hojat yo'q)
- *   - `null`      → claim bor, lekin rol yo'q (role'siz akkaunt)
- *   - `undefined` → claim yo'q / dekod muvaffaqiyatsiz → DB fallback ishlaydi
- *
- * Bu token'ni getUser() allaqachon Auth serverida tekshirgani uchun
- * uning claim'lariga ishonish xavfsiz. Faqat lokal dekod (imzo qayta
- * tekshirilmaydi, chunki bu allaqachon bajarilgan).
- */
-function getRoleFromToken(accessToken?: string): string | null | undefined {
-  if (!accessToken) return undefined
-  const parts = accessToken.split('.')
-  if (parts.length !== 3) return undefined
-  try {
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
-    const payload = JSON.parse(atob(base64)) as Record<string, unknown>
-    if (!('user_role' in payload)) return undefined
-    const role = payload.user_role
-    return typeof role === 'string' ? role : null
-  } catch {
-    return undefined
-  }
 }
 
 export async function updateSession(request: NextRequest) {

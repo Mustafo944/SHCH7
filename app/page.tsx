@@ -1,23 +1,24 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { signIn, signInWithPasskeyFunc } from '@/lib/supabase-db'
+import { signIn, cacheUserProfile } from '@/lib/supabase-db'
 import { safeStorage } from '@/lib/utils/storage'
+import { getRoleHome } from '@/lib/auth/roles'
+import { getRoleFromToken } from '@/lib/auth/jwt'
+import {
+  classifyPasskeyError,
+  fetchPasskeyChallenge,
+  isChallengeUsable,
+  isPasskeySupported,
+  loginWithPasskeyChallenge,
+  type PasskeyChallenge,
+} from '@/lib/auth/passkey'
+import { getPasskeyFlagSnapshot, readLastRole, saveLastRole } from '@/lib/auth/login-hints'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import { User, Eye, EyeOff, Lock, ArrowRight, Fingerprint, X } from 'lucide-react'
-
-function getRoleHome(role: string) {
-  if (role === 'dispatcher') return '/dispatcher'
-  if (role === 'bekat_boshlighi') return '/bekat-boshlighi'
-  if (role === 'bekat_navbatchisi') return '/bekat-navbatchisi'
-  if (role === 'yul_ustasi') return '/yul-ustasi'
-  if (role === 'ech_xodimi') return '/ech-xodimi'
-  if (role === 'mehnat_muhofazasi') return '/mehnat-muhofazasi'
-  return '/worker' // worker, elektromexanik, elektromontyor, katta_elektromexanik
-}
 
 export default function LoginPage() {
   const [login, setLogin] = useState('')
@@ -30,6 +31,10 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const router = useRouter()
 
+  // Oldindan olingan challenge va joriy marosimni bekor qilish uchun boshqaruvchi
+  const challengeRef = useRef<PasskeyChallenge | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
   useEffect(() => {
     // Agar oldinroq parolni saqlab qo'ygan bo'lsa
     const rememberedLogin = safeStorage.getItem('remembered-login')
@@ -37,19 +42,39 @@ export default function LoginPage() {
       setLogin(rememberedLogin)
       setRememberMe(true)
     }
-    
+
     // Agar login sahifasiga kirgan bo'lsa (SSR orqali shu yerga keldikmi, demak tizimda emas),
     // eskirgan profile keshni tozalash
     safeStorage.removeItem('user-profile')
   }, [])
 
-  useEffect(() => {
-    // Barmoq izi yoqilgan bo'lsa, avtomatik oynani ochish
-    const passkeyEnabled = localStorage.getItem('hasPasskeyEnabled')
-    if (passkeyEnabled === 'true') {
-      setShowPasskeyModal(true)
+  const prefetchChallenge = useCallback(async () => {
+    try {
+      challengeRef.current = await fetchPasskeyChallenge()
+    } catch {
+      // Muhim emas — tugma bosilganda qayta urinamiz
+      challengeRef.current = null
     }
   }, [])
+
+  useEffect(() => {
+    if (!getPasskeyFlagSnapshot() || !isPasskeySupported()) return
+
+    setShowPasskeyModal(true)
+
+    // Rolga mos sahifani oldindan yuklaymiz. Foydalanuvchi barmoq izini
+    // bosayotgan paytda sahifaning JS chunk'lari fon rejimida kelib bo'ladi,
+    // shuning uchun navigatsiya deyarli bir zumda ko'rinadi.
+    const lastRole = readLastRole()
+    if (lastRole) router.prefetch(getRoleHome(lastRole))
+
+    // Challenge'ni oldindan olamiz — barmoq izi oynasi tugma bosilishi bilan
+    // ochilishi uchun (batafsil izoh: lib/auth/passkey.ts).
+    void prefetchChallenge()
+
+    // Sahifadan chiqilsa, ochiq qolgan marosimni to'xtatamiz
+    return () => abortRef.current?.abort()
+  }, [router, prefetchChallenge])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -66,6 +91,7 @@ export default function LoginPage() {
         } else {
           safeStorage.removeItem('remembered-login')
         }
+        saveLastRole(user.role)
         setNavigating(true)
         router.push(getRoleHome(user.role))
         return
@@ -79,42 +105,84 @@ export default function LoginPage() {
     }
   }
 
-  async function handlePasskeyLogin(retryCount = 0) {
+  async function handlePasskeyLogin() {
+    if (loading) return
+
     setLoading(true)
     setError('')
-    try {
-      const user = await signInWithPasskeyFunc()
-      if (user) {
-        setNavigating(true)
-        router.push(getRoleHome(user.role))
-      } else {
-        setError("Profil topilmadi (User profile not found)")
-      }
-    } catch (err: any) {
-      console.error(err);
-      
-      const errMsg = err.message || "";
-      const isCancelled = err.name === 'NotAllowedError' || errMsg.includes('cancelled') || errMsg.includes('NotAllowedError');
-      const isNonWebAuthn = errMsg.includes('Non-Webauthn related error');
 
-      if (isCancelled) {
-        // Foydalanuvchi bekor qildi, xato chiqarmaymiz
-        setError('');
-      } else if (isNonWebAuthn) {
-        if (retryCount === 0) {
-          // 1 marta avtomatik qayta urinib ko'ramiz
-          setTimeout(() => handlePasskeyLogin(1), 500);
-        } else {
-          setError("Iltimos, tugmani yana bir marta bosing.");
-        }
+    // Avvalgi tugab ulgurmagan marosimni to'xtatamiz — aks holda brauzer
+    // ikkinchisini `InvalidStateError` bilan rad etadi.
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    try {
+      // Odatda challenge mount paytida olingan bo'ladi va bu yerda tarmoq
+      // so'rovi bo'lmaydi — barmoq izi oynasi darhol ochiladi.
+      let challenge = challengeRef.current
+      if (!isChallengeUsable(challenge)) {
+        challenge = await fetchPasskeyChallenge()
+      }
+      // Challenge bir martalik — ishlatilgandan keyin qayta ishlatmaymiz
+      challengeRef.current = null
+
+      const { userId, accessToken } = await loginWithPasskeyChallenge(challenge, controller.signal)
+
+      // Profilni keshlashni DARHOL boshlaymiz, lekin kutmaymiz: u sahifa
+      // yuklanishi bilan parallel ketadi.
+      const profilePromise = cacheUserProfile(userId)
+
+      // Rolni JWT claim'idan olamiz — middleware ham aynan shu `user_role`
+      // claim'ini o'qiydi. Demak navigatsiyadan oldin `users` jadvaliga
+      // alohida so'rov yuborish shart emas.
+      const role = getRoleFromToken(accessToken)
+
+      if (role) {
+        saveLastRole(role)
+        setNavigating(true)
+        router.replace(getRoleHome(role))
+        return
+      }
+
+      // Custom Access Token Hook yoqilmagan bo'lsa — eski yo'l: profilni kutamiz
+      const profile = await profilePromise
+      if (!profile) {
+        setError('Profil topilmadi')
+        void prefetchChallenge()
+        return
+      }
+      saveLastRole(profile.role)
+      setNavigating(true)
+      router.replace(getRoleHome(profile.role))
+    } catch (err) {
+      const kind = classifyPasskeyError(err)
+
+      if (kind === 'cancelled') {
+        setError('')
+      } else if (kind === 'network') {
+        setError("Internet aloqasi yo'q. Qayta urinib ko'ring.")
+      } else if (kind === 'unsupported') {
+        setError("Bu qurilma barmoq izini qo'llab-quvvatlamaydi. Parol bilan kiring.")
       } else {
-        setError("Xatolik: " + (errMsg || "Passkey orqali ulanishda xatolik yuz berdi"));
+        console.error('Passkey login error:', err)
+        setError('Kirishda xatolik. Iltimos, qaytadan urinib ko\'ring.')
       }
+
+      // Keyingi urinish yana tez bo'lishi uchun yangi challenge tayyorlaymiz
+      void prefetchChallenge()
     } finally {
-      if (retryCount === 0) {
-        setLoading(false)
-      }
+      // Ilgari bu yerda `if (retryCount === 0)` sharti bor edi va avtomatik
+      // qayta urinish yo'lida `loading` abadiy `true` bo'lib qolar edi —
+      // butun ekranli "Iltimos kuting..." oynasi hech qachon yopilmasdi.
+      setLoading(false)
     }
+  }
+
+  function closePasskeyModal() {
+    abortRef.current?.abort()
+    setShowPasskeyModal(false)
+    setError('')
   }
 
 
@@ -132,7 +200,7 @@ export default function LoginPage() {
             <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-purple-400/30 rounded-full blur-3xl"></div>
 
             <button 
-              onClick={() => setShowPasskeyModal(false)}
+              onClick={closePasskeyModal}
               className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100/50 text-slate-500 hover:bg-slate-200 transition-colors active:scale-95 z-10"
             >
               <X size={18} strokeWidth={2.5} />
@@ -148,7 +216,7 @@ export default function LoginPage() {
             <p className="relative z-10 text-sm font-medium text-slate-500 mb-8 px-2">Barmoq izi orqali xavfsiz va tezkor kirish uchun quyidagi tugmani bosing.</p>
             
             <button
-              onClick={() => handlePasskeyLogin()}
+              onClick={handlePasskeyLogin}
               disabled={loading}
               className="relative z-10 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-500 to-blue-500 px-6 py-4 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-95 disabled:opacity-50"
             >
