@@ -82,22 +82,41 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const user = await signIn(login.trim(), password)
+      const auth = await signIn(login.trim(), password)
 
-      if (user) {
-        // Faqat loginni saqlash (parol saqlanmaydi — xavfsizlik)
-        if (rememberMe) {
-          safeStorage.setItem('remembered-login', login.trim())
-        } else {
-          safeStorage.removeItem('remembered-login')
-        }
-        saveLastRole(user.role)
-        setNavigating(true)
-        router.push(getRoleHome(user.role))
-        return
-      } else {
+      if (!auth) {
         setError("Login yoki parol noto'g'ri")
+        return
       }
+
+      // Faqat loginni saqlash (parol saqlanmaydi — xavfsizlik)
+      if (rememberMe) {
+        safeStorage.setItem('remembered-login', login.trim())
+      } else {
+        safeStorage.removeItem('remembered-login')
+      }
+
+      // Tezkor yo'l (passkey bilan bir xil naqsh): profilni FONDA yuklaymiz,
+      // rolni esa JWT claim'idan darhol o'qib, navigatsiyani kutdirmaymiz.
+      const profilePromise = cacheUserProfile(auth.userId)
+      const role = getRoleFromToken(auth.accessToken)
+
+      if (role) {
+        saveLastRole(role)
+        setNavigating(true)
+        router.push(getRoleHome(role))
+        return
+      }
+
+      // Custom Access Token Hook yoqilmagan bo'lsa — eski yo'l: profilni kutamiz
+      const profile = await profilePromise
+      if (!profile) {
+        setError("Login yoki parol noto'g'ri")
+        return
+      }
+      saveLastRole(profile.role)
+      setNavigating(true)
+      router.push(getRoleHome(profile.role))
     } catch (err) {
       setError("Tizimga ulanishda xatolik yuz berdi")
     } finally {
@@ -138,10 +157,19 @@ export default function LoginPage() {
       // alohida so'rov yuborish shart emas.
       const role = getRoleFromToken(accessToken)
 
+      // MUHIM: `router.replace()` (client-side navigatsiya) O'RNIGA
+      // `window.location.href` ishlatamiz. Sababi — passkey (experimental
+      // Supabase API) muvaffaqiyatidan keyin sessiya cookie'si YOZILISHI
+      // bir zumlik kechikishi mumkin. `router.replace()` DARHOL ishlaydi va
+      // middleware hali eski (sessiyasiz) cookie'ni ko'rib, foydalanuvchini
+      // yana login sahifasiga qaytarib yuborishi mumkin edi — bu esa
+      // "cheksiz kirish" (login → tashlanadi → login → ...) holatiga olib
+      // kelardi. Hard navigatsiya esa cookie yozilishini kutib turadigan
+      // yangi HTTP so'rov yuboradi, shuning uchun bu poyga (race) yo'qoladi.
       if (role) {
         saveLastRole(role)
         setNavigating(true)
-        router.replace(getRoleHome(role))
+        window.location.href = getRoleHome(role)
         return
       }
 
@@ -154,7 +182,7 @@ export default function LoginPage() {
       }
       saveLastRole(profile.role)
       setNavigating(true)
-      router.replace(getRoleHome(profile.role))
+      window.location.href = getRoleHome(profile.role)
     } catch (err) {
       const kind = classifyPasskeyError(err)
 

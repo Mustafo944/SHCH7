@@ -7,7 +7,7 @@ import { getJournal, upsertJournal } from '@/lib/supabase-db'
 import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
 import type { ALSNEntry } from '@/types'
 import { Plus, Trash2, CheckCircle2, Download, ChevronLeft } from 'lucide-react'
-import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel } from './helpers'
+import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel, mergeJournalEntries, stripSessionFlags } from './helpers'
 import { DateInput, TimeInput } from './JournalSelectModal'
 
 const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
@@ -73,13 +73,24 @@ export function ALSNJournalView({
         const monthEntries = loadedAllEntries.filter(e => e.journalMonth === journalMonth)
 
         if (monthEntries.length > 0) {
-          setEntries(monthEntries)
+          // Real-time yangilanish shu bekatning BOSHQA jurnali saqlanganda ham
+          // kelaveradi — hali saqlanmagan (`_isEdited`/`_isNew`) lokal qatorlar
+          // serverning eskiroq nusxasi bilan ustidan yozib yuborilmasligi kerak.
+          setEntries(prev => mergeJournalEntries(monthEntries, prev))
         } else {
-          setEntries(Array.from({ length: 5 }, (_, i) => ({ ...EMPTY_ALSN(), nomber: String(i + 1) })))
+          setEntries(prev => {
+            const hasLocalEdits = prev.some(p => p._isEdited || p._isNew)
+            if (hasLocalEdits) return prev
+            return Array.from({ length: 5 }, (_, i) => ({ ...EMPTY_ALSN(), nomber: String(i + 1) }))
+          })
         }
       } else {
         setAllEntries([])
-        setEntries(Array.from({ length: 5 }, (_, i) => ({ ...EMPTY_ALSN(), nomber: String(i + 1) })))
+        setEntries(prev => {
+          const hasLocalEdits = prev.some(p => p._isEdited || p._isNew)
+          if (hasLocalEdits) return prev
+          return Array.from({ length: 5 }, (_, i) => ({ ...EMPTY_ALSN(), nomber: String(i + 1) }))
+        })
       }
     } catch (err) {
       console.error('ALSN journal yuklash xatosi:', err)
@@ -108,11 +119,11 @@ export function ALSNJournalView({
 
   const update = (i: number, field: keyof ALSNEntry, val: string) => {
     const n = [...entries]
-    n[i] = { ...n[i], [field]: val }
+    n[i] = { ...n[i], [field]: val, _isEdited: true }
     setEntries(n)
   }
 
-  const addRow = () => setEntries([...entries, { ...EMPTY_ALSN(), nomber: String(entries.length + 1) }])
+  const addRow = () => setEntries([...entries, { ...EMPTY_ALSN(), nomber: String(entries.length + 1), _isNew: true }])
   const removeRow = () => {
     if (entries.length <= 1) return
     const last = entries[entries.length - 1]
@@ -129,7 +140,11 @@ export function ALSNJournalView({
     setAllEntries(newAllEntries)
 
     try {
-      await upsertJournal(stationId, 'alsn', newAllEntries, userName)
+      await upsertJournal(stationId, 'alsn', newAllEntries.map(stripSessionFlags), userName)
+      // Saqlangach bayroqlarni tozalaymiz — aks holda bu qator keyingi
+      // real-time yangilanishlarda doim "lokal g'olib" bo'lib qolib,
+      // boshqa xodimning o'zgarishini ko'rsatmay qo'yardi.
+      setEntries(updated.map(stripSessionFlags))
     } catch (err) {
       console.error('Saqlash xatosi:', err)
       setEntries(prev)

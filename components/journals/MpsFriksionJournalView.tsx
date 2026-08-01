@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
+import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
 import type { MpsFriksionEntry } from '@/types'
 import { Plus, Trash2, Download, X } from 'lucide-react'
-import { getCurrentJournalMonth, isMonthInPast } from './helpers'
+import { getCurrentJournalMonth, isMonthInPast, mergeJournalEntries, stripSessionFlags } from './helpers'
 
 const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
   const [val, setVal] = useState(value)
@@ -52,22 +53,55 @@ export function MpsFriksionJournalView({
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const isWorker = ['worker', 'elektromexanik', 'elektromontyor'].includes(userRole)
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    setLoading(true)
-    getJournal(stationId, 'mpsFriksion').then(doc => {
+  const loadJournalData = useCallback((isSilent = false) => {
+    if (!isSilent) setLoading(true)
+    return getJournal(stationId, 'mpsFriksion').then(doc => {
       if (doc?.entries?.length) {
         const parsed = doc.entries as MpsFriksionEntry[]
         setAllEntries(parsed)
         const filtered = parsed.filter(e => e.journalMonth === journalMonth)
-        if (filtered.length > 0) setEntries(filtered)
-        else setEntries(Array.from({ length: 5 }, EMPTY_MPS_FRIKSION))
+        if (filtered.length > 0) {
+          // Real-time yangilanish shu bekatning BOSHQA jurnali saqlanganda ham
+          // kelaveradi — hali saqlanmagan (`_isEdited`/`_isNew`) lokal qatorlar
+          // serverning eskiroq nusxasi bilan ustidan yozib yuborilmasligi kerak.
+          setEntries(prev => mergeJournalEntries(filtered, prev))
+        } else {
+          setEntries(prev => {
+            const hasLocalEdits = prev.some(p => p._isEdited || p._isNew)
+            if (hasLocalEdits) return prev
+            return Array.from({ length: 5 }, EMPTY_MPS_FRIKSION)
+          })
+        }
       } else {
         setAllEntries([])
-        setEntries(Array.from({ length: 5 }, EMPTY_MPS_FRIKSION))
+        setEntries(prev => {
+          const hasLocalEdits = prev.some(p => p._isEdited || p._isNew)
+          if (hasLocalEdits) return prev
+          return Array.from({ length: 5 }, EMPTY_MPS_FRIKSION)
+        })
       }
-    }).finally(() => setLoading(false))
+    }).finally(() => { if (!isSilent) setLoading(false) })
   }, [stationId, journalMonth])
+
+  useEffect(() => {
+    loadJournalData(false)
+  }, [loadJournalData])
+
+  useRealtimeSubscription(
+    stationId && journalMonth
+      ? [
+          {
+            channelName: `journal_mpsFriksion_${userRole}_${stationId}_${journalMonth}`,
+            table: 'station_journals',
+            filter: `station_id=eq.${stationId}`,
+            onEvent: () => loadJournalData(true),
+          },
+        ]
+      : [],
+    !!stationId && !!journalMonth
+  )
 
   const handleSave = async (data: MpsFriksionEntry[], isSilent = false): Promise<boolean> => {
     if (!isSilent) setSaving(true)
@@ -77,7 +111,11 @@ export function MpsFriksionJournalView({
       const finalEntries = [...merged, ...toSave]
       setAllEntries(finalEntries)
 
-      await upsertJournal(stationId, 'mpsFriksion', finalEntries as any, userName)
+      await upsertJournal(stationId, 'mpsFriksion', finalEntries.map(stripSessionFlags) as any, userName)
+      // Saqlangach bayroqlarni tozalaymiz — aks holda bu qator keyingi
+      // real-time yangilanishlarda doim "lokal g'olib" bo'lib qolib,
+      // boshqa xodimning o'zgarishini ko'rsatmay qo'yardi.
+      setEntries(data.map(stripSessionFlags))
       if (!isSilent) {
         setMsg('Saqlandi! ✅')
         setTimeout(() => setMsg(null), 2000)
@@ -98,11 +136,12 @@ export function MpsFriksionJournalView({
     const row = { ...n[idx] }
     if (row.imzo && field !== 'imzo') return
     ;(row as any)[field] = val
+    row._isEdited = true
     n[idx] = row
     setEntries(n)
-    
-    if ((window as any).mpsFriksionSaveTimeout) clearTimeout((window as any).mpsFriksionSaveTimeout)
-    ;(window as any).mpsFriksionSaveTimeout = setTimeout(() => handleSave(n, true), 1500)
+
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = setTimeout(() => handleSave(n, true), 1500)
   }
 
   const handleBajarildi = (idx: number) => {
@@ -118,7 +157,7 @@ export function MpsFriksionJournalView({
     handleSave(n, true)
   }
 
-  const addRow = () => { if (!isWorker) return; const n = [...entries, EMPTY_MPS_FRIKSION()]; setEntries(n); }
+  const addRow = () => { if (!isWorker) return; const n = [...entries, { ...EMPTY_MPS_FRIKSION(), _isNew: true }]; setEntries(n); }
   const removeRow = () => { if (!isWorker || entries.length <= 1) return; const last = entries[entries.length - 1]; if (last.imzo) return; const n = entries.slice(0, -1); setEntries(n); handleSave(n, true); }
 
   const exportPDF = async () => {

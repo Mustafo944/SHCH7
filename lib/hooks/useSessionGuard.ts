@@ -21,25 +21,20 @@ export function useSessionGuard(expectedRole: Role | Role[]) {
     let cancelled = false
 
     async function init() {
-      // ⚠️ VAQTINCHALIK DIAGNOSTIKA — bug topilgach olib tashlanadi
-      console.log('[GUARD] init() ishga tushdi — sessiya tekshirilyapti')
       try {
         const user = await getCachedSession()
 
         if (cancelled) return
 
         if (!user) {
-          console.log('[GUARD] >>> SESSIYA YO\'Q — login sahifasiga yuborilyapti')
           await signOut()
           router.replace('/')
           return
         }
 
         const allowedRoles = Array.isArray(expectedRoleRef.current) ? expectedRoleRef.current : [expectedRoleRef.current]
-        console.log('[GUARD] rol =', user.role, '| ruxsat etilgan:', allowedRoles, '| mos:', allowedRoles.includes(user.role))
 
         if (!allowedRoles.includes(user.role)) {
-          console.log('[GUARD] >>> ROL MOS EMAS — router.replace() SAHIFANI QAYTA YUKLAYDI')
           // Rolga mos sahifaga yo'naltirish
           if (user.role === 'dispatcher') router.replace('/dispatcher')
           else if (user.role === 'bekat_boshlighi') router.replace('/bekat-boshlighi')
@@ -64,17 +59,22 @@ export function useSessionGuard(expectedRole: Role | Role[]) {
     return () => { cancelled = true }
   }, [router])
 
-  const handleSignOut = useCallback(async () => {
+  const handleSignOut = useCallback(() => {
     // 1. Darhol state ni tozalaymiz (UI tezkor javob beradi)
     setSession(null)
 
-    // 2. Server va client tozalashni PARALLEL bajaramiz (ketma-ket emas)
-    await Promise.allSettled([
+    // 2. `signOut()` ichidagi cookie/localStorage tozalash SINXRON qismi
+    // (birinchi `await`gacha) darhol bajariladi — demak brauzer nazarida
+    // foydalanuvchi ALLAQACHON chiqqan. Server tomonidagi sessiyani bekor
+    // qilish (tarmoq so'rovi) esa orqada davom etadi — buni KUTISH shart
+    // emas, chunki navigatsiya uni bloklamasligi kerak (aks holda "chiqish"
+    // sekin ishlagandek tuyulardi).
+    void Promise.allSettled([
       fetch('/api/auth/signout', { method: 'POST' }),
       signOut(),
     ])
 
-    // 3. Login sahifasiga o'tamiz
+    // 3. Login sahifasiga darhol o'tamiz
     window.location.href = '/'
   }, [])
 

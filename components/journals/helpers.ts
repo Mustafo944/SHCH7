@@ -58,6 +58,78 @@ export function trimTrailingEmpty<T>(list: T[], isEmpty: (e: T) => boolean): T[]
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// REAL-TIME XAVFSIZ BIRLASHTIRISH (barcha "oddiy" jurnal turlari uchun umumiy)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+type SessionFlagged = { _isNew?: boolean; _isEdited?: boolean }
+
+/**
+ * Qatorda (metama'lumot maydonlaridan tashqari) haqiqiy mazmun bormi?
+ * `nomber`/`journalMonth` va `_` bilan boshlanadigan UI bayroqlari hisobga
+ * olinmaydi — ular "amalda bo'sh" qatorni ham "to'ldirilgan" ko'rsatib
+ * yuborar edi.
+ */
+function rowHasContent(row: Record<string, unknown>): boolean {
+  return Object.entries(row).some(([key, value]) => {
+    if (key === 'nomber' || key === 'journalMonth' || key.startsWith('_')) return false
+    if (typeof value === 'boolean') return value === true
+    if (typeof value === 'string') return value.trim() !== ''
+    return value !== null && value !== undefined
+  })
+}
+
+/**
+ * Real-time orqali kelgan server ma'lumotini lokal holat bilan XAVFSIZ
+ * birlashtiradi. Buning zarurati: `useRealtimeSubscription` bekatning
+ * BARCHA jurnal turlari uchun umumiy (faqat `station_id` bo'yicha
+ * filtrlangan) — ya'ni boshqa xodim shu bekatning istalgan jurnalini
+ * saqlasa ham, joriy jurnalni ochib turgan xodimda `loadJournalData(true)`
+ * ishga tushadi. Agar shu payt xodim hali saqlanmagan qator ustida ishlab
+ * turgan bo'lsa (`_isEdited`/`_isNew` bilan belgilangan), server javobi bu
+ * qatorni SHART-SHAROITSIZ ustidan yozib, hali saqlanmagan matnni yo'q
+ * qilib yubormasligi kerak.
+ *
+ * Qoidalar:
+ *  - Ikkalasida ham bor indekslar uchun: agar lokal qator `_isEdited`/
+ *    `_isNew` bilan belgilangan bo'lsa — lokal versiya g'olib (serverning
+ *    eskiroq nusxasi bilan yozib qo'yilmaydi). Aks holda — server g'olib
+ *    (boshqa xodimning o'zgarishi ko'rinishi uchun).
+ *  - Faqat lokalda bor (server hali "ko'rmagan") ortiqcha qatorlar —
+ *    bayroqlangan yoki mazmuni bo'lsa saqlanadi, aks holda tashlab
+ *    yuboriladi (bo'sh shablon qatorlar takrorlanib ketmasligi uchun).
+ */
+export function mergeJournalEntries<T extends SessionFlagged>(serverRows: T[], localRows: T[]): T[] {
+  const merged = serverRows.map((serverRow, i) => {
+    const localRow = localRows[i]
+    if (localRow && (localRow._isEdited || localRow._isNew)) {
+      return localRow
+    }
+    return serverRow
+  })
+
+  for (let i = merged.length; i < localRows.length; i++) {
+    const localRow = localRows[i]
+    if (localRow._isEdited || localRow._isNew || rowHasContent(localRow as Record<string, unknown>)) {
+      merged.push(localRow)
+    }
+  }
+
+  return merged
+}
+
+/**
+ * `_isNew`/`_isEdited` faqat shu sessiyada UI uchun ishlatiladigan
+ * vaqtinchalik bayroqlar — bazaga hech qachon yozilmasligi kerak.
+ */
+export function stripSessionFlags<T extends SessionFlagged>(entry: T): T {
+  if (!entry._isNew && !entry._isEdited) return entry
+  const copy: T = { ...entry }
+  delete copy._isNew
+  delete copy._isEdited
+  return copy
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // HELPERS: Sana va vaqtni avto-formatlash
 // ═══════════════════════════════════════════════════════════════════════════════
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState, useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 import { supabase } from '@/lib/supabase'
 import { classifyPasskeyError } from '@/lib/auth/passkey'
 import {
@@ -20,7 +20,34 @@ type ToastApi = Pick<ReturnType<typeof useToast>, 'success' | 'error'>
 
 // Ikkita tugma (yon panel va "Yana" menyusi) bir vaqtda bosilib, ikkita
 // WebAuthn marosimi ustma-ust tushmasligi uchun modul darajasidagi qulf.
+//
+// `loading` HAM shu yerda, modul darajasida saqlanadi (avval har bir tugma
+// o'zining alohida `useState`iga ega edi). Aks holda: yon paneldagi tugma
+// bosilib jarayon ketayotganda "Yana" menyusidagi tugma hali ham "bo'sh"
+// ko'rinardi — bosilsa `inFlight` qulfi darhol chiqib ketardi-yu, lekin
+// foydalanuvchiga hech qanday belgi (spinner/xabar) ko'rsatilmasdi.
 let inFlight = false
+const loadingListeners = new Set<() => void>()
+
+function setInFlight(value: boolean): void {
+  inFlight = value
+  loadingListeners.forEach((listener) => listener())
+}
+
+function subscribeLoading(listener: () => void): () => void {
+  loadingListeners.add(listener)
+  return () => {
+    loadingListeners.delete(listener)
+  }
+}
+
+function getLoadingSnapshot(): boolean {
+  return inFlight
+}
+
+function getLoadingServerSnapshot(): boolean {
+  return false
+}
 
 /**
  * Barmoq izi (passkey) ON/OFF boshqaruvi — yon panel va "Yana" menyusi uchun
@@ -44,12 +71,15 @@ export function usePasskey(toast: ToastApi) {
     getPasskeyFlagSnapshot,
     getPasskeyFlagServerSnapshot
   )
-  const [loading, setLoading] = useState(false)
+  const loading = useSyncExternalStore(
+    subscribeLoading,
+    getLoadingSnapshot,
+    getLoadingServerSnapshot
+  )
 
   const toggle = useCallback(async () => {
     if (inFlight) return
-    inFlight = true
-    setLoading(true)
+    setInFlight(true)
 
     try {
       if (hasPasskey) {
@@ -81,8 +111,7 @@ export function usePasskey(toast: ToastApi) {
         showError('Barmoq izi sozlamasida xatolik yuz berdi.')
       }
     } finally {
-      inFlight = false
-      setLoading(false)
+      setInFlight(false)
     }
   }, [hasPasskey, success, showError])
 

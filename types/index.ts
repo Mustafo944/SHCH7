@@ -338,6 +338,10 @@ export interface ALSNEntry {
   bajarildi?: boolean          // Bajarildi tugmasi bosilganmi
   bajarildiAt?: string         // Qachon bajarildi
   journalMonth?: string        // Oy kaliti (2026-05)
+  // Shu sessiyada hali saqlanmagan/qo'shilgan qatorni real-time merge'da
+  // saqlab qolish uchun vaqtinchalik UI bayroqlari (bazaga yozilmaydi)
+  _isNew?: boolean
+  _isEdited?: boolean
 }
 
 // Yerlatgich xabarlagichi yordamida montaj izolyatsiya qarshiligini o'lchash jurnali
@@ -353,6 +357,8 @@ export interface YerlatgichEntry {
   bajarildi?: boolean       // Bajarildi tugmasi bosilganmi
   bajarildiAt?: string      // Qachon bajarildi
   journalMonth?: string     // Oy kaliti (2026-05)
+  _isNew?: boolean
+  _isEdited?: boolean
 }
 
 // ALSN kodlarini to'g'rilash va tok kuchini o'lchash jurnali (NSH-01 10.4)
@@ -368,6 +374,8 @@ export interface AlsnKodEntry {
   bajarildi?: boolean
   bajarildiAt?: string
   journalMonth?: string
+  _isNew?: boolean
+  _isEdited?: boolean
 }
 
 // MPS turidagi elektrodvigatellarni friksion tokini o'lchash jurnali (NSH-01 9.1.4)
@@ -384,6 +392,8 @@ export interface MpsFriksionEntry {
   bajarildi?: boolean
   bajarildiAt?: string
   journalMonth?: string
+  _isNew?: boolean
+  _isEdited?: boolean
 }
 
 // Dizel generatorlarini ishlashini nazorat qilish jurnali (NSH-01 18.3.1)
@@ -398,6 +408,8 @@ export interface DgaNazoratEntry {
   bajarildi?: boolean
   bajarildiAt?: string
   journalMonth?: string
+  _isNew?: boolean
+  _isEdited?: boolean
 }
 
 // Jurnal turi

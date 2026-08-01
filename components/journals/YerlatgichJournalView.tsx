@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
+import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
 import type { YerlatgichEntry } from '@/types'
 import { Plus, Trash2, Download, X } from 'lucide-react'
-import { getCurrentJournalMonth, isMonthInPast } from './helpers'
+import { getCurrentJournalMonth, isMonthInPast, mergeJournalEntries, stripSessionFlags } from './helpers'
 import { DateInput, TimeInput } from './JournalSelectModal'
 
 const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
@@ -55,32 +56,58 @@ export function YerlatgichJournalView({
 
   const isWorker = ['worker', 'elektromexanik', 'elektromontyor'].includes(userRole)
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      try {
-        const doc = await getJournal(stationId, 'yerlatgich')
-        if (doc && doc.entries?.length) {
-          const parsed = doc.entries as YerlatgichEntry[]
-          setAllEntries(parsed)
-          const currentMonthData = parsed.filter(e => e.journalMonth === journalMonth)
-          if (currentMonthData.length > 0) {
-            setEntries(currentMonthData)
-          } else {
-            setEntries(Array.from({ length: 5 }, EMPTY_YERLATGICH))
-          }
+  const loadJournalData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true)
+    try {
+      const doc = await getJournal(stationId, 'yerlatgich')
+      if (doc && doc.entries?.length) {
+        const parsed = doc.entries as YerlatgichEntry[]
+        setAllEntries(parsed)
+        const currentMonthData = parsed.filter(e => e.journalMonth === journalMonth)
+        if (currentMonthData.length > 0) {
+          // Real-time yangilanish shu bekatning BOSHQA jurnali saqlanganda ham
+          // kelaveradi — hali saqlanmagan (`_isEdited`/`_isNew`) lokal qatorlar
+          // serverning eskiroq nusxasi bilan ustidan yozib yuborilmasligi kerak.
+          setEntries(prev => mergeJournalEntries(currentMonthData, prev))
         } else {
-          setAllEntries([])
-          setEntries(Array.from({ length: 5 }, EMPTY_YERLATGICH))
+          setEntries(prev => {
+            const hasLocalEdits = prev.some(p => p._isEdited || p._isNew)
+            if (hasLocalEdits) return prev
+            return Array.from({ length: 5 }, EMPTY_YERLATGICH)
+          })
         }
-      } catch (err) {
-        console.error('Yerlatgich journal yuklash xatosi:', err)
-      } finally {
-        setLoading(false)
+      } else {
+        setAllEntries([])
+        setEntries(prev => {
+          const hasLocalEdits = prev.some(p => p._isEdited || p._isNew)
+          if (hasLocalEdits) return prev
+          return Array.from({ length: 5 }, EMPTY_YERLATGICH)
+        })
       }
+    } catch (err) {
+      console.error('Yerlatgich journal yuklash xatosi:', err)
+    } finally {
+      if (!isSilent) setLoading(false)
     }
-    load()
   }, [stationId, journalMonth])
+
+  useEffect(() => {
+    loadJournalData(false)
+  }, [loadJournalData])
+
+  useRealtimeSubscription(
+    stationId && journalMonth
+      ? [
+          {
+            channelName: `journal_yerlatgich_${userRole}_${stationId}_${journalMonth}`,
+            table: 'station_journals',
+            filter: `station_id=eq.${stationId}`,
+            onEvent: () => loadJournalData(true),
+          },
+        ]
+      : [],
+    !!stationId && !!journalMonth
+  )
 
   async function handleSave(newEntries: YerlatgichEntry[], isSilent = false) {
     if (!isWorker) return
@@ -91,7 +118,11 @@ export function YerlatgichJournalView({
       const finalEntries = [...merged, ...toSave]
       setAllEntries(finalEntries)
 
-      await upsertJournal(stationId, 'yerlatgich', finalEntries as any, userName)
+      await upsertJournal(stationId, 'yerlatgich', finalEntries.map(stripSessionFlags) as any, userName)
+      // Saqlangach bayroqlarni tozalaymiz — aks holda bu qator keyingi
+      // real-time yangilanishlarda doim "lokal g'olib" bo'lib qolib,
+      // boshqa xodimning o'zgarishini ko'rsatmay qo'yardi.
+      setEntries(newEntries.map(stripSessionFlags))
       if (!isSilent) {
         setMsg('Saqlandi! ✅')
         setTimeout(() => setMsg(null), 2000)
@@ -107,11 +138,12 @@ export function YerlatgichJournalView({
     if (!isWorker) return
     const n = [...entries]
     const row = { ...n[idx] }
-    
+
     if ((field === 'sana' || field === 'kuchlanishNomi' || field === 'olchanganQiymat') && row.imzo) return
     if ((field === 'sana2' || field === 'olchanganQiymat2') && row.imzo2) return
 
     ;(row as any)[field] = val
+    row._isEdited = true
     n[idx] = row
     setEntries(n)
     handleSave(n, true)
@@ -136,7 +168,7 @@ export function YerlatgichJournalView({
 
   const addRow = () => {
     if (!isWorker) return
-    const n = [...entries, EMPTY_YERLATGICH()]
+    const n = [...entries, { ...EMPTY_YERLATGICH(), _isNew: true }]
     setEntries(n)
   }
 

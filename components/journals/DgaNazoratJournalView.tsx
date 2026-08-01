@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useCallback, useState, useEffect } from 'react'
 import { DgaNazoratEntry } from '@/types'
 import { X, Plus, Trash2, Download } from 'lucide-react'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
-import { getCurrentJournalMonth, isMonthInPast } from './helpers'
+import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
+import { getCurrentJournalMonth, isMonthInPast, mergeJournalEntries, stripSessionFlags } from './helpers'
 
 // Local input component to avoid losing focus
 function LocalInput({ value, onChange, className, readOnly, placeholder }: { value: string, onChange: (v: string) => void, className: string, readOnly?: boolean, placeholder?: string }) {
@@ -73,32 +74,58 @@ export function DgaNazoratJournalView({
 
   const isWorker = ['worker', 'elektromexanik', 'elektromontyor', 'katta_elektromexanik'].includes(userRole)
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      try {
-        const doc = await getJournal(stationId, 'dgaNazorat')
-        if (doc && doc.entries?.length) {
-          const parsed = doc.entries as DgaNazoratEntry[]
-          setAllEntries(parsed)
-          const currentMonthData = parsed.filter(e => e.journalMonth === journalMonth)
-          if (currentMonthData.length > 0) {
-            setEntries(currentMonthData)
-          } else {
-            setEntries(Array.from({ length: 5 }, EMPTY_ENTRY))
-          }
+  const loadJournalData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true)
+    try {
+      const doc = await getJournal(stationId, 'dgaNazorat')
+      if (doc && doc.entries?.length) {
+        const parsed = doc.entries as DgaNazoratEntry[]
+        setAllEntries(parsed)
+        const currentMonthData = parsed.filter(e => e.journalMonth === journalMonth)
+        if (currentMonthData.length > 0) {
+          // Real-time yangilanish shu bekatning BOSHQA jurnali saqlanganda ham
+          // kelaveradi — hali saqlanmagan (`_isEdited`/`_isNew`) lokal qatorlar
+          // serverning eskiroq nusxasi bilan ustidan yozib yuborilmasligi kerak.
+          setEntries(prev => mergeJournalEntries(currentMonthData, prev))
         } else {
-          setAllEntries([])
-          setEntries(Array.from({ length: 5 }, EMPTY_ENTRY))
+          setEntries(prev => {
+            const hasLocalEdits = prev.some(p => p._isEdited || p._isNew)
+            if (hasLocalEdits) return prev
+            return Array.from({ length: 5 }, EMPTY_ENTRY)
+          })
         }
-      } catch (err) {
-        console.error('DGA journal yuklash xatosi:', err)
-      } finally {
-        setLoading(false)
+      } else {
+        setAllEntries([])
+        setEntries(prev => {
+          const hasLocalEdits = prev.some(p => p._isEdited || p._isNew)
+          if (hasLocalEdits) return prev
+          return Array.from({ length: 5 }, EMPTY_ENTRY)
+        })
       }
+    } catch (err) {
+      console.error('DGA journal yuklash xatosi:', err)
+    } finally {
+      if (!isSilent) setLoading(false)
     }
-    load()
   }, [stationId, journalMonth])
+
+  useEffect(() => {
+    loadJournalData(false)
+  }, [loadJournalData])
+
+  useRealtimeSubscription(
+    stationId && journalMonth
+      ? [
+          {
+            channelName: `journal_dgaNazorat_${userRole}_${stationId}_${journalMonth}`,
+            table: 'station_journals',
+            filter: `station_id=eq.${stationId}`,
+            onEvent: () => loadJournalData(true),
+          },
+        ]
+      : [],
+    !!stationId && !!journalMonth
+  )
 
   async function handleSave(newEntries: DgaNazoratEntry[], isSilent = false) {
     if (!isWorker) return
@@ -109,7 +136,11 @@ export function DgaNazoratJournalView({
       const finalEntries = [...merged, ...toSave]
       setAllEntries(finalEntries)
 
-      await upsertJournal(stationId, 'dgaNazorat', finalEntries as any, userName)
+      await upsertJournal(stationId, 'dgaNazorat', finalEntries.map(stripSessionFlags) as any, userName)
+      // Saqlangach bayroqlarni tozalaymiz — aks holda bu qator keyingi
+      // real-time yangilanishlarda doim "lokal g'olib" bo'lib qolib,
+      // boshqa xodimning o'zgarishini ko'rsatmay qo'yardi.
+      setEntries(newEntries.map(stripSessionFlags))
       if (!isSilent) {
         setMsg('Saqlandi! ✅')
         setTimeout(() => setMsg(''), 2000)
@@ -127,6 +158,7 @@ export function DgaNazoratJournalView({
     const row = { ...newEntries[index] }
     if (row.imzo) return // Imzolangan bo'lsa o'zgartirib bo'lmaydi
     ;(row as any)[field] = value
+    row._isEdited = true
     newEntries[index] = row
     setEntries(newEntries)
     handleSave(newEntries, true)
@@ -147,7 +179,7 @@ export function DgaNazoratJournalView({
 
   const addRow = () => {
     if (!isWorker) return
-    const newEntries = [...entries, EMPTY_ENTRY()]
+    const newEntries = [...entries, { ...EMPTY_ENTRY(), _isNew: true }]
     setEntries(newEntries)
   }
 
