@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { signIn, signInWithPasskeyFunc } from '@/lib/supabase-db'
 import { safeStorage } from '@/lib/utils/storage'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
-import { User, Eye, EyeOff, Lock, ArrowRight, Fingerprint } from 'lucide-react'
+import { User, Eye, EyeOff, Lock, ArrowRight, Fingerprint, X } from 'lucide-react'
 
 function getRoleHome(role: string) {
   if (role === 'dispatcher') return '/dispatcher'
@@ -26,37 +26,29 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [navigating, setNavigating] = useState(false)
+  const [showPasskeyModal, setShowPasskeyModal] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
 
   useEffect(() => {
-    // Saqlangan loginni yuklash (parol saqlanmaydi)
-    try {
-      const savedLogin = safeStorage.getItem('remembered-login')
-      if (savedLogin) {
-        setLogin(savedLogin)
-        setRememberMe(true)
-      }
-      
-      // Agar login sahifasiga kirgan bo'lsa (SSR orqali shu yerga keldikmi, demak tizimda emas),
-      // eskirgan profile keshni tozalash
-      safeStorage.removeItem('user-profile')
-    } catch { /* ignore */ }
+    // Agar oldinroq parolni saqlab qo'ygan bo'lsa
+    const rememberedLogin = safeStorage.getItem('remembered-login')
+    if (rememberedLogin) {
+      setLogin(rememberedLogin)
+      setRememberMe(true)
+    }
+    
+    // Agar login sahifasiga kirgan bo'lsa (SSR orqali shu yerga keldikmi, demak tizimda emas),
+    // eskirgan profile keshni tozalash
+    safeStorage.removeItem('user-profile')
   }, [])
 
-  // Barmoq izi yoqilgan bo'lsa, avtomatik tizim oynasini chaqiramiz
   useEffect(() => {
-    const checkAndPromptPasskey = async () => {
-      const passkeyEnabled = localStorage.getItem('hasPasskeyEnabled')
-      if (passkeyEnabled === 'true') {
-        // Kichik kechikish beramiz (UI to'liq yuklanishi uchun)
-        setTimeout(() => {
-          handlePasskeyLogin(true) // true = bu avtomatik chaqiruv ekanligini bildiradi
-        }, 300)
-      }
+    // Barmoq izi yoqilgan bo'lsa, avtomatik oynani ochish
+    const passkeyEnabled = localStorage.getItem('hasPasskeyEnabled')
+    if (passkeyEnabled === 'true') {
+      setShowPasskeyModal(true)
     }
-    checkAndPromptPasskey()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -87,7 +79,7 @@ export default function LoginPage() {
     }
   }
 
-  async function handlePasskeyLogin(isAutoPrompt = false) {
+  async function handlePasskeyLogin() {
     setLoading(true)
     setError('')
     try {
@@ -96,15 +88,11 @@ export default function LoginPage() {
         setNavigating(true)
         router.push(getRoleHome(user.role))
       } else {
-        if (!isAutoPrompt) setError("Profil topilmadi")
+        setError("Profil topilmadi (User profile not found)")
       }
     } catch (err: any) {
       console.error(err);
-      // Agar foydalanuvchi oynani o'zi yopsa (Cancel qilsa), xato chiqarmaymiz
-      const isCancelled = err.name === 'NotAllowedError' || err.message?.includes('cancelled') || err.message?.includes('NotAllowedError');
-      if (!isCancelled && !isAutoPrompt) {
-        setError("Xatolik: " + (err.message || "Passkey orqali ulanishda xatolik yuz berdi"));
-      }
+      setError("Xatolik: " + (err.message || "Passkey orqali ulanishda xatolik yuz berdi"));
     } finally {
       setLoading(false)
     }
@@ -115,6 +103,51 @@ export default function LoginPage() {
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 p-4">
       {/* Aurora Mesh Background */}
       <AuroraMeshBackground />
+
+      {/* Avtomatik Passkey Modali */}
+      {showPasskeyModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="relative w-full max-w-sm rounded-[32px] bg-white/70 backdrop-blur-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-white/60 p-8 text-center animate-fade-up overflow-hidden">
+            {/* Bezli yorug'lik */}
+            <div className="absolute -top-20 -left-20 w-40 h-40 bg-blue-400/30 rounded-full blur-3xl"></div>
+            <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-purple-400/30 rounded-full blur-3xl"></div>
+
+            <button 
+              onClick={() => setShowPasskeyModal(false)}
+              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100/50 text-slate-500 hover:bg-slate-200 transition-colors active:scale-95 z-10"
+            >
+              <X size={18} strokeWidth={2.5} />
+            </button>
+            
+            <div className="relative z-10 mb-6 flex justify-center">
+              <div className="flex h-24 w-24 items-center justify-center rounded-[28px] bg-gradient-to-br from-blue-500 to-purple-600 shadow-xl shadow-blue-500/30 animate-bounce-slow">
+                <Fingerprint size={48} className="text-white drop-shadow-md" strokeWidth={1.5} />
+              </div>
+            </div>
+            
+            <h3 className="relative z-10 text-xl font-black text-slate-800 tracking-tight mb-2">Tizim sizni taniydi</h3>
+            <p className="relative z-10 text-sm font-medium text-slate-500 mb-8 px-2">Barmoq izi orqali xavfsiz va tezkor kirish uchun quyidagi tugmani bosing.</p>
+            
+            <button
+              onClick={handlePasskeyLogin}
+              disabled={loading}
+              className="relative z-10 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-500 to-blue-500 px-6 py-4 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+            >
+              {loading ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+              ) : (
+                <>
+                  <Fingerprint size={20} />
+                  <span>Barmoq bilan kirish</span>
+                </>
+              )}
+            </button>
+            {error && (
+              <p className="relative z-10 mt-4 text-xs font-bold text-red-500 bg-red-50/50 py-2 rounded-xl border border-red-100">{error}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Full screen loading overlay */}
       {(loading || navigating) && (
