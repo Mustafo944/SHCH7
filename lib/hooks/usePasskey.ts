@@ -1,8 +1,15 @@
 'use client'
 
-import { useCallback, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useSyncExternalStore } from 'react'
 import { supabase } from '@/lib/supabase'
-import { classifyPasskeyError } from '@/lib/auth/passkey'
+import {
+  classifyPasskeyError,
+  fetchPasskeyRegistrationChallenge,
+  isChallengeUsable,
+  isPasskeySupported,
+  registerPasskeyWithChallenge,
+  type PasskeyRegistrationChallenge,
+} from '@/lib/auth/passkey'
 import {
   getPasskeyFlagServerSnapshot,
   getPasskeyFlagSnapshot,
@@ -49,6 +56,32 @@ function getLoadingServerSnapshot(): boolean {
   return false
 }
 
+// Ro'yxatdan o'tish (yoqish) challenge'i ham modul darajasida — bir nechta
+// `usePasskey()` instansiyasi (yon panel + "Yana" menyusi) bir xil
+// challenge'ni alohida-alohida so'ramasligi uchun. LOGIN sahifasidagi
+// mantiqning aynan o'zi (lib/auth/passkey.ts izohiga qarang): challenge
+// TUGMA BOSILISHIDAN OLDIN olinadi, shunda `navigator.credentials.create()`
+// tugma bosilgan zahoti (orada `await fetch` bo'lmasdan) chaqiriladi.
+// Aks holda ba'zi mobil brauzerlar "transient user activation"ni yo'qotilgan
+// deb hisoblab, "A non-webauthn related error has occurred" bilan rad etadi.
+let registrationChallenge: PasskeyRegistrationChallenge | null = null
+let isFetchingRegistrationChallenge = false
+
+function prefetchRegistrationChallenge(): void {
+  if (isChallengeUsable(registrationChallenge) || isFetchingRegistrationChallenge) return
+  isFetchingRegistrationChallenge = true
+  fetchPasskeyRegistrationChallenge()
+    .then((c) => {
+      registrationChallenge = c
+    })
+    .catch(() => {
+      // Muhim emas — tugma bosilganda qayta urinamiz
+    })
+    .finally(() => {
+      isFetchingRegistrationChallenge = false
+    })
+}
+
 /**
  * Barmoq izi (passkey) ON/OFF boshqaruvi — yon panel va "Yana" menyusi uchun
  * umumiy. Ilgari bu ~50 qator mantiq `AppSidebar.tsx` va `worker/page.tsx`da
@@ -77,6 +110,12 @@ export function usePasskey(toast: ToastApi) {
     getLoadingServerSnapshot
   )
 
+  // Barmoq izi hali ulanmagan bo'lsa, "yoqish" challenge'ini oldindan
+  // tayyorlab qo'yamiz — tugma bosilganda darhol ishlatish uchun.
+  useEffect(() => {
+    if (!hasPasskey && isPasskeySupported()) prefetchRegistrationChallenge()
+  }, [hasPasskey])
+
   const toggle = useCallback(async () => {
     if (inFlight) return
     setInFlight(true)
@@ -92,8 +131,16 @@ export function usePasskey(toast: ToastApi) {
         setPasskeyFlag(false)
         success("Barmoq izi (Face ID) o'chirildi.")
       } else {
-        const { error } = await supabase.auth.registerPasskey()
-        if (error) throw error
+        // Odatda challenge oldindan (useEffect'da) olingan bo'ladi va bu
+        // yerda tarmoq so'rovi bo'lmaydi — barmoq izi oynasi darhol ochiladi.
+        let challenge = registrationChallenge
+        if (!isChallengeUsable(challenge)) {
+          challenge = await fetchPasskeyRegistrationChallenge()
+        }
+        // Challenge bir martalik — ishlatilgandan keyin qayta ishlatmaymiz
+        registrationChallenge = null
+
+        await registerPasskeyWithChallenge(challenge)
         setPasskeyFlag(true)
         success('Barmoq izi muvaffaqiyatli ulandi! Endi loginga shu orqali kira olasiz.')
       }
@@ -119,6 +166,8 @@ export function usePasskey(toast: ToastApi) {
       }
     } finally {
       setInFlight(false)
+      // Keyingi urinish yana tez (darhol) bo'lishi uchun yangi challenge tayyorlaymiz
+      if (!hasPasskey) prefetchRegistrationChallenge()
     }
   }, [hasPasskey, success, showError])
 
