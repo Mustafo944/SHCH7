@@ -108,7 +108,14 @@ export function usePasskey(toast: ToastApi) {
         showError("Bu qurilma yoki brauzer barmoq izini qo'llab-quvvatlamaydi.")
       } else {
         console.error('Passkey toggle error:', err)
-        showError('Barmoq izi sozlamasida xatolik yuz berdi.')
+        // Sababni ANIQ ko'rsatamiz — Supabase server xatolari (masalan,
+        // "Auth session missing!" yoki loyihada Passkeys yoqilmaganligi)
+        // WebAuthn nomlari bilan tanilmaydi, shuning uchun avval umumiy
+        // xabar bilan yashiringan edi. Mobil qurilmada DevTools ochib
+        // bo'lmasligi mumkin, shuning uchun xabarning o'zi kifoya qilishi
+        // kerak.
+        const detail = err instanceof Error && err.message ? `: ${err.message}` : ''
+        showError(`Barmoq izi sozlamasida xatolik yuz berdi${detail}`)
       }
     } finally {
       setInFlight(false)
