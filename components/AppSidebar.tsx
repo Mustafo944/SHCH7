@@ -5,6 +5,8 @@ import Image from 'next/image'
 import type { LucideIcon } from 'lucide-react'
 import { ChevronLeft, ChevronRight, LogOut, Fingerprint } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useToast } from '@/lib/hooks/useToast'
+import { ToastContainer } from '@/components/ToastContainer'
 
 export interface SidebarNavItem {
   key: string
@@ -37,6 +39,7 @@ export function AppSidebar({
   userRole,
   userPhotoUrl,
 }: AppSidebarProps) {
+  const toast = useToast()
 
   const [hasPasskey, setHasPasskey] = useState(false)
   const [passkeyLoading, setPasskeyLoading] = useState(false)
@@ -72,19 +75,19 @@ export function AppSidebar({
           }
         }
         setHasPasskey(false)
-        alert("Barmoq izi (Face ID) o'chirildi.")
+        toast.success("Barmoq izi (Face ID) o'chirildi.")
       } else {
         // Ulash
         const { data, error } = await supabase.auth.registerPasskey()
         if (error) {
-          alert("Barmoq izini ulashda xatolik: " + error.message)
+          toast.error("Barmoq izini ulashda xatolik: " + error.message)
         } else {
           setHasPasskey(true)
-          alert("Barmoq izi muvaffaqiyatli ulandi! Endi loginga shu orqali kira olasiz.")
+          toast.success("Barmoq izi muvaffaqiyatli ulandi! Endi loginga shu orqali kira olasiz.")
         }
       }
     } catch (err: any) {
-      alert("Xatolik yuz berdi: " + err.message)
+      toast.error("Xatolik yuz berdi: " + err.message)
     } finally {
       setPasskeyLoading(false)
     }
@@ -255,6 +258,7 @@ export function AppSidebar({
           </div>
         </div>
       </aside>
+      <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
     </>
   )
 }

@@ -130,18 +130,18 @@ export default function WorkerPage() {
           }
         }
         setHasPasskey(false)
-        alert("Barmoq izi (Face ID) o'chirildi.")
+        toast.success("Barmoq izi (Face ID) o'chirildi.")
       } else {
         const { data, error } = await supabase.auth.registerPasskey()
         if (error) {
-          alert("Barmoq izini ulashda xatolik: " + error.message)
+          toast.error("Barmoq izini ulashda xatolik: " + error.message)
         } else {
           setHasPasskey(true)
-          alert("Barmoq izi muvaffaqiyatli ulandi! Endi loginga shu orqali kira olasiz.")
+          toast.success("Barmoq izi muvaffaqiyatli ulandi! Endi loginga shu orqali kira olasiz.")
         }
       }
     } catch (err: any) {
-      alert("Xatolik yuz berdi: " + err.message)
+      toast.error("Xatolik yuz berdi: " + err.message)
     } finally {
       setPasskeyLoading(false)
     }
