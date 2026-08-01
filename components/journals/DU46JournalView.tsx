@@ -219,7 +219,7 @@ export function DU46JournalView({
           loadedAllEntries = [...carryOverRows, ...remainingEntries]
           // Avtomatik orqaga saqlab qo'yamiz
           import('@/lib/supabase-db').then(db => {
-            db.updateJournal(stationId, 'du46', loadedAllEntries, userName).catch(console.error)
+            db.upsertJournal(stationId, 'du46', loadedAllEntries, userName).catch(console.error)
           }).catch(console.error)
         }
         // ── CARRY OVER LOGIC END ──
