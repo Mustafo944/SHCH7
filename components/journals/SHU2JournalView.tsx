@@ -140,6 +140,7 @@ export function SHU2JournalView({
   const [initialDataApplied, setInitialDataApplied] = useState(false)
   const [viewMode, setViewMode] = useState<'kunlik' | 'jadval'>('kunlik')
   const [selectedDateFilter, setSelectedDateFilter] = useState<number>(new Date().getDate())
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
   const isWorker = ['worker', 'elektromexanik', 'elektromontyor'].includes(userRole)
   const isDispatcher = userRole === 'dispatcher'
@@ -550,9 +551,37 @@ export function SHU2JournalView({
                 >
                   <ChevronLeft size={20} />
                 </button>
-                <div className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-purple-50/50">
-                  <Calendar size={16} className="text-purple-500" />
-                  <span className="text-sm font-black text-slate-700 tracking-tight">{selectedDateFilter} - {journalMonthLabel.split(' ')[0]}</span>
+                <div className="relative">
+                  <button 
+                    onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-purple-50/50 hover:bg-purple-100 transition-colors"
+                  >
+                    <Calendar size={16} className="text-purple-500" />
+                    <span className="text-sm font-black text-slate-700 tracking-tight">{selectedDateFilter} - {journalMonthLabel.split(' ')[0]}</span>
+                  </button>
+                  
+                  {isCalendarOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsCalendarOpen(false)} />
+                      <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 z-50 p-4 bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/60 shadow-xl w-64 animate-fade-up">
+                         <div className="grid grid-cols-7 gap-1">
+                           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
+                             <button
+                                key={day}
+                                onClick={() => { changeDateFilter(() => day); setIsCalendarOpen(false); }}
+                                className={`aspect-square flex items-center justify-center rounded-xl text-xs font-bold transition-all ${
+                                  selectedDateFilter === day 
+                                    ? 'bg-purple-600 text-white shadow-md shadow-purple-500/30 scale-105'
+                                    : 'text-slate-600 hover:bg-purple-100 hover:text-purple-700'
+                                }`}
+                             >
+                                {day}
+                             </button>
+                           ))}
+                         </div>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <button
                   onClick={() => changeDateFilter(p => Math.min(daysInMonth, p + 1))}

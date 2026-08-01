@@ -96,7 +96,19 @@ export default function WorkerPage() {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false)
 
   const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen || relayModalOpen || isMoreMenuOpen
+
+  // ⚠️ VAQTINCHALIK DIAGNOSTIKA — "Boshlandi bosilganda asosiy sahifaga tashlash"
+  // bugi topilgach OLIB TASHLANADI.
+  useEffect(() => {
+    console.log('[WORKER] KOMPONENT O\'RNATILDI (mount) — agar bu Boshlandi bosilganda chiqsa, sahifa QAYTA O\'RNATILYAPTI')
+    return () => console.log('[WORKER] KOMPONENT OLIB TASHLANDI (unmount)')
+  }, [])
+  useEffect(() => {
+    console.log('[WORKER] view =', view, '| isSubViewActive =', isSubViewActive)
+  }, [view, isSubViewActive])
+
   const handleHardwareBack = useCallback(() => {
+    console.log('[WORKER] handleHardwareBack CHAQIRILDI', { view, isSignOutModalOpen, isMoreMenuOpen, relayModalOpen, selectedJournalType, workerModal })
     if (isSignOutModalOpen) {
       setIsSignOutModalOpen(false)
     } else if (isMoreMenuOpen) {
@@ -108,6 +120,7 @@ export default function WorkerPage() {
     } else if (workerModal !== null) {
       setWorkerModal(null)
     } else if (view !== 'home') {
+      console.log('[WORKER] >>> setView(\'home\') — ASOSIY SAHIFAGA QAYTARILYAPTI')
       setView('home')
     }
     // `isMoreMenuOpen` dep massivda YO'Q edi: `useHardwareBack` callback'ni ref'da

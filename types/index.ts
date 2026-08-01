@@ -295,6 +295,11 @@ export interface DU46Entry {
   dispetcherImzo?: string
   journalMonth?: string
   
+  // ── O'tgan oydan ko'chirish (Carry over) ──
+  carriedOverToMonth?: string       // Bu qator qaysi oyga ko'chirilgan (masalan "2026-08")
+  carriedOverFromMonth?: string     // Bu qator qaysi oydan kelgan (masalan "2026-07")
+  carriedOverFromId?: string        // Bu qator qaysi oydagi asl qatorning ID si
+
   // ── Oylik Ish Rejasi bilan bog'lanish (Task Link) ──
   linkedReportId?: string
   linkedEntryIndex?: number

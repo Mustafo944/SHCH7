@@ -6,78 +6,22 @@ import { supabase } from '@/lib/supabase'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
 import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
 import type { DU46Entry } from '@/types'
-import { Plus, Trash2, CheckCircle2, Download, ChevronLeft, ChevronRight, Calendar, LayoutGrid, List } from 'lucide-react'
+import { Plus, Trash2, CheckCircle2, Download, ChevronLeft, ChevronRight, Calendar, LayoutGrid, List, Loader2 } from 'lucide-react'
 import { getCurrentJournalMonth, isMonthInPast, getJournalMonthLabel, trimTrailingEmpty, isFutureDate } from './helpers'
 import { DateInput, TimeInput } from './JournalSelectModal'
 import { ApprovalChainModal } from './ApprovalChainModal'
 import { TaskSelectModal } from './TaskSelectModal'
 import { MicButton } from './MicButton'
+import { DU46JournalRow } from './DU46JournalRow'
 import { getCreator, getNextApproverRole, DU46_WORKER_GROUP_ROLES } from '@/lib/journals/du46Approval'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // LOCAL COMPONENTS (PREVENT EXCESSIVE RE-RENDERS)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const LocalTextarea = ({ value, onChange, readOnly, className, rows, spellCheck, lang, placeholder }: any) => {
-  const [val, setVal] = useState(value)
-  const onChangeRef = useRef(onChange)
 
-  useEffect(() => {
-    onChangeRef.current = onChange
-  }, [onChange])
 
-  useEffect(() => setVal(value), [value])
 
-  useEffect(() => {
-    if (val !== value) {
-      const timer = setTimeout(() => onChangeRef.current(val), 50)
-      return () => clearTimeout(timer)
-    }
-  }, [val, value])
-
-  return (
-    <textarea
-      value={val}
-      onChange={e => setVal(e.target.value)}
-      onBlur={() => { if (val !== value) onChange(val) }}
-      readOnly={readOnly}
-      className={className}
-      rows={rows}
-      spellCheck={spellCheck}
-      lang={lang}
-      placeholder={placeholder}
-    />
-  )
-}
-
-const LocalInput = ({ value, onChange, readOnly, className, placeholder }: any) => {
-  const [val, setVal] = useState(value)
-  const onChangeRef = useRef(onChange)
-
-  useEffect(() => {
-    onChangeRef.current = onChange
-  }, [onChange])
-
-  useEffect(() => setVal(value), [value])
-
-  useEffect(() => {
-    if (val !== value) {
-      const timer = setTimeout(() => onChangeRef.current(val), 50)
-      return () => clearTimeout(timer)
-    }
-  }, [val, value])
-
-  return (
-    <input
-      value={val}
-      onChange={e => setVal(e.target.value)}
-      onBlur={() => { if (val !== value) onChange(val) }}
-      readOnly={readOnly}
-      className={className}
-      placeholder={placeholder}
-    />
-  )
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMPTY ENTRY FACTORY
@@ -162,16 +106,22 @@ export function DU46JournalView({
   }
 }) {
   const [entries, setEntries] = useState<DU46Entry[]>([])
+  const entriesRef = useRef(entries)
+  useEffect(() => { entriesRef.current = entries }, [entries])
   const [allEntries, setAllEntries] = useState<DU46Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'kunlik' | 'jadval'>('kunlik')
   const [selectedDateFilter, setSelectedDateFilter] = useState<number>(new Date().getDate())
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
   // Tasdiqlash zanjirini tanlash modali
   const [approvalChainModal, setApprovalChainModal] = useState<{ index: number, isEdit: boolean, currentChain: string[] } | null>(null)
   // Standart vazifalar ro'yxatidan tanlash modali (3-ustun)
   const [taskModalIdx, setTaskModalIdx] = useState<number | null>(null)
+
+  // Saqlash jarayonida ekanligini bildiruvchi state (poyga holatlari va qotishlarning oldini olish uchun)
+  const [isSavingJournal, setIsSavingJournal] = useState(false)
 
   // Bugungi sana va tanlangan oy
   const today = new Date()
@@ -211,9 +161,70 @@ export function DU46JournalView({
       const j = await getJournal(stationId, 'du46')
       if (j && j.entries.length > 0) {
         // Eski buzilgan yozuvlarda _isNew/_isEdited bazaga yozilib qolgan bo'lishi mumkin — yuklashda tozalaymiz
-        const loadedAllEntries = (j.entries as DU46Entry[]).map(stripSessionFlags)
-        setAllEntries(loadedAllEntries)
+        let loadedAllEntries = (j.entries as DU46Entry[]).map(stripSessionFlags)
 
+        // ── OYLAR RO'YXATI ──
+        const OYLAR = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr']
+        const getMonthName = (monthStr: string) => {
+          if (!monthStr) return "O'tgan"
+          const m = parseInt(monthStr.split('-')[1], 10)
+          return !isNaN(m) && m >= 1 && m <= 12 ? OYLAR[m - 1] : "O'tgan"
+        }
+
+        // ── CARRY OVER LOGIC START ──
+        let hasCarryOvers = false
+        const carryOverRows: DU46Entry[] = []
+        const remainingEntries: DU46Entry[] = []
+
+        loadedAllEntries.forEach(e => {
+          // Boshlangan lekin tugatilmagan va eski oydan bo'lgan qatorlarni aniqlash
+          if (
+            e.kamchilik?.trim() &&
+            !e.bartarafBajarildi &&
+            e.journalMonth &&
+            e.journalMonth < journalMonth &&
+            !e.carriedOverToMonth
+          ) {
+            // Duplikatsiyani oldini olish (agar qachondir xato saqlangan bo'lsa)
+            const isAlreadyCarriedOver = loadedAllEntries.some(x => x.carriedOverFromId === e._id && x.journalMonth === journalMonth)
+
+            if (!isAlreadyCarriedOver) {
+              e.carriedOverToMonth = journalMonth
+              hasCarryOvers = true
+
+              const oldId = e._id || Math.random().toString(36).substr(2, 9)
+              e._id = oldId // asliga yozamiz
+
+              const monthName = getMonthName(e.journalMonth)
+              const prefix = `[${monthName} oyidan yopilmaganligi sababli ko'chirildi]`
+              const hasPrefixAlready = e.kamchilik.includes("oyidan yopilmaganligi sababli ko'chirildi]") || e.kamchilik.includes("[O'tgan oydan ko'chirildi]")
+              const newKamchilik = hasPrefixAlready ? e.kamchilik : `${prefix}\n${e.kamchilik}`
+
+              const newRow: DU46Entry = {
+                ...e,
+                _id: undefined, // Yangi id berilishi uchun
+                journalMonth: journalMonth,
+                carriedOverFromMonth: e.journalMonth,
+                carriedOverFromId: oldId,
+                kamchilik: newKamchilik
+              }
+              carryOverRows.push(newRow)
+            }
+          }
+          remainingEntries.push(e)
+        })
+
+        if (hasCarryOvers) {
+          // Ko'chirilgan qatorlarni ro'yxatning boshiga qo'shamiz
+          loadedAllEntries = [...carryOverRows, ...remainingEntries]
+          // Avtomatik orqaga saqlab qo'yamiz
+          import('@/lib/supabase-db').then(db => {
+            db.updateJournal(stationId, 'du46', loadedAllEntries, userName).catch(console.error)
+          }).catch(console.error)
+        }
+        // ── CARRY OVER LOGIC END ──
+
+        setAllEntries(loadedAllEntries)
         // Bug #11 fix: eski qatorlarda journalMonth bo'lmasligi mumkin (migratsiyadan oldin saqlangan).
         // Bunday qatorlarni joriy tanlangan oy uchun ko'rsatamiz (backward compatibility).
         const monthEntries = loadedAllEntries.filter(
@@ -236,11 +247,14 @@ export function DU46JournalView({
                 merged[i] = newRow
               }
             }
-            // Agar foydalanuvchi lokalda ko'proq qator qo'shgan bo'lsa va unda ma'lumot bo'lsa, ularni saqlab qolamiz
+            // Agar foydalanuvchi lokalda ko'proq qator qo'shgan bo'lsa, ularni saqlab qolamiz.
+            // `_isNew` tekshiruvi ham SHART: aks holda "Qator qo'shish" bosilgach hali
+            // matn kiritilmagan yangi (bo'sh) qator — saqlashdan keyingi realtime
+            // yangilanish shu yerga kelib qolib, darhol yana o'chib ketardi.
             if (prev.length > merged.length) {
               for (let i = merged.length; i < prev.length; i++) {
                 const localRow = prev[i];
-                if (localRow.kamchilik || localRow.bartarafInfo) {
+                if (localRow.kamchilik || localRow.bartarafInfo || (localRow as any)._isNew || (localRow as any)._isEdited) {
                   merged.push(localRow);
                 }
               }
@@ -356,7 +370,7 @@ export function DU46JournalView({
   // bosh sahifadagi "kutilmoqda" hisobi (getPendingJournalCounts) bilan bir xil
   // manbadan foydalanish uchun (ilgari ikkalasi mustaqil yozilgan va farqlanib ketgan edi).
 
-  const isFinalApprover = (e: DU46Entry, col: 3 | 12): boolean => {
+  const isFinalApprover = useCallback((e: DU46Entry, col: 3 | 12): boolean => {
     const nextRole = getNextApproverRole(e, col)
     if (!nextRole) return false
     // DSP har doim oxirgi tasdiqlovchi (har ikki ustun uchun ham)
@@ -374,23 +388,23 @@ export function DU46JournalView({
     }
 
     return false
-  }
+  }, [getCreator])
 
-  const isCol3Finished = (e: DU46Entry): boolean => {
+  const isCol3Finished = useCallback((e: DU46Entry): boolean => {
     if (e.kamchilikBBTasdiqladi) return true
     const nextRole = getNextApproverRole(e, 3)
     if (e.kamchilikBajarildi && nextRole === null) return true
     return false
-  }
+  }, [])
 
-  const isCol12Finished = (e: DU46Entry): boolean => {
+  const isCol12Finished = useCallback((e: DU46Entry): boolean => {
     if (e.bartarafBBTasdiqladi) return true
     const nextRole = getNextApproverRole(e, 12)
     if (e.bartarafBajarildi && nextRole === null) return true
     return false
-  }
+  }, [])
 
-  const canIApprove = (e: DU46Entry, col: 3 | 12): boolean => {
+  const canIApprove = useCallback((e: DU46Entry, col: 3 | 12): boolean => {
     const nextRole = getNextApproverRole(e, col)
     if (!nextRole) return false
     // DSP = faqat bekat navbatchisi tasdiqlaydi (bekat boshlig'i emas)
@@ -399,9 +413,17 @@ export function DU46JournalView({
     if (col === 12 && e.bartarafImzo === userName) return false
     if (nextRole === 'worker') return isWorker
     return userRole === nextRole
-  }
+  }, [isBekatNavbatchisi, userName, isWorker, userRole])
 
-  // Hozir kim tasdiqlashi kerakligini aniqlaydigan yordamchi
+  // Hozir kim tasdiqlashi kerakligini aniqlaydigan yordamchi.
+  //
+  // HOZIRDA ISHLATILMAYDI: u faqat "Navbat kutilmoqda — avval X tasdiqlashi
+  // kerak" yorlig'ini chizish uchun kerak edi, o'sha yorliq esa foydalanuvchi
+  // so'roviga ko'ra 2026-07-31 da olib tashlandi. Funksiya ataylab qoldirildi —
+  // yorliqni qaytarish kerak bo'lsa (3- va 12-ustunlardagi `null` o'rniga)
+  // shunchaki qayta chaqiriladi. Navbat MANTIG'I bundan mustaqil ishlaydi
+  // (`isMyTurnToApprove` / `getNextApproverRole`), shuning uchun bu funksiyani
+  // o'chirish ham, qoldirish ham xatti-harakatga ta'sir qilmaydi.
   const getWaitingForRole = (e: DU46Entry, col: 3 | 12): string | null => {
     const isBoshlandi = col === 3 ? e.kamchilikBajarildi : e.bartarafBajarildi
     if (!isBoshlandi) return null
@@ -413,12 +435,12 @@ export function DU46JournalView({
   }
 
   // ── Input yangilash ───────────────────────────────────────────────────────────
-  const update = (i: number, field: keyof DU46Entry, val: string) => {
-    const n = [...entries]
+  const update = useCallback((i: number, field: keyof DU46Entry, val: string) => {
+    const n = [...entriesRef.current]
     n[i] = { ...n[i], [field]: val }
-    
-    // Foydalanuvchi tahrirlayotgan qator Kunlik rejimda sana o'zgargani uchun g'oyib bo'lmasligi uchun belgi qo'yamiz
-    ;(n[i] as any)._isEdited = true;
+
+      // Foydalanuvchi tahrirlayotgan qator Kunlik rejimda sana o'zgargani uchun g'oyib bo'lmasligi uchun belgi qo'yamiz
+      ; (n[i] as any)._isEdited = true;
 
     // Bug #17 fix: createdByRole ni istalgan maydon o'zgarganda belgilaymiz (faqat 3 ta maydon emas)
     if (!n[i].createdByRole) {
@@ -433,7 +455,7 @@ export function DU46JournalView({
     startTransition(() => {
       setEntries(n)
     })
-  }
+  }, [isYulUstasi, isEchXodimi, isElektromexanik, isBekatNavbatchisi, isBekatBoshlighi])
 
   // ── Qator boshqaruvi ─────────────────────────────────────────────────────────
   // Bug #16 fix: yangi qatorlarga journalMonth ni uzatamiz
@@ -491,12 +513,6 @@ export function DU46JournalView({
     }
   }
 
-  // "Qator o'chirish" tugmasi bosilganda qaysi qator o'chirilishi kerakligini
-  // aniqlaydi. `entries` BUTUN OYNING qatorlarini saqlaydi (kunlar bo'yicha
-  // alohida emas) — Kunlik va To'liq jadval faqat SHU massiv ustidagi ikki xil
-  // KO'RSATISH filtri (renderdagi bilan bir xil mantiq). Shuning uchun oddiy
-  // "oxirgi elementni olish" Kunlik rejimda ekranda ko'rinmayotgan, boshqa
-  // kunga tegishli qatorni o'chirib yuborishi mumkin edi.
   const findLastVisibleIndex = (): number => {
     if (viewMode === 'jadval') return entries.length - 1
     const selDayStr = String(selectedDateFilter).padStart(2, '0')
@@ -518,64 +534,50 @@ export function DU46JournalView({
     }
     const target = entries[idx]
 
-    // Boshlandi bosilgan bo'lsa o'chirib bo'lmaydi
     if (target.kamchilikBajarildi) {
       showMsg("Boshlandi bosilgan qatorni o'chirib bo'lmaydi", 3000)
       return
     }
 
-    // 2-ustun (soatMinut1) va 3-ustun (kamchilik) bo'sh bo'lmasa o'chirib bo'lmaydi
     const hasTime = !!target.soatMinut1?.trim()
     const hasTask = !!target.kamchilik?.trim()
     if (hasTime || hasTask) {
-       showMsg("Soat yoki ish kiritilgan qatorni o'chirib bo'lmaydi", 3000)
-       return
+      showMsg("Soat yoki ish kiritilgan qatorni o'chirib bo'lmaydi", 3000)
+      return
     }
 
     const newEntries = [...entries.slice(0, idx), ...entries.slice(idx + 1)]
     saveEntries(newEntries, entries, { deletedIndex: idx })
   }
 
-  // ── Saqlash (optimistik & xavfsiz) ─────────────────────────────────────────────
-  // Bug #6 fix: rollback uchun snapshot olamiz; allEntries snapshot ni closure'dan emas, useRef dan olamiz.
   const allEntriesRef = useCallback(() => allEntries, [allEntries])
 
-  const saveEntries = async (updated: DU46Entry[], prev: DU46Entry[], options?: { deletedIndex?: number }) => {
+  const saveEntries = useCallback(async (updated: DU46Entry[], prev: DU46Entry[], options?: { deletedIndex?: number }) => {
+    setIsSavingJournal(true)
     setEntries(updated)
     const prevAllEntries = allEntriesRef()
 
     try {
-      // 1. Bazadagi eng so'nggi holatni olish (Concurrency himoyasi)
       const latestJournal = await getJournal(stationId, 'du46')
       const latestAllEntries = (latestJournal?.entries as DU46Entry[]) || []
 
-      // 2. DB dagi joriy oydagi qatorlarni ajratish.
-      // MUHIM: loadJournalData bilan BIR XIL qoida — journalMonth'siz eski
-      // qatorlar (migratsiyadan avval saqlanganlar) ham "joriy oy" hisoblanadi,
-      // agar bazada umuman oy belgisi bo'lgan qator bo'lmasa. Aks holda bunday
-      // jurnalni saqlaganda eski qatorlar "boshqa oy" deb qayta qo'shilib,
-      // dublikat va "o'chirgan qator qaytib keladi" muammosi chiqar edi.
       const hasAnyMonthTag = latestAllEntries.some(x => x.journalMonth)
       const isCurrentMonthRow = (e: DU46Entry) =>
         e.journalMonth === journalMonth || (!e.journalMonth && !hasAnyMonthTag)
       const dbMonthEntries = latestAllEntries.filter(isCurrentMonthRow)
 
-      // Agar qator qasddan o'chirilgan bo'lsa, uni DB'dagi ro'yxatdan olib tashlaymiz
       if (options?.deletedIndex !== undefined && options.deletedIndex < dbMonthEntries.length) {
         dbMonthEntries.splice(options.deletedIndex, 1)
       }
 
-      // 3. Mahalliy va DB dagi qatorlarni birlashtirish
       const mergedMonthEntries = [...updated]
       for (let i = 0; i < Math.max(mergedMonthEntries.length, dbMonthEntries.length); i++) {
         const local = mergedMonthEntries[i]
         const db = dbMonthEntries[i]
 
         if (!local && db) {
-          // Boshqa foydalanuvchi yangi qator qo'shgan
           mergedMonthEntries.push(db)
         } else if (local && db) {
-          // Bug #7 fix: approvalsCol3/12 ham himoyalanadi — DB'da ko'proq imzo bo'lsa saqlanadi
           const mergeApprovals = (
             localList: typeof local.approvalsCol3,
             dbList: typeof db.approvalsCol3
@@ -587,17 +589,14 @@ export function DU46JournalView({
 
           let merged = { ...local }
 
-          // Tasdiqlash holatlarini DB'dan himoyalab olamiz (false→true yo'nalishda)
           if (!local.kamchilikBajarildi && db.kamchilikBajarildi) {
             merged = { ...merged, kamchilikBajarildi: db.kamchilikBajarildi, kamchilikBajarildiAt: db.kamchilikBajarildiAt, kamchilikImzo: db.kamchilikImzo, createdByRole: db.createdByRole }
-            // Stale state (eski ma'lumot) bazadagini o'chirib yubormasligi uchun text maydonlarini ham saqlaymiz:
             if (!local.oyKun1 && db.oyKun1) merged.oyKun1 = db.oyKun1
             if (!local.soatMinut1 && db.soatMinut1) merged.soatMinut1 = db.soatMinut1
             if (!local.kamchilik && db.kamchilik) merged.kamchilik = db.kamchilik
           }
           if (!local.bartarafBajarildi && db.bartarafBajarildi) {
             merged = { ...merged, bartarafBajarildi: db.bartarafBajarildi, bartarafBajarildiAt: db.bartarafBajarildiAt, bartarafImzo: db.bartarafImzo, bartarafByRole: db.bartarafByRole }
-            // 10, 11, 12 ustunlar matnlarini ham saqlab qolamiz:
             if (!local.oyKun4 && db.oyKun4) merged.oyKun4 = db.oyKun4
             if (!local.soatMinut4 && db.soatMinut4) merged.soatMinut4 = db.soatMinut4
             if (!local.bartarafInfo && db.bartarafInfo) merged.bartarafInfo = db.bartarafInfo
@@ -609,7 +608,6 @@ export function DU46JournalView({
             merged = { ...merged, bartarafBBTasdiqladi: db.bartarafBBTasdiqladi, bartarafBBTasdiqladiAt: db.bartarafBBTasdiqladiAt, bartarafBBImzo: db.bartarafBBImzo, bartarafBBVaqt: db.bartarafBBVaqt }
           }
 
-          // Qolgan oraliq matnli maydonlarni ham himoya qilamiz
           const otherFields: (keyof DU46Entry)[] = ['oyKun2', 'soatMinut2', 'xabarUsuli', 'oyKun3', 'soatMinut3', 'dspImzo', 'nomber']
           otherFields.forEach(field => {
             if (!local[field] && db[field]) {
@@ -617,7 +615,6 @@ export function DU46JournalView({
             }
           })
 
-          // Bug #7: imzolar massivini birlashtirish
           merged = {
             ...merged,
             approvalsCol3: mergeApprovals(local.approvalsCol3, db.approvalsCol3),
@@ -628,22 +625,58 @@ export function DU46JournalView({
         }
       }
 
-      // Boshqa oylardagi qatorlarni ham DB dan olib saqlaymiz
-      // (isCurrentMonthRow bilan aynan teskari to'plam — eski journalMonth'siz
-      // qatorlar ikki marta hisobga olinmaydi)
       const otherMonths = latestAllEntries.filter(e => !isCurrentMonthRow(e))
-
-      // Oxiridagi bo'sh qatorlar bazaga YOZILMAYDI (UI da ko'rinaveradi) —
-      // ular saqlansa boshqa foydalanuvchilarda ham chiqib, o'chirilganda
-      // qaytib kelaverar edi.
       const mergedWithMonth = trimTrailingEmpty(mergedMonthEntries, isEmptyDu46Row)
         .map(e => ({ ...e, journalMonth }))
+
+      // ── CARRY OVER SYNC LOGIC ──
+      // Zanjirli yopish: barcha o'tgan oylardagi nusxalarini (agar bir necha oyga o'tgan bo'lsa) ham topib yangilaymiz.
+      mergedWithMonth.forEach(currentEntry => {
+        let targetId = currentEntry.carriedOverFromId
+        while (targetId) {
+          const originalIndex = otherMonths.findIndex(x => x._id === targetId)
+          if (originalIndex !== -1) {
+            const original = otherMonths[originalIndex]
+            otherMonths[originalIndex] = {
+              ...original,
+              // O'ng tomon (7-12 ustunlar) va yopilish bayroqlarini arxivga ham yozamiz
+              oyKun2: currentEntry.oyKun2 || original.oyKun2,
+              soatMinut2: currentEntry.soatMinut2 || original.soatMinut2,
+              xabarUsuli: currentEntry.xabarUsuli || original.xabarUsuli,
+              oyKun3: currentEntry.oyKun3 || original.oyKun3,
+              soatMinut3: currentEntry.soatMinut3 || original.soatMinut3,
+              dspImzo: currentEntry.dspImzo || original.dspImzo,
+              oyKun4: currentEntry.oyKun4 || original.oyKun4,
+              soatMinut4: currentEntry.soatMinut4 || original.soatMinut4,
+              bartarafInfo: currentEntry.bartarafInfo || original.bartarafInfo,
+              bartarafBajarildi: currentEntry.bartarafBajarildi || original.bartarafBajarildi,
+              bartarafBajarildiAt: currentEntry.bartarafBajarildiAt || original.bartarafBajarildiAt,
+              bartarafImzo: currentEntry.bartarafImzo || original.bartarafImzo,
+              bartarafByRole: currentEntry.bartarafByRole || original.bartarafByRole,
+              bartarafNeedsEM: currentEntry.bartarafNeedsEM !== undefined ? currentEntry.bartarafNeedsEM : original.bartarafNeedsEM,
+              bartarafEMTasdiqladi: currentEntry.bartarafEMTasdiqladi !== undefined ? currentEntry.bartarafEMTasdiqladi : original.bartarafEMTasdiqladi,
+              bartarafEMTasdiqladiAt: currentEntry.bartarafEMTasdiqladiAt || original.bartarafEMTasdiqladiAt,
+              bartarafEMImzo: currentEntry.bartarafEMImzo || original.bartarafEMImzo,
+              bartarafBBTasdiqladi: currentEntry.bartarafBBTasdiqladi !== undefined ? currentEntry.bartarafBBTasdiqladi : original.bartarafBBTasdiqladi,
+              bartarafBBTasdiqladiAt: currentEntry.bartarafBBTasdiqladiAt || original.bartarafBBTasdiqladiAt,
+              bartarafBBImzo: currentEntry.bartarafBBImzo || original.bartarafBBImzo,
+              bartarafBBVaqt: currentEntry.bartarafBBVaqt || original.bartarafBBVaqt,
+              approvalsCol12: currentEntry.approvalsCol12 || original.approvalsCol12,
+            }
+            targetId = original.carriedOverFromId // Zanjirni orqaga davom ettirish
+          } else {
+            targetId = undefined
+          }
+        }
+      })
+      // ── CARRY OVER SYNC LOGIC END ──
+
       let newAllEntries = [...otherMonths, ...mergedWithMonth]
 
-      // Bazadagi himoya triggeri (prevent_journal_wipe) butunlay bo'sh massivni
-      // rad etadi. Oxirgi qator ham o'chirilganda saqlash xato bilan qaytmasligi
-      // uchun bitta bo'sh qator qoldiramiz — u keyingi saqlashda baribir
-      // trim qilinadi va hech qanday hisobga ta'sir qilmaydi.
+      if (options?.deletedIndex !== undefined) {
+        setAllEntries(newAllEntries)
+      }
+
       if (newAllEntries.length === 0) {
         newAllEntries = [EMPTY_DU46(journalMonth)]
       }
@@ -660,25 +693,28 @@ export function DU46JournalView({
       setAllEntries(prevAllEntries)
       showMsg(err instanceof Error ? err.message : 'Saqlashda xatolik yuz berdi', 3000)
       throw err
+    } finally {
+      setIsSavingJournal(false)
     }
-  }
+  }, [allEntriesRef, stationId, journalMonth, userName])
 
   // ══════════════════════════════════════════════════════════════════════════════
   // USTUN 3: BOSHLANDI + TASDIQLASH
   // ══════════════════════════════════════════════════════════════════════════════
 
-  const handleKamchilikBoshlandiClick = (i: number) => {
-    const e = entries[i]
+  const handleKamchilikBoshlandiClick = useCallback((i: number) => {
+    const e = entriesRef.current[i]
     if (!e.oyKun1 || !e.soatMinut1 || !e.kamchilik?.trim()) {
       showMsg("1, 2 va 3-ustunlarni to'ldiring!")
       return
     }
     setApprovalChainModal({ index: i, isEdit: false, currentChain: [] })
-  }
+  }, [])
 
-  const handleSaveApprovalChain = async (idx: number, chain: string[]) => {
-    const prev = [...entries]
-    const updated = [...entries]
+  const handleSaveApprovalChain = useCallback(async (idx: number, chain: string[]) => {
+    const currentEntries = entriesRef.current
+    const prev = [...currentEntries]
+    const updated = [...currentEntries]
     const e = updated[idx]
     const isEdit = approvalChainModal?.isEdit
 
@@ -699,14 +735,21 @@ export function DU46JournalView({
       }
     }
 
+    // Modal DARHOL yopiladi — foydalanuvchi saqlash tugashini kutib turmaydi.
+    // Bu xavfsiz, chunki `saveEntries` xato bo'lsa O'ZI hamma narsani orqaga
+    // qaytaradi (`setEntries(prev)` + `setAllEntries(prevAllEntries)`) va xato
+    // xabarini `showMsg` bilan ko'rsatadi. Ilgari ham modal xato holatida
+    // `catch` ichida yopilardi, ya'ni u HAR QANDAY holatda yopilgan — farqi
+    // faqat foydalanuvchi 3-4 soniya kutib turishida edi.
+    setApprovalChainModal(null)
+
     try {
-      // MUHIM: bazaga saqlash tasdiqlanmaguncha modal yopilmaydi va onAccepted()
-      // chaqirilmaydi — aks holda saqlash xato bilan tugasa, tashqi tomon
-      // (ish rejasidagi vazifa) allaqachon "jarayonda/bajarildi" deb
-      // belgilanib, modal yopilib ulguradi va foydalanuvchi xatoni ko'rmay qoladi.
+      // MUHIM: `onAccepted()` va `updateReportEntryInProgress()` HAMON saqlash
+      // tasdiqlangandan KEYIN chaqiriladi — aks holda saqlash xato bilan tugasa,
+      // tashqi tomon (ish rejasidagi vazifa) allaqachon "jarayonda/bajarildi"
+      // deb belgilanib qolar edi.
       await saveEntries(updated, prev)
 
-      setApprovalChainModal(null)
       showMsg(isEdit ? 'Tasdiqlash zanjiri yangilandi!' : 'Boshlandi belgilandi!')
 
       // taskContext bo'lsa, uni Jarayonda (In Progress) ga o'tkazamiz
@@ -723,11 +766,14 @@ export function DU46JournalView({
         onAccepted?.(true, false)
       }
     } catch {
-      // saveEntries xato xabarini allaqachon ko'rsatdi — orqadagi xabar
-      // ko'rinishi uchun kichik tasdiqlash-zanjiri modalini yopamiz
-      setApprovalChainModal(null)
+      // Bu yerda qo'shimcha ish YO'Q va bu ataylab:
+      //   • modal yuqorida allaqachon yopilgan;
+      //   • `saveEntries` holatni `prev` ga qaytargan va xato xabarini
+      //     `showMsg` orqali ko'rsatgan.
+      // `catch` faqat qayta otilgan xatoni ushlab qolish uchun turibdi
+      // (aks holda u "unhandled rejection" bo'lib chiqar edi).
     }
-  }
+  }, [userName, saveEntries, approvalChainModal, taskContext, onAccepted])
 
   const handleKamchilikTasdiqlash = async (i: number) => {
     const prev = [...entries]
@@ -767,9 +813,10 @@ export function DU46JournalView({
   // USTUN 12: BAJARILDI + TASDIQLASH
   // ══════════════════════════════════════════════════════════════════════════════
 
-  const handleBartarafBajarildiClick = async (i: number) => {
-    const prev = [...entries]
-    const updated = [...entries]
+  const handleBartarafBajarildiClick = useCallback(async (i: number) => {
+    const currentEntries = entriesRef.current
+    const prev = [...currentEntries]
+    const updated = [...currentEntries]
     const e = updated[i]
     if (!e.oyKun4 || !e.soatMinut4 || !e.bartarafInfo?.trim()) {
       showMsg("10, 11 va 12-ustunlarni to'ldiring!")
@@ -806,13 +853,14 @@ export function DU46JournalView({
         }).catch(err => console.error("In progress clear error:", err))
       }
     } catch { /* saveEntries ichida xato xabari ko'rsatiladi */ }
-  }
+  }, [userName, userRole, saveEntries, taskContext, onAccepted])
 
-  const handleBartarafTasdiqlash = async (i: number) => {
-    const prev = [...entries]
-    const updated = [...entries]
+  const handleBartarafTasdiqlash = useCallback(async (i: number) => {
+    const currentEntries = entriesRef.current
+    const prev = [...currentEntries]
+    const updated = [...currentEntries]
     // Bug #2 fix: e ni joriy entries state'dan olamiz
-    const e = entries[i]
+    const e = currentEntries[i]
 
     if (!e.oyKun4 || !e.soatMinut4 || !e.bartarafInfo?.trim()) {
       showMsg("10, 11 va 12-ustunlar to'ldirilmagan!")
@@ -848,7 +896,7 @@ export function DU46JournalView({
       }
       // Agar "Bajarildi" bosilsa (Tugadi emas, tasdiqlansa) onAccepted() chaqirilmaydi, chunki user modalni o'zi yopadi.
     } catch { /* */ }
-  }
+  }, [userName, isBekatNavbatchisi, saveEntries])
 
   // ── PDF YUKLAB OLISH ──────────────────────────────────────────────────────────
 
@@ -988,8 +1036,8 @@ export function DU46JournalView({
           )}
           {msg && (
             <span className={`text-xs font-bold px-3 py-1 rounded-full border transition-all ${msg.toLowerCase().includes('xato') || msg.toLowerCase().includes('error')
-                ? 'bg-red-50 text-red-600 border-red-100'
-                : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+              ? 'bg-red-50 text-red-600 border-red-100'
+              : 'bg-emerald-50 text-emerald-600 border-emerald-100'
               }`}>{msg}</span>
           )}
         </div>
@@ -1039,9 +1087,36 @@ export function DU46JournalView({
                 >
                   <ChevronLeft size={20} />
                 </button>
-                <div className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-purple-50/50">
-                  <Calendar size={16} className="text-purple-500" />
-                  <span className="text-sm font-black text-slate-700 tracking-tight">{selectedDateFilter} - {journalMonthLabel.split(' ')[0]}</span>
+                <div className="relative">
+                  <button
+                    onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-purple-50/50 hover:bg-purple-100 transition-colors"
+                  >
+                    <Calendar size={16} className="text-purple-500" />
+                    <span className="text-sm font-black text-slate-700 tracking-tight">{selectedDateFilter} - {journalMonthLabel.split(' ')[0]}</span>
+                  </button>
+
+                  {isCalendarOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsCalendarOpen(false)} />
+                      <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 z-50 p-4 bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/60 shadow-xl w-64 animate-fade-up">
+                        <div className="grid grid-cols-7 gap-1">
+                          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
+                            <button
+                              key={day}
+                              onClick={() => { changeDateFilter(() => day); setIsCalendarOpen(false); }}
+                              className={`aspect-square flex items-center justify-center rounded-xl text-xs font-bold transition-all ${selectedDateFilter === day
+                                  ? 'bg-purple-600 text-white shadow-md shadow-purple-500/30 scale-105'
+                                  : 'text-slate-600 hover:bg-purple-100 hover:text-purple-700'
+                                }`}
+                            >
+                              {day}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <button
                   onClick={() => changeDateFilter(p => Math.min(daysInMonth, p + 1))}
@@ -1086,396 +1161,35 @@ export function DU46JournalView({
               </tr>
             </thead>
             <tbody>
-              {entries.map((e, i) => {
-                if (viewMode === 'kunlik') {
-                  const isSessionActive = (e as any)._isNew || (e as any)._isEdited
-                  if (!isSessionActive) {
-                    const selDayStr = String(selectedDateFilter).padStart(2, '0')
-                    const val = (e.oyKun1 || '').trim()
-                    const valDay = val.split('-')[0].split('.')[0]
-                    // Agar sana kiritilmagan bo'lsa yoki tanlangan kunga teng bo'lmasa, yashiramiz
-                    if (valDay !== selDayStr) return null
-                  }
-                }
-                const iAmRoleCreator = isCreator(e)
-                const isExactCreator = e.kamchilikImzo ? e.kamchilikImzo === userName : iAmRoleCreator
-                // Elektromexanik/elektromontyor/katta_elektromexanik guruhidagi xodimlar
-                // bir-birining (shu guruhdagi boshqa xodim yaratgan) yozuvini ham 12-ustunda
-                // tugata olishi kerak — aynan o'sha odamning o'zi bo'lishi shart emas.
-                // Boshqa rollar (bekat_boshlighi, yul_ustasi, ech_xodimi, bekat_navbatchisi)
-                // uchun bu qoida ishlamaydi — ular uchun avvalgidek faqat aniq ijrochi.
-                const isCrossWorkerGroupFix =
-                  DU46_WORKER_GROUP_ROLES.includes(getCreator(e)) && DU46_WORKER_GROUP_ROLES.includes(userRole)
-                const hasRightToFix = isExactCreator || isCrossWorkerGroupFix || (e.approvalChain && e.approvalChain.includes(userRole))
-
-                const hasNoCreator = !e.createdByRole && !e.kamchilik && !e.soatMinut1
-                const canWriteCol3 = isCurrentMonth && !e.kamchilikBajarildi && !isDispatcher
-
-                // Bug #5 fix: o'tgan oylar uchun 12-ustun ham yopiq bo'lishi kerak
-                const canWriteCol12 = isCurrentMonth && !e.bartarafBajarildi && isCol3Finished(e) && !isDispatcher && hasRightToFix && !isBekatNavbatchisi
-
-                const canWriteMiddle = isCurrentMonth && !isDispatcher && !isCol12Finished(e) && (hasRightToFix || hasNoCreator)
-
-                return (
-                  <tr key={i} className="border-b border-slate-200 hover:bg-blue-50/50 transition-colors">
-                    {/* --- № --- */}
-                    <td className="border-r border-slate-200 p-1 text-center bg-slate-50/30">
-                      <LocalInput
-                        value={e.nomber || ''}
-                        onChange={(val: string) => update(i, 'nomber', val)}
-                        readOnly={isDispatcher || !!e.yuborildi}
-                        placeholder={String(i + 1)}
-                        className="w-full rounded bg-transparent text-center font-black text-slate-400 outline-none focus:bg-white transition-all focus:text-purple-600"
-                      />
-                    </td>
-
-                    {/* ── Ustun 1: Oy va kun (avtomatik to'ldiriladi) ─────────────────── */}
-                    <td className="border-r border-slate-200 p-0.5">
-                      <DateInput
-                        value={e.oyKun1 || ''}
-                        onChange={val => update(i, 'oyKun1', val)}
-                        readOnly={true}
-                      />
-                    </td>
-
-                    {/* — Ustun 2: Soat va daqiqa */}
-                    <td className="border-r border-slate-200 p-0.5 align-top relative bg-purple-50/10">
-                      <div className="pb-[150px]">
-                        <TimeInput
-                          value={e.soatMinut1 || ''}
-                          onChange={val => update(i, 'soatMinut1', val)}
-                          readOnly={!canWriteCol3}
-                          className={e.kamchilikBajarildi ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-transparent focus:bg-white focus:shadow-inner'}
-                        />
-                      </div>
-
-                      {e.kamchilik && e.kamchilikBajarildi && (
-                        <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center justify-end">
-                          {isCol3Finished(e) && e.kamchilikBBVaqt ? (
-                            <div className="w-full rounded-xl bg-amber-100 px-2 py-2 text-center text-[10px] font-black text-amber-700 border border-amber-200 shadow-sm">
-                              {e.kamchilikBBVaqt}
-                            </div>
-                          ) : null}
-                        </div>
-                      )}
-                    </td>
-
-                    {/* — Ustun 3: Kamchilik bayoni */}
-                    <td className="border-r border-slate-200 p-0.5 align-top relative min-w-[200px]">
-                      <div className="pb-[150px]">
-                        {isDispatcher ? (
-                          <div className="w-full rounded px-3 py-2 text-[11px] font-medium text-slate-700 bg-white min-h-[60px]">
-                            {e.kamchilik || <span className="text-slate-300">—</span>}
-                          </div>
-                        ) : (
-                          <div>
-                            <LocalTextarea
-                              value={e.kamchilik || ''}
-                              onChange={(val: string) => update(i, 'kamchilik', val)}
-                              readOnly={!canWriteCol3 || !e.oyKun1 || !e.soatMinut1}
-                              rows={3}
-                              spellCheck={false}
-                              lang="uz"
-                              placeholder={(!e.oyKun1 || !e.soatMinut1) && canWriteCol3 ? "Oldin 1 va 2-ustunlarni to'ldiring" : ""}
-                              className="w-full resize-y rounded bg-transparent px-3 py-2 text-[11px] font-medium text-slate-700 outline-none transition-all focus:bg-white focus:shadow-inner"
-                            />
-                            {canWriteCol3 && e.oyKun1 && e.soatMinut1 && (
-                              <div className="mt-1 flex items-center justify-end gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => setTaskModalIdx(i)}
-                                  title="Standart vazifalar ro'yxatidan tanlash"
-                                  className="flex items-center justify-center rounded-lg bg-purple-50 p-1.5 text-purple-600 shadow-sm border border-purple-100 transition-all hover:bg-purple-600 hover:text-white"
-                                >
-                                  <Plus size={12} strokeWidth={3} />
-                                </button>
-                                <MicButton
-                                  baseText={e.kamchilik || ''}
-                                  onChange={(val) => update(i, 'kamchilik', val)}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* — Boshlandi / Tasdiqlash zanjiri tugmalari */}
-                      <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
-                        {/* 1) Boshlandi tugmasi (faqat yozuvchi ko'radi) */}
-                        {e.kamchilik?.trim() && iAmRoleCreator && !e.kamchilikBajarildi && !isMonthInPast(journalMonth) && (
-                          <button
-                            onClick={() => handleKamchilikBoshlandiClick(i)}
-                            disabled={!e.oyKun1 || !e.soatMinut1}
-                            className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${(!e.oyKun1 || !e.soatMinut1) ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'btn-gradient'}`}
-                          >
-                            ▶ Boshlandi
-                          </button>
-                        )}
-
-                        {e.kamchilikBajarildi && (
-                          <div className="flex flex-col items-center gap-1 w-full relative group/edit">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Boshladi:</span>
-                            <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-1.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 w-full justify-center shadow-sm relative">
-                              <CheckCircle2 size={12} strokeWidth={3} /> <span className="truncate">{e.kamchilikImzo}</span>
-                            </div>
-                            {isExactCreator && !isMonthInPast(journalMonth) && !isCol3Finished(e) && (
-                              <button
-                                onClick={() => setApprovalChainModal({ index: i, isEdit: true, currentChain: e.approvalChain || [] })}
-                                className="absolute top-0 right-0 p-1 bg-white/80 rounded shadow-sm text-slate-400 hover:text-purple-600 border border-slate-200"
-                                title="Tasdiqlash zanjirini tahrirlash"
-                              >
-                                ✏️
-                              </button>
-                            )}
-                          </div>
-                        )}
-
-                        {e.approvalsCol3?.map((appr, idx) => (
-                          <div key={idx} className="flex flex-col items-center gap-1 w-full">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{appr.role.replace('_', ' ')}:</span>
-                            <div className="flex items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-1.5 text-[10px] font-bold text-blue-600 border border-blue-100 w-full justify-center shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} />
-                              <span className="truncate">{appr.signedBy}</span>
-                            </div>
-                          </div>
-                        ))}
-
-                        {e.kamchilikBBTasdiqladi && (
-                          <div className="flex flex-col items-center gap-1 w-full">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bekat navbatchisi:</span>
-                            <div className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-1.5 text-[10px] font-bold text-amber-700 border border-amber-100 w-full justify-center shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} />
-                              <span className="truncate">{e.kamchilikBBImzo}</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {canIApprove(e, 3) && !isMonthInPast(journalMonth) ? (() => {
-                          const isFinal = isFinalApprover(e, 3)
-                          const canConfirm = !isFinal || !!e.kamchilikBBVaqt
-                          return (
-                            <div className="flex flex-col gap-1 w-full mt-1">
-                              {isFinal && (
-                                <TimeInput
-                                  value={e.kamchilikBBVaqt || ''}
-                                  onChange={val => update(i, 'kamchilikBBVaqt', val)}
-                                  readOnly={false}
-                                  className="w-full bg-white shadow-sm border border-slate-200"
-                                />
-                              )}
-                              <button
-                                onClick={() => handleKamchilikTasdiqlash(i)}
-                                disabled={!canConfirm}
-                                className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${!canConfirm ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-amber-500 text-white hover:bg-amber-600 border-transparent'}`}
-                              >
-                                Tasdiqlash
-                              </button>
-                            </div>
-                          )
-                        })() : (
-                          // Tasdiqlash tugmasi yo'q bo'lsa, hamma ko'rishi uchun navbat kutilayotgan shaxsni chiqaramiz
-                          (() => {
-                            const waitingFor = getWaitingForRole(e, 3)
-                            if (!isMonthInPast(journalMonth) && waitingFor) {
-                              return (
-                                <div className="w-full rounded-xl bg-orange-50 px-2 py-1.5 border border-orange-100 mt-1 flex flex-col items-center">
-                                  <span className="text-[8px] font-bold uppercase text-orange-400">Navbat kutilmoqda</span>
-                                  <span className="text-[9px] font-black text-orange-600 text-center leading-tight">
-                                    Avval {waitingFor} tasdiqlashi kerak
-                                  </span>
-                                </div>
-                              )
-                            }
-                            return null
-                          })()
-                        )}
-                      </div>
-                    </td>
-
-                    {/* — Ustunlar 4-9 (oraliq) */}
-                    {(['oyKun2', 'soatMinut2', 'xabarUsuli', 'oyKun3', 'soatMinut3', 'dspImzo'] as (keyof DU46Entry)[]).map((field, fi) => (
-                      <td key={fi} className="border-r border-slate-200 p-0.5 bg-purple-50/5">
-                        {(field === 'oyKun2' || field === 'oyKun3') ? (
-                          <DateInput
-                            value={(e[field] as string) || ''}
-                            onChange={val => update(i, field, val)}
-                            readOnly={!canWriteMiddle}
-                          />
-                        ) : (field === 'soatMinut2' || field === 'soatMinut3') ? (
-                          <TimeInput
-                            value={(e[field] as string) || ''}
-                            onChange={val => update(i, field, val)}
-                            readOnly={!canWriteMiddle}
-                            className="bg-transparent focus:bg-white focus:shadow-inner"
-                          />
-                        ) : (
-                          <LocalInput
-                            value={(e[field] as string) || ''}
-                            onChange={(val: string) => update(i, field, val)}
-                            readOnly={!canWriteMiddle}
-                            className="w-full rounded bg-transparent px-1.5 py-3 text-center text-[11px] outline-none transition-all focus:bg-white focus:shadow-inner"
-                          />
-                        )}
-                      </td>
-                    ))}
-
-                    {/* — Ustun 10: Oy/kun */}
-                    <td className="border-r border-slate-200 p-0.5">
-                      <DateInput
-                        value={e.oyKun4 || ''}
-                        onChange={val => update(i, 'oyKun4', val)}
-                        readOnly={!canWriteCol12}
-                      />
-                    </td>
-
-                    {/* — Ustun 11: Soat va daqiqa */}
-                    <td className="border-r border-slate-200 p-0.5 align-top relative bg-amber-50/5">
-                      <div className="pb-[150px]">
-                        <TimeInput
-                          value={e.soatMinut4 || ''}
-                          onChange={val => update(i, 'soatMinut4', val)}
-                          readOnly={!canWriteCol12}
-                          className={e.bartarafBajarildi ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-transparent focus:bg-white focus:shadow-inner'}
-                        />
-                      </div>
-
-                      {e.bartarafInfo && e.bartarafBajarildi && (
-                        <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center justify-end">
-                          {isCol12Finished(e) && e.bartarafBBVaqt ? (
-                            <div className="w-full rounded-xl bg-amber-100 px-2 py-2 text-center text-[10px] font-black text-amber-700 border border-amber-200 shadow-sm">
-                              {e.bartarafBBVaqt}
-                            </div>
-                          ) : null}
-                        </div>
-                      )}
-                    </td>
-
-                    {/* — Ustun 12: Bartaraf tafsiloti */}
-                    <td className="p-0.5 align-top relative bg-amber-50/5 min-w-[200px]">
-                      <div className="pb-[150px]">
-                        {isDispatcher ? (
-                          <div className="w-full rounded px-3 py-2 text-[11px] font-medium text-slate-700 bg-white min-h-[60px]">
-                            {e.bartarafInfo || <span className="text-slate-300">—</span>}
-                          </div>
-                        ) : (
-                          <>
-                            <LocalTextarea
-                              value={e.bartarafInfo || ''}
-                              onChange={(val: string) => update(i, 'bartarafInfo', val)}
-                              readOnly={!canWriteCol12}
-                              rows={3}
-                              spellCheck={false}
-                              lang="uz"
-                              className={`w-full resize-y rounded px-3 py-2 text-[11px] font-medium outline-none transition-all ${!canWriteCol12 && !e.bartarafInfo
-                                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                  : canWriteCol12
-                                    ? 'bg-transparent focus:bg-white focus:shadow-inner text-slate-700'
-                                    : 'bg-transparent text-slate-700 cursor-not-allowed'
-                                }`}
-                              placeholder={!isCol3Finished(e) ? '3-ustun tasdiqlanishi kerak...' : ''}
-                            />
-                            {canWriteCol12 && (
-                              <div className="mt-1 flex items-center justify-end">
-                                <MicButton
-                                  baseText={e.bartarafInfo || ''}
-                                  onChange={(val) => update(i, 'bartarafInfo', val)}
-                                />
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-
-                      <div className="absolute bottom-2 left-0 right-0 px-2 flex flex-col items-center gap-1.5">
-                        {e.bartarafInfo?.trim() && hasRightToFix && !isBekatNavbatchisi && !e.bartarafBajarildi && !isMonthInPast(journalMonth) && (
-                          <button
-                            onClick={() => handleBartarafBajarildiClick(i)}
-                            disabled={!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi || isFutureDate(e.oyKun4)}
-                            title={isFutureDate(e.oyKun4) ? "Kelajakdagi sana uchun tugatish mumkin emas" : "Tugadi"}
-                            className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${(!e.oyKun4 || !e.soatMinut4 || !e.kamchilikBajarildi || isFutureDate(e.oyKun4)) ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'btn-gradient'}`}
-                          >
-                            Tugadi
-                          </button>
-                        )}
-
-                        {e.bartarafBajarildi && (
-                          <div className="flex flex-col items-center gap-1 w-full relative">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Tugadi:</span>
-                            <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-1.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 w-full justify-center shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} /> <span className="truncate">{e.bartarafImzo}</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {e.approvalsCol12?.map((app, idx) => (
-                          <div key={idx} className="flex flex-col items-center gap-1 w-full mt-1">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{app.role.replace('_', ' ')}:</span>
-                            <div className="flex items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-1.5 text-[10px] font-bold text-blue-700 border border-blue-100 w-full justify-center shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} /> <span className="truncate">{app.signedBy}</span>
-                            </div>
-                          </div>
-                        ))}
-
-                        {e.bartarafBBTasdiqladi && (
-                          <div className="flex flex-col items-center gap-1 w-full">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bekat navbatchisi:</span>
-                            <div className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-1.5 text-[10px] font-bold text-amber-700 border border-amber-100 w-full justify-center shadow-sm">
-                              <CheckCircle2 size={12} strokeWidth={3} />
-                              <span className="truncate">{e.bartarafBBImzo}</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {canIApprove(e, 12) && !isMonthInPast(journalMonth) ? (() => {
-                          const isFinal = isFinalApprover(e, 12)
-                          const canConfirm = !isFinal || !!e.bartarafBBVaqt
-                          return (
-                            <div className="flex flex-col gap-1 w-full mt-1">
-                              {isFinal && (
-                                <TimeInput
-                                  value={e.bartarafBBVaqt || ''}
-                                  onChange={val => update(i, 'bartarafBBVaqt', val)}
-                                  readOnly={false}
-                                  className="w-full bg-white shadow-sm border border-slate-200"
-                                />
-                              )}
-                              <button
-                                onClick={() => handleBartarafTasdiqlash(i)}
-                                disabled={!canConfirm}
-                                className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm active:scale-95 ${!canConfirm ? 'bg-slate-100/50 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-amber-500 text-white hover:bg-amber-600 border-transparent'}`}
-                              >
-                                Tasdiqlash
-                              </button>
-                            </div>
-                          )
-                        })() : (
-                          // Hamma foydalanuvchilarga keyingi navbat kimdaligini ko'rsatish
-                          (() => {
-                            const waitingFor = getWaitingForRole(e, 12)
-                            if (!isMonthInPast(journalMonth) && waitingFor) {
-                              return (
-                                <div className="w-full rounded-xl bg-orange-50 px-2 py-1.5 border border-orange-100 mt-1 flex flex-col items-center">
-                                  <span className="text-[8px] font-bold uppercase text-orange-400">Navbat kutilmoqda</span>
-                                  <span className="text-[9px] font-black text-orange-600 text-center leading-tight">
-                                    Avval {waitingFor} tasdiqlashi kerak
-                                  </span>
-                                </div>
-                              )
-                            }
-                            return null
-                          })()
-                        )}
-                        {/* 3) Telegramga yuborish */}
-                        {e.bartarafInfo && !isCol3Finished(e) && (
-                          <span className="text-[8px] font-black text-red-400 text-center leading-tight px-1 mt-1 uppercase tracking-tighter">
-                            3-ustun oxirigacha tasdiqlanmagan
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
+              {entries.map((e, i) => (
+                <DU46JournalRow
+                  key={e._id || i}
+                  e={e}
+                  i={i}
+                  viewMode={viewMode}
+                  selectedDateFilter={selectedDateFilter}
+                  userName={userName}
+                  userRole={userRole}
+                  journalMonth={journalMonth || ''}
+                  isDispatcher={isDispatcher}
+                  isCurrentMonth={isCurrentMonth}
+                  DU46_WORKER_GROUP_ROLES={DU46_WORKER_GROUP_ROLES}
+                  isBekatNavbatchisi={isBekatNavbatchisi}
+                  isCreator={isCreator}
+                  isCol3Finished={isCol3Finished}
+                  isCol12Finished={isCol12Finished}
+                  canIApprove={canIApprove}
+                  isFinalApprover={isFinalApprover}
+                  getWaitingForRole={getWaitingForRole}
+                  update={update}
+                  setTaskModalIdx={setTaskModalIdx}
+                  handleKamchilikBoshlandiClick={handleKamchilikBoshlandiClick}
+                  setApprovalChainModal={setApprovalChainModal}
+                  handleKamchilikTasdiqlash={handleKamchilikTasdiqlash}
+                  handleBartarafBajarildiClick={handleBartarafBajarildiClick}
+                  handleBartarafTasdiqlash={handleBartarafTasdiqlash}
+                />
+              ))}
             </tbody>
           </table>
         </div>
@@ -1486,19 +1200,32 @@ export function DU46JournalView({
           return (
             <div className="mt-6 flex flex-wrap items-center gap-3">
               {!isMonthInPast(journalMonth) && (
-                <button onClick={addRow} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm active:scale-95">
-                  <Plus size={14} strokeWidth={3} /> <span className="uppercase tracking-widest">Qator qo&apos;shish</span>
+                <button
+                  onClick={addRow}
+                  disabled={isSavingJournal}
+                  className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold transition-all shadow-sm active:scale-95 ${isSavingJournal
+                      ? 'border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    }`}
+                >
+                  {isSavingJournal ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} strokeWidth={3} />}
+                  <span className="uppercase tracking-widest">{isSavingJournal ? "Saqlanmoqda..." : "Qator qo'shish"}</span>
                 </button>
               )}
               {!isMonthInPast(journalMonth) && (
-                <button onClick={removeRow} disabled={!canRemove}
-                  className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black transition-all shadow-sm active:scale-95 ${canRemove
-                    ? 'border-slate-200 bg-white text-slate-500 hover:text-red-500 hover:border-red-200 hover:bg-red-50'
-                    : 'border-slate-100 bg-slate-50/50 text-slate-300 cursor-not-allowed'
-                    }`}>
-                  <Trash2 size={14} strokeWidth={3} /> <span className="uppercase tracking-widest">Qator o&apos;chirish</span>
+                <button
+                  onClick={removeRow}
+                  disabled={!canRemove || isSavingJournal}
+                  className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black transition-all shadow-sm active:scale-95 ${!canRemove || isSavingJournal
+                      ? 'border-slate-100 bg-slate-50/50 text-slate-300 cursor-not-allowed'
+                      : 'border-slate-200 bg-white text-slate-500 hover:text-red-500 hover:border-red-200 hover:bg-red-50'
+                    }`}
+                >
+                  <Trash2 size={14} strokeWidth={3} />
+                  <span className="uppercase tracking-widest">Qator o'chirish</span>
                 </button>
               )}
+
 
             </div>
           )

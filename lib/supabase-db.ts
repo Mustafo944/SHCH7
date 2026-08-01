@@ -92,6 +92,20 @@ export async function signIn(login: string, password: string): Promise<User | nu
   return user;
 }
 
+export async function signInWithPasskeyFunc(): Promise<User | null> {
+  const { data: authData, error: authError } = await supabase.auth.signInWithPasskey();
+
+  if (authError || !authData?.user) return null;
+
+  const user = await getUserProfileById(authData.user.id);
+
+  if (user && typeof document !== 'undefined') {
+    safeStorage.setItem('user-profile', JSON.stringify(user));
+  }
+
+  return user;
+}
+
 async function getUserProfileById(userId: string): Promise<User | null> {
   const { data: profile } = await supabase
     .from('users')

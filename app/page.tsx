@@ -4,10 +4,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { signIn } from '@/lib/supabase-db'
+import { signIn, signInWithPasskeyFunc } from '@/lib/supabase-db'
 import { safeStorage } from '@/lib/utils/storage'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
-import { User, Eye, EyeOff, Lock, ArrowRight } from 'lucide-react'
+import { User, Eye, EyeOff, Lock, ArrowRight, Fingerprint } from 'lucide-react'
 
 function getRoleHome(role: string) {
   if (role === 'dispatcher') return '/dispatcher'
@@ -72,6 +72,24 @@ export default function LoginPage() {
     }
   }
 
+  async function handlePasskeyLogin() {
+    setLoading(true)
+    setError('')
+    try {
+      const user = await signInWithPasskeyFunc()
+      if (user) {
+        setNavigating(true)
+        router.push(getRoleHome(user.role))
+      } else {
+        setError("Barmoq izi (Passkey) topilmadi yoki xatolik")
+      }
+    } catch (err) {
+      setError("Passkey orqali ulanishda xatolik yuz berdi")
+    } finally {
+      setLoading(false)
+    }
+  }
+
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 p-4">
@@ -121,10 +139,10 @@ export default function LoginPage() {
           </div>
 
           {/* ─── O'NG TOMON: Login formasi ─── */}
-          <div className="w-full md:w-[55%] p-8 sm:p-10 md:p-12 flex flex-col justify-center">
+          <div className="w-full md:w-[55%] p-6 sm:p-10 md:p-12 flex flex-col justify-center">
             {/* Logo and title */}
-            <div className="mb-8 text-center sm:mb-10">
-              <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center sm:h-24 sm:w-24 drop-shadow-md">
+            <div className="mb-6 text-center sm:mb-10">
+              <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center sm:h-24 sm:w-24 drop-shadow-md">
                 <Image src="/uty-logo.png" alt="UTY" fill priority className="object-contain" />
               </div>
               <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900 sm:text-3xl">
@@ -136,7 +154,7 @@ export default function LoginPage() {
             </div>
 
             {/* Login form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Login input */}
               <div className="space-y-2">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
@@ -151,7 +169,7 @@ export default function LoginPage() {
                     required
                     value={login}
                     onChange={(e) => setLogin(e.target.value)}
-                    className="block w-full rounded-2xl border border-white/50 bg-white/50 backdrop-blur-md py-4 pl-12 pr-4 text-sm font-medium text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-blue-400 focus:bg-white/80 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                    className="block w-full rounded-2xl border border-white/50 bg-white/50 backdrop-blur-md py-3.5 pl-12 pr-4 text-sm font-medium text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-blue-400 focus:bg-white/80 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
                     placeholder="Loginni kiriting"
                   />
                 </div>
@@ -171,7 +189,7 @@ export default function LoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full rounded-2xl border border-white/50 bg-white/50 backdrop-blur-md py-4 pl-12 pr-12 text-sm font-medium text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-blue-400 focus:bg-white/80 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                    className="block w-full rounded-2xl border border-white/50 bg-white/50 backdrop-blur-md py-3.5 pl-12 pr-12 text-sm font-medium text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-blue-400 focus:bg-white/80 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
                     placeholder="Parolni kiriting"
                   />
                   <button
@@ -213,7 +231,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="relative flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-500 to-blue-500 px-6 py-4 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-700 hover:via-sky-600 hover:to-blue-600 hover:shadow-xl hover:shadow-blue-500/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                className="relative flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-500 to-blue-500 px-6 py-3.5 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-700 hover:via-sky-600 hover:to-blue-600 hover:shadow-xl hover:shadow-blue-500/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? (
                   <>
@@ -227,10 +245,27 @@ export default function LoginPage() {
                   </>
                 )}
               </button>
+              
+              <div className="relative flex items-center py-1">
+                <div className="flex-grow border-t border-slate-200"></div>
+                <span className="flex-shrink-0 mx-4 text-slate-400 text-[10px] font-bold uppercase">yoki</span>
+                <div className="flex-grow border-t border-slate-200"></div>
+              </div>
+
+              {/* Passkey login button */}
+              <button
+                type="button"
+                onClick={handlePasskeyLogin}
+                disabled={loading}
+                className="relative flex w-full items-center justify-center gap-2 rounded-2xl bg-white border-2 border-slate-200 px-6 py-2.5 text-xs font-black uppercase tracking-widest text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-blue-300 hover:text-blue-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 group"
+              >
+                <Fingerprint size={18} className="text-slate-400 group-hover:text-blue-500 transition-colors" strokeWidth={2} />
+                <span>Barmoq izi orqali kirish</span>
+              </button>
             </form>
 
             {/* Footer text */}
-            <p className="mt-8 text-center text-xs text-slate-400">
+            <p className="mt-4 sm:mt-6 text-center text-[10px] text-slate-400 font-medium">
               © 2026 SHCH Buxoro. Barcha huquqlar himoyalangan.
             </p>
           </div>

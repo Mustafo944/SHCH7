@@ -19,6 +19,16 @@ const AVAILABLE_ROLES = [
 
 export function ApprovalChainModal({ initialChain, isEdit, creatorRole, onCancel, onSave }: ApprovalChainModalProps) {
   const [chain, setChain] = useState<string[]>(initialChain || [])
+  const [isSaving, setIsSaving] = useState(false)
+
+  const handleSave = () => {
+    setIsSaving(true)
+    // Brauzerga loading spinnerni chizishga ulgurishi uchun kichkina pauza beramiz.
+    // Bu main thread bloklanishidan oldin tugma bosilganini ko'rsatadi va "qotish" hissini yo'q qiladi.
+    setTimeout(() => {
+      onSave(chain)
+    }, 15)
+  }
 
   const toggleRole = (roleId: string) => {
     if (chain.includes(roleId)) {
@@ -58,7 +68,7 @@ export function ApprovalChainModal({ initialChain, isEdit, creatorRole, onCancel
               <button
                 key={r.id}
                 onClick={() => !isDisabled && toggleRole(r.id)}
-                disabled={isDisabled}
+                disabled={isDisabled || isSaving}
                 className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
                   isDisabled 
                     ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed' 
@@ -81,20 +91,22 @@ export function ApprovalChainModal({ initialChain, isEdit, creatorRole, onCancel
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm font-black text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
+            disabled={isSaving}
+            className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm font-black text-slate-600 hover:bg-slate-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Bekor qilish
           </button>
           <button
-            onClick={() => onSave(chain)}
-            disabled={creatorRole === 'bekat_navbatchisi' && chain.length === 0}
-            className={`flex-1 rounded-xl px-5 py-3.5 text-sm font-black text-white transition-all active:scale-95 ${
-              creatorRole === 'bekat_navbatchisi' && chain.length === 0
-                ? 'bg-slate-300 shadow-none cursor-not-allowed'
+            onClick={handleSave}
+            disabled={(creatorRole === 'bekat_navbatchisi' && chain.length === 0) || isSaving}
+            className={`flex-1 rounded-xl px-5 py-3.5 text-sm font-black text-white transition-all active:scale-95 flex items-center justify-center gap-2 ${
+              (creatorRole === 'bekat_navbatchisi' && chain.length === 0) || isSaving
+                ? 'bg-slate-400 shadow-none cursor-not-allowed'
                 : 'bg-purple-500 shadow-lg shadow-purple-500/20 hover:bg-purple-600'
             }`}
           >
-            {isEdit ? 'Saqlash' : 'Boshlash'}
+            {isSaving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+            {isEdit ? 'Saqlanmoqda...' : (isSaving ? 'Boshlanmoqda...' : 'Boshlash')}
           </button>
         </div>
       </div>

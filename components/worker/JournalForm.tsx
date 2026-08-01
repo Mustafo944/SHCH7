@@ -26,21 +26,27 @@ function TaskSelectionModal({
   modalType,
   onClose,
   onSelect,
-  taskMappings
+  taskMappings,
+  multiSelect,
+  onMultiSelect
 }: {
   modalOpen: boolean;
   modalType: '4-haftalik' | 'yillik';
   onClose: () => void;
-  onSelect: (task: ParsedTaskItem, text: string) => void;
+  onSelect?: (task: ParsedTaskItem, text: string) => void;
   taskMappings: TaskQRMapping[];
+  multiSelect?: boolean;
+  onMultiSelect?: (tasks: {task: ParsedTaskItem, text: string}[]) => void;
 }) {
   const [modalSearch, setModalSearch] = useState('');
   const [selectedBolim, setSelectedBolim] = useState<number | null>(null);
+  const [selectedTasks, setSelectedTasks] = useState<Set<ParsedTaskItem>>(new Set());
 
   useEffect(() => {
     if (modalOpen) {
       setModalSearch('');
       setSelectedBolim(null);
+      setSelectedTasks(new Set());
     }
   }, [modalOpen]);
 
@@ -95,40 +101,57 @@ function TaskSelectionModal({
                 .map((task: ParsedTaskItem, ti: number) => (
                   (() => {
                     const hasQR = taskMappings.some(m => m.taskNsh === taskDisplayKey(task.manba, task.raqam));
+                    const isSelected = selectedTasks.has(task);
                     return (
                       <button
                         key={ti}
                         onClick={() => {
-                          const text =
-                            `[${taskDisplayKey(task.manba, task.raqam)}] ${task.ish}\n` +
-                            `Davriyligi: ${task.davriylik}\n` +
-                            `Bajaruvchi: ${task.bajaruvchi}` +
-                            (task.jurnal ? `\nJurnal: ${task.jurnal}` : '');
-                          onSelect(task, text);
+                          if (multiSelect) {
+                            const newSet = new Set(selectedTasks);
+                            if (newSet.has(task)) {
+                              newSet.delete(task);
+                            } else {
+                              newSet.add(task);
+                            }
+                            setSelectedTasks(newSet);
+                          } else {
+                            const text =
+                              `[${taskDisplayKey(task.manba, task.raqam)}] ${task.ish}\n` +
+                              `Davriyligi: ${task.davriylik}\n` +
+                              `Bajaruvchi: ${task.bajaruvchi}` +
+                              (task.jurnal ? `\nJurnal: ${task.jurnal}` : '');
+                            if (onSelect) onSelect(task, text);
+                          }
                         }}
-                        className={`w-full rounded-xl border p-3 text-left backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-md hover:bg-purple-50/30 group ${hasQR ? 'border-purple-300 bg-purple-50/40' : 'border-slate-200/60 bg-white/80'
-                          }`}
+                        className={`w-full rounded-xl border p-3 text-left backdrop-blur-sm transition-all hover:border-purple-300 hover:shadow-md group flex items-start gap-3 ${isSelected ? 'border-purple-400 bg-purple-100/60' : hasQR ? 'border-purple-300 bg-purple-50/40' : 'border-slate-200/60 bg-white/80'}`}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                            <p className="text-[10px] text-purple-600"><span className="inline-block h-1.5 w-1.5 rounded-full bg-purple-400 mr-0.5" /> {task.bolim}</p>
-                            <p className="text-[10px] text-amber-600/70"><span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 mr-0.5" /> {task.manba} {task.raqam}</p>
-                            <p className="text-[10px] text-slate-400"><Clock size={10} className="inline mr-0.5" /> {task.davriylik}</p>
-                            <p className="text-[10px] text-slate-400"><span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-300 mr-0.5" /> {task.bajaruvchi}</p>
+                        {multiSelect && (
+                          <div className={`mt-1 shrink-0 flex h-5 w-5 items-center justify-center rounded border ${isSelected ? 'bg-purple-600 border-purple-600 text-white' : 'border-slate-300 bg-white'}`}>
+                            {isSelected && <CheckCircle2 size={14} />}
                           </div>
-                          {hasQR && (
-                            <div className="shrink-0 flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-1 rounded-lg text-[9px] font-black uppercase border border-purple-200">
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
-                              QR
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                              <p className="text-[10px] text-purple-600"><span className="inline-block h-1.5 w-1.5 rounded-full bg-purple-400 mr-0.5" /> {task.bolim}</p>
+                              <p className="text-[10px] text-amber-600/70"><span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 mr-0.5" /> {task.manba} {task.raqam}</p>
+                              <p className="text-[10px] text-slate-400"><Clock size={10} className="inline mr-0.5" /> {task.davriylik}</p>
+                              <p className="text-[10px] text-slate-400"><span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-300 mr-0.5" /> {task.bajaruvchi}</p>
+                            </div>
+                            {hasQR && (
+                              <div className="shrink-0 flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-1 rounded-lg text-[9px] font-black uppercase border border-purple-200">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
+                                QR
+                              </div>
+                            )}
+                          </div>
+                          <p className={`mt-2 whitespace-pre-wrap text-xs font-bold ${isSelected ? 'text-purple-900' : 'text-slate-700 group-hover:text-slate-900'}`}>{task.ish}</p>
+                          {task.jurnal && (
+                            <div className="mt-2 inline-block rounded-md bg-purple-50/80 px-2 py-1 text-[9px] uppercase tracking-widest text-purple-600 border border-purple-100/60">
+                              Jurnal: {task.jurnal}
                             </div>
                           )}
                         </div>
-                        <p className="mt-2 whitespace-pre-wrap text-xs font-bold text-slate-700 group-hover:text-slate-900">{task.ish}</p>
-                        {task.jurnal && (
-                          <div className="mt-2 inline-block rounded-md bg-purple-50/80 px-2 py-1 text-[9px] uppercase tracking-widest text-purple-600 border border-purple-100/60">
-                            Jurnal: {task.jurnal}
-                          </div>
-                        )}
                       </button>
                     );
                   })()
@@ -136,6 +159,24 @@ function TaskSelectionModal({
             </div>
           )}
         </div>
+        {multiSelect && selectedTasks.size > 0 && (
+          <div className="border-t border-slate-200/60 bg-white p-4">
+            <button
+              onClick={() => {
+                if (onMultiSelect) {
+                  const selections = Array.from(selectedTasks).map(task => ({
+                    task,
+                    text: `[${taskDisplayKey(task.manba, task.raqam)}] ${task.ish}\nDavriyligi: ${task.davriylik}\nBajaruvchi: ${task.bajaruvchi}${task.jurnal ? `\nJurnal: ${task.jurnal}` : ''}`
+                  }));
+                  onMultiSelect(selections);
+                }
+              }}
+              className="w-full rounded-2xl bg-purple-600 px-4 py-4 text-sm font-black uppercase tracking-widest text-white shadow-md shadow-purple-500/30 transition-all hover:bg-purple-700 active:scale-[0.98]"
+            >
+              Tanlanganlarni qo'shish ({selectedTasks.size} ta)
+            </button>
+          </div>
+        )}
       </div>
     </div>,
     document.body
@@ -161,8 +202,10 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
   const monthStr = `${new Date().getFullYear()}-${String(month + 1).padStart(2, '0')}`
   const draftReport = useMemo(() => reports.find(r => r.month === monthStr && r.stationId === stationId), [reports, monthStr, stationId])
   const canEditPlan = session.position === 'katta_elektromexanik'
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards')
+  const isPlanEmpty = useMemo(() => entries.every(e => !e.haftalikJadval && !e.yillikJadval && !e.yangiIshlar && !e.kmoBartaraf && !e.majburiyOzgarish), [entries])
+  const [viewMode, setViewMode] = useState<'table' | 'cards' | 'builder'>(isPlanEmpty && canEditPlan ? 'builder' : 'cards')
   const [selectedDay, setSelectedDay] = useState<number>(initialDay || new Date().getDate() || 1)
+  const [builderDayModal, setBuilderDayModal] = useState<number | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   // Serverda reja boshqa joyda (masalan boshqa tab/qurilmada) allaqachon o'zgargan bo'lsa —
   // ustidan yozib yubormaymiz, o'rniga foydalanuvchidan sahifani yangilashni so'raymiz.
@@ -184,7 +227,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
     const draft = draftReport
     if (draft) {
       if (!hasUnsavedChanges) {
-        setEntries(draft.entries)
+        setEntries([...draft.entries].sort((a, b) => parseInt(a.ragat) - parseInt(b.ragat)))
         setKnownSubmittedAt(draft.submittedAt)
       }
       setIsConfirmed(!!draft.confirmedAt)
@@ -601,7 +644,118 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
         >
           <List size={14} /> To&apos;liq jadval
         </button>
+        {canEditPlan && !isConfirmed && (
+          <button
+            onClick={() => setViewMode('builder')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'builder' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20' : 'text-slate-500 hover:bg-slate-100'}`}
+          >
+            <Calendar size={14} /> Tuzish
+          </button>
+        )}
       </div>
+
+      {viewMode === 'builder' && canEditPlan && !isConfirmed && (
+        <div className="mt-4 animate-fade-up">
+          {isPlanEmpty && (
+            <div className="mb-6 rounded-3xl border border-dashed border-purple-300 bg-purple-50/50 p-8 sm:p-12 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+                <Calendar size={32} />
+              </div>
+              <h3 className="text-xl font-black text-slate-800 mb-2">Oylik ish rejani tayyorlash</h3>
+              <p className="text-sm font-medium text-slate-500 max-w-lg mx-auto mb-6">
+                Ushbu oy uchun reja hali kiritilmagan. Quyida sanalar ro&apos;yxatidan foydalanib ishlarni tezkor qo&apos;shib chiqishingiz mumkin.
+              </p>
+            </div>
+          )}
+
+          <div className="flex justify-end mb-4 animate-fade-up" style={{animationDelay: '100ms'}}>
+             <button 
+                onClick={() => {
+                  setModalType('4-haftalik');
+                  setBuilderDayModal(-1);
+                  setModalOpen(true);
+                }}
+                className="flex items-center gap-2 rounded-xl bg-purple-100 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-purple-700 hover:bg-purple-200 transition-all shadow-sm active:scale-95 border border-purple-200/50"
+             >
+                <Plus size={14} /> Barcha kunlarga (Har kunlik ish) qo'shish
+             </button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: new Date(new Date().getFullYear(), month + 1, 0).getDate() }, (_, i) => i + 1).map(day => {
+              const dayTasks = entries.filter(e => parseInt(e.ragat) === day && (e.haftalikJadval || e.yillikJadval || e.yangiIshlar || e.kmoBartaraf || e.majburiyOzgarish));
+              return (
+                <div key={day} className="flex flex-col rounded-3xl border border-slate-200/60 bg-white/80 p-5 shadow-sm backdrop-blur-sm transition-all hover:border-purple-200 hover:shadow-md">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-100 to-fuchsia-100 text-xl font-black text-purple-700 shadow-inner">
+                        {day}
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">KUN</p>
+                        <p className="text-sm font-black text-slate-800">{day}-{MONTHS[month].toLowerCase()}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <button onClick={() => { setBuilderDayModal(day); setModalType('4-haftalik'); setModalOpen(true); }} className="flex items-center gap-1.5 rounded-lg bg-purple-50 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-widest text-purple-600 transition hover:bg-purple-100 active:scale-95">
+                        <Plus size={12} strokeWidth={3} /> 4-haftalik
+                      </button>
+                      <button onClick={() => { setBuilderDayModal(day); setModalType('yillik'); setModalOpen(true); }} className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-widest text-blue-600 transition hover:bg-blue-100 active:scale-95">
+                        <Plus size={12} strokeWidth={3} /> Yillik
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {dayTasks.length > 0 ? (
+                    <div className="space-y-2 mt-4">
+                      {dayTasks.map((task, idx) => (
+                        <div key={idx} className="group relative rounded-xl border border-slate-100 bg-slate-50/80 p-2.5 pr-8 transition-colors hover:border-slate-200">
+                           <span className="block text-[11px] font-bold text-slate-700 line-clamp-2 leading-relaxed">
+                             {task.haftalikJadval || task.yillikJadval || task.yangiIshlar || task.kmoBartaraf || task.majburiyOzgarish}
+                           </span>
+                           <button
+                             onClick={() => {
+                               // Builder rejimidan o'chirish: xuddi shu entryni topib tozalash yoki massivdan olib tashlash
+                               setEntries(prev => {
+                                 const newEntries = [...prev];
+                                 const targetIdx = newEntries.findIndex(e => e === task);
+                                 if (targetIdx !== -1) {
+                                   if (!task.doneHaftalik && !task.doneYillik && !task.doneYangi && !task.doneKmo && !task.doneMajburiy) {
+                                     newEntries.splice(targetIdx, 1);
+                                   } else {
+                                     newEntries[targetIdx] = { ...task, haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '' };
+                                   }
+                                 }
+                                 return newEntries;
+                               });
+                               setHasUnsavedChanges(true);
+                             }}
+                             className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-300 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+                           >
+                             <X size={14} strokeWidth={2.5} />
+                           </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-4 text-center">
+                       <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Vazifa yo&apos;q</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          
+          <div className="mt-8 flex justify-center">
+             <button
+                onClick={() => { setViewMode('table'); setFormMessage({type: 'success', text: 'Reja yaratildi! Yuborishni unutmang.'}); setTimeout(() => setFormMessage(null), 3000); }}
+                className="btn-gradient flex-1 max-w-sm py-4 text-sm font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg"
+             >
+                Yakunlash va Jadvalni ko&apos;rish
+             </button>
+          </div>
+        </div>
+      )}
 
       {viewMode === 'cards' && (
         <div className="mt-2">
@@ -819,6 +973,7 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
         modalType={modalType}
         onClose={() => setModalOpen(false)}
         taskMappings={stationTaskMappings}
+        multiSelect={viewMode === 'builder'}
         onSelect={(task, text) => {
           const newEntries = [...entries]
           const row = { ...newEntries[modalIdx] }
@@ -841,6 +996,47 @@ export function JournalForm({ session, stationId, stationName, month, reports, r
           setTimeout(() => {
             setModalOpen(false)
           }, 10)
+        }}
+        onMultiSelect={(selections) => {
+           if (builderDayModal === null) return;
+           
+           setEntries(prev => {
+              const newEntries = [...prev];
+              
+              selections.forEach(({task, text}) => {
+                 const daysInMonth = new Date(new Date().getFullYear(), month + 1, 0).getDate();
+                 const daysToAdd = builderDayModal === -1 ? Array.from({length: daysInMonth}, (_, i) => i + 1) : [builderDayModal];
+                 
+                 daysToAdd.forEach(day => {
+                   let targetIdx = newEntries.findIndex(e => parseInt(e.ragat) === day && !e.haftalikJadval && !e.yillikJadval && !e.yangiIshlar && !e.kmoBartaraf && !e.majburiyOzgarish);
+                   
+                   if (targetIdx === -1) {
+                      targetIdx = newEntries.length;
+                      newEntries.push({
+                        ragat: String(day), haftalikJadval: '', yillikJadval: '', yangiIshlar: '', kmoBartaraf: '', majburiyOzgarish: '', bajarildiShn: '', bajarildiImzo: '', adImzosi: ''
+                      });
+                   }
+                   
+                   const row = { ...newEntries[targetIdx] };
+                   if (modalType === '4-haftalik') {
+                      row.haftalikJadval = text;
+                      if (task.jurnal) row.jurnalHaftalik = task.jurnal;
+                   } else {
+                      row.yillikJadval = text;
+                      if (task.jurnal) row.jurnalYillik = task.jurnal;
+                   }
+                   
+                   newEntries[targetIdx] = row;
+                 });
+              });
+              
+              newEntries.sort((a, b) => parseInt(a.ragat) - parseInt(b.ragat));
+              return newEntries;
+           });
+           
+           setHasUnsavedChanges(true);
+           setModalOpen(false);
+           setBuilderDayModal(null);
         }}
       />
 

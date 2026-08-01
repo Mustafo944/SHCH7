@@ -3,7 +3,8 @@
 
 import Image from 'next/image'
 import type { LucideIcon } from 'lucide-react'
-import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LogOut, Fingerprint } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 export interface SidebarNavItem {
   key: string
@@ -36,6 +37,20 @@ export function AppSidebar({
   userRole,
   userPhotoUrl,
 }: AppSidebarProps) {
+
+  async function handleRegisterPasskey() {
+    try {
+      const { data, error } = await supabase.auth.registerPasskey();
+      if (error) {
+        alert("Barmoq izini ulashda xatolik: " + error.message);
+      } else {
+        alert("Barmoq izi muvaffaqiyatli ulandi! Endi loginga shu orqali kira olasiz.");
+      }
+    } catch (err: any) {
+      alert("Xatolik yuz berdi: " + err.message);
+    }
+  }
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -151,7 +166,6 @@ export function AppSidebar({
               src="/afrosiyob.webp"
               loading="lazy"
               decoding="async"
-              onError={(e) => (e.currentTarget.src = '/1.png')}
               alt="Afrosiyob"
               className="w-full h-full object-cover object-[80%_center] opacity-90"
             />
@@ -179,6 +193,15 @@ export function AppSidebar({
                 <p className="truncate text-[10.5px] font-bold text-slate-500 uppercase tracking-wide">{userRole}</p>
               </div>
             </div>
+            
+            {!isCollapsed && (
+              <button 
+                onClick={handleRegisterPasskey}
+                className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl bg-white/60 backdrop-blur-md border border-white/50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-blue-600 shadow-sm transition hover:bg-white/80 active:scale-95"
+              >
+                <Fingerprint size={14} /> Barmoq izini ulash
+              </button>
+            )}
           </div>
         </div>
       </aside>

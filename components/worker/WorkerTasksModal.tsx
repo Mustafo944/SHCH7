@@ -15,6 +15,7 @@ import {
 import { getTaskScans, insertTaskScan, autoFillShu2Entry, type TaskScan } from '@/lib/supabase-db'
 import { supabase } from '@/lib/supabase'
 import type { User, ReportEntry } from '@/types'
+import { getCurrentJournalMonth, isMonthInPast } from '@/components/journals/helpers'
 import { useToast } from '@/lib/hooks/useToast'
 import { useStationEquipments } from '@/lib/hooks/useStationEquipments'
 import dynamic from 'next/dynamic'
@@ -618,7 +619,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     }
   };
 
-  const handleJournalClose = (journalName: string, isDone = false, isInProgressFlag = false) => {
+  const handleJournalClose = (journalName: string, isDone = false, isInProgressFlag = false, shouldClose = true) => {
     if (isDone && selectedTaskType) {
       onJournalVisited?.(selectedTaskType, journalName)
       setLocalProgress(prev => {
@@ -630,14 +631,26 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     if (isInProgressFlag && selectedTaskType) {
       setLocalProgress(prev => ({ ...prev, [selectedTaskType]: true }))
     }
-    setActiveJournal(null)
+    
+    if (shouldClose) {
+      setActiveJournal(null)
+    }
   }
 
   // Journal portals
   if (activeJournal === 'du46') {
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-        <DU46JournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole={session.position || 'worker'} journalMonth={journalMonth} onClose={() => handleJournalClose('DU-46', false)} onAccepted={(isDone, isInProg) => handleJournalClose('DU-46', isDone, isInProg)} taskContext={{ reportId, entryIndex: _entryIndex, taskType: selectedTaskType!, taskText: currentTask?.text }} />
+        <DU46JournalView 
+          stationId={stationId} 
+          stationName={stationName} 
+          userName={session.fullName} 
+          userRole={session.position || 'worker'} 
+          journalMonth={isMonthInPast(journalMonth) ? getCurrentJournalMonth() : journalMonth} 
+          onClose={() => handleJournalClose('DU-46', false, false, true)} 
+          onAccepted={(isDone, isInProg) => handleJournalClose('DU-46', isDone, isInProg, isDone)} 
+          taskContext={{ reportId, entryIndex: _entryIndex, taskType: selectedTaskType!, taskText: currentTask?.text }} 
+        />
       </div>,
       document.body
     )

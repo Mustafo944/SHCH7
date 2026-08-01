@@ -21,20 +21,25 @@ export function useSessionGuard(expectedRole: Role | Role[]) {
     let cancelled = false
 
     async function init() {
+      // ⚠️ VAQTINCHALIK DIAGNOSTIKA — bug topilgach olib tashlanadi
+      console.log('[GUARD] init() ishga tushdi — sessiya tekshirilyapti')
       try {
         const user = await getCachedSession()
 
         if (cancelled) return
 
         if (!user) {
+          console.log('[GUARD] >>> SESSIYA YO\'Q — login sahifasiga yuborilyapti')
           await signOut()
           router.replace('/')
           return
         }
 
         const allowedRoles = Array.isArray(expectedRoleRef.current) ? expectedRoleRef.current : [expectedRoleRef.current]
+        console.log('[GUARD] rol =', user.role, '| ruxsat etilgan:', allowedRoles, '| mos:', allowedRoles.includes(user.role))
 
         if (!allowedRoles.includes(user.role)) {
+          console.log('[GUARD] >>> ROL MOS EMAS — router.replace() SAHIFANI QAYTA YUKLAYDI')
           // Rolga mos sahifaga yo'naltirish
           if (user.role === 'dispatcher') router.replace('/dispatcher')
           else if (user.role === 'bekat_boshlighi') router.replace('/bekat-boshlighi')

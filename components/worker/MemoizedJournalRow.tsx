@@ -12,6 +12,15 @@ export const LocalTextarea = ({ value, onChange, readOnly, className, rows, spel
 
   useEffect(() => {
     if (val !== value) {
+      // Bo'sh <-> bo'sh-emas o'tishi darhol yuboriladi — masalan "Boshlandi"
+      // tugmasi birinchi harf kiritilishi bilanoq chiqishi kerak. Qolgan
+      // har bir keyingi harf esa perfomans uchun debounce qilinadi.
+      const wasEmpty = !value?.trim()
+      const isEmpty = !val?.trim()
+      if (wasEmpty !== isEmpty) {
+        onChange(val)
+        return
+      }
       const timer = setTimeout(() => onChange(val), 500)
       return () => clearTimeout(timer)
     }
@@ -37,6 +46,13 @@ export const LocalInput = ({ value, onChange, readOnly, className, placeholder }
 
   useEffect(() => {
     if (val !== value) {
+      // Bo'sh <-> bo'sh-emas o'tishi darhol yuboriladi (LocalTextarea bilan bir xil sabab)
+      const wasEmpty = !value?.trim()
+      const isEmpty = !val?.trim()
+      if (wasEmpty !== isEmpty) {
+        onChange(val)
+        return
+      }
       const timer = setTimeout(() => onChange(val), 500)
       return () => clearTimeout(timer)
     }
