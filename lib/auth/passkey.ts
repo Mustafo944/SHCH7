@@ -208,3 +208,18 @@ export function classifyPasskeyError(err: unknown): PasskeyFailure {
 
   return 'unknown'
 }
+
+/**
+ * Tashxis uchun qisqa kod, masalan `NotReadableError/ERROR_PASSTHROUGH...`.
+ *
+ * Supabase brauzerning asl `DOMException`ini o'zining `WebAuthnError`iga
+ * o'raydi va asl nomni faqat `cause` ichida qoldiradi — shuning uchun ikkala
+ * qatlamni ham o'qiymiz. Mobil qurilmada DevTools ochib bo'lmagani uchun bu
+ * kod xabarning o'zida ko'rsatiladi: xatoning aniq turini bilmasdan
+ * sababni topib bo'lmaydi.
+ */
+export function passkeyErrorCode(err: unknown): string {
+  const e = err as { name?: string; code?: string; cause?: { name?: string } } | null
+  const parts = [e?.cause?.name, e?.name, e?.code].filter(Boolean)
+  return parts.length ? Array.from(new Set(parts)).join('/') : 'noname'
+}

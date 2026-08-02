@@ -2,7 +2,7 @@
 
 import { useCallback, useSyncExternalStore } from 'react'
 import { supabase } from '@/lib/supabase'
-import { classifyPasskeyError } from '@/lib/auth/passkey'
+import { classifyPasskeyError, passkeyErrorCode } from '@/lib/auth/passkey'
 import {
   getPasskeyFlagServerSnapshot,
   getPasskeyFlagSnapshot,
@@ -113,7 +113,10 @@ export function usePasskey(toast: ToastApi) {
       } else if (kind === 'unsupported') {
         showError("Bu qurilma yoki brauzer barmoq izini qo'llab-quvvatlamaydi.")
       } else if (kind === 'device') {
-        showError("Qurilmangizning parol menejeri xizmatida vaqtinchalik nosozlik. Google Play Services'ni yangilang yoki birozdan so'ng qayta urinib ko'ring.")
+        showError(
+          "Qurilmangizning parol menejeri kalitni saqlay olmadi. Google Play Services'ni yangilang, " +
+            `so'ng qayta urinib ko'ring. [${passkeyErrorCode(err)}]`
+        )
       } else {
         console.error('Passkey toggle error:', err)
         // Sababni ANIQ ko'rsatamiz — Supabase server xatolari (masalan,
@@ -123,7 +126,7 @@ export function usePasskey(toast: ToastApi) {
         // bo'lmasligi mumkin, shuning uchun xabarning o'zi kifoya qilishi
         // kerak.
         const detail = err instanceof Error && err.message ? `: ${err.message}` : ''
-        showError(`Barmoq izi sozlamasida xatolik yuz berdi${detail}`)
+        showError(`Barmoq izi sozlamasida xatolik yuz berdi${detail} [${passkeyErrorCode(err)}]`)
       }
     } finally {
       setInFlight(false)
