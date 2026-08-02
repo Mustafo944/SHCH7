@@ -5,7 +5,6 @@ import { getCreator, getNextApproverRole } from './journals/du46Approval';
 // Stations
 import { getStations, getStation } from './store';
 import { safeStorage } from './utils/storage';
-import { setPasskeyFlag } from './auth/login-hints';
 export { getStations, getStation };
 
 // DB SELECT konstantalari (takrorlanishni kamaytirish)
@@ -78,9 +77,9 @@ interface DbSchemaRow {
  * Login+parolni auth serverida tekshiradi va DARHOL qaytadi — profilni
  * (rol, ism va h.k.) BU YERDA KUTMAYDI. Ilgari `getUserProfileById()` shu
  * yerda kutilar edi, ya'ni navigatsiyadan oldin IKKITA ketma-ket tarmoq
- * so'rovi (auth + profil) bo'lardi. Endi passkey oqimi bilan bir xil
- * naqsh: chaqiruvchi rolni `accessToken`dan (JWT claim) darhol o'qiydi,
- * to'liq profil esa fonda (`cacheUserProfile`) yuklanadi.
+ * so'rovi (auth + profil) bo'lardi. Endi chaqiruvchi rolni `accessToken`dan
+ * (JWT claim) darhol o'qiydi, to'liq profil esa fonda (`cacheUserProfile`)
+ * yuklanadi.
  */
 export async function signIn(
   login: string,
@@ -101,7 +100,7 @@ export async function signIn(
 /**
  * Profilni yuklab, `user-profile` keshiga yozadi.
  *
- * Hech qachon throw QILMAYDI — passkey oqimi buni kutmasdan, sahifa
+ * Hech qachon throw QILMAYDI — chaqiruvchi buni kutmasdan, sahifa
  * navigatsiyasi bilan parallel ishga tushiradi (rol JWT claim'idan olinadi,
  * shuning uchun navigatsiya bu so'rovni kutib turishi shart emas).
  */
@@ -146,12 +145,6 @@ export async function signOut(): Promise<void> {
 
     // Supabase localStorage kalitlarini ham tozalash
     safeStorage.clearMatching('sb-');
-
-    // "Barmoq izi ulangan" belgisi qurilma darajasida saqlanadi (login-hints.ts),
-    // aniq xodimga bog'lanmagan. Chiqishda tozalanmasa, umumiy bekat kompyuterida
-    // keyingi (boshqa) xodim login sahifasini ochishi bilan avvalgi xodimning
-    // barmoq izi bilan kirish oynasi avtomatik chiqib qolar edi.
-    setPasskeyFlag(false);
   }
   await supabase.auth.signOut();
 }
