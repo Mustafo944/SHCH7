@@ -369,6 +369,39 @@ export function SHU2JournalView({
     }
   }
 
+  // Tezkor saqlash — FAQAT "Bajarildi" tasdiqlash uchun (foydalanuvchi so'roviga
+  // ko'ra). Odatiy `persistEntries` saqlashdan OLDIN serverni qayta o'qib,
+  // qator-ma-qator solishtiradi — bu ishonchli, lekin ikki marta tarmoq
+  // so'rovi talab qilgani uchun sekin. Tasdiqlashda bu oldindan o'qish
+  // bosqichi ATAYLAB olib tashlangan: qator odatda shu zahoti yaratilgan
+  // bo'ladi (masalan QR skanerdan keyin), shuning uchun ziddiyat ehtimoli
+  // juda past. Xavfsizlik butunlay yo'qolmaydi — server action'ning o'zi
+  // ham optimistic-locking va konflikt bo'lsa qator darajasidagi merge
+  // qiladi (`journal-actions.ts`), faqat CHAQIRUVCHI tomonidagi qo'shimcha
+  // himoya qatlami yo'q.
+  const persistEntriesFast = async (updated: SHU2Entry[], prevSnapshot: SHU2Entry[]) => {
+    const prevAllSnapshot = allEntries
+    setEntries(updated)
+
+    const otherMonths = allEntries.filter(e => e.journalMonth !== journalMonth)
+    const mergedWithMonth = trimTrailingEmpty(updated, isEmptyShu2Row).map(e => ({ ...stripSessionFlags(e), journalMonth }))
+    let newAllEntries = [...otherMonths, ...mergedWithMonth]
+    if (newAllEntries.length === 0) newAllEntries = [{ ...EMPTY_SHU2(), journalMonth }]
+
+    setAllEntries(newAllEntries)
+
+    try {
+      await upsertJournal(stationId, 'shu2', newAllEntries, userName)
+    } catch (err) {
+      console.error('❌ SHU-2 saqlash xatosi:', err)
+      setEntries(prevSnapshot)
+      setAllEntries(prevAllSnapshot)
+      setMsg(err instanceof Error ? err.message : 'Xatolik')
+      setTimeout(() => setMsg(null), 3000)
+      throw err
+    }
+  }
+
   const removeRow = () => {
     const idx = findLastVisibleIndex()
     if (idx === -1) {
@@ -408,11 +441,11 @@ export function SHU2JournalView({
     }
 
     try {
-      await persistEntries(updated, prev)
+      await persistEntriesFast(updated, prev)
       onAccepted?.(true, false)
       setMsg('Tasdiqlandi!')
       setTimeout(() => setMsg(null), 2000)
-    } catch { /* persistEntries allaqachon rollback va xabarni ko'rsatdi */ }
+    } catch { /* persistEntriesFast allaqachon rollback va xabarni ko'rsatdi */ }
   }
 
   const handleDownload = async () => {
