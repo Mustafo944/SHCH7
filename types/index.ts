@@ -319,6 +319,11 @@ export interface SHU2Entry {
   dispetcherQabulQildi?: boolean  // Dispetcher qabul qildi
   dispetcherImzo?: string     // Dispetcher ismi (qabul qilganda)
   journalMonth?: string
+  // Vazifa (ish rejasi) orqali to'ldirilgan qatorlarda — ishning ASL
+  // rejalashtirilgan kuni (masalan "04.08.2026"). `sana` esa doim jurnal
+  // TO'LDIRILGAN (haqiqiy) kunni ko'rsatadi. Ikkalasi farq qilsa (ish
+  // muddatidan OLDIN bajarilgan bo'lsa), UI buni apelsin rangda ko'rsatadi.
+  dueDate?: string
 }
 
 // Poezd radioaloqasi va ALSN ni tekshirish jurnali yozuvi

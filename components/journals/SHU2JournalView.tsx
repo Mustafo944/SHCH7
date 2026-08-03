@@ -130,7 +130,7 @@ export function SHU2JournalView({
   journalMonth?: string
   onClose: () => void
   onAccepted?: (isDone?: boolean, isInProgress?: boolean) => void
-  initialData?: { text: string; date: string }
+  initialData?: { text: string; date: string; dueDate?: string }
 }) {
   const [entries, setEntries] = useState<SHU2Entry[]>([])
   const [allEntries, setAllEntries] = useState<SHU2Entry[]>([])
@@ -218,6 +218,12 @@ export function SHU2JournalView({
   // Apply initialData if present
   useEffect(() => {
     if (initialData && !initialDataApplied && !loading) {
+      // Ish muddatidan OLDIN bajarilayotgan bo'lsa (`dueDate` bugungi
+      // sanadan farq qilsa), qatorga saqlab qo'yamiz — "Bajarildi" tugmasi
+      // tagida apelsin rangda ko'rsatish uchun.
+      const dueDate = initialData.dueDate && initialData.dueDate !== initialData.date
+        ? initialData.dueDate
+        : undefined
       const firstEmptyIdx = entries.findIndex(e => !e.sana && !e.yozuv && !e.tasdiqlandi && !e.yuborildi)
       if (firstEmptyIdx !== -1) {
         const newEntries = [...entries]
@@ -225,6 +231,7 @@ export function SHU2JournalView({
           ...newEntries[firstEmptyIdx],
           sana: initialData.date,
           yozuv: initialData.text,
+          dueDate,
         }
         setEntries(newEntries)
       } else {
@@ -232,7 +239,8 @@ export function SHU2JournalView({
           ...EMPTY_SHU2(),
           nomber: String(entries.length + 1),
           sana: initialData.date,
-          yozuv: initialData.text
+          yozuv: initialData.text,
+          dueDate,
         }
         setEntries([...entries, newRow])
       }
@@ -718,6 +726,13 @@ export function SHU2JournalView({
                           >
                             Bajarildi
                           </button>
+                        )}
+                        {/* Ish muddatidan OLDIN bajarilgan bo'lsa — asl bajarilishi
+                            kerak bo'lgan sana apelsin rangda ko'rsatiladi. */}
+                        {!dispHidesRow && e.dueDate && (
+                          <div className="flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-2 py-1 text-[9px] font-bold text-orange-600 whitespace-nowrap">
+                            {e.dueDate} kuni bajarilishi kerak edi
+                          </div>
                         )}
                       </div>
                     </td>

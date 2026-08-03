@@ -617,6 +617,25 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     }
   };
 
+  // Jurnal TO'LDIRILAYOTGAN (bugungi, haqiqiy) sana — SHU-2 ning 1-ustuniga
+  // shu yoziladi, ishning o'zi qaysi kunga tegishli ekanidan qat'i nazar.
+  const getTodayFormatted = (): string => {
+    const todayDate = new Date()
+    return `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`
+  }
+
+  // Ishning O'ZI qaysi kunga rejalashtirilgan (`entry.ragat`). Bu 1-ustunga
+  // YOZILMAYDI — faqat ish muddatidan OLDIN bajarilgan holatni SHU2JournalView
+  // "Bajarildi" tugmasi tagida apelsin rangda ko'rsatishi uchun uzatiladi.
+  const getTaskDueDateFormatted = (): string => {
+    const ragatNum = parseInt(entry.ragat || '', 10)
+    if (!isNaN(ragatNum) && journalMonth?.includes('-')) {
+      const [yyyy, mm] = journalMonth.split('-')
+      return `${String(ragatNum).padStart(2, '0')}.${mm}.${yyyy}`
+    }
+    return getTodayFormatted()
+  }
+
   // "Yo'q" — kamchilik topilmadi: avvalgidek avtomatik to'ldirilib, darhol tasdiqlanadi.
   // Oyna SAQLASH tugaguncha OCHIQ qoladi (spinner bilan) — aks holda oyna
   // darhol yopilib, natija (tarmoq so'rovi tugaguncha) bir necha soniya hech
@@ -625,10 +644,10 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     if (!selectedTaskType || isAutoFillingShu2) return;
     setIsAutoFillingShu2(true);
     try {
-      const todayDate = new Date();
-      const dateFormatted = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`;
+      const dateFormatted = getTodayFormatted();
+      const dueDateFormatted = getTaskDueDateFormatted();
       const firstLine = currentTask?.text.split('\n')[0] || '';
-      await autoFillShu2Entry(stationId, journalMonth, firstLine, dateFormatted, session?.fullName || 'Ishchi');
+      await autoFillShu2Entry(stationId, journalMonth, firstLine, dateFormatted, session?.fullName || 'Ishchi', dueDateFormatted);
       onJournalVisited?.(selectedTaskType, 'SHU-2');
       toast.success("SHU-2 jurnali avtomatik to'ldirildi");
     } catch (autoErr) {
@@ -696,15 +715,15 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     )
   }
   if (activeJournal === 'shu2') {
-    const todayDate = new Date()
-    const dateFormatted = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`
+    const dateFormatted = getTodayFormatted()
+    const dueDateFormatted = getTaskDueDateFormatted()
     const firstLine = currentTask?.text.split('\n')[0] || ''
     // "Kamchilik topildi" (Ha) yo'lida 2-ustun ATAYLAB bo'sh qoldiriladi —
     // ishchi topilgan kamchilikni o'zi yozishi kerak, vazifa matni emas.
     const initialText = shu2IssueMode ? '' : firstLine
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-        <SHU2JournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" journalMonth={journalMonth} onClose={() => handleJournalClose('SHU-2', false)} onAccepted={() => handleJournalClose('SHU-2', true)} initialData={{ text: initialText, date: dateFormatted }} />
+        <SHU2JournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" journalMonth={journalMonth} onClose={() => handleJournalClose('SHU-2', false)} onAccepted={() => handleJournalClose('SHU-2', true)} initialData={{ text: initialText, date: dateFormatted, dueDate: dueDateFormatted }} />
       </div>,
       document.body
     )

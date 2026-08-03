@@ -1275,7 +1275,8 @@ export async function autoFillShu2Entry(
   journalMonth: string,
   taskText: string,
   dateFormatted: string,
-  workerName: string
+  workerName: string,
+  dueDateFormatted?: string
 ): Promise<void> {
   const journal = await getJournal(stationId, 'shu2');
   const allEntries = ((journal?.entries as SHU2Entry[]) || []);
@@ -1297,6 +1298,9 @@ export async function autoFillShu2Entry(
     yuborildi: true,
     dispetcherQabulQildi: true,
     journalMonth,
+    // Ish muddatidan oldin bajarilgan bo'lsa, SHU2JournalView shu sanani
+    // "Bajarildi" tugmasi tagida apelsin rangda ko'rsatadi.
+    ...(dueDateFormatted && dueDateFormatted !== dateFormatted ? { dueDate: dueDateFormatted } : {}),
   };
 
   const updatedMonthEntries = [...monthEntries];
