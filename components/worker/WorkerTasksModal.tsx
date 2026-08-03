@@ -388,6 +388,10 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   const [localProgress, setLocalProgress] = useState<Record<string, boolean>>({})
   const [dbScans, setDbScans] = useState<TaskScan[]>([])
   const [isScanningDb, setIsScanningDb] = useState(false)
+  // Barcha qurilmalar skanerlangandan keyin: "Biron kamchilik aniqlandimi?"
+  // so'rovi va "Ha" javobida SHU-2 ni bo'sh 2-ustun bilan ochish bayrog'i.
+  const [showDeficiencyPrompt, setShowDeficiencyPrompt] = useState(false)
+  const [shu2IssueMode, setShu2IssueMode] = useState(false)
   const toast = useToast()
 
   // Umumiy SWR keshi. `preloadedStationEq` propi olib tashlandi — JournalForm
@@ -589,22 +593,14 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
       if (onScanProgress) onScanProgress(newScansArray, selectedTaskType);
 
       // Oxirgi qurilma skaner qilindi — agar SHU-2 kerak bo'lsa-yu, ishchi hali
-      // uni qo'lda to'ldirmagan bo'lsa, tizim o'zi to'ldirib tasdiqlaydi.
+      // uni qo'lda to'ldirmagan bo'lsa, avval "Biron kamchilik aniqlandimi?"
+      // deb so'raymiz (avtomatik tasdiqlashdan OLDIN).
       if (
         updatedDbScans.length >= targetScans &&
         supportedRequired.includes('SHU-2') &&
         !visitedJournals.has('SHU-2')
       ) {
-        try {
-          const todayDate = new Date();
-          const dateFormatted = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`;
-          const firstLine = currentTask?.text.split('\n')[0] || '';
-          await autoFillShu2Entry(stationId, journalMonth, firstLine, dateFormatted, session?.fullName || 'Ishchi');
-          onJournalVisited?.(selectedTaskType, 'SHU-2');
-          toast.success("SHU-2 jurnali avtomatik to'ldirildi");
-        } catch (autoErr) {
-          console.error('SHU-2 auto-fill error:', autoErr);
-        }
+        setShowDeficiencyPrompt(true);
       }
 
     } catch (err: any) {
@@ -619,6 +615,34 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     }
   };
 
+  // "Yo'q" — kamchilik topilmadi: avvalgidek avtomatik to'ldirilib, darhol tasdiqlanadi.
+  const handleNoDeficiency = async () => {
+    setShowDeficiencyPrompt(false);
+    if (!selectedTaskType) return;
+    try {
+      const todayDate = new Date();
+      const dateFormatted = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`;
+      const firstLine = currentTask?.text.split('\n')[0] || '';
+      await autoFillShu2Entry(stationId, journalMonth, firstLine, dateFormatted, session?.fullName || 'Ishchi');
+      onJournalVisited?.(selectedTaskType, 'SHU-2');
+      toast.success("SHU-2 jurnali avtomatik to'ldirildi");
+    } catch (autoErr) {
+      console.error('SHU-2 auto-fill error:', autoErr);
+      toast.error("SHU-2 jurnalini avtomatik to'ldirishda xatolik");
+    }
+  };
+
+  // "Ha" — kamchilik topildi: SHU-2 ochiladi, 1-ustun (sana) avtomatik
+  // to'ldiriladi, 2-ustun esa BO'SH qoladi — ishchi topilgan kamchilikni
+  // o'zi yozadi. 3-ustun ("Bajarildi") 2-ustun to'ldirilgunga qadar yopiq
+  // turadi (SHU2JournalView'da allaqachon shunday: tugma faqat `yozuv`
+  // to'ldirilganda chiqadi).
+  const handleHasDeficiency = () => {
+    setShowDeficiencyPrompt(false);
+    setShu2IssueMode(true);
+    setActiveJournal('shu2');
+  };
+
   const handleJournalClose = (journalName: string, isDone = false, isInProgressFlag = false, shouldClose = true) => {
     if (isDone && selectedTaskType) {
       onJournalVisited?.(selectedTaskType, journalName)
@@ -631,9 +655,10 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     if (isInProgressFlag && selectedTaskType) {
       setLocalProgress(prev => ({ ...prev, [selectedTaskType]: true }))
     }
-    
+
     if (shouldClose) {
       setActiveJournal(null)
+      setShu2IssueMode(false)
     }
   }
 
@@ -659,9 +684,12 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     const todayDate = new Date()
     const dateFormatted = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`
     const firstLine = currentTask?.text.split('\n')[0] || ''
+    // "Kamchilik topildi" (Ha) yo'lida 2-ustun ATAYLAB bo'sh qoldiriladi —
+    // ishchi topilgan kamchilikni o'zi yozishi kerak, vazifa matni emas.
+    const initialText = shu2IssueMode ? '' : firstLine
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-        <SHU2JournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" journalMonth={journalMonth} onClose={() => handleJournalClose('SHU-2', false)} onAccepted={() => handleJournalClose('SHU-2', true)} initialData={{ text: firstLine, date: dateFormatted }} />
+        <SHU2JournalView stationId={stationId} stationName={stationName} userName={session.fullName} userRole="worker" journalMonth={journalMonth} onClose={() => handleJournalClose('SHU-2', false)} onAccepted={() => handleJournalClose('SHU-2', true)} initialData={{ text: initialText, date: dateFormatted }} />
       </div>,
       document.body
     )
@@ -752,7 +780,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                   <div key={name}>
                     {showAutoFillHint && (
                       <p className="mb-1 px-1 text-[10px] font-bold text-purple-500 leading-snug">
-                        💡 Barcha qurilmalarni skaner qilsangiz, SHU-2 jurnali avtomatik to'ldiriladi.
+                        💡 Barcha qurilmalarni skaner qilsangiz, kamchilik bor-yo'qligi so'raladi va SHU-2 jurnali shunga qarab to'ldiriladi.
                       </p>
                     )}
                     <button
@@ -984,6 +1012,34 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
           existingScans={currentScans}
           title={`${specificScanItem.name} ni skanerlang`}
         />
+      )}
+
+      {showDeficiencyPrompt && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.72)', padding: '16px' }}>
+          <div className="w-full max-w-sm rounded-3xl bg-white shadow-2xl animate-scale-in overflow-hidden">
+            <div className="flex flex-col items-center gap-3 px-6 pt-7 pb-2 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
+                <AlertTriangle size={26} />
+              </div>
+              <h3 className="text-lg font-black text-slate-900 tracking-tight">Barcha qurilmalar skanerlandi</h3>
+              <p className="text-sm font-semibold text-slate-500 leading-relaxed">Biron kamchilik aniqlandimi?</p>
+            </div>
+            <div className="flex gap-3 px-6 pt-4 pb-6">
+              <button
+                onClick={handleNoDeficiency}
+                className="flex-1 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black uppercase tracking-wide text-emerald-600 transition-all hover:bg-emerald-100 active:scale-95"
+              >
+                Yo&apos;q
+              </button>
+              <button
+                onClick={handleHasDeficiency}
+                className="flex-1 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-black uppercase tracking-wide text-white shadow-md shadow-amber-500/25 transition-all hover:shadow-lg active:scale-95"
+              >
+                Ha
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>,
     document.body
