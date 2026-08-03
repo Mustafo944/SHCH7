@@ -1283,7 +1283,17 @@ export async function autoFillShu2Entry(
   const monthEntries = allEntries.filter(e => e.journalMonth === journalMonth);
   const otherMonths = allEntries.filter(e => e.journalMonth !== journalMonth);
 
-  const alreadyExists = monthEntries.some(e => e.sana === dateFormatted && e.yozuv === taskText);
+  // MUHIM: faqat `sana` + `yozuv` bo'yicha solishtirish YETARLI EMAS. `sana`
+  // endi doim BUGUNGI (haqiqiy) kunni ko'rsatadi — agar bir nechta kunga
+  // (masalan 4-, 5-, 6-avgust) tegishli BIR XIL takrorlanuvchi ish BIR XIL
+  // kunda (bugun) bajarilsa, ularning barchasida `sana` va `yozuv` bir xil
+  // chiqib, bu tekshiruv ularni "bitta yozuv" deb xato hisoblab, faqat
+  // birinchisini saqlab qolar, qolganlarini butunlay tashlab yuborardi.
+  // Shuning uchun `dueDate` (ishning ASL rejalashtirilgan kuni) ham
+  // solishtiriladi — shu orqali har bir kunga alohida qator yaratiladi.
+  const alreadyExists = monthEntries.some(
+    e => e.sana === dateFormatted && e.yozuv === taskText && (e.dueDate || null) === (dueDateFormatted || null)
+  );
   if (alreadyExists) return;
 
   const emptyIndex = monthEntries.findIndex(e => !e.sana && !e.yozuv && !e.tasdiqlandi && !e.yuborildi);
