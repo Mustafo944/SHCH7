@@ -10,7 +10,8 @@ import {
   AlertTriangle,
   FileText,
   QrCode,
-  ClipboardCheck
+  ClipboardCheck,
+  Loader2
 } from 'lucide-react'
 import { getTaskScans, insertTaskScan, autoFillShu2Entry, type TaskScan } from '@/lib/supabase-db'
 import { supabase } from '@/lib/supabase'
@@ -392,6 +393,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   // so'rovi va "Ha" javobida SHU-2 ni bo'sh 2-ustun bilan ochish bayrog'i.
   const [showDeficiencyPrompt, setShowDeficiencyPrompt] = useState(false)
   const [shu2IssueMode, setShu2IssueMode] = useState(false)
+  const [isAutoFillingShu2, setIsAutoFillingShu2] = useState(false)
   const toast = useToast()
 
   // Umumiy SWR keshi. `preloadedStationEq` propi olib tashlandi — JournalForm
@@ -616,9 +618,12 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   };
 
   // "Yo'q" — kamchilik topilmadi: avvalgidek avtomatik to'ldirilib, darhol tasdiqlanadi.
+  // Oyna SAQLASH tugaguncha OCHIQ qoladi (spinner bilan) — aks holda oyna
+  // darhol yopilib, natija (tarmoq so'rovi tugaguncha) bir necha soniya hech
+  // narsa ko'rinmasdan "osilib qolgandek" tuyular edi.
   const handleNoDeficiency = async () => {
-    setShowDeficiencyPrompt(false);
-    if (!selectedTaskType) return;
+    if (!selectedTaskType || isAutoFillingShu2) return;
+    setIsAutoFillingShu2(true);
     try {
       const todayDate = new Date();
       const dateFormatted = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`;
@@ -629,6 +634,9 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     } catch (autoErr) {
       console.error('SHU-2 auto-fill error:', autoErr);
       toast.error("SHU-2 jurnalini avtomatik to'ldirishda xatolik");
+    } finally {
+      setIsAutoFillingShu2(false);
+      setShowDeficiencyPrompt(false);
     }
   };
 
@@ -638,6 +646,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   // turadi (SHU2JournalView'da allaqachon shunday: tugma faqat `yozuv`
   // to'ldirilganda chiqadi).
   const handleHasDeficiency = () => {
+    if (isAutoFillingShu2) return;
     setShowDeficiencyPrompt(false);
     setShu2IssueMode(true);
     setActiveJournal('shu2');
@@ -1022,18 +1031,22 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
                 <AlertTriangle size={26} />
               </div>
               <h3 className="text-lg font-black text-slate-900 tracking-tight">Barcha qurilmalar skanerlandi</h3>
-              <p className="text-sm font-semibold text-slate-500 leading-relaxed">Biron kamchilik aniqlandimi?</p>
+              <p className="text-sm font-semibold text-slate-500 leading-relaxed">
+                {isAutoFillingShu2 ? 'SHU-2 jurnaliga yozilmoqda...' : 'Biron kamchilik aniqlandimi?'}
+              </p>
             </div>
             <div className="flex gap-3 px-6 pt-4 pb-6">
               <button
                 onClick={handleNoDeficiency}
-                className="flex-1 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black uppercase tracking-wide text-emerald-600 transition-all hover:bg-emerald-100 active:scale-95"
+                disabled={isAutoFillingShu2}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black uppercase tracking-wide text-emerald-600 transition-all hover:bg-emerald-100 active:scale-95 disabled:opacity-60 disabled:active:scale-100"
               >
-                Yo&apos;q
+                {isAutoFillingShu2 ? <Loader2 size={16} className="animate-spin" /> : "Yo'q"}
               </button>
               <button
                 onClick={handleHasDeficiency}
-                className="flex-1 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-black uppercase tracking-wide text-white shadow-md shadow-amber-500/25 transition-all hover:shadow-lg active:scale-95"
+                disabled={isAutoFillingShu2}
+                className="flex-1 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-black uppercase tracking-wide text-white shadow-md shadow-amber-500/25 transition-all hover:shadow-lg active:scale-95 disabled:opacity-60 disabled:active:scale-100"
               >
                 Ha
               </button>
