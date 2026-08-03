@@ -322,27 +322,11 @@ const ScanHistoryCalendar = memo(function ScanHistoryCalendar({
 // ─── DebouncedInput: local state bilan ishlaydi, blur/Enter da parent'ga uzatadi ─
 
 const DebouncedInput = memo(function DebouncedInput({ value, onChange, placeholder, className }: { value: string; onChange: (val: string) => void; placeholder: string; className: string }) {
-  const [localVal, setLocalVal] = useState(value);
-
-  useEffect(() => {
-    setLocalVal(value);
-  }, [value]);
-
-  const handleBlur = () => {
-    if (localVal !== value) onChange(localVal);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') onChange(localVal);
-  };
-
   return (
     <input
       type="text"
-      value={localVal}
-      onChange={(e) => setLocalVal(e.target.value)}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       className={className}
     />
@@ -836,10 +820,8 @@ export function StationEquipmentsView({ stationId, stationName, canEdit, isDispa
   const handleCancelEditing = useCallback(() => {
     setIsEditing(false);
     setIsEditingMappings(false);
-    if (swrData) {
-      setCategories(swrData.categories || []);
-      setTaskMappings(normalizeTaskMappings(swrData.taskMappings));
-    }
+    setCategories(swrData?.categories || []);
+    setTaskMappings(normalizeTaskMappings(swrData?.taskMappings));
   }, [swrData]);
 
   // ─── Bekat pasporti (bo'lim → kichik bo'lim → qurilma) tahrirlash handlerlari ──
@@ -909,9 +891,7 @@ export function StationEquipmentsView({ stationId, stationName, canEdit, isDispa
 
   const handleCancelEditingPassport = useCallback(() => {
     setIsEditingPassport(false);
-    if (swrData) {
-      setPassport(swrData.passport || []);
-    }
+    setPassport(swrData?.passport || []);
   }, [swrData]);
 
   // ─── PDF yuklab olish ─────────────────────────────────────────────
@@ -1312,6 +1292,9 @@ export function StationEquipmentsView({ stationId, stationName, canEdit, isDispa
 
               {activeTab === 'equipments' && (
                 <>
+                  {categories.length === 0 && !isEditing && (
+                    <EmptyHint icon={Server} text="Hali qurilmalar qo'shilmagan. Quyidagi O'zgartirish tugmasini bosib toifa va qurilmalarni kiriting." />
+                  )}
                   {/* TOIFALAR — har biri alohida memoized komponent */}
                   {categories.map((category) => (
                     <CategoryCard
@@ -1587,7 +1570,7 @@ export function StationEquipmentsView({ stationId, stationName, canEdit, isDispa
               canEdit ? (
                 <button
                   onClick={() => setIsEditing(true)}
-                  disabled={!swrData}
+                  disabled={isLoading}
                   className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 text-white font-bold text-sm hover:from-purple-700 hover:to-violet-700 transition shadow-lg shadow-purple-500/25 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Edit3 size={18} /> O&apos;zgartirish
@@ -1598,7 +1581,7 @@ export function StationEquipmentsView({ stationId, stationName, canEdit, isDispa
             ) : activeTab === 'passport' ? (
               <button
                 onClick={() => setIsEditingPassport(true)}
-                disabled={!swrData}
+                disabled={isLoading}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 text-white font-bold text-sm hover:from-purple-700 hover:to-violet-700 transition shadow-lg shadow-purple-500/25 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Edit3 size={18} /> O&apos;zgartirish
@@ -1606,7 +1589,7 @@ export function StationEquipmentsView({ stationId, stationName, canEdit, isDispa
             ) : activeTab === 'tasks' ? (
               <button
                 onClick={() => setIsEditingMappings(true)}
-                disabled={!swrData}
+                disabled={isLoading}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 text-white font-bold text-sm hover:from-purple-700 hover:to-violet-700 transition shadow-lg shadow-purple-500/25 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Edit3 size={18} /> O&apos;zgartirish

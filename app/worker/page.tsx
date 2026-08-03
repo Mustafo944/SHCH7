@@ -1120,8 +1120,8 @@ export default function WorkerPage() {
               <StationEquipmentsView
                 stationId={activeStationId}
                 stationName={stationName}
-                canEdit={session?.role === 'katta_elektromexanik' || session?.position === 'katta_elektromexanik'}
-                canEditTaskMappings={session?.role === 'katta_elektromexanik' || session?.position === 'katta_elektromexanik'}
+                canEdit={session?.role === 'katta_elektromexanik' || (session?.position || '').toLowerCase().replace(/\s+/g, '_') === 'katta_elektromexanik'}
+                canEditTaskMappings={session?.role === 'katta_elektromexanik' || (session?.position || '').toLowerCase().replace(/\s+/g, '_') === 'katta_elektromexanik'}
                 userName={session?.fullName || 'Foydalanuvchi'}
               />
             ) : (
