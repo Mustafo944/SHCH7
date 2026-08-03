@@ -666,6 +666,12 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
     }
 
     if (shouldClose) {
+      // QR skaner orqali ("Ha, kamchilik topildi") ochilgan SHU-2 yopilganda,
+      // ishchi vazifaning umumiy ekraniga emas, aynan qayerdan kirgan bo'lsa
+      // o'sha joyga — qurilmalar ro'yxati (skaner) oynasiga qaytishi kerak.
+      if (journalName === 'SHU-2' && shu2IssueMode) {
+        setScannerListOpen(true)
+      }
       setActiveJournal(null)
       setShu2IssueMode(false)
     }
