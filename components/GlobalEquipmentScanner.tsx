@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { X, Clock, FileText, ChevronRight, Loader2, Download, Eye } from 'lucide-react'
+import { X, Clock, FileText, ChevronRight, Loader2 } from 'lucide-react'
 import { QRScannerModal } from './QRScannerModal'
 import { buildEquipmentQrValue } from '@/lib/utils/qr'
 import { getSchemasByStation, getStationTaskScans, type TaskScan } from '@/lib/supabase-db'
@@ -66,13 +66,14 @@ export function GlobalEquipmentScanner({ isOpen, onClose, stationId, stationName
   }, [isOpen])
 
   // Sxemalar va arxivni yuklash
-  const loadData = useCallback(async (equipmentId: string) => {
+  const loadData = useCallback(async (equipmentId: string, equipmentName: string) => {
     setLoadingSchemas(true)
     setLoadingHistory(true)
     try {
       const schemasData = await getSchemasByStation(stationId)
       // Faqat shu qurilmaga tegishli sxemalarni topamiz (schema_type da qurilma nomi yoki umumiy sxemalar)
-      setSchemas(schemasData)
+      const prefix = `[${equipmentName}] `
+      setSchemas(schemasData.filter(s => s.schemaType.startsWith(prefix) || !s.schemaType.startsWith('[')))
     } catch { /* */ } finally {
       setLoadingSchemas(false)
     }
@@ -92,7 +93,7 @@ export function GlobalEquipmentScanner({ isOpen, onClose, stationId, stationName
       setFoundEquipment(found)
       setScannerOpen(false)
       setActiveView('main')
-      loadData(found.item.id)
+      loadData(found.item.id, found.item.name)
     } else {
       // QR kod topilmadi — skanerni qaytadan ochadi
       setScannerOpen(false)
