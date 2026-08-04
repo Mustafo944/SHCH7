@@ -911,7 +911,8 @@ export async function uploadSchemaFile(
   uploadedBy: string
 ): Promise<StationSchema> {
   const fileExt = file.name.split('.').pop();
-  const filePath = `${stationId}/${Date.now()}_${schemaType}.${fileExt}`;
+  const safeType = schemaType.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const filePath = `${stationId}/${Date.now()}_${safeType}.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage
     .from('sxemalar')
