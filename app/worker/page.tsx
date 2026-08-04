@@ -61,7 +61,8 @@ import {
   Library,
   Server,
   ChevronRight,
-  X
+  X,
+  QrCode
 } from 'lucide-react'
 
 export default function WorkerPage() {
@@ -1169,6 +1170,30 @@ export default function WorkerPage() {
             {[
               { key: 'home', label: 'Asosiy', icon: Home, active: view === 'home' || view === 'selectStation', onClick: () => { setView('home'); setIsMoreMenuOpen(false); } },
               { key: 'reja', label: 'Ish reja', icon: FileText, active: ['selectMonth', 'viewReport', 'journal'].includes(view), onClick: () => { setView('selectMonth'); setIsMoreMenuOpen(false); } },
+            ].map(item => (
+              <button key={item.key} onClick={item.onClick} className={`flex flex-col items-center justify-center w-[76px] h-14 rounded-2xl transition-all active:scale-95 ${item.active ? 'text-purple-600' : 'text-slate-500 hover:text-slate-700'}`}>
+                <div className={`mb-1 p-1.5 rounded-xl ${item.active ? 'bg-purple-100/80 shadow-sm' : 'bg-white/30'}`}>
+                  <item.icon size={22} strokeWidth={item.active ? 2.5 : 2} />
+                </div>
+                <span className={`text-[10px] font-bold ${item.active ? 'text-purple-700' : 'text-slate-600'}`}>{item.label}</span>
+              </button>
+            ))}
+
+            {/* QR Skaner — markaziy ko'tarilgan tugma */}
+            <button
+              onClick={() => { /* TODO: global skaner ochish */ }}
+              className="relative flex flex-col items-center justify-center -mt-8 group"
+            >
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 blur-lg opacity-40 group-active:opacity-60 transition-opacity" />
+                <div className="relative flex items-center justify-center w-[60px] h-[60px] rounded-full bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-600 text-white shadow-xl shadow-purple-500/30 border-[3px] border-white transition-all group-active:scale-90">
+                  <QrCode size={28} strokeWidth={2.5} />
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-purple-700 mt-1">Skaner</span>
+            </button>
+
+            {[
               { key: 'jurnallar', label: 'Jurnallar', icon: BookOpen, active: ['journalSelect', 'journalMonthSelect', 'du46', 'shu2', 'boshqaJurnallar', 'alsn', 'yerlatgich', 'alsnKod', 'mpsFriksion', 'dgaNazorat'].includes(view), onClick: () => { setView('journalSelect'); setIsMoreMenuOpen(false); } },
             ].map(item => (
               <button key={item.key} onClick={item.onClick} className={`flex flex-col items-center justify-center w-[76px] h-14 rounded-2xl transition-all active:scale-95 ${item.active ? 'text-purple-600' : 'text-slate-500 hover:text-slate-700'}`}>
@@ -1182,7 +1207,7 @@ export default function WorkerPage() {
               <div className={`mb-1 p-1.5 rounded-xl ${isMoreMenuOpen ? 'bg-purple-100/80 shadow-sm' : 'bg-white/30'}`}>
                 <Menu size={22} strokeWidth={isMoreMenuOpen ? 2.5 : 2} />
               </div>
-              <span className={`text-[10px] font-bold ${isMoreMenuOpen ? 'text-purple-700' : 'text-slate-600'}`}>Ko'proq</span>
+              <span className={`text-[10px] font-bold ${isMoreMenuOpen ? 'text-purple-700' : 'text-slate-600'}`}>Ko&apos;proq</span>
             </button>
           </div>
         </div>
