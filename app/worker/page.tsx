@@ -46,6 +46,7 @@ import { LibraryView } from '@/components/library/LibraryView'
 const StationEquipmentsView = dynamic(() => import('@/components/StationEquipmentsView').then(mod => mod.StationEquipmentsView), { ssr: false, loading: () => <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-md"><div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-blue-500" /></div> })
 const RelayListModal = dynamic(() => import('@/components/worker/RelayListModal').then(mod => mod.RelayListModal), { ssr: false, loading: () => <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-md"><div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-amber-500" /></div> })
 const StationScheme = dynamic(() => import('@/components/worker/monosxema/StationScheme').then(mod => mod.StationScheme), { ssr: false })
+const GlobalEquipmentScanner = dynamic(() => import('@/components/GlobalEquipmentScanner').then(mod => mod.GlobalEquipmentScanner), { ssr: false })
 import {
   FileText,
   Map as MapIcon,
@@ -95,8 +96,10 @@ export default function WorkerPage() {
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false)
+  const [globalScannerOpen, setGlobalScannerOpen] = useState(false)
+  const { data: globalScannerEq } = useStationEquipments(globalScannerOpen ? activeStationId : null)
 
-  const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen || relayModalOpen || isMoreMenuOpen
+  const isSubViewActive = view !== 'home' || workerModal !== null || selectedJournalType !== null || isSignOutModalOpen || relayModalOpen || isMoreMenuOpen || globalScannerOpen
 
   const handleHardwareBack = useCallback(() => {
     if (isSignOutModalOpen) {
@@ -433,6 +436,7 @@ export default function WorkerPage() {
     { key: 'incidents', label: 'Baxtsiz hodisalar', icon: AlertTriangle, active: view === 'incidents', onClick: () => setView('incidents') },
     { key: 'kutubxona', label: 'Kutubxona', icon: Library, active: view === 'kutubxona', onClick: () => setView('kutubxona') },
     { key: 'qurilmalar', label: 'Bekat qurilmalari', icon: Server, active: view === 'qurilmalar', onClick: () => setView('qurilmalar') },
+    { key: 'scanner', label: 'Smart Skaner', icon: QrCode, active: globalScannerOpen, onClick: () => setGlobalScannerOpen(true) },
   ]
 
   return (
@@ -1181,7 +1185,7 @@ export default function WorkerPage() {
 
             {/* QR Skaner — markaziy ko'tarilgan tugma */}
             <button
-              onClick={() => { /* TODO: global skaner ochish */ }}
+              onClick={() => { setGlobalScannerOpen(true); setIsMoreMenuOpen(false); }}
               className="relative flex flex-col items-center justify-center -mt-8 group"
             >
               <div className="relative">
@@ -1296,6 +1300,15 @@ export default function WorkerPage() {
         </div>
       )}
       <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
+      {globalScannerOpen && activeStationId && (
+        <GlobalEquipmentScanner
+          isOpen={globalScannerOpen}
+          onClose={() => setGlobalScannerOpen(false)}
+          stationId={activeStationId}
+          stationName={stationName}
+          stationEquipments={globalScannerEq}
+        />
+      )}
     </div>
   )
 
