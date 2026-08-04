@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { X, Save, Edit3, Plus, Trash2, Printer, Download, AlertTriangle, Loader2, ArrowRightLeft, Target, ChevronLeft, ChevronRight, Clock, History, Calendar, User, QrCode, Server } from 'lucide-react';
-import { StationEquipments, EquipmentCategory, PassportSection, PassportDevice } from '@/types';
+import { StationEquipments, EquipmentCategory, PassportSection, PassportDevice, StationEquipmentItem } from '@/types';
 import { upsertStationEquipments, getStationTaskScans, type TaskScan } from '@/lib/supabase-db';
 import { useToast } from '@/lib/hooks/useToast';
 import { useStationEquipments } from '@/lib/hooks/useStationEquipments';
@@ -9,6 +9,7 @@ import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import { TORT_HAFTALIK_REJA_FLAT, YILLIK_REJA_FLAT, TORT_HAFTALIK_REJA, YILLIK_REJA, taskDisplayKey } from '@/lib/reja-data';
 import { TaskQRMapping } from '@/types';
 import { buildEquipmentQrValue } from '@/lib/utils/qr';
+import { EquipmentSchemaModal } from '@/components/EquipmentSchemaModal';
 
 // ─── Turlar va konstantalar ──────────────────────────────────────────
 
@@ -336,13 +337,13 @@ const DebouncedInput = memo(function DebouncedInput({ value, onChange, placehold
 // ─── Alohida qurilma elementlari (React.memo — faqat o'zi o'zgarganda qayta render) ─
 
 /** O'qish rejimidagi bitta qurilma badge'i */
-const EquipmentBadge = memo(function EquipmentBadge({ name, color }: { name: string; color: string }) {
+const EquipmentBadge = memo(function EquipmentBadge({ name, color, onClick }: { name: string; color: string; onClick?: () => void }) {
   const style = colorStyle(color);
   return (
-    <div className={`flex items-center gap-2.5 bg-gradient-to-br from-white to-purple-50/40 border border-purple-100/40 ${style.hoverBorder} px-4 py-2.5 rounded-xl transition-all cursor-default shadow-sm hover:shadow-md hover:shadow-purple-500/5`}>
+    <button onClick={onClick} className={`flex items-center gap-2.5 bg-gradient-to-br from-white to-purple-50/40 border border-purple-100/40 ${style.hoverBorder} px-4 py-2.5 rounded-xl transition-all shadow-sm hover:shadow-md hover:shadow-purple-500/10 active:scale-95 text-left`}>
       <div className={`w-2.5 h-2.5 rounded-full ${style.dot} ring-2 ring-offset-1 ring-current/20`} />
       <span className="font-bold text-slate-700">{name}</span>
-    </div>
+    </button>
   );
 });
 
@@ -374,6 +375,7 @@ interface CategoryCardProps {
   onRemoveItem: (categoryId: string, itemId: string) => void;
   onStartEditWithAdd: (categoryId: string) => void;
   onDeleteCategory: (categoryId: string) => void;
+  onItemClick: (item: StationEquipmentItem) => void;
 }
 
 const CategoryCard = memo(function CategoryCard({
@@ -385,6 +387,7 @@ const CategoryCard = memo(function CategoryCard({
   onRemoveItem,
   onStartEditWithAdd,
   onDeleteCategory,
+  onItemClick,
 }: CategoryCardProps) {
   const style = colorStyle(category.color);
   const items = category.items || [];
@@ -427,7 +430,7 @@ const CategoryCard = memo(function CategoryCard({
               onRemove={() => onRemoveItem(category.id, item.id)}
             />
           ) : (
-            <EquipmentBadge key={item.id} name={item.name} color={category.color} />
+            <EquipmentBadge key={item.id} name={item.name} color={category.color} onClick={() => onItemClick(item)} />
           )
         )}
       </div>
@@ -641,6 +644,8 @@ export function StationEquipmentsView({ stationId, stationName, canEdit, isDispa
   const [selectedPlanType, setSelectedPlanType] = useState<'tort' | 'yillik' | null>(null);
   const [selectedTaskNsh, setSelectedTaskNsh] = useState<string | null>(null);
   const [selectedBolim, setSelectedBolim] = useState<number | null>(null);
+
+  const [selectedSchemaEquipment, setSelectedSchemaEquipment] = useState<{ id: string, name: string } | null>(null);
 
   // QR chop etish — xuddi shu naqshdagi uch bosqichli navigatsiya: Toifa → Uskuna → bitta QR kod
   const [selectedPrintCategoryId, setSelectedPrintCategoryId] = useState<string | null>(null);
@@ -1307,6 +1312,7 @@ export function StationEquipmentsView({ stationId, stationName, canEdit, isDispa
                       onRemoveItem={removeItem}
                       onStartEditWithAdd={startEditWithAdd}
                       onDeleteCategory={requestDeleteCategory}
+                      onItemClick={(item) => setSelectedSchemaEquipment({ id: item.id, name: item.name })}
                     />
                   ))}
 
@@ -1651,6 +1657,17 @@ export function StationEquipmentsView({ stationId, stationName, canEdit, isDispa
             </div>
           </div>
         </div>
+      )}
+      {/* Sxema qo'shish modali */}
+      {selectedSchemaEquipment && (
+        <EquipmentSchemaModal
+          isOpen={!!selectedSchemaEquipment}
+          onClose={() => setSelectedSchemaEquipment(null)}
+          stationId={stationId}
+          equipmentName={selectedSchemaEquipment.name}
+          userName={userName}
+          canEdit={canEdit}
+        />
       )}
     </>
   );

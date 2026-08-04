@@ -436,7 +436,6 @@ export default function WorkerPage() {
     { key: 'incidents', label: 'Baxtsiz hodisalar', icon: AlertTriangle, active: view === 'incidents', onClick: () => setView('incidents') },
     { key: 'kutubxona', label: 'Kutubxona', icon: Library, active: view === 'kutubxona', onClick: () => setView('kutubxona') },
     { key: 'qurilmalar', label: 'Bekat qurilmalari', icon: Server, active: view === 'qurilmalar', onClick: () => setView('qurilmalar') },
-    { key: 'scanner', label: 'Smart Skaner', icon: QrCode, active: globalScannerOpen, onClick: () => setGlobalScannerOpen(true) },
   ]
 
   return (
