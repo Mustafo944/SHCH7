@@ -92,6 +92,10 @@ export function QRScannerModal({
   // Faol dvigatel: native BarcodeDetector yoki html5-qrcode fallback.
   // Native ishlamay qolsa runtime'da fallback'ga o'tamiz.
   const [engine, setEngine] = useState<'native' | 'fallback'>(() => hasBarcodeDetectorApi() ? 'native' : 'fallback');
+  
+  const [zoom, setZoom] = useState(1);
+  const [maxZoom, setMaxZoom] = useState(1);
+  const [zoomSupported, setZoomSupported] = useState(false);
 
   // ── Timer'larni markazlashgan tozalash ──
   // Modal yopilganda kutayotgan `setTimeout`lar bekor qilinishi SHART: aks holda
@@ -199,15 +203,31 @@ export function QRScannerModal({
     try {
       const track = streamRef.current?.getVideoTracks?.()[0];
       if (track) {
-        await track.applyConstraints({ advanced: [{ torch: next }] } as any);
+        await track.applyConstraints({ advanced: [{ torch: next, zoom }] } as any);
       } else if (html5Ref.current?.applyVideoConstraints) {
-        await html5Ref.current.applyVideoConstraints({ advanced: [{ torch: next }] } as any);
+        await html5Ref.current.applyVideoConstraints({ advanced: [{ torch: next, zoom }] } as any);
       } else {
         return;
       }
       setTorchOn(next);
     } catch { /* qurilma qo'llab-quvvatlamasa jim o'tamiz */ }
-  }, [torchOn]);
+  }, [torchOn, zoom]);
+
+  const toggleZoom = useCallback(async () => {
+    // 1x -> max(2, maxZoom) -> max(3, maxZoom) -> 1x
+    let nextZoom = zoom === 1 ? Math.min(2, maxZoom) : (zoom >= 2 && maxZoom >= 3 ? Math.min(3, maxZoom) : 1);
+    if (nextZoom === zoom || nextZoom < 1) nextZoom = 1;
+    
+    try {
+      const track = streamRef.current?.getVideoTracks?.()[0];
+      if (track) {
+        await track.applyConstraints({ advanced: [{ zoom: nextZoom, torch: torchOn }] } as any);
+      } else if (html5Ref.current?.applyVideoConstraints) {
+        await html5Ref.current.applyVideoConstraints({ advanced: [{ zoom: nextZoom, torch: torchOn }] } as any);
+      }
+      setZoom(nextZoom);
+    } catch { /* */ }
+  }, [zoom, maxZoom, torchOn]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -220,6 +240,8 @@ export function QRScannerModal({
     setIsLoading(true);
     setTorchOn(false);
     setTorchSupported(false);
+    setZoom(1);
+    setZoomSupported(false);
 
     // ——— Fallback: html5-qrcode o'zining optimizatsiyalangan kamera skaneri ———
     const startFallback = async () => {
@@ -238,7 +260,7 @@ export function QRScannerModal({
         html5Ref.current = decoder;
 
         await decoder.start(
-          { facingMode: 'environment' },
+          { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
           {
             fps: 15,
             qrbox: { width: 240, height: 240 },
@@ -251,10 +273,16 @@ export function QRScannerModal({
 
         if (!mountedRef.current) return;
 
-        // Fonar (torch) qo'llab-quvvatlanishini html5-qrcode orqali tekshiramiz
+        // Fonar va Zoom qo'llab-quvvatlanishini html5-qrcode orqali tekshiramiz
         try {
           const caps: any = decoder.getRunningTrackCapabilities?.();
-          if (caps && 'torch' in caps && caps.torch) setTorchSupported(true);
+          if (caps) {
+            if ('torch' in caps && caps.torch) setTorchSupported(true);
+            if ('zoom' in caps && caps.zoom && caps.zoom.max > 1) {
+              setZoomSupported(true);
+              setMaxZoom(caps.zoom.max);
+            }
+          }
         } catch { /* */ }
 
         setIsLoading(false);
@@ -274,8 +302,8 @@ export function QRScannerModal({
           stream = await navigator.mediaDevices.getUserMedia({
             video: {
               facingMode: { ideal: 'environment' },
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
               // Uzluksiz avtofokus — QR ni tez va aniq ushlaydi
               focusMode: 'continuous',
               advanced: [{ focusMode: 'continuous' }]
@@ -297,11 +325,17 @@ export function QRScannerModal({
 
         streamRef.current = stream;
 
-        // Fonar (torch) qo'llab-quvvatlanishini tekshiramiz
+        // Fonar va Zoom qo'llab-quvvatlanishini tekshiramiz
         try {
           const track = stream.getVideoTracks()[0];
           const caps: any = track.getCapabilities?.();
-          if (caps && 'torch' in caps && caps.torch) setTorchSupported(true);
+          if (caps) {
+            if ('torch' in caps && caps.torch) setTorchSupported(true);
+            if ('zoom' in caps && caps.zoom && caps.zoom.max > 1) {
+              setZoomSupported(true);
+              setMaxZoom(caps.zoom.max);
+            }
+          }
         } catch { /* */ }
 
         const video = videoRef.current;
@@ -456,6 +490,17 @@ export function QRScannerModal({
               aria-label="Fonar"
             >
               {torchOn ? <Flashlight size={20} /> : <FlashlightOff size={20} />}
+            </button>
+          )}
+
+          {/* Zoom tugmasi (qo'llab-quvvatlansa) */}
+          {zoomSupported && !isLoading && !error && !success && (
+            <button
+              onClick={toggleZoom}
+              className={`absolute bottom-3 ${torchSupported ? 'right-16' : 'right-3'} z-20 flex h-11 w-11 items-center justify-center rounded-full shadow-lg transition active:scale-90 bg-slate-900/60 text-white backdrop-blur-sm`}
+              aria-label="Kattalashtirish (Zoom)"
+            >
+              <span className="text-[13px] font-black">{zoom}x</span>
             </button>
           )}
         </div>
