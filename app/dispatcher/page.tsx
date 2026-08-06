@@ -14,6 +14,8 @@ import {
   addWorker,
   updateWorker,
   deleteWorker,
+  getArchivedWorkers,
+  restoreWorker,
   getReportsByMonths,
   getIncidents,
   getReadIncidentIds,
@@ -155,6 +157,12 @@ export default function DispatcherPage() {
     fallbackData: getFallback('dispatcher_workers_cache'),
     onSuccess: (data) => safeStorage.setItemDebounced('dispatcher_workers_cache', JSON.stringify(data))
   })
+
+  // Arxivlangan ishchilar (soft-deleted)
+  const { data: archivedWorkers = [], mutate: mutateArchivedWorkers } = useSWR(
+    session ? 'dispatcher_archived_workers' : null,
+    getArchivedWorkers
+  )
   
   // Dashboard faqat joriy + o'tgan oy hisobotlarini ishlatadi (pastdagi
   // aggregatsiyalar shu ikki oy bo'yicha filtrlanadi). Butun bazani tortish
@@ -469,12 +477,24 @@ export default function DispatcherPage() {
     setDeleteWorkerError(null)
     try {
       await deleteWorker(deleteConfirmId)
-      refreshData()
+      mutateWorkers()
+      mutateArchivedWorkers()
       setDeleteConfirmId(null)
     } catch (err: unknown) {
       setDeleteWorkerError(err instanceof Error ? err.message : "Xatolik yuz berdi")
     } finally {
       setIsDeletingWorker(false)
+    }
+  }
+
+  async function handleRestoreWorker(workerId: string) {
+    try {
+      await restoreWorker(workerId)
+      mutateWorkers()
+      mutateArchivedWorkers()
+      toast.success("Ishchi arxivdan tiklandi")
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Tiklashda xatolik yuz berdi")
     }
   }
 
@@ -1019,6 +1039,8 @@ export default function DispatcherPage() {
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}
           onDelete={handleDeleteWorker}
+          archivedWorkers={archivedWorkers}
+          onRestore={handleRestoreWorker}
         />
       )}
 
@@ -1050,16 +1072,16 @@ export default function DispatcherPage() {
       {deleteConfirmId && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
           <div className="premium-card w-full max-w-md p-8 animate-scale-in">
-            <h3 className="text-lg font-black text-slate-900">Ishchini o&apos;chirish</h3>
-            <p className="mt-2 text-sm text-slate-500">Haqiqatdan ham ishchini o&apos;chirishni xohlaysizmi? Bu amalni qaytarib bo&apos;lmaydi.</p>
+            <h3 className="text-lg font-black text-slate-900">Ishchini arxivlash</h3>
+            <p className="mt-2 text-sm text-slate-500">Ishchini arxivga o&apos;tkazmoqchimisiz? Uning hisobotlari va qilingan ishlar tarixi saqlanib qoladi, lekin o&apos;zi tizimga kira olmaydi.</p>
             {deleteWorkerError && (
               <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-600">{deleteWorkerError}</div>
             )}
             <div className="mt-8 flex justify-end gap-3">
               <button disabled={isDeletingWorker} onClick={() => setDeleteConfirmId(null)} className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50">Bekor qilish</button>
-              <button disabled={isDeletingWorker} onClick={confirmDeleteWorker} className="flex items-center justify-center gap-2 rounded-xl bg-red-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all disabled:opacity-70 disabled:cursor-not-allowed">
+              <button disabled={isDeletingWorker} onClick={confirmDeleteWorker} className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-6 py-3 text-sm font-black text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all disabled:opacity-70 disabled:cursor-not-allowed">
                 {isDeletingWorker ? <Loader2 size={16} className="animate-spin" /> : null}
-                {isDeletingWorker ? "O'chirilmoqda..." : "O'chirish"}
+                {isDeletingWorker ? "Arxivlanmoqda..." : "Arxivlash"}
               </button>
             </div>
           </div>

@@ -121,6 +121,7 @@ async function getUserProfileById(userId: string): Promise<User | null> {
     .from('users')
     .select(USER_COLUMNS)
     .eq('id', userId)
+    .is('deleted_at', null) // Soft delete: arxivlangan ishchi login qila olmaydi
     .single();
 
   if (!profile) return null;
@@ -225,6 +226,7 @@ export async function getWorkers(): Promise<User[]> {
     .from('users')
     .select(USER_COLUMNS)
     .neq('role', 'dispatcher')
+    .is('deleted_at', null) // Soft delete: faqat faol ishchilar
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -304,6 +306,12 @@ export async function uploadAvatar(file: File, userId: string): Promise<string> 
   return data.publicUrl;
 }
 
+/**
+ * Ishchini arxivlaydi (soft delete). Ma'lumotlar bazasidan o'chirmaydi,
+ * faqat `deleted_at` ustuniga joriy sana yoziladi.
+ * Arxivlangan ishchi tizimga kira olmaydi, lekin barcha eski hisobotlari,
+ * jurnal yozuvlari va QR kodlari saqlanib qoladi.
+ */
 export async function deleteWorker(id: string): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;
@@ -320,7 +328,51 @@ export async function deleteWorker(id: string): Promise<void> {
   const result = await response.json();
 
   if (!response.ok || !result.success) {
-    throw new Error(result.message || 'Delete worker failed');
+    throw new Error(result.message || 'Arxivlashda xatolik');
+  }
+}
+
+/**
+ * Arxivlangan (soft-deleted) ishchilar ro'yxatini qaytaradi.
+ * Dispatcher uchun — arxivdan tiklash imkoniyati bilan.
+ */
+export async function getArchivedWorkers(): Promise<(User & { deletedAt: string })[]> {
+  const { data, error } = await supabase
+    .from('users')
+    .select(USER_COLUMNS + ', deleted_at')
+    .neq('role', 'dispatcher')
+    .not('deleted_at', 'is', null) // Faqat arxivlanganlar
+    .order('deleted_at', { ascending: false });
+
+  if (error || !data) return [];
+  return (data as unknown as (DbUserRow & { deleted_at: string })[]).map(row => ({
+    ...mapDbUserToUser(row),
+    deletedAt: row.deleted_at,
+  }));
+}
+
+/**
+ * Arxivlangan ishchini qayta tiklaydi (deleted_at = null).
+ * Ishchining eski hisobotlari, QR kodlari hammasini saqlagan holda
+ * tizimga qayta kirish imkoniyatini beradi.
+ */
+export async function restoreWorker(id: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
+  const response = await fetch('/api/admin/delete-worker', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ id, restore: true }),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || 'Tiklashda xatolik');
   }
 }
 

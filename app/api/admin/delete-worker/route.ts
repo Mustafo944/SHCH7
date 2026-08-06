@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 
 type DeleteWorkerBody = {
   id: string
+  /** true bo'lsa — arxivdan qayta tiklash (deleted_at = null) */
+  restore?: boolean
 }
 
 export async function POST(req: Request) {
@@ -50,32 +52,45 @@ export async function POST(req: Request) {
       )
     }
 
-    // 1. Avval Auth'dan o'chirish (agar users dan avval o'chilsa, auth orphan bo'lib qoladi)
-    const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(body.id)
+    if (body.restore) {
+      // ── QAYTA TIKLASH: deleted_at ni null qilish ──
+      const { error: restoreError } = await supabaseAdmin
+        .from('users')
+        .update({ deleted_at: null })
+        .eq('id', body.id)
 
-    if (authDeleteError) {
-      return NextResponse.json(
-        { success: false, message: `Auth delete xato: ${authDeleteError.message}` },
-        { status: 400 }
-      )
+      if (restoreError) {
+        return NextResponse.json(
+          { success: false, message: `Tiklashda xato: ${restoreError.message}` },
+          { status: 400 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Worker restored',
+      })
     }
 
-    // 2. Keyin users jadvalidan o'chirish
-    const { error: userDeleteError } = await supabaseAdmin
+    // ── SOFT DELETE: deleted_at = now() ──
+    // Auth yozuvini O'CHIRMAYMIZ — faqat `users` jadvalida arxivlaymiz.
+    // getUserProfileById da `deleted_at IS NULL` filtri bor, shuning uchun
+    // arxivlangan ishchi login ham qila olmaydi.
+    const { error: softDeleteError } = await supabaseAdmin
       .from('users')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', body.id)
 
-    if (userDeleteError) {
+    if (softDeleteError) {
       return NextResponse.json(
-        { success: false, message: `Auth'dan o'chdi, lekin users jadvalidan xato: ${userDeleteError.message}` },
+        { success: false, message: `Arxivlashda xato: ${softDeleteError.message}` },
         { status: 400 }
       )
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Worker deleted',
+      message: 'Worker archived (soft delete)',
     })
   } catch (error) {
     return NextResponse.json(
