@@ -25,7 +25,7 @@ interface Props {
   stationEquipments: StationEquipments | null | undefined
 }
 
-export function GlobalEquipmentScanner({ isOpen, onClose, stationId, stationName, stationEquipments }: Props) {
+export function GlobalEquipmentScanner({ isOpen, onClose, stationId, stationName: _stationName, stationEquipments }: Props) {
   const [scannerOpen, setScannerOpen] = useState(false)
   const [foundEquipment, setFoundEquipment] = useState<FoundEquipment | null>(null)
   const [activeView, setActiveView] = useState<'main' | 'archive' | 'schema'>('main')

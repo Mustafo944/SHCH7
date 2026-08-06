@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useState, useEffect } from 'react'
+import React, { useCallback, useState, useEffect, useRef } from 'react'
 import { DgaNazoratEntry } from '@/types'
 import { X, Plus, Trash2, Download } from 'lucide-react'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
@@ -67,7 +67,7 @@ export function DgaNazoratJournalView({
   onAccepted?: (isDone?: boolean, isInProgress?: boolean) => void
 }) {
   const [entries, setEntries] = useState<DgaNazoratEntry[]>(Array.from({ length: 5 }, EMPTY_ENTRY))
-  const [allEntries, setAllEntries] = useState<DgaNazoratEntry[]>([])
+  const allEntriesRef = useRef<DgaNazoratEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -80,7 +80,7 @@ export function DgaNazoratJournalView({
       const doc = await getJournal(stationId, 'dgaNazorat')
       if (doc && doc.entries?.length) {
         const parsed = doc.entries as DgaNazoratEntry[]
-        setAllEntries(parsed)
+        allEntriesRef.current = parsed
         const currentMonthData = parsed.filter(e => e.journalMonth === journalMonth)
         if (currentMonthData.length > 0) {
           // Real-time yangilanish shu bekatning BOSHQA jurnali saqlanganda ham
@@ -95,7 +95,7 @@ export function DgaNazoratJournalView({
           })
         }
       } else {
-        setAllEntries([])
+        allEntriesRef.current = []
         setEntries(prev => {
           const hasLocalEdits = prev.some(p => p._isEdited || p._isNew)
           if (hasLocalEdits) return prev
@@ -131,10 +131,10 @@ export function DgaNazoratJournalView({
     if (!isWorker) return
     if (!isSilent) setSaving(true)
     try {
-      const merged = allEntries.filter(e => e.journalMonth !== journalMonth)
+      const merged = allEntriesRef.current.filter(e => e.journalMonth !== journalMonth)
       const toSave = newEntries.map(e => ({ ...e, journalMonth }))
       const finalEntries = [...merged, ...toSave]
-      setAllEntries(finalEntries)
+      allEntriesRef.current = finalEntries
 
       await upsertJournal(stationId, 'dgaNazorat', finalEntries.map(stripSessionFlags) as any, userName)
       // Saqlangach bayroqlarni tozalaymiz — aks holda bu qator keyingi

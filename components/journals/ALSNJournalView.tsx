@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
 import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
@@ -49,7 +49,7 @@ export function ALSNJournalView({
   onClose: () => void
 }) {
   const [entries, setEntries] = useState<ALSNEntry[]>(Array.from({ length: 5 }, (_, i) => ({ ...EMPTY_ALSN(), nomber: String(i + 1) })))
-  const [allEntries, setAllEntries] = useState<ALSNEntry[]>([])
+  const allEntriesRef = useRef<ALSNEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<string | null>(null)
 
@@ -68,7 +68,7 @@ export function ALSNJournalView({
       const j = await getJournal(stationId, 'alsn')
       if (j && j.entries.length > 0) {
         const loadedAllEntries = j.entries as ALSNEntry[]
-        setAllEntries(loadedAllEntries)
+        allEntriesRef.current = loadedAllEntries
 
         const monthEntries = loadedAllEntries.filter(e => e.journalMonth === journalMonth)
 
@@ -85,7 +85,7 @@ export function ALSNJournalView({
           })
         }
       } else {
-        setAllEntries([])
+        allEntriesRef.current = []
         setEntries(prev => {
           const hasLocalEdits = prev.some(p => p._isEdited || p._isNew)
           if (hasLocalEdits) return prev
@@ -135,9 +135,10 @@ export function ALSNJournalView({
     setEntries(updated)
 
     const updatedWithMonth = updated.map(e => ({ ...e, journalMonth }))
-    const otherMonths = allEntries.filter(e => e.journalMonth !== journalMonth)
+    const prevAllEntriesSnapshot = allEntriesRef.current
+    const otherMonths = allEntriesRef.current.filter(e => e.journalMonth !== journalMonth)
     const newAllEntries = [...otherMonths, ...updatedWithMonth]
-    setAllEntries(newAllEntries)
+    allEntriesRef.current = newAllEntries
 
     try {
       await upsertJournal(stationId, 'alsn', newAllEntries.map(stripSessionFlags), userName)
@@ -148,7 +149,7 @@ export function ALSNJournalView({
     } catch (err) {
       console.error('Saqlash xatosi:', err)
       setEntries(prev)
-      setAllEntries(allEntries)
+      allEntriesRef.current = prevAllEntriesSnapshot
       showMsg(err instanceof Error ? err.message : 'Xatolik', 3000)
       throw err
     }

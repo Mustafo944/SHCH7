@@ -108,9 +108,7 @@ export function DU46JournalView({
   const [entries, setEntries] = useState<DU46Entry[]>([])
   const entriesRef = useRef(entries)
   useEffect(() => { entriesRef.current = entries }, [entries])
-  const [allEntries, setAllEntries] = useState<DU46Entry[]>([])
-  const allEntriesRef = useRef(allEntries)
-  useEffect(() => { allEntriesRef.current = allEntries }, [allEntries])
+  const allEntriesRef = useRef<DU46Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'kunlik' | 'jadval'>('kunlik')
@@ -229,7 +227,7 @@ export function DU46JournalView({
         }
         // ── CARRY OVER LOGIC END ──
 
-        setAllEntries(loadedAllEntries)
+        allEntriesRef.current = loadedAllEntries
         // Bug #11 fix: eski qatorlarda journalMonth bo'lmasligi mumkin (migratsiyadan oldin saqlangan).
         // Bunday qatorlarni joriy tanlangan oy uchun ko'rsatamiz (backward compatibility).
         const monthEntries = loadedAllEntries.filter(
@@ -277,7 +275,7 @@ export function DU46JournalView({
           }
         }
       } else {
-        setAllEntries([])
+        allEntriesRef.current = []
         const localEntries = entriesRef.current
         const hasLocalEdits = localEntries.some(p => p.kamchilik || p.oyKun1 || p.bartarafInfo)
         if (!hasLocalEdits || localEntries.length === 0) {
@@ -291,7 +289,7 @@ export function DU46JournalView({
         setTimeout(() => setLoading(false), 50)
       }
     }
-  }, [stationId, journalMonth])
+  }, [stationId, journalMonth, userName])
 
   useEffect(() => {
     loadJournalData(false)
@@ -486,11 +484,11 @@ export function DU46JournalView({
     // allaqachon band bo'lgan raqam (masalan yana "1") berilib qolar edi.
     const effectiveMax = (list: DU46Entry[]) =>
       list.reduce((max, x, i) => Math.max(max, parseInt(x.nomber || '') || (i + 1)), 0)
-    // allEntries BARCHA oylarni saqlaydi, raqamlash esa har oy 1 dan boshlanadi
+    // allEntriesRef BARCHA oylarni saqlaydi, raqamlash esa har oy 1 dan boshlanadi
     // (jadval ham oy bo'yicha filtrlangan ro'yxatni ko'rsatadi) — shuning uchun
     // faqat joriy oy qatorlarini olamiz (loadJournalData'dagi filtr bilan bir xil).
-    const monthDbEntries = allEntries.filter(
-      e => e.journalMonth === journalMonth || (!e.journalMonth && !allEntries.some(x => x.journalMonth))
+    const monthDbEntries = allEntriesRef.current.filter(
+      e => e.journalMonth === journalMonth || (!e.journalMonth && !allEntriesRef.current.some(x => x.journalMonth))
     )
     return String(Math.max(effectiveMax(monthDbEntries), effectiveMax(localEntries)) + 1)
   }
@@ -694,14 +692,14 @@ export function DU46JournalView({
       let newAllEntries = [...otherMonths, ...mergedWithMonth]
 
       if (options?.deletedIndex !== undefined) {
-        setAllEntries(newAllEntries)
+        allEntriesRef.current = newAllEntries
       }
 
       if (newAllEntries.length === 0) {
         newAllEntries = [EMPTY_DU46(journalMonth)]
       }
 
-      setAllEntries(newAllEntries)
+      allEntriesRef.current = newAllEntries
       setEntries(mergedMonthEntries)
 
       // _isNew/_isEdited faqat shu sessiya uchun — bazaga hech qachon yozilmasligi kerak
@@ -710,7 +708,7 @@ export function DU46JournalView({
       // Bug #6 fix: snapshot'dan to'g'ri rollback
       console.error('Saqlash xatosi:', err)
       setEntries(prev)
-      setAllEntries(prevAllEntries)
+      allEntriesRef.current = prevAllEntries
       showMsg(err instanceof Error ? err.message : 'Saqlashda xatolik yuz berdi', 3000)
       throw err
     } finally {
@@ -763,7 +761,7 @@ export function DU46JournalView({
 
     // Modal DARHOL yopiladi — foydalanuvchi saqlash tugashini kutib turmaydi.
     // Bu xavfsiz, chunki `saveEntries` xato bo'lsa O'ZI hamma narsani orqaga
-    // qaytaradi (`setEntries(prev)` + `setAllEntries(prevAllEntries)`) va xato
+    // qaytaradi (`setEntries(prev)` + `allEntriesRef.current = prevAllEntries`) va xato
     // xabarini `showMsg` bilan ko'rsatadi. Ilgari ham modal xato holatida
     // `catch` ichida yopilardi, ya'ni u HAR QANDAY holatda yopilgan — farqi
     // faqat foydalanuvchi 3-4 soniya kutib turishida edi.

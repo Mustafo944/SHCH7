@@ -48,7 +48,7 @@ export function AlsnKodJournalView({
   onAccepted?: (isDone?: boolean, isInProgress?: boolean) => void
 }) {
   const [entries, setEntries] = useState<AlsnKodEntry[]>(Array.from({ length: 5 }, EMPTY_ALSN_KOD))
-  const [allEntries, setAllEntries] = useState<AlsnKodEntry[]>([])
+  const allEntriesRef = useRef<AlsnKodEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
@@ -60,7 +60,7 @@ export function AlsnKodJournalView({
     return getJournal(stationId, 'alsnKod').then(doc => {
       if (doc?.entries?.length) {
         const parsed = doc.entries as AlsnKodEntry[]
-        setAllEntries(parsed)
+        allEntriesRef.current = parsed
         const filtered = parsed.filter(e => e.journalMonth === journalMonth)
         if (filtered.length > 0) {
           // Real-time yangilanish shu bekatning BOSHQA jurnali saqlanganda ham
@@ -75,7 +75,7 @@ export function AlsnKodJournalView({
           })
         }
       } else {
-        setAllEntries([])
+        allEntriesRef.current = []
         setEntries(prev => {
           const hasLocalEdits = prev.some(p => p._isEdited || p._isNew)
           if (hasLocalEdits) return prev
@@ -106,10 +106,10 @@ export function AlsnKodJournalView({
   const handleSave = async (data: AlsnKodEntry[], isSilent = false) => {
     if (!isSilent) setSaving(true)
     try {
-      const merged = allEntries.filter(e => e.journalMonth !== journalMonth)
+      const merged = allEntriesRef.current.filter(e => e.journalMonth !== journalMonth)
       const toSave = data.map(e => ({ ...e, journalMonth }))
       const finalEntries = [...merged, ...toSave]
-      setAllEntries(finalEntries)
+      allEntriesRef.current = finalEntries
 
       await upsertJournal(stationId, 'alsnKod', finalEntries.map(stripSessionFlags) as any, userName)
       // Saqlangach bayroqlarni tozalaymiz — aks holda bu qator keyingi

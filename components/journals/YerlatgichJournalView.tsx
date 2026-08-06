@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @next/next/no-img-element */
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { getJournal, upsertJournal } from '@/lib/supabase-db'
 import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription'
 import type { YerlatgichEntry } from '@/types'
@@ -49,7 +49,7 @@ export function YerlatgichJournalView({
   onAccepted?: (isDone?: boolean, isInProgress?: boolean) => void
 }) {
   const [entries, setEntries] = useState<YerlatgichEntry[]>(Array.from({ length: 5 }, EMPTY_YERLATGICH))
-  const [allEntries, setAllEntries] = useState<YerlatgichEntry[]>([])
+  const allEntriesRef = useRef<YerlatgichEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -62,7 +62,7 @@ export function YerlatgichJournalView({
       const doc = await getJournal(stationId, 'yerlatgich')
       if (doc && doc.entries?.length) {
         const parsed = doc.entries as YerlatgichEntry[]
-        setAllEntries(parsed)
+        allEntriesRef.current = parsed
         const currentMonthData = parsed.filter(e => e.journalMonth === journalMonth)
         if (currentMonthData.length > 0) {
           // Real-time yangilanish shu bekatning BOSHQA jurnali saqlanganda ham
@@ -77,7 +77,7 @@ export function YerlatgichJournalView({
           })
         }
       } else {
-        setAllEntries([])
+        allEntriesRef.current = []
         setEntries(prev => {
           const hasLocalEdits = prev.some(p => p._isEdited || p._isNew)
           if (hasLocalEdits) return prev
@@ -113,10 +113,10 @@ export function YerlatgichJournalView({
     if (!isWorker) return
     if (!isSilent) setSaving(true)
     try {
-      const merged = allEntries.filter(e => e.journalMonth !== journalMonth)
+      const merged = allEntriesRef.current.filter(e => e.journalMonth !== journalMonth)
       const toSave = newEntries.map(e => ({ ...e, journalMonth }))
       const finalEntries = [...merged, ...toSave]
-      setAllEntries(finalEntries)
+      allEntriesRef.current = finalEntries
 
       await upsertJournal(stationId, 'yerlatgich', finalEntries.map(stripSessionFlags) as any, userName)
       // Saqlangach bayroqlarni tozalaymiz — aks holda bu qator keyingi

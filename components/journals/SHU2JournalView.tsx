@@ -133,7 +133,7 @@ export function SHU2JournalView({
   initialData?: { text: string; date: string; dueDate?: string }
 }) {
   const [entries, setEntries] = useState<SHU2Entry[]>([])
-  const [allEntries, setAllEntries] = useState<SHU2Entry[]>([])
+  const allEntriesRef = useRef<SHU2Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<string | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
@@ -151,7 +151,7 @@ export function SHU2JournalView({
       const j = await getJournal(stationId, 'shu2')
       if (j && j.entries.length > 0) {
         const loadedAllEntries = j.entries as SHU2Entry[]
-        setAllEntries(loadedAllEntries)
+        allEntriesRef.current = loadedAllEntries
         // Faqat haqiqiy (yozuvi bor yoki tasdiqlangan) qatorlarni olamiz
         const monthEntries = loadedAllEntries.filter(
           e => e.journalMonth === journalMonth && !isEmptyShu2Row(e)
@@ -181,7 +181,7 @@ export function SHU2JournalView({
           })
         }
       } else {
-        setAllEntries([])
+        allEntriesRef.current = []
         setEntries(prev => {
           const hasLocalEdits = prev.some(p => (p.sana || p.yozuv) && !p.tasdiqlandi)
           if (hasLocalEdits && prev.length > 0) return prev
@@ -274,7 +274,7 @@ export function SHU2JournalView({
     // "ko'rmaydi"), natijada ikkinchi qatorga birinchisidan KICHIK raqam
     // berilib qolar edi (masalan 2 dan keyin yana 1).
     setEntries(prev => {
-      const maxFromDb = allEntries.length > 0 ? Math.max(...allEntries.map(x => parseInt(x.nomber || '0') || 0)) : 0;
+      const maxFromDb = allEntriesRef.current.length > 0 ? Math.max(...allEntriesRef.current.map(x => parseInt(x.nomber || '0') || 0)) : 0;
       const maxFromLocal = prev.length > 0 ? Math.max(...prev.map(x => parseInt(x.nomber || '0') || 0)) : 0;
       const newNomber = String(Math.max(maxFromDb, maxFromLocal) + 1);
       const newRow: any = { ...EMPTY_SHU2(), nomber: newNomber, sana: targetSana }
@@ -313,7 +313,7 @@ export function SHU2JournalView({
     prevSnapshot: SHU2Entry[],
     options?: { deletedIndex?: number }
   ) => {
-    const prevAllSnapshot = allEntries
+    const prevAllSnapshot = allEntriesRef.current
     setEntries(updated)
 
     try {
@@ -363,14 +363,14 @@ export function SHU2JournalView({
       // qator qoldiramiz (keyingi saqlashda baribir trim bo'ladi)
       if (newAllEntries.length === 0) newAllEntries = [{ ...EMPTY_SHU2(), journalMonth }]
 
-      setAllEntries(newAllEntries)
+      allEntriesRef.current = newAllEntries
       setEntries(merged)
 
       await upsertJournal(stationId, 'shu2', newAllEntries, userName)
     } catch (err) {
       console.error('❌ SHU-2 saqlash xatosi:', err)
       setEntries(prevSnapshot)
-      setAllEntries(prevAllSnapshot)
+      allEntriesRef.current = prevAllSnapshot
       setMsg(err instanceof Error ? err.message : 'Xatolik')
       setTimeout(() => setMsg(null), 3000)
       throw err
@@ -388,22 +388,22 @@ export function SHU2JournalView({
   // qiladi (`journal-actions.ts`), faqat CHAQIRUVCHI tomonidagi qo'shimcha
   // himoya qatlami yo'q.
   const persistEntriesFast = async (updated: SHU2Entry[], prevSnapshot: SHU2Entry[]) => {
-    const prevAllSnapshot = allEntries
+    const prevAllSnapshot = allEntriesRef.current
     setEntries(updated)
 
-    const otherMonths = allEntries.filter(e => e.journalMonth !== journalMonth)
+    const otherMonths = allEntriesRef.current.filter(e => e.journalMonth !== journalMonth)
     const mergedWithMonth = trimTrailingEmpty(updated, isEmptyShu2Row).map(e => ({ ...stripSessionFlags(e), journalMonth }))
     let newAllEntries = [...otherMonths, ...mergedWithMonth]
     if (newAllEntries.length === 0) newAllEntries = [{ ...EMPTY_SHU2(), journalMonth }]
 
-    setAllEntries(newAllEntries)
+    allEntriesRef.current = newAllEntries
 
     try {
       await upsertJournal(stationId, 'shu2', newAllEntries, userName)
     } catch (err) {
       console.error('❌ SHU-2 saqlash xatosi:', err)
       setEntries(prevSnapshot)
-      setAllEntries(prevAllSnapshot)
+      allEntriesRef.current = prevAllSnapshot
       setMsg(err instanceof Error ? err.message : 'Xatolik')
       setTimeout(() => setMsg(null), 3000)
       throw err
