@@ -322,9 +322,14 @@ export function GlobalEquipmentScanner({ isOpen, onClose, stationId, stationName
                       <p className="text-xs font-black text-slate-800 truncate">{scan.scanned_by}</p>
                       <p className="text-[10px] font-bold text-slate-500 mt-0.5">{scan.task_nsh}</p>
                     </div>
-                    <p className="text-[10px] font-bold text-slate-400 shrink-0">
-                      {new Date(scan.scanned_at).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                    </p>
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] font-bold text-slate-500">
+                        {new Date(scan.scanned_at).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                      <p className="text-[9px] font-bold text-slate-400">
+                        {new Date(scan.scanned_at).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      </p>
+                    </div>
                   </div>
                 ))
               )}
