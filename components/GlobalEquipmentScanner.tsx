@@ -283,6 +283,26 @@ export function GlobalEquipmentScanner({ isOpen, onClose, stationId, stationName
             </div>
 
             <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-4 space-y-2 custom-scrollbar">
+              {!loadingHistory && scanHistory.length > 0 && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-100 shadow-sm">
+                  <p className="text-sm font-black text-blue-800">
+                    Joriy oyda: {scanHistory.filter(s => {
+                      const d = new Date(s.scanned_at);
+                      const now = new Date();
+                      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                    }).length} marta tekshirilgan
+                  </p>
+                  <p className="text-xs font-bold text-blue-600 mt-1">
+                    Tekshirilgan kunlar (shu oy): {
+                      Array.from(new Set(scanHistory.filter(s => {
+                        const d = new Date(s.scanned_at);
+                        const now = new Date();
+                        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                      }).map(s => new Date(s.scanned_at).getDate()))).sort((a, b) => a - b).join(', ') || 'Yo\'q'
+                    }
+                  </p>
+                </div>
+              )}
               {loadingHistory ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 size={28} className="animate-spin text-blue-500" />
