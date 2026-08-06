@@ -186,7 +186,10 @@ export function DU46JournalView({
             !e.carriedOverToMonth
           ) {
             // Duplikatsiyani oldini olish (agar qachondir xato saqlangan bo'lsa)
-            const isAlreadyCarriedOver = loadedAllEntries.some(x => x.carriedOverFromId === e._id && x.journalMonth === journalMonth)
+            const isAlreadyCarriedOver = loadedAllEntries.some(x => 
+              x.journalMonth === journalMonth && 
+              ((e._id && x.carriedOverFromId === e._id) || x.kamchilik.includes(e.kamchilik))
+            )
 
             if (!isAlreadyCarriedOver) {
               e.carriedOverToMonth = journalMonth

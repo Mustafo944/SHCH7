@@ -1623,6 +1623,44 @@ export async function upsertStationEquipments(
   return mapEquipmentsRow(stationId, resultData);
 }
 
+function mergeEntries(
+  serverEntries: JournalEntry[],
+  localEntries: JournalEntry[]
+): JournalEntry[] {
+  const localIds = new Set(
+    localEntries.map(e => e._id).filter((id): id is string => Boolean(id))
+  )
+
+  // O'tish davri uchun: localEntries ichida oldin _id'siz bo'lib, hozir _id olgan qatorlarni topish
+  // Buning uchun localEntries'dagi barcha qatorlarning _id'siz versiyasini JSON qilib saqlaymiz
+  const localWithoutIdsJson = new Set(
+    localEntries.map(e => {
+      const { _id: _ignored, carriedOverToMonth: _ignored2, ...rest } = e
+      return JSON.stringify(rest)
+    })
+  )
+
+  const merged: JournalEntry[] = [...localEntries]
+
+  for (const serverEntry of serverEntries) {
+    if (serverEntry._id) {
+      if (!localIds.has(serverEntry._id)) {
+        // Boshqa xodim qo'shgan yangi yozuv — saqlab qolamiz
+        merged.push(serverEntry)
+      }
+    } else {
+      // O'tish davri: _id'siz eski server yozuvi
+      const { _id: _ignored, carriedOverToMonth: _ignored2, ...rest } = serverEntry
+      // Agar serverEntry'ning id'siz qismi local'da bo'lsa (ya'ni local'da unga id berilgan bo'lsa)
+      // uni yana qo'shmaymiz, chunki local'dagi versiyasi allaqachon merged ichida bor.
+      if (!localWithoutIdsJson.has(JSON.stringify(rest)) && !localWithoutIdsJson.has(JSON.stringify(serverEntry))) {
+        merged.push(serverEntry)
+      }
+    }
+  }
+  return merged
+}
+
 export async function updateEquipmentScanHistory(
   stationId: string,
   scans: QRScanRecord[],
