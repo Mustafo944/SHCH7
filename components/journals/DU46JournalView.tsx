@@ -109,6 +109,8 @@ export function DU46JournalView({
   const entriesRef = useRef(entries)
   useEffect(() => { entriesRef.current = entries }, [entries])
   const [allEntries, setAllEntries] = useState<DU46Entry[]>([])
+  const allEntriesRef = useRef(allEntries)
+  useEffect(() => { allEntriesRef.current = allEntries }, [allEntries])
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'kunlik' | 'jadval'>('kunlik')
@@ -235,49 +237,52 @@ export function DU46JournalView({
         )
 
         if (monthEntries.length > 0) {
-          setEntries(prev => {
-            const merged = [...monthEntries]
-            for (let i = 0; i < merged.length; i++) {
-              const dbRow = merged[i]
-              const localRow = prev[i]
-              if (dbRow && localRow) {
-                // Live (realtime) yangilanishlar barcha foydalanuvchilarda bir xil ko'rinishi uchun
-                // doim ma'lumotlar bazasidan kelgan eng so'nggi holatni olamiz.
-                // Lekin foydalanuvchi joriy sessiyada tahrirlayotgan/qo'shgan qatorlar Kunlik rejimda yo'qolib qolmasligi uchun UI bayroqlarni saqlaymiz:
-                const newRow: any = { ...dbRow }
-                newRow._isEdited = (localRow as any)._isEdited
-                newRow._isNew = (localRow as any)._isNew
-                merged[i] = newRow
-              }
+          // Pirillash tuzatish: setEntries(prev=>) o'rniga entriesRef ishlatamiz.
+          // prev callback har safar yangi reference yaratib, qayta renderga sabab bo'lardi.
+          const localEntries = entriesRef.current
+          const dbById = new Map(monthEntries.map(e => [e._id, e]))
+          const localById = new Map(localEntries.map(e => [e._id, e]))
+
+          // Asosiy natija: DB dan kelgan qatorlar, lekin lokal tahrir saqlanadi
+          const merged: DU46Entry[] = monthEntries.map(dbRow => {
+            const localRow = localById.get(dbRow._id)
+            if (localRow && ((localRow as any)._isEdited || (localRow as any)._isNew)) {
+              return localRow // lokal tahrir g'olib
             }
-            // Agar foydalanuvchi lokalda ko'proq qator qo'shgan bo'lsa, ularni saqlab qolamiz.
-            // `_isNew` tekshiruvi ham SHART: aks holda "Qator qo'shish" bosilgach hali
-            // matn kiritilmagan yangi (bo'sh) qator — saqlashdan keyingi realtime
-            // yangilanish shu yerga kelib qolib, darhol yana o'chib ketardi.
-            if (prev.length > merged.length) {
-              for (let i = merged.length; i < prev.length; i++) {
-                const localRow = prev[i];
-                if (localRow.kamchilik || localRow.bartarafInfo || (localRow as any)._isNew || (localRow as any)._isEdited) {
-                  merged.push(localRow);
-                }
-              }
+            // DB versiyasi, lekin UI bayroqlarni saqlaymiz
+            if (localRow) {
+              const newRow: any = { ...dbRow }
+              newRow._isEdited = (localRow as any)._isEdited
+              newRow._isNew = (localRow as any)._isNew
+              return newRow
             }
-            return merged
+            return dbRow
           })
+
+          // Faqat lokalda bor qatorlarni qo'shish (yangi qo'shilgan yoki hali saqlanmagan)
+          localEntries.forEach(localRow => {
+            if (!dbById.has(localRow._id)) {
+              if (localRow.kamchilik || localRow.bartarafInfo || (localRow as any)._isNew || (localRow as any)._isEdited) {
+                merged.push(localRow)
+              }
+            }
+          })
+
+          setEntries(merged)
         } else {
-          setEntries(prev => {
-            const hasLocalEdits = prev.some(p => p.kamchilik || p.oyKun1 || p.bartarafInfo)
-            if (hasLocalEdits && prev.length > 0) return prev
-            return []
-          })
+          const localEntries = entriesRef.current
+          const hasLocalEdits = localEntries.some(p => p.kamchilik || p.oyKun1 || p.bartarafInfo)
+          if (!hasLocalEdits || localEntries.length === 0) {
+            setEntries([])
+          }
         }
       } else {
         setAllEntries([])
-        setEntries(prev => {
-          const hasLocalEdits = prev.some(p => p.kamchilik || p.oyKun1 || p.bartarafInfo)
-          if (hasLocalEdits && prev.length > 0) return prev
-          return []
-        })
+        const localEntries = entriesRef.current
+        const hasLocalEdits = localEntries.some(p => p.kamchilik || p.oyKun1 || p.bartarafInfo)
+        if (!hasLocalEdits || localEntries.length === 0) {
+          setEntries([])
+        }
       }
     } catch (err) {
       console.error('Journal yuklash xatosi:', err)
@@ -293,52 +298,53 @@ export function DU46JournalView({
   }, [loadJournalData])
 
   // ── Auto-populate row based on taskContext ──
+  // Cheksiz tsikl tuzatish: entries.length o'rniga ref ishlatamiz.
+  // Oldin: entries.length o'zgarishi → useEffect → setEntries → entries.length o'zgarishi → loop
+  const hasLinkedTaskRef = useRef(false)
   useEffect(() => {
-    if (!loading && taskContext && entries.length > 0) {
-      // Check if we already have a row linked to this task
-      const alreadyLinked = entries.some(
+    if (hasLinkedTaskRef.current) return // faqat 1 marta
+    if (!loading && taskContext && entriesRef.current.length > 0) {
+      const currentEntries = entriesRef.current
+      const alreadyLinked = currentEntries.some(
         e => e.linkedReportId === taskContext.reportId && e.linkedTaskType === taskContext.taskType
       )
       if (!alreadyLinked && taskContext.taskText) {
-        // Find first empty row (or create new if all are full)
-        const emptyIndex = entries.findIndex(e => !e.kamchilik && !e.oyKun1 && !e.soatMinut1 && !e.bartarafInfo && !e.kamchilikBajarildi)
+        hasLinkedTaskRef.current = true
+        const emptyIndex = currentEntries.findIndex(e => !e.kamchilik && !e.oyKun1 && !e.soatMinut1 && !e.bartarafInfo && !e.kamchilikBajarildi)
 
         const todayStr = `${String(new Date().getDate()).padStart(2, '0')}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}`
         const timeStr = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
 
-        setEntries(prev => {
-          const n = [...prev]
-          if (emptyIndex !== -1) {
-            n[emptyIndex] = {
-              ...n[emptyIndex],
-              nomber: n[emptyIndex].nomber || getNextNomber(n),
-              oyKun1: todayStr,
-              soatMinut1: timeStr,
-              linkedReportId: taskContext.reportId,
-              linkedEntryIndex: taskContext.entryIndex,
-              linkedTaskType: taskContext.taskType,
-              createdByRole: userRole as any
-            }
-          } else {
-            // Append a new row if no empty rows
-            const newRow = EMPTY_DU46(journalMonth)
-            newRow.nomber = getNextNomber(n)
-            newRow.oyKun1 = todayStr
-            newRow.soatMinut1 = timeStr
-            newRow.linkedReportId = taskContext.reportId
-            newRow.linkedEntryIndex = taskContext.entryIndex
-            newRow.linkedTaskType = taskContext.taskType
-            newRow.createdByRole = userRole as any
-            n.push(newRow)
+        const n = [...currentEntries]
+        if (emptyIndex !== -1) {
+          n[emptyIndex] = {
+            ...n[emptyIndex],
+            nomber: n[emptyIndex].nomber || getNextNomber(n),
+            oyKun1: todayStr,
+            soatMinut1: timeStr,
+            linkedReportId: taskContext.reportId,
+            linkedEntryIndex: taskContext.entryIndex,
+            linkedTaskType: taskContext.taskType,
+            createdByRole: userRole as any
           }
-          return n
-        })
+        } else {
+          const newRow = EMPTY_DU46(journalMonth)
+          newRow.nomber = getNextNomber(n)
+          newRow.oyKun1 = todayStr
+          newRow.soatMinut1 = timeStr
+          newRow.linkedReportId = taskContext.reportId
+          newRow.linkedEntryIndex = taskContext.entryIndex
+          newRow.linkedTaskType = taskContext.taskType
+          newRow.createdByRole = userRole as any
+          n.push(newRow)
+        }
+        setEntries(n)
 
         showMsg("Sana va vaqt avtomatik kiritildi — ish mazmunini o'zingiz yozing", 3000)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, taskContext, entries.length])
+  }, [loading, taskContext])
 
   useRealtimeSubscription(
     stationId && journalMonth
@@ -391,7 +397,7 @@ export function DU46JournalView({
     }
 
     return false
-  }, [getCreator])
+  }, [])
 
   const isCol3Finished = useCallback((e: DU46Entry): boolean => {
     if (e.kamchilikBBTasdiqladi) return true
@@ -553,12 +559,12 @@ export function DU46JournalView({
     saveEntries(newEntries, entries, { deletedIndex: idx })
   }
 
-  const allEntriesRef = useCallback(() => allEntries, [allEntries])
+  // allEntriesRef yuqorida useRef sifatida e'lon qilingan (qator ~111)
 
   const saveEntries = useCallback(async (updated: DU46Entry[], prev: DU46Entry[], options?: { deletedIndex?: number }) => {
     setIsSavingJournal(true)
     setEntries(updated)
-    const prevAllEntries = allEntriesRef()
+    const prevAllEntries = allEntriesRef.current
 
     try {
       const latestJournal = await getJournal(stationId, 'du46')
@@ -573,60 +579,71 @@ export function DU46JournalView({
         dbMonthEntries.splice(options.deletedIndex, 1)
       }
 
-      const mergedMonthEntries = [...updated]
-      for (let i = 0; i < Math.max(mergedMonthEntries.length, dbMonthEntries.length); i++) {
-        const local = mergedMonthEntries[i]
-        const db = dbMonthEntries[i]
-
-        if (!local && db) {
-          mergedMonthEntries.push(db)
-        } else if (local && db) {
-          const mergeApprovals = (
-            localList: typeof local.approvalsCol3,
-            dbList: typeof db.approvalsCol3
-          ) => {
-            if (!dbList || dbList.length === 0) return localList || []
-            if (!localList || localList.length === 0) return dbList
-            return dbList.length >= localList.length ? dbList : localList
-          }
-
-          let merged = { ...local }
-
-          if (!local.kamchilikBajarildi && db.kamchilikBajarildi) {
-            merged = { ...merged, kamchilikBajarildi: db.kamchilikBajarildi, kamchilikBajarildiAt: db.kamchilikBajarildiAt, kamchilikImzo: db.kamchilikImzo, createdByRole: db.createdByRole }
-            if (!local.oyKun1 && db.oyKun1) merged.oyKun1 = db.oyKun1
-            if (!local.soatMinut1 && db.soatMinut1) merged.soatMinut1 = db.soatMinut1
-            if (!local.kamchilik && db.kamchilik) merged.kamchilik = db.kamchilik
-          }
-          if (!local.bartarafBajarildi && db.bartarafBajarildi) {
-            merged = { ...merged, bartarafBajarildi: db.bartarafBajarildi, bartarafBajarildiAt: db.bartarafBajarildiAt, bartarafImzo: db.bartarafImzo, bartarafByRole: db.bartarafByRole }
-            if (!local.oyKun4 && db.oyKun4) merged.oyKun4 = db.oyKun4
-            if (!local.soatMinut4 && db.soatMinut4) merged.soatMinut4 = db.soatMinut4
-            if (!local.bartarafInfo && db.bartarafInfo) merged.bartarafInfo = db.bartarafInfo
-          }
-          if (!local.kamchilikBBTasdiqladi && db.kamchilikBBTasdiqladi) {
-            merged = { ...merged, kamchilikBBTasdiqladi: db.kamchilikBBTasdiqladi, kamchilikBBTasdiqladiAt: db.kamchilikBBTasdiqladiAt, kamchilikBBImzo: db.kamchilikBBImzo, kamchilikBBVaqt: db.kamchilikBBVaqt }
-          }
-          if (!local.bartarafBBTasdiqladi && db.bartarafBBTasdiqladi) {
-            merged = { ...merged, bartarafBBTasdiqladi: db.bartarafBBTasdiqladi, bartarafBBTasdiqladiAt: db.bartarafBBTasdiqladiAt, bartarafBBImzo: db.bartarafBBImzo, bartarafBBVaqt: db.bartarafBBVaqt }
-          }
-
-          const otherFields: (keyof DU46Entry)[] = ['oyKun2', 'soatMinut2', 'xabarUsuli', 'oyKun3', 'soatMinut3', 'dspImzo', 'nomber']
-          otherFields.forEach(field => {
-            if (!local[field] && db[field]) {
-              merged[field] = db[field] as never
-            }
-          })
-
-          merged = {
-            ...merged,
-            approvalsCol3: mergeApprovals(local.approvalsCol3, db.approvalsCol3),
-            approvalsCol12: mergeApprovals(local.approvalsCol12, db.approvalsCol12),
-          }
-
-          mergedMonthEntries[i] = merged
-        }
+      // ═══ _id ASOSLI MERGE (indeks-asosli o'rniga) ═══
+      // Oldingi indeks-asosli merge xavfli edi — agar server va lokalda
+      // qatorlar soni yoki tartibi farq qilsa, noto'g'ri qatorlar birlashtirilib ketardi.
+      const mergeApprovals = (
+        localList: DU46Entry['approvalsCol3'],
+        dbList: DU46Entry['approvalsCol3']
+      ) => {
+        if (!dbList || dbList.length === 0) return localList || []
+        if (!localList || localList.length === 0) return dbList
+        return dbList.length >= localList.length ? dbList : localList
       }
+
+      const mergeOneEntry = (local: DU46Entry, db: DU46Entry): DU46Entry => {
+        let merged = { ...local }
+        // _id ni DB dan saqlab qolish (ghost duplicate oldini olish)
+        if (db._id && !merged._id) merged._id = db._id
+
+        if (!local.kamchilikBajarildi && db.kamchilikBajarildi) {
+          merged = { ...merged, kamchilikBajarildi: db.kamchilikBajarildi, kamchilikBajarildiAt: db.kamchilikBajarildiAt, kamchilikImzo: db.kamchilikImzo, createdByRole: db.createdByRole }
+          if (!local.oyKun1 && db.oyKun1) merged.oyKun1 = db.oyKun1
+          if (!local.soatMinut1 && db.soatMinut1) merged.soatMinut1 = db.soatMinut1
+          if (!local.kamchilik && db.kamchilik) merged.kamchilik = db.kamchilik
+        }
+        if (!local.bartarafBajarildi && db.bartarafBajarildi) {
+          merged = { ...merged, bartarafBajarildi: db.bartarafBajarildi, bartarafBajarildiAt: db.bartarafBajarildiAt, bartarafImzo: db.bartarafImzo, bartarafByRole: db.bartarafByRole }
+          if (!local.oyKun4 && db.oyKun4) merged.oyKun4 = db.oyKun4
+          if (!local.soatMinut4 && db.soatMinut4) merged.soatMinut4 = db.soatMinut4
+          if (!local.bartarafInfo && db.bartarafInfo) merged.bartarafInfo = db.bartarafInfo
+        }
+        if (!local.kamchilikBBTasdiqladi && db.kamchilikBBTasdiqladi) {
+          merged = { ...merged, kamchilikBBTasdiqladi: db.kamchilikBBTasdiqladi, kamchilikBBTasdiqladiAt: db.kamchilikBBTasdiqladiAt, kamchilikBBImzo: db.kamchilikBBImzo, kamchilikBBVaqt: db.kamchilikBBVaqt }
+        }
+        if (!local.bartarafBBTasdiqladi && db.bartarafBBTasdiqladi) {
+          merged = { ...merged, bartarafBBTasdiqladi: db.bartarafBBTasdiqladi, bartarafBBTasdiqladiAt: db.bartarafBBTasdiqladiAt, bartarafBBImzo: db.bartarafBBImzo, bartarafBBVaqt: db.bartarafBBVaqt }
+        }
+
+        const otherFields: (keyof DU46Entry)[] = ['oyKun2', 'soatMinut2', 'xabarUsuli', 'oyKun3', 'soatMinut3', 'dspImzo', 'nomber']
+        otherFields.forEach(field => {
+          if (!local[field] && db[field]) {
+            merged[field] = db[field] as never
+          }
+        })
+
+        merged = {
+          ...merged,
+          approvalsCol3: mergeApprovals(local.approvalsCol3, db.approvalsCol3),
+          approvalsCol12: mergeApprovals(local.approvalsCol12, db.approvalsCol12),
+        }
+        return merged
+      }
+
+      // _id bo'yicha DB qatorlarni map qilish
+      const dbById = new Map(dbMonthEntries.filter(e => e._id).map(e => [e._id, e]))
+      const mergedMonthEntries: DU46Entry[] = updated.map(localEntry => {
+        const db = localEntry._id ? dbById.get(localEntry._id) : undefined
+        if (db) {
+          dbById.delete(localEntry._id!) // ishlatilganini belgilaymiz
+          return mergeOneEntry(localEntry, db)
+        }
+        return localEntry // yangi qator — DB da hali yo'q
+      })
+      // DB'da bor lekin lokalda yo'q qatorlarni qo'shish (boshqa xodim qo'shgan)
+      dbById.forEach(dbEntry => {
+        mergedMonthEntries.push(dbEntry)
+      })
 
       const otherMonths = latestAllEntries.filter(e => !isCurrentMonthRow(e))
       const mergedWithMonth = trimTrailingEmpty(mergedMonthEntries, isEmptyDu46Row)
@@ -699,7 +716,7 @@ export function DU46JournalView({
     } finally {
       setIsSavingJournal(false)
     }
-  }, [allEntriesRef, stationId, journalMonth, userName])
+  }, [stationId, journalMonth, userName])
 
   // ══════════════════════════════════════════════════════════════════════════════
   // USTUN 3: BOSHLANDI + TASDIQLASH
@@ -714,12 +731,12 @@ export function DU46JournalView({
     setApprovalChainModal({ index: i, isEdit: false, currentChain: [] })
   }, [])
 
-  const handleSaveApprovalChain = useCallback(async (idx: number, chain: string[]) => {
+  const handleSaveApprovalChain = useCallback(async (idx: number, chain: string[], isEditMode: boolean) => {
     const currentEntries = entriesRef.current
     const prev = [...currentEntries]
     const updated = [...currentEntries]
     const e = updated[idx]
-    const isEdit = approvalChainModal?.isEdit
+    const isEdit = isEditMode
 
     if (isEdit) {
       updated[idx] = { ...e, approvalChain: chain }
@@ -782,13 +799,13 @@ export function DU46JournalView({
       // `catch` faqat qayta otilgan xatoni ushlab qolish uchun turibdi
       // (aks holda u "unhandled rejection" bo'lib chiqar edi).
     }
-  }, [userName, saveEntries, approvalChainModal, taskContext, onAccepted])
+  }, [userName, saveEntries, taskContext, onAccepted])
 
-  const handleKamchilikTasdiqlash = async (i: number) => {
-    const prev = [...entries]
-    const updated = [...entries]
-    // Bug #1 fix: e ni joriy entries state'dan olamiz (stale closure muammosidan himoya)
-    const e = entries[i]
+  const handleKamchilikTasdiqlash = useCallback(async (i: number) => {
+    const currentEntries = entriesRef.current
+    const prev = [...currentEntries]
+    const updated = [...currentEntries]
+    const e = currentEntries[i]
 
     if (!e.oyKun1 || !e.soatMinut1 || !e.kamchilik?.trim()) {
       showMsg("1, 2 va 3-ustunlar to'ldirilmagan!")
@@ -816,7 +833,7 @@ export function DU46JournalView({
       await saveEntries(updated, prev)
       showMsg('Tasdiqlandi!')
     } catch { /* */ }
-  }
+  }, [userName, isBekatNavbatchisi, saveEntries])
 
   // ══════════════════════════════════════════════════════════════════════════════
   // USTUN 12: BAJARILDI + TASDIQLASH
@@ -1249,7 +1266,7 @@ export function DU46JournalView({
           isEdit={approvalChainModal.isEdit}
           creatorRole={userRole}
           onCancel={() => setApprovalChainModal(null)}
-          onSave={(chain) => handleSaveApprovalChain(approvalChainModal.index, chain)}
+          onSave={(chain) => handleSaveApprovalChain(approvalChainModal.index, chain, approvalChainModal.isEdit)}
         />
       )}
 
