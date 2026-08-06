@@ -721,6 +721,12 @@ export function DU46JournalView({
     if (isEdit) {
       updated[idx] = { ...e, approvalChain: chain }
     } else {
+      // Double check in case of race condition
+      if (!e.kamchilik || !e.kamchilik.trim()) {
+        showMsg("Ish mazmuni (kamchilik) yozilmagan!");
+        setApprovalChainModal(null);
+        return;
+      }
       updated[idx] = {
         ...e,
         kamchilikBajarildi: true,
