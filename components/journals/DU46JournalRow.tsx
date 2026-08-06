@@ -60,7 +60,8 @@ export const DU46JournalRow = React.memo(({
   const hasNoCreator = !e.createdByRole && !e.kamchilik && !e.soatMinut1
   const canWriteCol3 = isCurrentMonth && !e.kamchilikBajarildi && !isDispatcher
 
-  const canWriteCol12 = isCurrentMonth && !e.bartarafBajarildi && isCol3Finished(e) && !isDispatcher && hasRightToFix && !isBekatNavbatchisi
+  const isBuggyCol12 = e.bartarafBajarildi && (!e.oyKun4 || !e.soatMinut4)
+  const canWriteCol12 = isCurrentMonth && (!e.bartarafBajarildi || isBuggyCol12) && isCol3Finished(e) && !isDispatcher && hasRightToFix && !isBekatNavbatchisi
   const canWriteMiddle = isCurrentMonth && !isDispatcher && !isCol12Finished(e) && (hasRightToFix || hasNoCreator)
 
   return (
