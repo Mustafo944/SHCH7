@@ -249,6 +249,17 @@ export function DU46JournalView({
             }
             // DB versiyasi, lekin UI bayroqlarni saqlaymiz
             if (localRow) {
+              // Ishchilar telefonida "lipirlash" (flickering) oldini olish uchun:
+              // Agar DB va local data bir xil bo'lsa, ESKI referenceni qaytaramiz.
+              // Shunda React.memo qatorni qayta render qilmaydi.
+              const cleanLocal = { ...localRow } as any
+              delete cleanLocal._isEdited
+              delete cleanLocal._isNew
+              
+              if (JSON.stringify(cleanLocal) === JSON.stringify(dbRow)) {
+                return localRow
+              }
+
               const newRow: any = { ...dbRow }
               newRow._isEdited = (localRow as any)._isEdited
               newRow._isNew = (localRow as any)._isNew
@@ -441,26 +452,27 @@ export function DU46JournalView({
     return nextRole.replace('_', ' ')
   }
 
-  // ── Input yangilash ───────────────────────────────────────────────────────────
   const update = useCallback((i: number, field: keyof DU46Entry, val: string) => {
-    const n = [...entriesRef.current]
-    n[i] = { ...n[i], [field]: val }
-
-      // Foydalanuvchi tahrirlayotgan qator Kunlik rejimda sana o'zgargani uchun g'oyib bo'lmasligi uchun belgi qo'yamiz
-      ; (n[i] as any)._isEdited = true;
-
-    // Bug #17 fix: createdByRole ni istalgan maydon o'zgarganda belgilaymiz (faqat 3 ta maydon emas)
-    if (!n[i].createdByRole) {
-      if (isYulUstasi) n[i].createdByRole = 'yul_ustasi'
-      else if (isEchXodimi) n[i].createdByRole = 'ech_xodimi'
-      else if (isElektromexanik) n[i].createdByRole = 'worker'
-      else if (isBekatNavbatchisi) n[i].createdByRole = 'bekat_navbatchisi'
-      else if (isBekatBoshlighi) n[i].createdByRole = 'bekat_boshlighi'
-    }
-
     // Heavy render from large list is deferred to keep typing smooth
+    // React setEntries(prev => ...) ishlatish orqali poyga holati va yo'qolgan harflarni oldini olamiz
     startTransition(() => {
-      setEntries(n)
+      setEntries(prev => {
+        const n = [...prev]
+        n[i] = { ...n[i], [field]: val }
+
+        // Foydalanuvchi tahrirlayotgan qator Kunlik rejimda sana o'zgargani uchun g'oyib bo'lmasligi uchun belgi qo'yamiz
+        ; (n[i] as any)._isEdited = true;
+
+        // Bug #17 fix: createdByRole ni istalgan maydon o'zgarganda belgilaymiz
+        if (!n[i].createdByRole) {
+          if (isYulUstasi) n[i].createdByRole = 'yul_ustasi'
+          else if (isEchXodimi) n[i].createdByRole = 'ech_xodimi'
+          else if (isElektromexanik) n[i].createdByRole = 'worker'
+          else if (isBekatNavbatchisi) n[i].createdByRole = 'bekat_navbatchisi'
+          else if (isBekatBoshlighi) n[i].createdByRole = 'bekat_boshlighi'
+        }
+        return n;
+      })
     })
   }, [isYulUstasi, isEchXodimi, isElektromexanik, isBekatNavbatchisi, isBekatBoshlighi])
 
