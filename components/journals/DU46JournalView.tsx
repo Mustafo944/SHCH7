@@ -114,6 +114,7 @@ export function DU46JournalView({
   const [viewMode, setViewMode] = useState<'kunlik' | 'jadval'>('kunlik')
   const [selectedDateFilter, setSelectedDateFilter] = useState<number>(new Date().getDate())
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+  const hasProcessedCarryOversRef = useRef(false)
 
   // Tasdiqlash zanjirini tanlash modali
   const [approvalChainModal, setApprovalChainModal] = useState<{ index: number, isEdit: boolean, currentChain: string[] } | null>(null)
@@ -176,8 +177,9 @@ export function DU46JournalView({
         const carryOverRows: DU46Entry[] = []
         const remainingEntries: DU46Entry[] = []
 
-        loadedAllEntries.forEach(e => {
-          // Boshlangan lekin tugatilmagan va eski oydan bo'lgan qatorlarni aniqlash
+        if (!hasProcessedCarryOversRef.current) {
+          loadedAllEntries.forEach(e => {
+            // Boshlangan lekin tugatilmagan va eski oydan bo'lgan qatorlarni aniqlash
           if (
             e.kamchilik?.trim() &&
             !e.bartarafBajarildi &&
@@ -218,12 +220,17 @@ export function DU46JournalView({
         })
 
         if (hasCarryOvers) {
+          hasProcessedCarryOversRef.current = true
           // Ko'chirilgan qatorlarni ro'yxatning boshiga qo'shamiz
           loadedAllEntries = [...carryOverRows, ...remainingEntries]
           // Avtomatik orqaga saqlab qo'yamiz
           import('@/lib/supabase-db').then(db => {
             db.upsertJournal(stationId, 'du46', loadedAllEntries, userName).catch(console.error)
           }).catch(console.error)
+        } else {
+          // Carry over yo'q bo'lsa ham flagni true qilib qo'yamiz, qayta ishlamasligi uchun
+          hasProcessedCarryOversRef.current = true
+          loadedAllEntries = remainingEntries.length > 0 ? remainingEntries : loadedAllEntries
         }
         // ── CARRY OVER LOGIC END ──
 
@@ -256,7 +263,11 @@ export function DU46JournalView({
               delete cleanLocal._isEdited
               delete cleanLocal._isNew
               
-              if (JSON.stringify(cleanLocal) === JSON.stringify(dbRow)) {
+              // Custom equal to avoid key order issues from JSON.stringify
+              const isSame = Object.keys(cleanLocal).length === Object.keys(dbRow).length && 
+                             Object.keys(cleanLocal).every(k => cleanLocal[k] === (dbRow as any)[k]);
+
+              if (isSame) {
                 return localRow
               }
 
@@ -630,7 +641,7 @@ export function DU46JournalView({
           'linkedReportId', 'linkedTaskType', 'linkedEntryIndex'
         ]
         otherFields.forEach(field => {
-          if (local[field] === undefined && db[field] !== undefined) {
+          if ((local[field] === undefined || local[field] === '') && db[field] !== undefined && db[field] !== '') {
             merged[field] = db[field] as never
           }
         })
