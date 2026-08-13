@@ -123,6 +123,7 @@ export function DU46JournalView({
 
   // Saqlash jarayonida ekanligini bildiruvchi state (poyga holatlari va qotishlarning oldini olish uchun)
   const [isSavingJournal, setIsSavingJournal] = useState(false)
+  const isSavingRef = useRef(false)
 
   // Bugungi sana va tanlangan oy
   const today = new Date()
@@ -230,7 +231,14 @@ export function DU46JournalView({
             }
           })
 
-          setEntries(merged)
+          // Pirillash tuzatish: faqat haqiqiy o'zgarish bo'lganda setEntries chaqiramiz.
+          // Agar merged array eskisi bilan aynan bir xil bo'lsa — o'tkazib yuboramiz.
+          const currentEntries = entriesRef.current
+          const hasRealChange = merged.length !== currentEntries.length ||
+            merged.some((m, idx) => m !== currentEntries[idx])
+          if (hasRealChange) {
+            setEntries(merged)
+          }
         } else {
           const localEntries = entriesRef.current
           const hasLocalEdits = localEntries.some(p => p.kamchilik || p.oyKun1 || p.bartarafInfo)
@@ -315,7 +323,12 @@ export function DU46JournalView({
           channelName: `journal_du46_${userRole}_${stationId}_${journalMonth}`,
           table: 'station_journals',
           filter: `station_id=eq.${stationId}`,
-          onEvent: () => loadJournalData(true),
+          onEvent: () => {
+            // Pirillash tuzatish: o'zimiz saqlayotganda realtime xabarni e'tiborsiz qoldiramiz.
+            // Aks holda: save → DB yoziladi → realtime xabar → loadJournalData → setEntries → lipillash
+            if (isSavingRef.current) return
+            loadJournalData(true)
+          },
         },
       ]
       : [],
@@ -526,6 +539,7 @@ export function DU46JournalView({
 
   const saveEntries = useCallback(async (updated: DU46Entry[], prev: DU46Entry[], options?: { deletedIndex?: number }) => {
     setIsSavingJournal(true)
+    isSavingRef.current = true
     setEntries(updated)
     const prevAllEntries = allEntriesRef.current
 
@@ -643,6 +657,8 @@ export function DU46JournalView({
       throw err
     } finally {
       setIsSavingJournal(false)
+      // Biroz kutamiz — realtime xabar saqlashdan keyin bir oz kech kelishi mumkin
+      setTimeout(() => { isSavingRef.current = false }, 1500)
     }
   }, [stationId, journalMonth, userName])
 
