@@ -674,45 +674,7 @@ export function DU46JournalView({
         .map(e => ({ ...e, journalMonth }))
 
       // ── CARRY OVER SYNC LOGIC ──
-      // Zanjirli yopish: barcha o'tgan oylardagi nusxalarini (agar bir necha oyga o'tgan bo'lsa) ham topib yangilaymiz.
-      mergedWithMonth.forEach(currentEntry => {
-        let targetId = currentEntry.carriedOverFromId
-        while (targetId) {
-          const originalIndex = otherMonths.findIndex(x => x._id === targetId)
-          if (originalIndex !== -1) {
-            const original = otherMonths[originalIndex]
-            otherMonths[originalIndex] = {
-              ...original,
-              // O'ng tomon (7-12 ustunlar) va yopilish bayroqlarini arxivga ham yozamiz
-              oyKun2: currentEntry.oyKun2 || original.oyKun2,
-              soatMinut2: currentEntry.soatMinut2 || original.soatMinut2,
-              xabarUsuli: currentEntry.xabarUsuli || original.xabarUsuli,
-              oyKun3: currentEntry.oyKun3 || original.oyKun3,
-              soatMinut3: currentEntry.soatMinut3 || original.soatMinut3,
-              dspImzo: currentEntry.dspImzo || original.dspImzo,
-              oyKun4: currentEntry.oyKun4 || original.oyKun4,
-              soatMinut4: currentEntry.soatMinut4 || original.soatMinut4,
-              bartarafInfo: currentEntry.bartarafInfo || original.bartarafInfo,
-              bartarafBajarildi: currentEntry.bartarafBajarildi || original.bartarafBajarildi,
-              bartarafBajarildiAt: currentEntry.bartarafBajarildiAt || original.bartarafBajarildiAt,
-              bartarafImzo: currentEntry.bartarafImzo || original.bartarafImzo,
-              bartarafByRole: currentEntry.bartarafByRole || original.bartarafByRole,
-              bartarafNeedsEM: currentEntry.bartarafNeedsEM !== undefined ? currentEntry.bartarafNeedsEM : original.bartarafNeedsEM,
-              bartarafEMTasdiqladi: currentEntry.bartarafEMTasdiqladi !== undefined ? currentEntry.bartarafEMTasdiqladi : original.bartarafEMTasdiqladi,
-              bartarafEMTasdiqladiAt: currentEntry.bartarafEMTasdiqladiAt || original.bartarafEMTasdiqladiAt,
-              bartarafEMImzo: currentEntry.bartarafEMImzo || original.bartarafEMImzo,
-              bartarafBBTasdiqladi: currentEntry.bartarafBBTasdiqladi !== undefined ? currentEntry.bartarafBBTasdiqladi : original.bartarafBBTasdiqladi,
-              bartarafBBTasdiqladiAt: currentEntry.bartarafBBTasdiqladiAt || original.bartarafBBTasdiqladiAt,
-              bartarafBBImzo: currentEntry.bartarafBBImzo || original.bartarafBBImzo,
-              bartarafBBVaqt: currentEntry.bartarafBBVaqt || original.bartarafBBVaqt,
-              approvalsCol12: currentEntry.approvalsCol12 || original.approvalsCol12,
-            }
-            targetId = original.carriedOverFromId // Zanjirni orqaga davom ettirish
-          } else {
-            targetId = undefined
-          }
-        }
-      })
+      // Foydalanuvchi iltimosiga ko'ra hozircha olib tashlandi
       // ── CARRY OVER SYNC LOGIC END ──
 
       let newAllEntries = [...otherMonths, ...mergedWithMonth]
