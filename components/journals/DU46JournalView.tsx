@@ -219,6 +219,22 @@ export function DU46JournalView({
               newRow._isNew = (localRow as any)._isNew
               return newRow
             }
+            // ── Anti-flickering: DB-only qatorlar uchun ──
+            // Agar bu qator oldingi renderda ham mavjud bo'lgan va mazmuni
+            // o'zgarmagan bo'lsa, ESKI referenceni qaytaramiz. Yangi object
+            // yaratilmaydi → React.memo qator komponentini qayta chizmaydi.
+            // Bu ayniqsa "Boshlandi" bosilmagan qatorlar uchun muhim — ularni
+            // hech kim tahrir qilmayapti, lekin har realtime hodisada yangi
+            // object berilsa, barcha shu qatorlar lipirlab qoladi.
+            const prevRef = localEntries.find(p => p._id === dbRow._id)
+            if (prevRef) {
+              const cleanPrev = { ...prevRef } as any
+              delete cleanPrev._isEdited
+              delete cleanPrev._isNew
+              if (JSON.stringify(cleanPrev) === JSON.stringify(dbRow)) {
+                return prevRef
+              }
+            }
             return dbRow
           })
 
@@ -273,44 +289,90 @@ export function DU46JournalView({
   const hasLinkedTaskRef = useRef(false)
   useEffect(() => {
     if (hasLinkedTaskRef.current) return // faqat 1 marta
-    if (!loading && taskContext && entriesRef.current.length > 0) {
+    if (!loading && taskContext) {
       const currentEntries = entriesRef.current
       const alreadyLinked = currentEntries.some(
         e => e.linkedReportId === taskContext.reportId && e.linkedTaskType === taskContext.taskType
       )
-      if (!alreadyLinked && taskContext.taskText) {
+      if (!alreadyLinked) {
         hasLinkedTaskRef.current = true
-        const emptyIndex = currentEntries.findIndex(e => !e.kamchilik && !e.oyKun1 && !e.soatMinut1 && !e.bartarafInfo && !e.kamchilikBajarildi)
 
         const todayStr = `${String(new Date().getDate()).padStart(2, '0')}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}`
         const timeStr = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
 
+        // Kim qo'shganini darhol belgilaymiz
+        let createdByRole: DU46Entry['createdByRole'] | undefined
+        if (isYulUstasi) createdByRole = 'yul_ustasi'
+        else if (isEchXodimi) createdByRole = 'ech_xodimi'
+        else if (isElektromexanik) createdByRole = 'worker'
+        else if (isBekatNavbatchisi) createdByRole = 'bekat_navbatchisi'
+        else if (isBekatBoshlighi) createdByRole = 'bekat_boshlighi'
+
         const n = [...currentEntries]
-        if (emptyIndex !== -1) {
-          n[emptyIndex] = {
-            ...n[emptyIndex],
-            nomber: n[emptyIndex].nomber || getNextNomber(n),
-            oyKun1: todayStr,
-            soatMinut1: timeStr,
-            linkedReportId: taskContext.reportId,
-            linkedEntryIndex: taskContext.entryIndex,
-            linkedTaskType: taskContext.taskType,
-            createdByRole: userRole as any
+
+        if (currentEntries.length > 0) {
+          // Mavjud qatorlar ichidan bo'sh birini topamiz
+          const emptyIndex = currentEntries.findIndex(e => !e.kamchilik && !e.oyKun1 && !e.soatMinut1 && !e.bartarafInfo && !e.kamchilikBajarildi)
+
+          if (emptyIndex !== -1) {
+            n[emptyIndex] = {
+              ...n[emptyIndex],
+              nomber: n[emptyIndex].nomber || getNextNomber(n),
+              oyKun1: todayStr,
+              soatMinut1: timeStr,
+              linkedReportId: taskContext.reportId,
+              linkedEntryIndex: taskContext.entryIndex,
+              linkedTaskType: taskContext.taskType,
+              createdByRole: createdByRole || (userRole as any)
+            }
+          } else {
+            const newRow = EMPTY_DU46(journalMonth)
+            newRow.nomber = getNextNomber(n)
+            newRow.oyKun1 = todayStr
+            newRow.soatMinut1 = timeStr
+            newRow.linkedReportId = taskContext.reportId
+            newRow.linkedEntryIndex = taskContext.entryIndex
+            newRow.linkedTaskType = taskContext.taskType
+            newRow.createdByRole = createdByRole || (userRole as any)
+            ;(newRow as any)._isNew = true
+            n.push(newRow)
           }
         } else {
+          // Jurnal bo'sh — yangi qator yaratib bog'lanishni o'rnatamiz
           const newRow = EMPTY_DU46(journalMonth)
-          newRow.nomber = getNextNomber(n)
+          newRow.nomber = '1'
           newRow.oyKun1 = todayStr
           newRow.soatMinut1 = timeStr
           newRow.linkedReportId = taskContext.reportId
           newRow.linkedEntryIndex = taskContext.entryIndex
           newRow.linkedTaskType = taskContext.taskType
-          newRow.createdByRole = userRole as any
+          newRow.createdByRole = createdByRole || (userRole as any)
+          ;(newRow as any)._isNew = true
           n.push(newRow)
         }
         setEntries(n)
 
+        // ── MUHIM: Bog'lanishni DARHOL bazaga saqlaymiz ──
+        // Aks holda foydalanuvchi jurnaldan chiqsa (Boshlandi bosmasdan),
+        // linkedReportId/linkedTaskType yo'qoladi va keyinchalik jurnal
+        // ro'yxatidan kirilganda bekat navbatchisi tasdiqlasa ham oylik
+        // ish rejadagi vazifa bajarildi hisoblanmaydi.
+        const toSave = n.map(stripSessionFlags)
+        const otherMonths = allEntriesRef.current.filter(
+          e => e.journalMonth !== journalMonth && !(
+            !e.journalMonth && !allEntriesRef.current.some(x => x.journalMonth)
+          )
+        )
+        const newAllEntries = [...otherMonths, ...toSave.map(e => ({ ...e, journalMonth }))]
+        allEntriesRef.current = newAllEntries
+        upsertJournal(stationId, 'du46', newAllEntries, userName).catch(err =>
+          console.error('taskContext bog\'lanishini saqlash xatosi:', err)
+        )
+
         showMsg("Sana va vaqt avtomatik kiritildi — ish mazmunini o'zingiz yozing", 3000)
+      } else {
+        // Allaqachon bog'langan — takroriy ochishda flag ni o'rnatib qo'yamiz
+        hasLinkedTaskRef.current = true
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -859,7 +921,7 @@ export function DU46JournalView({
       showMsg('Tasdiqlandi!')
 
       // Agar bekat navbatchisi 12-ustunni tasdiqlasa, task ni "Bajarildi" qilamiz
-      if (isBekatNavbatchisi && e.linkedReportId && e.linkedTaskType) {
+      if (isBekatNavbatchisi && e.linkedReportId && e.linkedTaskType && e.linkedEntryIndex !== undefined) {
         import('@/lib/supabase-db').then(db => {
           db.markReportEntryDoneFromJournal(e.linkedReportId!, e.linkedEntryIndex!, e.linkedTaskType!, userName)
         }).catch(err => console.error("Mark done error:", err))

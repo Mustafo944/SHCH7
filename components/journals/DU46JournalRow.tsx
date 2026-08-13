@@ -403,13 +403,61 @@ export const DU46JournalRow = React.memo(({
     </tr>
   )
 }, (prev, next) => {
-  return (
+  // Tez yo'l: agar reference bir xil bo'lsa, qator o'zgarmagan
+  if (
     prev.e === next.e &&
     prev.i === next.i &&
     prev.viewMode === next.viewMode &&
     prev.selectedDateFilter === next.selectedDateFilter &&
     prev.isDispatcher === next.isDispatcher &&
     prev.isCurrentMonth === next.isCurrentMonth
+  ) return true
+
+  // Reference farq qilsa ham, lekin boshqa proplar va data maydonlari o'zgarmagan
+  // bo'lsa, qayta render KERAK EMAS — lipirlash shundan kelib chiqadi.
+  if (
+    prev.i !== next.i ||
+    prev.viewMode !== next.viewMode ||
+    prev.selectedDateFilter !== next.selectedDateFilter ||
+    prev.isDispatcher !== next.isDispatcher ||
+    prev.isCurrentMonth !== next.isCurrentMonth
+  ) return false
+
+  // Entry object'larni maydon bo'yicha solishtirish (referencial emas)
+  const a = prev.e
+  const b = next.e
+  return (
+    a._id === b._id &&
+    a.nomber === b.nomber &&
+    a.oyKun1 === b.oyKun1 &&
+    a.soatMinut1 === b.soatMinut1 &&
+    a.kamchilik === b.kamchilik &&
+    a.oyKun2 === b.oyKun2 &&
+    a.soatMinut2 === b.soatMinut2 &&
+    a.xabarUsuli === b.xabarUsuli &&
+    a.oyKun3 === b.oyKun3 &&
+    a.soatMinut3 === b.soatMinut3 &&
+    a.dspImzo === b.dspImzo &&
+    a.oyKun4 === b.oyKun4 &&
+    a.soatMinut4 === b.soatMinut4 &&
+    a.bartarafInfo === b.bartarafInfo &&
+    a.kamchilikBajarildi === b.kamchilikBajarildi &&
+    a.kamchilikImzo === b.kamchilikImzo &&
+    a.kamchilikBBTasdiqladi === b.kamchilikBBTasdiqladi &&
+    a.kamchilikBBImzo === b.kamchilikBBImzo &&
+    a.kamchilikBBVaqt === b.kamchilikBBVaqt &&
+    a.bartarafBajarildi === b.bartarafBajarildi &&
+    a.bartarafImzo === b.bartarafImzo &&
+    a.bartarafBBTasdiqladi === b.bartarafBBTasdiqladi &&
+    a.bartarafBBImzo === b.bartarafBBImzo &&
+    a.bartarafBBVaqt === b.bartarafBBVaqt &&
+    a.createdByRole === b.createdByRole &&
+    a.bartarafByRole === b.bartarafByRole &&
+    a.approvalChain === b.approvalChain &&
+    a.approvalsCol3 === b.approvalsCol3 &&
+    a.approvalsCol12 === b.approvalsCol12 &&
+    (a as any)._isNew === (b as any)._isNew &&
+    (a as any)._isEdited === (b as any)._isEdited
   )
 })
 
