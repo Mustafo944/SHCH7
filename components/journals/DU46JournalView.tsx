@@ -162,7 +162,7 @@ export function DU46JournalView({
       const j = await getJournal(stationId, 'du46')
       if (j && j.entries.length > 0) {
         // Eski buzilgan yozuvlarda _isNew/_isEdited bazaga yozilib qolgan bo'lishi mumkin — yuklashda tozalaymiz
-        let loadedAllEntries = (j.entries as DU46Entry[]).map(stripSessionFlags)
+        const loadedAllEntries = (j.entries as DU46Entry[]).map(stripSessionFlags)
 
         // ── OYLAR RO'YXATI ──
         const OYLAR = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr']
@@ -253,7 +253,7 @@ export function DU46JournalView({
         setTimeout(() => setLoading(false), 50)
       }
     }
-  }, [stationId, journalMonth, userName])
+  }, [stationId, journalMonth])
 
   useEffect(() => {
     loadJournalData(false)
