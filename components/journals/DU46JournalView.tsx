@@ -173,65 +173,7 @@ export function DU46JournalView({
         }
 
         // ── CARRY OVER LOGIC START ──
-        let hasCarryOvers = false
-        const carryOverRows: DU46Entry[] = []
-        const remainingEntries: DU46Entry[] = []
-
-        if (!hasProcessedCarryOversRef.current) {
-          loadedAllEntries.forEach(e => {
-            // Boshlangan lekin tugatilmagan va eski oydan bo'lgan qatorlarni aniqlash
-          if (
-            e.kamchilik?.trim() &&
-            !e.bartarafBajarildi &&
-            e.journalMonth &&
-            e.journalMonth < journalMonth &&
-            !e.carriedOverToMonth
-          ) {
-            // Duplikatsiyani oldini olish (agar qachondir xato saqlangan bo'lsa)
-            const isAlreadyCarriedOver = loadedAllEntries.some(x => 
-              x.journalMonth === journalMonth && 
-              ((e._id && x.carriedOverFromId === e._id) || x.kamchilik.includes(e.kamchilik))
-            )
-
-            if (!isAlreadyCarriedOver) {
-              e.carriedOverToMonth = journalMonth
-              hasCarryOvers = true
-
-              const oldId = e._id || Math.random().toString(36).substr(2, 9)
-              e._id = oldId // asliga yozamiz
-
-              const monthName = getMonthName(e.journalMonth)
-              const prefix = `[${monthName} oyidan yopilmaganligi sababli ko'chirildi]`
-              const hasPrefixAlready = e.kamchilik.includes("oyidan yopilmaganligi sababli ko'chirildi]") || e.kamchilik.includes("[O'tgan oydan ko'chirildi]")
-              const newKamchilik = hasPrefixAlready ? e.kamchilik : `${prefix}\n${e.kamchilik}`
-
-              const newRow: DU46Entry = {
-                ...e,
-                _id: undefined, // Yangi id berilishi uchun
-                journalMonth: journalMonth,
-                carriedOverFromMonth: e.journalMonth,
-                carriedOverFromId: oldId,
-                kamchilik: newKamchilik
-              }
-              carryOverRows.push(newRow)
-            }
-          }
-          remainingEntries.push(e)
-        })
-
-        if (hasCarryOvers) {
-          hasProcessedCarryOversRef.current = true
-          // Ko'chirilgan qatorlarni ro'yxatning boshiga qo'shamiz
-          loadedAllEntries = [...carryOverRows, ...remainingEntries]
-          // Avtomatik orqaga saqlab qo'yamiz
-          import('@/lib/supabase-db').then(db => {
-            db.upsertJournal(stationId, 'du46', loadedAllEntries, userName).catch(console.error)
-          }).catch(console.error)
-        } else {
-          // Carry over yo'q bo'lsa ham flagni true qilib qo'yamiz, qayta ishlamasligi uchun
-          hasProcessedCarryOversRef.current = true
-          loadedAllEntries = remainingEntries.length > 0 ? remainingEntries : loadedAllEntries
-        }
+        // Foydalanuvchi iltimosiga ko'ra hozircha olib tashlandi
         // ── CARRY OVER LOGIC END ──
 
         allEntriesRef.current = loadedAllEntries
