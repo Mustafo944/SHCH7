@@ -677,7 +677,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   };
 
   const handleJournalClose = (journalName: string, isDone = false, isInProgressFlag = false, shouldClose = true) => {
-    let nextVisited = new Set(visitedJournals);
+    const nextVisited = new Set(visitedJournals);
     if (isDone && selectedTaskType) {
       onJournalVisited?.(selectedTaskType, journalName)
       setLocalProgress(prev => {
