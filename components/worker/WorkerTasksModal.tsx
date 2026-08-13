@@ -603,6 +603,11 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
         !visitedJournals.has('SHU-2')
       ) {
         setShowDeficiencyPrompt(true);
+      } else if (updatedDbScans.length >= targetScans && supportedRequired.every(j => visitedJournals.has(j))) {
+        setTimeout(() => {
+          onComplete(selectedTaskType);
+          toast.success("Vazifa barcha shartlar bajarilgani uchun avtomatik yakunlandi");
+        }, 400);
       }
 
     } catch (err: any) {
@@ -672,6 +677,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
   };
 
   const handleJournalClose = (journalName: string, isDone = false, isInProgressFlag = false, shouldClose = true) => {
+    let nextVisited = new Set(visitedJournals);
     if (isDone && selectedTaskType) {
       onJournalVisited?.(selectedTaskType, journalName)
       setLocalProgress(prev => {
@@ -679,6 +685,7 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
         delete next[selectedTaskType]
         return next
       })
+      nextVisited.add(journalName);
     }
     if (isInProgressFlag && selectedTaskType) {
       setLocalProgress(prev => ({ ...prev, [selectedTaskType]: true }))
@@ -693,6 +700,19 @@ export function TaskCompletionModal({ entry, entryIndex: _entryIndex, reportId, 
       }
       setActiveJournal(null)
       setShu2IssueMode(false)
+      
+      if (isDone && selectedTaskType) {
+        const remainingSupported = supportedRequired.filter(j => !nextVisited.has(j));
+        if (remainingSupported.length === 0) {
+           const allScanned = requiresQR ? dbScansRef.current.length >= targetScans : true;
+           if (allScanned) {
+              setTimeout(() => {
+                 onComplete(selectedTaskType);
+                 toast.success("Vazifa barcha shartlar bajarilgani uchun avtomatik yakunlandi");
+              }, 400);
+           }
+        }
+      }
     }
   }
 

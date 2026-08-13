@@ -1,5 +1,5 @@
 import React from 'react'
-import { CheckCircle2, Plus } from 'lucide-react'
+import { CheckCircle2, Plus, BookOpen } from 'lucide-react'
 import type { DU46Entry } from '@/types'
 import { DateInput, TimeInput } from './JournalSelectModal'
 import { LocalTextarea, LocalInput } from '@/components/worker/WorkerComponents'
@@ -111,6 +111,11 @@ export const DU46JournalRow = React.memo(({
             </div>
           ) : (
             <div>
+              {e.linkedReportId && (
+                <div className="mb-1 flex items-center gap-1 w-max rounded bg-purple-50 px-1.5 py-0.5 text-[9px] font-black uppercase text-purple-500 border border-purple-100">
+                  <BookOpen size={10} /> Oylik ish reja
+                </div>
+              )}
               <LocalTextarea
                 value={e.kamchilik || ''}
                 onChange={(val: string) => update(i, 'kamchilik', val)}

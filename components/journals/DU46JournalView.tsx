@@ -625,9 +625,12 @@ export function DU46JournalView({
           merged = { ...merged, bartarafBBTasdiqladi: db.bartarafBBTasdiqladi, bartarafBBTasdiqladiAt: db.bartarafBBTasdiqladiAt, bartarafBBImzo: db.bartarafBBImzo, bartarafBBVaqt: db.bartarafBBVaqt }
         }
 
-        const otherFields: (keyof DU46Entry)[] = ['oyKun2', 'soatMinut2', 'xabarUsuli', 'oyKun3', 'soatMinut3', 'dspImzo', 'nomber']
+        const otherFields: (keyof DU46Entry)[] = [
+          'oyKun2', 'soatMinut2', 'xabarUsuli', 'oyKun3', 'soatMinut3', 'dspImzo', 'nomber',
+          'linkedReportId', 'linkedTaskType', 'linkedEntryIndex'
+        ]
         otherFields.forEach(field => {
-          if (!local[field] && db[field]) {
+          if (local[field] === undefined && db[field] !== undefined) {
             merged[field] = db[field] as never
           }
         })
