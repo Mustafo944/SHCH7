@@ -41,6 +41,7 @@ export function useSessionGuard(expectedRole: Role | Role[]) {
           else if (user.role === 'bekat_navbatchisi') router.replace('/bekat-navbatchisi')
           else if (user.role === 'yul_ustasi') router.replace('/yul-ustasi')
           else if (user.role === 'ech_xodimi') router.replace('/ech-xodimi')
+          else if (user.role === 'texnik_hujjatlar') router.replace('/texnik-hujjatlar')
           else router.replace('/worker')
           return
         }

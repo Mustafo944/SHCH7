@@ -42,9 +42,9 @@ export function WorkersModal({ workers, stations, onClose, onEdit, onDelete, arc
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
-      <div className="flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] p-0 animate-scale-in bg-white/85 backdrop-blur-3xl border border-white/60 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/40 px-8 py-6 bg-white/50">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+      <div className="flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] p-0 animate-scale-in bg-slate-50/95 border border-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200/60 px-8 py-6 bg-white">
           <div className="flex items-center gap-4">
             {(selectedStationId || showArchived) && (
               <button
@@ -122,29 +122,90 @@ export function WorkersModal({ workers, stations, onClose, onEdit, onDelete, arc
             </div>
           ) : selectedStationId === null ? (
             /* ── BEKATLAR RO'YXATI ── */
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {stations.map(st => {
-                  const count = stationWorkerMap[st.id]?.length || 0
-                  return (
-                    <button
-                      key={st.id}
-                      onClick={() => setSelectedStationId(st.id)}
-                      className="group flex items-center justify-between p-6 rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/5 active:scale-[0.98] border border-white/60 bg-white/70 hover:bg-white/90 hover:border-purple-300/50"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white border border-slate-100 text-purple-600 shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:bg-purple-50">
-                          <MapPin size={24} />
+            <div className="space-y-8">
+
+              {/* ── BOSHQRMA XODIMLARI (Texnik hujjatlar, Mehnat muhofazasi) ── */}
+              {(() => {
+                const globalWorkers = workers.filter(w => w.role === 'texnik_hujjatlar' || w.role === 'mehnat_muhofazasi')
+                if (globalWorkers.length === 0) return null
+                return (
+                  <div className="space-y-3">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">Boshqarma xodimlari</h4>
+                    <div className="space-y-3">
+                      {globalWorkers.map(w => (
+                        <div key={w.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl transition-all duration-200 hover:shadow-md group border border-white/60 bg-white/70 hover:bg-white/90">
+                          <div className="flex items-center gap-4">
+                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-xl font-black text-white shadow-lg shadow-indigo-500/20 transition-transform duration-200 group-hover:scale-110">
+                              {w.fullName.charAt(0)}
+                            </div>
+                            <div>
+                              <h4 className="text-lg font-black text-slate-900 tracking-tight">{w.fullName}</h4>
+                              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+                                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
+                                  {ROLE_LABELS[w.role] || w.role}
+                                </span>
+                                <span className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                                  <Users size={14} className="text-slate-300" />
+                                  {w.login}
+                                </span>
+                                {w.phone && (
+                                  <span className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                                    <Phone size={14} className="text-slate-300" />
+                                    {w.phone}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 self-end sm:self-center">
+                            <button
+                              onClick={() => onEdit(w)}
+                              className="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-200 border border-transparent hover:border-indigo-100 shadow-sm"
+                            >
+                              <Edit size={18} />
+                              <span>Tahrirlash</span>
+                            </button>
+                            <button
+                              onClick={() => onDelete(w.id)}
+                              className="flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-600 hover:text-amber-800 hover:bg-amber-100 transition-all duration-200 border border-transparent hover:border-amber-200 shadow-sm"
+                            >
+                              <Archive size={18} />
+                              <span>Arxivlash</span>
+                            </button>
+                          </div>
                         </div>
-                        <div className="text-left">
-                          <h4 className="font-black text-slate-900">{st.name}</h4>
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{count} ta xodim biriktirilgan</p>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* ── BEKATLAR ── */}
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">Bekatlar</h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {stations.map(st => {
+                    const count = stationWorkerMap[st.id]?.length || 0
+                    return (
+                      <button
+                        key={st.id}
+                        onClick={() => setSelectedStationId(st.id)}
+                        className="group flex items-center justify-between p-6 rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/5 active:scale-[0.98] border border-white/60 bg-white/70 hover:bg-white/90 hover:border-purple-300/50"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white border border-slate-100 text-purple-600 shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:bg-purple-50">
+                            <MapPin size={24} />
+                          </div>
+                          <div className="text-left">
+                            <h4 className="font-black text-slate-900">{st.name}</h4>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{count} ta xodim biriktirilgan</p>
+                          </div>
                         </div>
-                      </div>
-                      <ChevronRight size={20} className="text-slate-300 group-hover:text-purple-500 transition-colors" />
-                    </button>
-                  )
-                })}
+                        <ChevronRight size={20} className="text-slate-300 group-hover:text-purple-500 transition-colors" />
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               {/* Arxiv tugmasi */}

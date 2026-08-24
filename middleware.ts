@@ -15,5 +15,6 @@ export const config = {
     '/yul-ustasi/:path*',
     '/ech-xodimi/:path*',
     '/mehnat-muhofazasi/:path*',
+    '/texnik-hujjatlar/:path*',
   ],
 }

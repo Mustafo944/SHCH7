@@ -417,7 +417,7 @@ export default function DispatcherPage() {
       setFormMsg({ type: 'err', text: "Ism, login va parol majburiy" })
       return
     }
-    if (form.stationIds.length === 0 && form.role !== 'mehnat_muhofazasi') {
+    if (form.stationIds.length === 0 && form.role !== 'mehnat_muhofazasi' && form.role !== 'texnik_hujjatlar') {
       setFormMsg({ type: 'err', text: "Kamida bitta bekat tanlang" })
       return
     }

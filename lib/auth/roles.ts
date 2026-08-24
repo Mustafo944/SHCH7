@@ -20,6 +20,7 @@ export const ROLE_HOME: Record<string, string> = {
   yul_ustasi: '/yul-ustasi',
   ech_xodimi: '/ech-xodimi',
   mehnat_muhofazasi: '/mehnat-muhofazasi',
+  texnik_hujjatlar: '/texnik-hujjatlar',
 }
 
 /**

@@ -6,7 +6,7 @@ type CreateWorkerBody = {
   login: string
   password: string
   phone: string
-  role: 'worker' | 'bekat_boshlighi' | 'elektromexanik' | 'elektromontyor' | 'bekat_navbatchisi' | 'yul_ustasi' | 'ech_xodimi' | 'mehnat_muhofazasi'
+  role: 'worker' | 'bekat_boshlighi' | 'elektromexanik' | 'elektromontyor' | 'bekat_navbatchisi' | 'yul_ustasi' | 'ech_xodimi' | 'mehnat_muhofazasi' | 'texnik_hujjatlar'
   stationIds: string[]
   position: string
   photoUrl?: string
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
       )
     }
 
-    if (body.role !== 'mehnat_muhofazasi' && (!Array.isArray(body.stationIds) || body.stationIds.length === 0)) {
+    if (body.role !== 'mehnat_muhofazasi' && body.role !== 'texnik_hujjatlar' && (!Array.isArray(body.stationIds) || body.stationIds.length === 0)) {
       return NextResponse.json(
         { success: false, message: 'Kamida bitta bekat tanlang' },
         { status: 400 }

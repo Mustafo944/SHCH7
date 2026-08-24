@@ -120,11 +120,12 @@ export function WorkerForm({ onSubmit, onCancel, form, setForm, isEdit, stations
               <button type="button" onClick={() => setForm({ ...form, role: 'yul_ustasi', stationIds: [] })} className={`rounded-xl py-3 px-2 text-xs font-bold border transition-all duration-200 ${form.role === 'yul_ustasi' ? 'bg-emerald-50 border-emerald-400 text-emerald-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Yo'l Ustasi</button>
               <button type="button" onClick={() => setForm({ ...form, role: 'ech_xodimi', stationIds: [] })} className={`rounded-xl py-3 px-2 text-xs font-bold border transition-all duration-200 ${form.role === 'ech_xodimi' ? 'bg-emerald-50 border-emerald-400 text-emerald-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>ECH Xodimi</button>
               <button type="button" onClick={() => setForm({ ...form, role: 'mehnat_muhofazasi', stationIds: [] })} className={`rounded-xl py-3 px-2 text-xs font-bold border transition-all duration-200 ${form.role === 'mehnat_muhofazasi' ? 'bg-purple-50 border-purple-400 text-purple-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Mehnat Muhofazasi</button>
+              <button type="button" onClick={() => setForm({ ...form, role: 'texnik_hujjatlar', stationIds: [] })} className={`rounded-xl py-3 px-2 text-xs font-bold border transition-all duration-200 ${form.role === 'texnik_hujjatlar' ? 'bg-teal-50 border-teal-400 text-teal-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}>Texnik Hujjatlar</button>
             </div>
           </div>
         </div>
 
-        {form.role !== 'mehnat_muhofazasi' && (
+        {form.role !== 'mehnat_muhofazasi' && form.role !== 'texnik_hujjatlar' && (
           <div className="rounded-2xl bg-slate-50/80 p-6 border border-slate-100">
             <label className="mb-4 block text-[10px] font-black uppercase tracking-widest text-slate-400">Bekatlarni biriktirish ({form.stationIds.length})</label>
             <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
