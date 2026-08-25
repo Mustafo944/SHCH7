@@ -7,10 +7,10 @@ import { useSessionGuard, useToast, useHardwareBack } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import { AppSidebar, type SidebarNavItem } from '@/components/AppSidebar'
+import { getTdmsSchedulesAdmin } from '@/lib/tdms-actions'
 import {
   getTdmsDocuments,
   getTdmsAudits,
-  getTdmsSchedules,
   addTdmsDocument,
   deleteTdmsDocument,
   addTdmsAudit,
@@ -85,6 +85,26 @@ const AUDIT_TYPE_LABELS: Record<string, string> = {
   cat4: 'BMTU UK TTD va Distansiya hujjatlari',
 }
 
+const getCategoryColor = (type: string, completed: boolean) => {
+  if (completed) {
+    switch (type) {
+      case 'cat1': return 'bg-blue-400 text-white'
+      case 'cat2': return 'bg-red-400 text-white'
+      case 'cat3': return 'bg-purple-400 text-white'
+      case 'cat4': return 'bg-orange-400 text-white'
+      default: return 'bg-emerald-400 text-white'
+    }
+  }
+  switch (type) {
+    case 'cat1': return 'bg-blue-500 text-white hover:bg-blue-600 cursor-pointer shadow-sm'
+    case 'cat2': return 'bg-red-500 text-white hover:bg-red-600 cursor-pointer shadow-sm'
+    case 'cat3': return 'bg-purple-500 text-white hover:bg-purple-600 cursor-pointer shadow-sm'
+    case 'cat4': return 'bg-orange-500 text-white hover:bg-orange-600 cursor-pointer shadow-sm'
+    default: return 'bg-slate-500 text-white shadow-sm'
+  }
+}
+
+
 const AUDIT_TYPE_COLORS: Record<string, string> = {
   cat1: 'bg-emerald-100 text-emerald-700 border-emerald-200',
   cat2: 'bg-red-100 text-red-700 border-red-200',
@@ -109,6 +129,7 @@ export default function TexnikHujjatlarPage() {
   // Modal states
   const [showAddDocModal, setShowAddDocModal] = useState(false)
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false)
+  const [activeScheduleMenu, setActiveScheduleMenu] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStationFilter, setSelectedStationFilter] = useState<string>('all')
   const [scheduleYear, setScheduleYear] = useState(new Date().getFullYear())
@@ -144,7 +165,7 @@ export default function TexnikHujjatlarPage() {
 
   const { data: schedules = [], mutate: mutateSchedules } = useSWR(
     session ? `tdms_schedules_${scheduleYear}` : null,
-    () => getTdmsSchedules(scheduleYear)
+    () => getTdmsSchedulesAdmin(scheduleYear)
   )
 
   // Kategoriyani tanlash uchun state (Option A bo'yicha 4 ta toifa)
@@ -235,6 +256,16 @@ export default function TexnikHujjatlarPage() {
       return { month: m.slice(0, 3), Bajarilgan: completed, Kutilayotgan: pending }
     })
 
+    // Joriy oy ishlari
+    const currentMonth = now.getMonth() + 1
+    const currentMonthSchedules = currentYearSchedules.filter(s => s.month === currentMonth)
+    const tasksByCategory = {
+      cat1: currentMonthSchedules.filter(s => s.audit_type === 'cat1'),
+      cat2: currentMonthSchedules.filter(s => s.audit_type === 'cat2'),
+      cat3: currentMonthSchedules.filter(s => s.audit_type === 'cat3'),
+      cat4: currentMonthSchedules.filter(s => s.audit_type === 'cat4'),
+    }
+
     return {
       stationStatus,
       greenCount,
@@ -247,7 +278,9 @@ export default function TexnikHujjatlarPage() {
       totalSchedules: currentYearSchedules.length,
       pieData,
       barData,
-      areaData
+      areaData,
+      tasksByCategory,
+      currentMonthName: MONTHS_UZ[currentMonth - 1]
     }
   }, [stations, audits, documents, schedules])
 
@@ -255,7 +288,15 @@ export default function TexnikHujjatlarPage() {
   const filteredDocs = useMemo(() => {
     let filtered = documents
     if (selectedStationFilter !== 'all') {
-      filtered = filtered.filter(d => d.station_id === selectedStationFilter)
+      const selectedStationName = stations.find(s => s.id === selectedStationFilter)?.name
+      if (selectedStationName) {
+        filtered = filtered.filter(d => 
+          d.station_id === selectedStationFilter || 
+          d.station_name.toLowerCase() === selectedStationName.toLowerCase()
+        )
+      } else {
+        filtered = filtered.filter(d => d.station_id === selectedStationFilter)
+      }
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
@@ -347,7 +388,7 @@ export default function TexnikHujjatlarPage() {
   // ─── Sidebar Items ───────────────────────────────────────────────────────
   const sidebarItems: SidebarNavItem[] = [
     { key: 'dashboard', label: 'Boshqaruv paneli', icon: Home, active: tab === 'dashboard', onClick: () => setTab('dashboard') },
-    { key: 'hujjatlar', label: 'Hujjatlar', icon: FileText, active: tab === 'hujjatlar', onClick: () => setTab('hujjatlar') },
+    { key: 'hujjatlar', label: 'Bekatlar sxemasi', icon: FileText, active: tab === 'hujjatlar', onClick: () => setTab('hujjatlar') },
     { key: 'grafik', label: 'Tekshiruv grafigi', icon: CalendarCheck, active: tab === 'grafik', onClick: () => setTab('grafik') },
     { key: 'tekshiruvlar', label: 'Tekshiruvlar tarixi', icon: BarChart2, active: tab === 'tekshiruvlar', onClick: () => setTab('tekshiruvlar') },
   ]
@@ -412,6 +453,53 @@ export default function TexnikHujjatlarPage() {
                 <StatCard icon={<Shield size={20} />} label="Jami tekshiruvlar" value={dashboardStats.totalAudits} color="blue" />
                 <StatCard icon={<CheckCircle2 size={20} />} label="Bajarilgan (bu yil)" value={dashboardStats.completedSchedules} color="emerald" />
                 <StatCard icon={<Clock size={20} />} label="Kutilayotgan" value={dashboardStats.pendingSchedules} color="amber" />
+              </div>
+
+              {/* Joriy oydagi ishlar */}
+              <div className="premium-card p-6">
+                <div className="flex items-center justify-between mb-1">
+                  <h2 className="text-lg font-black text-slate-900">Joriy oy rejalari ({dashboardStats.currentMonthName})</h2>
+                </div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Toifalar bo'yicha belgilangan ishlar ro'yxati</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                  {(['cat1', 'cat2', 'cat3', 'cat4'] as const).map(cat => {
+                    const tasks = dashboardStats.tasksByCategory[cat]
+                    if (tasks.length === 0) return null
+                    
+                    return (
+                      <div key={cat} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex gap-2 mb-4">
+                          <div className={`shrink-0 w-3 h-3 rounded-sm mt-0.5 ${cat === 'cat1' ? 'bg-blue-500' : cat === 'cat2' ? 'bg-red-500' : cat === 'cat3' ? 'bg-purple-500' : 'bg-orange-500'}`} />
+                          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-600 leading-tight">{AUDIT_TYPE_LABELS[cat]}</h3>
+                        </div>
+                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                          {tasks.map(task => (
+                            <div key={task.id} className="flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2.5 rounded-xl border border-slate-100 shadow-sm">
+                              <span className="text-xs font-bold text-slate-800">{task.station_name}</span>
+                              {task.completed ? (
+                                <span className="bg-emerald-100 text-emerald-600 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                                  <CheckCircle2 size={10} /> Bajarildi
+                                </span>
+                              ) : (
+                                <span className="bg-amber-100 text-amber-600 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">Kutilmoqda</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {Object.values(dashboardStats.tasksByCategory).every(arr => arr.length === 0) && (
+                    <div className="col-span-full py-12 text-center flex flex-col items-center justify-center">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                        <CheckCircle2 size={24} className="text-slate-300" />
+                      </div>
+                      <h3 className="text-sm font-black text-slate-600">Bu oy uchun ishlar rejalashtirilmagan</h3>
+                      <p className="text-xs text-slate-400 mt-1">Grafikga yangi ish qo'shish orqali reja shakllantiring</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Bekatlar holati (List) */}
@@ -561,7 +649,7 @@ export default function TexnikHujjatlarPage() {
           {/* ═══ GRAFIK ═══ */}
           {tab === 'grafik' && (
             <div className="space-y-4 animate-fade-in">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <h2 className="text-lg font-black text-slate-900">Tekshiruv grafigi</h2>
                   <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 px-1">
@@ -580,104 +668,128 @@ export default function TexnikHujjatlarPage() {
                     </button>
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowAddScheduleModal(true)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-black hover:bg-teal-700 transition-all active:scale-95 shadow-lg shadow-teal-200"
-                >
-                  <Plus size={16} /> Grafik qo&apos;shish
-                </button>
-                <button
-                  onClick={() => setShowAddStationModal(true)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-700 text-white text-sm font-black hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200"
-                >
-                  <Plus size={16} /> Bekat qo&apos;shish
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowAddScheduleModal(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-black hover:bg-teal-700 transition-all active:scale-95 shadow-lg shadow-teal-200"
+                  >
+                    <Plus size={16} /> Grafik qo&apos;shish
+                  </button>
+                  <button
+                    onClick={() => setShowAddStationModal(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-700 text-white text-sm font-black hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200"
+                  >
+                    <Plus size={16} /> Bekat qo&apos;shish
+                  </button>
+                </div>
               </div>
 
-              {/* Toifani tanlash tugmalari */}
-              <div className="flex flex-wrap gap-2 mb-4 bg-slate-100 p-2 rounded-2xl">
+              {/* Toifalar bo'yicha ranglar jadvali (Legend) */}
+              <div className="flex flex-wrap items-center gap-4 mb-4 px-2">
                 {(['cat1', 'cat2', 'cat3', 'cat4'] as const).map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setScheduleCategory(cat)}
-                    className={`flex-1 min-w-[200px] px-4 py-3 text-xs font-bold rounded-xl transition-all ${
-                      scheduleCategory === cat
-                        ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
-                        : 'text-slate-500 hover:bg-white/60'
-                    }`}
-                  >
-                    {AUDIT_TYPE_LABELS[cat]}
-                  </button>
+                  <div key={cat} className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-sm ${cat === 'cat1' ? 'bg-blue-500' : cat === 'cat2' ? 'bg-red-500' : cat === 'cat3' ? 'bg-purple-500' : 'bg-orange-500'}`}></div>
+                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{AUDIT_TYPE_LABELS[cat]}</span>
+                  </div>
                 ))}
               </div>
 
               {/* Oylar bo'yicha jadval */}
               <div className="premium-card overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-slate-50 border-b-2 border-slate-200">
-                        <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-48">Bekat / Oraliq</th>
+                <div className="overflow-auto max-h-[75vh] min-h-[600px]">
+                  <table className="w-full text-sm border-collapse border border-slate-200">
+                    <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm">
+                      <tr>
+                        <th className="sticky left-0 top-0 z-30 bg-slate-50 px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-48 border border-slate-200 shadow-[1px_0_0_0_#e2e8f0]">Bekat / Oraliq</th>
                         {MONTHS_UZ.map((m, i) => (
-                          <th key={i} className="px-2 py-3 text-center text-[10px] font-black uppercase tracking-tight text-slate-400 min-w-[60px]">{m.slice(0, 3)}</th>
+                          <th key={i} className="px-2 py-3 text-center text-[10px] font-black uppercase tracking-tight text-slate-400 min-w-[60px] border border-slate-200">{m.slice(0, 3)}</th>
                         ))}
-                        <th className="px-2 py-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 w-12"></th>
+                        <th className="px-2 py-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 w-12 border border-slate-200"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {tdmsStations.map(tdmsStation => {
                         const station = { id: tdmsStation.id, name: tdmsStation.name }
-                        const stationSchedules = schedules.filter(s => s.station_id === station.id && s.audit_type === scheduleCategory)
+                        const stationSchedules = schedules.filter(s => s.station_id === station.id)
                         const isInterval = tdmsStation.type === 'oraliq'
                         
                         return (
-                          <tr key={station.id} className={`border-b hover:bg-slate-50/50 group/row ${isInterval ? 'border-dashed border-slate-100 bg-slate-50/30' : 'border-slate-100'}`}>
-                            <td className={`px-4 py-2.5 text-xs font-bold ${isInterval ? 'text-slate-500 pl-8' : 'text-slate-800'}`}>
+                          <tr key={station.id} className={`hover:bg-slate-50/50 group/row ${isInterval ? 'bg-slate-50/30' : ''}`}>
+                            <td className={`sticky left-0 z-10 bg-white px-4 py-2.5 text-xs font-bold border border-slate-200 shadow-[1px_0_0_0_#e2e8f0] ${isInterval ? 'text-slate-500 pl-8 bg-slate-50/80' : 'text-slate-800'}`}>
                               <div className="flex items-center gap-1">
                                 {isInterval && <span className="text-slate-300 mr-1">↳</span>}
                                 {station.name}
                               </div>
                             </td>
                             {MONTHS_UZ.map((_, monthIdx) => {
-                              const cellSchedule = stationSchedules.find(s => s.month === monthIdx + 1)
+                              const monthSchedules = stationSchedules.filter(s => s.month === monthIdx + 1)
+                              const gridClass = monthSchedules.length > 2 ? 'grid-cols-2 grid-rows-2' : monthSchedules.length === 2 ? 'grid-cols-1 grid-rows-2' : 'grid-cols-1 grid-rows-1'
+                              
                               return (
-                                <td key={monthIdx} className="px-1 py-1.5 text-center border-l border-slate-100/50">
-                                  {cellSchedule ? (
-                                    <div className="group relative inline-block">
-                                      <button
-                                        onClick={() => {
-                                          if (!cellSchedule.completed) {
-                                            handleCompleteAudit(station.id, station.name, cellSchedule.audit_type, cellSchedule.id)
-                                          }
-                                        }}
-                                        className={`inline-flex items-center justify-center w-full h-8 rounded text-[10px] font-black transition-all ${
-                                          cellSchedule.completed
-                                            ? 'bg-emerald-500 text-white shadow-sm'
-                                            : scheduleCategory === 'cat2' 
-                                              ? 'bg-red-500 text-white shadow-sm hover:bg-red-600 cursor-pointer' 
-                                              : 'bg-emerald-500 text-white shadow-sm hover:bg-emerald-600 cursor-pointer'
-                                        }`}
-                                        title={`${AUDIT_TYPE_LABELS[cellSchedule.audit_type]}${cellSchedule.completed ? ' ✓ Bajarilgan' : ' — Bosing tasdiqlash uchun'}`}
-                                      >
-                                        {cellSchedule.completed ? '✓' : ''}
-                                      </button>
-                                      {!cellSchedule.completed && (
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); handleDeleteSchedule(cellSchedule.id) }}
-                                          className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:scale-110"
-                                        >
-                                          ×
-                                        </button>
-                                      )}
+                                <td key={monthIdx} className="p-0 text-center border border-slate-200 relative h-10 min-w-[60px] align-top bg-slate-50">
+                                  {monthSchedules.length > 0 ? (
+                                    <div className={`w-full h-full grid gap-[1px] bg-slate-200 ${gridClass}`}>
+                                      {monthSchedules.map(cellSchedule => (
+                                        <div key={cellSchedule.id} className="relative w-full h-full bg-white group/item">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              setActiveScheduleMenu(activeScheduleMenu === cellSchedule.id ? null : cellSchedule.id)
+                                            }}
+                                            className={`flex items-center justify-center w-full h-full text-[10px] font-black transition-all ${getCategoryColor(cellSchedule.audit_type, cellSchedule.completed)}`}
+                                            title={`${AUDIT_TYPE_LABELS[cellSchedule.audit_type]}${cellSchedule.completed ? ' ✓ Bajarilgan' : ''}`}
+                                          >
+                                            {cellSchedule.completed ? '✓' : ''}
+                                          </button>
+                                          
+                                          {activeScheduleMenu === cellSchedule.id && (
+                                            <>
+                                              <div className="fixed inset-0 z-40" onClick={() => setActiveScheduleMenu(null)} />
+                                              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/20 backdrop-blur-sm p-4 cursor-default" onClick={(e) => { e.stopPropagation(); setActiveScheduleMenu(null) }}>
+                                                <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xs overflow-hidden animate-fade-up" onClick={e => e.stopPropagation()}>
+                                                  <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                                                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Amalni tanlang</h4>
+                                                    <button onClick={() => setActiveScheduleMenu(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors">
+                                                      <X size={14} />
+                                                    </button>
+                                                  </div>
+                                                  <div className="p-2 flex flex-col gap-1">
+                                                    {!cellSchedule.completed && (
+                                                      <button 
+                                                        onClick={() => {
+                                                          handleCompleteAudit(station.id, station.name, cellSchedule.audit_type, cellSchedule.id)
+                                                          setActiveScheduleMenu(null)
+                                                        }}
+                                                        className="w-full text-left px-4 py-3 text-xs font-black text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors flex items-center gap-3"
+                                                      >
+                                                        <CheckCircle2 size={16} /> Bajarildi deb belgilash
+                                                      </button>
+                                                    )}
+                                                    <button 
+                                                      onClick={() => {
+                                                        handleDeleteSchedule(cellSchedule.id)
+                                                        setActiveScheduleMenu(null)
+                                                      }}
+                                                      className="w-full text-left px-4 py-3 text-xs font-black text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-3"
+                                                    >
+                                                      <Trash2 size={16} /> Grafikdan o'chirish
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </>
+                                          )}
+                                        </div>
+                                      ))}
                                     </div>
                                   ) : (
-                                    <span className="text-slate-100">·</span>
+                                    <span className="absolute inset-0 text-slate-200 flex items-center justify-center w-full h-full pointer-events-none bg-slate-50">·</span>
                                   )}
                                 </td>
                               )
                             })}
                             {/* O'chirish va O'zgartirish */}
-                            <td className="px-1 py-1.5 text-center whitespace-nowrap">
+                            <td className="px-1 py-1.5 text-center whitespace-nowrap border border-slate-200">
                               {activeRole === 'texnik_hujjatlar' && (
                                 <div className="flex items-center justify-center gap-1 opacity-40 group-hover/row:opacity-100 transition-opacity">
                                   <button

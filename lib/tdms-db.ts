@@ -292,7 +292,7 @@ export async function getTdmsSchedules(year?: number): Promise<TdmsSchedule[]> {
 
   const { data, error } = await query
   if (error) throw new Error(`Grafiklarni yuklashda xato: ${error.message}`)
-  return (data || []).map(mapSchedule)
+  console.log('getTdmsSchedules RETURN:', data?.length, 'rows'); return (data || []).map(mapSchedule)
 }
 
 /** Yangi grafik yozuvi qo'shish */
