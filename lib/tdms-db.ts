@@ -588,6 +588,16 @@ export async function getTdmsPageVersions(pageId: string): Promise<TdmsPageVersi
   return (data || []).map(mapPageVersion)
 }
 
+/** Eski versiyani o'chirish */
+export async function deleteTdmsPageVersion(versionId: string): Promise<void> {
+  const { error } = await supabase
+    .from('tdms_page_versions')
+    .delete()
+    .eq('id', versionId)
+
+  if (error) throw new Error(`Versiyani o'chirishda xato: ${error.message}`)
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // PAGE CHECKS CRUD
 // ═══════════════════════════════════════════════════════════════════════════════

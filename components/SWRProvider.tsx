@@ -6,12 +6,11 @@ export function SWRProvider({ children }: { children: React.ReactNode }) {
   return (
     <SWRConfig 
       value={{
-        revalidateOnFocus: true,
+        revalidateOnFocus: false,
         revalidateOnReconnect: true,
-        // Bir xil kalit bo'yicha 5s ichidagi takroriy so'rovlar birlashtiriladi.
-        // Fokus almashganda va bir necha komponent bir manbani so'raganda
-        // ortiqcha tarmoq yukini kamaytiradi (natija o'zgarmaydi).
-        dedupingInterval: 5000,
+        // Bir xil kalit bo'yicha 30s ichidagi takroriy so'rovlar birlashtiriladi.
+        // Sxemalar orasida tez-tez o'tganda qayta yuklanishning oldini oladi.
+        dedupingInterval: 30000,
         keepPreviousData: true,
       }}
     >

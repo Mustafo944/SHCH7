@@ -8,6 +8,7 @@ import { ToastContainer } from '@/components/ToastContainer'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
 import { AppSidebar, type SidebarNavItem } from '@/components/AppSidebar'
 import { getTdmsSchedulesAdmin } from '@/lib/tdms-actions'
+import { ConfirmModal } from '@/components/ConfirmModal'
 import {
   getTdmsDocuments,
   getTdmsAudits,
@@ -23,6 +24,7 @@ import {
   replaceTdmsPage,
   deleteTdmsPage,
   getTdmsPageVersions,
+  deleteTdmsPageVersion,
   getTdmsPageChecks,
   getTdmsPageChecksByPage,
   checkTdmsPage,
@@ -62,6 +64,8 @@ import {
   ChevronRight,
   AlertTriangle,
   Lock,
+  ChevronDown,
+  Check,
 } from 'lucide-react'
 import {
   PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -79,10 +83,10 @@ const MONTHS_UZ = [
 ]
 
 const AUDIT_TYPE_LABELS: Record<string, string> = {
-  cat1: 'Qurilmalar va hujjatlar (Bekat)',
-  cat2: 'Bekat hujjatlari va Distansiya hujjatlari',
-  cat3: 'Bekat TTD va Distansiya hujjatlari',
-  cat4: 'BMTU UK TTD va Distansiya hujjatlari',
+  cat1: 'Bekat qurilmalarining sxemaga mosligi',
+  cat2: 'Bekat sxemalarining distansiya sxemalariga mosligi',
+  cat3: 'Bekat TTD va distansiya sxemalari',
+  cat4: 'BMTU UK TTD va distansiya sxemalari',
 }
 
 const getCategoryColor = (type: string, completed: boolean) => {
@@ -131,7 +135,7 @@ export default function TexnikHujjatlarPage() {
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false)
   const [activeScheduleMenu, setActiveScheduleMenu] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedStationFilter, setSelectedStationFilter] = useState<string>('all')
+  const [selectedStationFilter, setSelectedStationFilter] = useState<string>('')
   const [scheduleYear, setScheduleYear] = useState(new Date().getFullYear())
 
   // Varaqlar (Pages) states
@@ -148,6 +152,7 @@ export default function TexnikHujjatlarPage() {
   const [showAddStationModal, setShowAddStationModal] = useState(false)
   const [editStation, setEditStation] = useState<TdmsStation | null>(null)
   const [deleteConfirmStation, setDeleteConfirmStation] = useState<TdmsStation | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{ id: string, type: 'document' | 'schedule' } | null>(null)
 
   // tdmsStations ni stations sifatida ishlatamiz (id va name bilan)
   const stations = tdmsStations.map(s => ({ id: s.id, name: s.name }))
@@ -266,6 +271,14 @@ export default function TexnikHujjatlarPage() {
       cat4: currentMonthSchedules.filter(s => s.audit_type === 'cat4'),
     }
 
+    // Actionable Metrics
+    const overdueTasks = currentYearSchedules.filter(s => s.month < currentMonth && !s.completed).length
+    const currentMonthRemaining = currentYearSchedules.filter(s => s.month === currentMonth && !s.completed).length
+    const yearlyProgress = currentYearSchedules.length > 0 
+      ? Math.round((completedSchedules.length / currentYearSchedules.length) * 100)
+      : 0
+    const problematicStationIds = new Set(currentYearSchedules.filter(s => s.month < currentMonth && !s.completed).map(s => s.station_id))
+
     return {
       stationStatus,
       greenCount,
@@ -276,6 +289,10 @@ export default function TexnikHujjatlarPage() {
       completedSchedules: completedSchedules.length,
       pendingSchedules: pendingSchedules.length,
       totalSchedules: currentYearSchedules.length,
+      overdueTasks,
+      currentMonthRemaining,
+      yearlyProgress,
+      problematicStationsCount: problematicStationIds.size,
       pieData,
       barData,
       areaData,
@@ -287,7 +304,7 @@ export default function TexnikHujjatlarPage() {
   // ─── Filtered Documents ──────────────────────────────────────────────────
   const filteredDocs = useMemo(() => {
     let filtered = documents
-    if (selectedStationFilter !== 'all') {
+    if (selectedStationFilter) {
       const selectedStationName = stations.find(s => s.id === selectedStationFilter)?.name
       if (selectedStationName) {
         filtered = filtered.filter(d => 
@@ -297,6 +314,9 @@ export default function TexnikHujjatlarPage() {
       } else {
         filtered = filtered.filter(d => d.station_id === selectedStationFilter)
       }
+    } else if (!searchQuery.trim()) {
+      // Bekat tanlanmagan va qidiruv yo'q — hech narsa ko'rsatmaslik
+      return []
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
@@ -307,7 +327,7 @@ export default function TexnikHujjatlarPage() {
       )
     }
     return filtered
-  }, [documents, selectedStationFilter, searchQuery])
+  }, [documents, selectedStationFilter, searchQuery, stations])
 
   // ─── Handlers ────────────────────────────────────────────────────────────
   const handleAddDocument = async (doc: Omit<TdmsDocument, 'id' | 'created_at'>) => {
@@ -321,7 +341,7 @@ export default function TexnikHujjatlarPage() {
     }
   }
 
-  const handleDeleteDocument = async (id: string) => {
+  const confirmDeleteDocument = async (id: string) => {
     try {
       await deleteTdmsDocument(id)
       mutateDocs()
@@ -329,6 +349,10 @@ export default function TexnikHujjatlarPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Xatolik yuz berdi")
     }
+  }
+
+  const handleDeleteDocument = (id: string) => {
+    setConfirmAction({ id, type: 'document' })
   }
 
   const handleAddSchedule = async (schedule: Omit<TdmsSchedule, 'id' | 'created_at' | 'completed' | 'completed_audit_id'>) => {
@@ -342,7 +366,7 @@ export default function TexnikHujjatlarPage() {
     }
   }
 
-  const handleDeleteSchedule = async (id: string) => {
+  const confirmDeleteSchedule = async (id: string) => {
     try {
       await deleteTdmsSchedule(id)
       mutateSchedules()
@@ -350,6 +374,10 @@ export default function TexnikHujjatlarPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Xatolik yuz berdi")
     }
+  }
+
+  const handleDeleteSchedule = (id: string) => {
+    setConfirmAction({ id, type: 'schedule' })
   }
 
   const handleCompleteAudit = async (stationId: string, stationName: string, auditType: TdmsAudit['audit_type'], scheduleId?: string) => {
@@ -414,7 +442,7 @@ export default function TexnikHujjatlarPage() {
         <header className="sticky top-0 z-30 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-[1600px]">
           <div className="flex w-full items-center justify-between bg-white/[0.25] backdrop-blur-3xl px-3 sm:px-5 py-2 sm:py-3 rounded-[32px] sm:rounded-[40px] shadow-sm border border-white/50">
             <div className="flex items-center gap-3 sm:gap-4">
-              <button onClick={() => setIsMobileSidebarOpen(true)} className="lg:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-white/20 backdrop-blur-md p-2 shadow-sm border border-white/30 text-slate-600 hover:bg-slate-50 transition-all active:scale-95">
+              <button onClick={() => setIsMobileSidebarOpen(true)} className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-white/20 backdrop-blur-md p-2 shadow-sm border border-white/30 text-slate-600 hover:bg-slate-50 transition-all active:scale-95">
                 <Menu size={20} />
               </button>
               <div className="hidden sm:flex relative h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center bg-white rounded-full shadow-sm">
@@ -443,7 +471,7 @@ export default function TexnikHujjatlarPage() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 mx-auto w-full max-w-[1600px]">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 sm:pb-6 mx-auto w-full max-w-[1600px]">
           {/* ═══ DASHBOARD ═══ */}
           {tab === 'dashboard' && (
             <div className="space-y-6 animate-fade-in">
@@ -456,49 +484,86 @@ export default function TexnikHujjatlarPage() {
               </div>
 
               {/* Joriy oydagi ishlar */}
-              <div className="premium-card p-6">
-                <div className="flex items-center justify-between mb-1">
-                  <h2 className="text-lg font-black text-slate-900">Joriy oy rejalari ({dashboardStats.currentMonthName})</h2>
+              <div className="premium-card relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                  <CalendarCheck size={120} />
                 </div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Toifalar bo'yicha belgilangan ishlar ro'yxati</p>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                  {(['cat1', 'cat2', 'cat3', 'cat4'] as const).map(cat => {
-                    const tasks = dashboardStats.tasksByCategory[cat]
-                    if (tasks.length === 0) return null
-                    
-                    return (
-                      <div key={cat} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="flex gap-2 mb-4">
-                          <div className={`shrink-0 w-3 h-3 rounded-sm mt-0.5 ${cat === 'cat1' ? 'bg-blue-500' : cat === 'cat2' ? 'bg-red-500' : cat === 'cat3' ? 'bg-purple-500' : 'bg-orange-500'}`} />
-                          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-600 leading-tight">{AUDIT_TYPE_LABELS[cat]}</h3>
-                        </div>
-                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-                          {tasks.map(task => (
-                            <div key={task.id} className="flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2.5 rounded-xl border border-slate-100 shadow-sm">
-                              <span className="text-xs font-bold text-slate-800">{task.station_name}</span>
-                              {task.completed ? (
-                                <span className="bg-emerald-100 text-emerald-600 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
-                                  <CheckCircle2 size={10} /> Bajarildi
-                                </span>
-                              ) : (
-                                <span className="bg-amber-100 text-amber-600 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">Kutilmoqda</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
-                  {Object.values(dashboardStats.tasksByCategory).every(arr => arr.length === 0) && (
-                    <div className="col-span-full py-12 text-center flex flex-col items-center justify-center">
-                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-3">
-                        <CheckCircle2 size={24} className="text-slate-300" />
-                      </div>
-                      <h3 className="text-sm font-black text-slate-600">Bu oy uchun ishlar rejalashtirilmagan</h3>
-                      <p className="text-xs text-slate-400 mt-1">Grafikga yangi ish qo'shish orqali reja shakllantiring</p>
+                <div className="relative p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 border-b border-slate-100 pb-4">
+                    <div>
+                      <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                        <span className="bg-teal-50 text-teal-600 p-1.5 rounded-lg">
+                          <CalendarCheck size={20} />
+                        </span>
+                        Joriy oy rejalari
+                      </h2>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">
+                        {dashboardStats.currentMonthName} oyi uchun belgilangan vazifalar ro'yxati
+                      </p>
                     </div>
-                  )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+                    {(['cat1', 'cat2', 'cat3', 'cat4'] as const).map(cat => {
+                      const tasks = dashboardStats.tasksByCategory[cat]
+                      if (tasks.length === 0) return null
+                      
+                      const colorMap = {
+                        cat1: 'from-blue-500/10 to-blue-500/5 text-blue-600 border-blue-200/50',
+                        cat2: 'from-red-500/10 to-red-500/5 text-red-600 border-red-200/50',
+                        cat3: 'from-purple-500/10 to-purple-500/5 text-purple-600 border-purple-200/50',
+                        cat4: 'from-orange-500/10 to-orange-500/5 text-orange-600 border-orange-200/50',
+                      }
+                      
+                      const iconColorMap = {
+                        cat1: 'text-blue-500 bg-blue-100',
+                        cat2: 'text-red-500 bg-red-100',
+                        cat3: 'text-purple-500 bg-purple-100',
+                        cat4: 'text-orange-500 bg-orange-100',
+                      }
+
+                      return (
+                        <div key={cat} className={`rounded-[20px] bg-gradient-to-b ${colorMap[cat]} border p-4 shadow-sm backdrop-blur-sm relative overflow-hidden group`}>
+                          <div className="flex gap-3 mb-4 items-start relative z-10">
+                            <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center ${iconColorMap[cat]} shadow-sm`}>
+                              <Layers size={16} />
+                            </div>
+                            <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-800 leading-tight pt-1">
+                              {AUDIT_TYPE_LABELS[cat]}
+                            </h3>
+                          </div>
+                          <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar relative z-10">
+                            {tasks.map(task => (
+                              <div key={task.id} className="flex items-center justify-between gap-3 bg-white/80 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-[0_4px_15px_rgba(0,0,0,0.05)] transition-all">
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0" />
+                                  <span className="text-[12px] font-black text-slate-700 leading-snug break-words whitespace-normal">{task.station_name}</span>
+                                </div>
+                                {task.completed ? (
+                                  <span className="shrink-0 bg-emerald-500 text-white px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shadow-sm">
+                                    <CheckCircle2 size={10} /> Bajarildi
+                                  </span>
+                                ) : (
+                                  <span className="shrink-0 bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">
+                                    Kutilmoqda
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {Object.values(dashboardStats.tasksByCategory).every(arr => arr.length === 0) && (
+                      <div className="col-span-full py-16 text-center flex flex-col items-center justify-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                        <div className="w-16 h-16 bg-white shadow-sm rounded-full flex items-center justify-center mb-4">
+                          <CheckCircle2 size={24} className="text-slate-300" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-600">Bu oy uchun ishlar rejalashtirilmagan</h3>
+                        <p className="text-xs text-slate-400 mt-1 font-medium">Grafikga yangi ish qo'shish orqali reja shakllantiring</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -552,14 +617,12 @@ export default function TexnikHujjatlarPage() {
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:border-teal-400 focus:ring-2 focus:ring-teal-100 outline-none transition-all"
                     />
                   </div>
-                  <select
+                  <CustomSelect
                     value={selectedStationFilter}
-                    onChange={e => setSelectedStationFilter(e.target.value)}
-                    className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-700 focus:border-teal-400 outline-none transition-all"
-                  >
-                    <option value="all">Barcha bekatlar</option>
-                    {stations.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
+                    onChange={setSelectedStationFilter}
+                    placeholder="Bekat tanlang..."
+                    options={stations.map(s => ({ label: s.name, value: s.id }))}
+                  />
                 </div>
                 <button
                   onClick={() => setShowAddDocModal(true)}
@@ -573,8 +636,14 @@ export default function TexnikHujjatlarPage() {
               {filteredDocs.length === 0 ? (
                 <div className="premium-card p-12 text-center">
                   <FileText size={48} className="mx-auto text-slate-300 mb-4" />
-                  <h3 className="text-lg font-black text-slate-600 mb-2">Hujjat topilmadi</h3>
-                  <p className="text-sm text-slate-400">Yangi hujjat qo&apos;shish uchun yuqoridagi tugmani bosing</p>
+                  <h3 className="text-lg font-black text-slate-600 mb-2">
+                    {!selectedStationFilter && !searchQuery.trim() ? 'Bekatni tanlang' : 'Hujjat topilmadi'}
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    {!selectedStationFilter && !searchQuery.trim() 
+                      ? 'Hujjatlarni ko\'rish uchun yuqoridagi ro\'yxatdan bekatni tanlang yoki qidiring' 
+                      : 'Bunday hujjat mavjud emas'}
+                  </p>
                 </div>
               ) : (
                 <div className="grid gap-3">
@@ -603,22 +672,24 @@ export default function TexnikHujjatlarPage() {
                                 <Layers size={18} className="text-teal-600" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-bold text-slate-800 truncate">{doc.name}</span>
-                                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-teal-50 text-teal-600 border border-teal-100">{doc.category}</span>
+                                <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                                  <span className="text-sm font-bold text-slate-800">{doc.name}</span>
+                                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-teal-50 text-teal-600 border border-teal-100 shrink-0">{doc.category}</span>
                                 </div>
                                 <p className="text-[10px] text-slate-400 font-bold mt-0.5">
                                   Yuklagan: {doc.uploaded_by} • {new Date(doc.updated_at).toLocaleDateString('uz')}
                                 </p>
                               </div>
                               <div className="flex items-center gap-2">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc.id) }}
-                                  className="p-2 rounded-xl text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
-                                  title="O'chirish"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
+                                {activeRole === 'texnik_hujjatlar' && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc.id) }}
+                                    className="p-2 rounded-xl text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                                    title="O'chirish"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                )}
                                 <ChevronRight size={18} className="text-slate-300 group-hover:text-teal-500 transition-colors" />
                               </div>
                             </div>
@@ -649,10 +720,10 @@ export default function TexnikHujjatlarPage() {
           {/* ═══ GRAFIK ═══ */}
           {tab === 'grafik' && (
             <div className="space-y-4 animate-fade-in">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-lg font-black text-slate-900">Tekshiruv grafigi</h2>
-                  <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 px-1">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-lg font-black text-slate-900 w-full sm:w-auto">Tekshiruv grafigi</h2>
+                  <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 px-1 w-fit">
                     <button
                       onClick={() => setScheduleYear(y => y - 1)}
                       className="px-3 py-1.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
@@ -668,16 +739,16 @@ export default function TexnikHujjatlarPage() {
                     </button>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 w-full md:w-auto">
                   <button
                     onClick={() => setShowAddScheduleModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-black hover:bg-teal-700 transition-all active:scale-95 shadow-lg shadow-teal-200"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-teal-600 text-white text-[11px] sm:text-sm font-black hover:bg-teal-700 transition-all active:scale-95 shadow-lg shadow-teal-200"
                   >
                     <Plus size={16} /> Grafik qo&apos;shish
                   </button>
                   <button
                     onClick={() => setShowAddStationModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-700 text-white text-sm font-black hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-slate-700 text-white text-[11px] sm:text-sm font-black hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200"
                   >
                     <Plus size={16} /> Bekat qo&apos;shish
                   </button>
@@ -685,11 +756,11 @@ export default function TexnikHujjatlarPage() {
               </div>
 
               {/* Toifalar bo'yicha ranglar jadvali (Legend) */}
-              <div className="flex flex-wrap items-center gap-4 mb-4 px-2">
+              <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-2 sm:gap-4 mb-4 px-2">
                 {(['cat1', 'cat2', 'cat3', 'cat4'] as const).map(cat => (
-                  <div key={cat} className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-sm ${cat === 'cat1' ? 'bg-blue-500' : cat === 'cat2' ? 'bg-red-500' : cat === 'cat3' ? 'bg-purple-500' : 'bg-orange-500'}`}></div>
-                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{AUDIT_TYPE_LABELS[cat]}</span>
+                  <div key={cat} className="flex items-start sm:items-center gap-2">
+                    <div className={`w-3 h-3 mt-0.5 sm:mt-0 rounded-sm shrink-0 ${cat === 'cat1' ? 'bg-blue-500' : cat === 'cat2' ? 'bg-red-500' : cat === 'cat3' ? 'bg-purple-500' : 'bg-orange-500'}`}></div>
+                    <span className="text-[9px] sm:text-[10px] font-black text-slate-600 uppercase tracking-widest leading-tight flex-1">{AUDIT_TYPE_LABELS[cat]}</span>
                   </div>
                 ))}
               </div>
@@ -765,15 +836,17 @@ export default function TexnikHujjatlarPage() {
                                                         <CheckCircle2 size={16} /> Bajarildi deb belgilash
                                                       </button>
                                                     )}
-                                                    <button 
-                                                      onClick={() => {
-                                                        handleDeleteSchedule(cellSchedule.id)
-                                                        setActiveScheduleMenu(null)
-                                                      }}
-                                                      className="w-full text-left px-4 py-3 text-xs font-black text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-3"
-                                                    >
-                                                      <Trash2 size={16} /> Grafikdan o'chirish
-                                                    </button>
+                                                    {activeRole === 'texnik_hujjatlar' && (
+                                                      <button 
+                                                        onClick={() => {
+                                                          handleDeleteSchedule(cellSchedule.id)
+                                                          setActiveScheduleMenu(null)
+                                                        }}
+                                                        className="w-full text-left px-4 py-3 text-xs font-black text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-3"
+                                                      >
+                                                        <Trash2 size={16} /> Grafikdan o'chirish
+                                                      </button>
+                                                    )}
                                                   </div>
                                                 </div>
                                               </div>
@@ -948,54 +1021,64 @@ export default function TexnikHujjatlarPage() {
         />
       )}
 
-      {/* ═══ DELETE STATION MODAL (2 bosqichli) ═══ */}
-      {deleteConfirmStation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl p-8 shadow-2xl max-w-sm w-full animate-fade-up">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-12 w-12 rounded-2xl bg-red-100 flex items-center justify-center">
-                <AlertTriangle size={24} className="text-red-500" />
+      <ConfirmModal
+        isOpen={!!deleteConfirmStation}
+        title="O'chirishni tasdiqlang"
+        message={`"${deleteConfirmStation?.name}" ni o'chirmoqchimisiz? Bunga biriktirilgan barcha grafiklar ham o'chib ketadi! Bu amalni qaytarib bo'lmaydi.`}
+        confirmText="Ha, o'chirish"
+        onConfirm={async () => {
+          if (!deleteConfirmStation) return
+          try {
+            await deleteTdmsStation(deleteConfirmStation.id)
+            mutateTdmsStations()
+            mutateSchedules()
+            setDeleteConfirmStation(null)
+            toast.success(`"${deleteConfirmStation?.name}" o'chirildi!`)
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Xatolik yuz berdi")
+          }
+        }}
+        onCancel={() => setDeleteConfirmStation(null)}
+      />
+
+      <ConfirmModal
+        isOpen={!!confirmAction}
+        title={confirmAction?.type === 'document' ? "Hujjatni o'chirish" : "Grafikni o'chirish"}
+        message={confirmAction?.type === 'document' 
+          ? "Rostdan ham ushbu hujjatni o'chirmoqchimisiz?" 
+          : "Rostdan ham ushbu grafikni o'chirmoqchimisiz?"}
+        onConfirm={() => {
+          if (confirmAction?.type === 'document') confirmDeleteDocument(confirmAction.id)
+          if (confirmAction?.type === 'schedule') confirmDeleteSchedule(confirmAction.id)
+          setConfirmAction(null)
+        }}
+        onCancel={() => setConfirmAction(null)}
+      />
+
+      {/* Mobile Bottom Navigation */}
+      <div className="lg:hidden fixed bottom-4 left-4 right-4 z-40 bg-white/60 backdrop-blur-3xl border border-white/60 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.08)]">
+        <div className="flex items-center justify-around px-1 py-2">
+          {sidebarItems.map((item) => (
+            <button
+              key={item.key}
+              onClick={() => {
+                item.onClick?.()
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+              className={`flex flex-col items-center justify-center w-full h-14 rounded-2xl transition-all active:scale-95 ${
+                item.active ? 'text-teal-600' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <div className={`mb-1 p-1.5 rounded-xl ${item.active ? 'bg-teal-100/80 shadow-sm' : 'bg-transparent'}`}>
+                <item.icon size={22} strokeWidth={item.active ? 2.5 : 2} className="transition-transform" />
               </div>
-              <div>
-                <h3 className="text-lg font-black text-slate-900">O&apos;chirishni tasdiqlang</h3>
-                <p className="text-xs text-slate-400 font-bold">2-bosqichli xavfsiz o&apos;chirish</p>
-              </div>
-            </div>
-            <div className="bg-red-50 border border-red-100 rounded-2xl p-4 mb-6">
-              <p className="text-sm font-bold text-red-800 mb-1">
-                &quot;{deleteConfirmStation.name}&quot; ni o&apos;chirmoqchimisiz?
-              </p>
-              <p className="text-xs text-red-600">
-                ⚠️ Bunga biriktirilgan barcha grafiklar ham o&apos;chib ketadi! Bu amalni qaytarib bo&apos;lmaydi.
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeleteConfirmStation(null)}
-                className="flex-1 px-4 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors"
-              >
-                Bekor qilish
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    await deleteTdmsStation(deleteConfirmStation.id)
-                    mutateTdmsStations()
-                    mutateSchedules()
-                    setDeleteConfirmStation(null)
-                    toast.success(`"${deleteConfirmStation.name}" o'chirildi!`)
-                  } catch (err) {
-                    toast.error(err instanceof Error ? err.message : "Xatolik yuz berdi")
-                  }
-                }}
-                className="flex-1 px-4 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-colors"
-              >
-                Ha, o&apos;chirish
-              </button>
-            </div>
-          </div>
+              <span className={`text-[9px] sm:text-[10px] font-bold truncate max-w-full px-1 text-center leading-tight ${item.active ? 'text-teal-700' : 'text-slate-600'}`}>
+                {item.label}
+              </span>
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
     </div>
@@ -1006,20 +1089,74 @@ export default function TexnikHujjatlarPage() {
 // SUBCOMPONENTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number; color: string }) {
+function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number | string; color: string }) {
   const colorClasses: Record<string, string> = {
     teal: 'bg-teal-50 border-teal-100 text-teal-600',
     blue: 'bg-blue-50 border-blue-100 text-blue-600',
     emerald: 'bg-emerald-50 border-emerald-100 text-emerald-600',
     amber: 'bg-amber-50 border-amber-100 text-amber-600',
+    red: 'bg-red-50 border-red-100 text-red-600',
+    rose: 'bg-rose-50 border-rose-100 text-rose-600',
   }
   return (
-    <div className="premium-card p-5">
-      <div className={`h-10 w-10 rounded-xl flex items-center justify-center border mb-3 ${colorClasses[color]}`}>
+    <div className="premium-card p-3 sm:p-5">
+      <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-xl flex items-center justify-center border mb-2 sm:mb-3 [&>svg]:w-4 [&>svg]:h-4 sm:[&>svg]:w-5 sm:[&>svg]:h-5 ${colorClasses[color]}`}>
         {icon}
       </div>
-      <div className="text-2xl font-black text-slate-900">{value}</div>
-      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{label}</div>
+      <div className="text-xl sm:text-2xl font-black text-slate-900">{value}</div>
+      <div className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 leading-tight">{label}</div>
+    </div>
+  )
+}
+
+function CustomSelect({
+  value,
+  onChange,
+  options,
+  placeholder = 'Tanlang...'
+}: {
+  value: string
+  onChange: (val: string) => void
+  options: { label: string, value: string }[]
+  placeholder?: string
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const selectedLabel = options.find(o => o.value === value)?.label || ''
+  
+  return (
+    <div className="relative z-30">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full sm:w-64 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+      >
+        <span className={`truncate ${selectedLabel ? 'text-slate-700' : 'text-slate-400'}`}>{selectedLabel || placeholder}</span>
+        <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+          <div className="absolute top-full left-0 right-0 mt-2 z-20 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden max-h-64 overflow-y-auto animate-fade-in origin-top">
+            {options.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => {
+                  onChange(opt.value)
+                  setIsOpen(false)
+                }}
+                className={`flex items-center justify-between w-full text-left px-4 py-3 text-sm font-bold transition-colors ${
+                  value === opt.value 
+                    ? 'bg-teal-50 text-teal-700' 
+                    : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {value === opt.value && <Check size={16} className="text-teal-600 shrink-0 ml-2" />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -1629,6 +1766,8 @@ function PageDetailModal({ page, userName, userRole, onClose, onDelete, toast }:
   const [replaceFile, setReplaceFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [currentPage, setCurrentPage] = useState(page)
+  const [viewingVersion, setViewingVersion] = useState<TdmsPageVersion | null>(null)
+  const [deleteVersionConfirm, setDeleteVersionConfirm] = useState<string | null>(null)
 
   // Tekshiruvlar
   const { data: checks = [], mutate: mutateChecks } = useSWR(
@@ -1696,11 +1835,10 @@ function PageDetailModal({ page, userName, userRole, onClose, onDelete, toast }:
     }
   }
 
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false)
+
   const handleDelete = () => {
-    if (window.confirm("Rostdan ham ushbu chizmani o'chirmoqchimisiz?")) {
-      onDelete(currentPage.id)
-      onClose()
-    }
+    setShowConfirmDelete(true)
   }
 
   return (
@@ -1727,14 +1865,16 @@ function PageDetailModal({ page, userName, userRole, onClose, onDelete, toast }:
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button 
-                onClick={handleDelete}
-                className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2 text-xs font-black"
-                title="Varaqni o'chirish"
-              >
-                <Trash2 size={18} />
-                <span className="hidden sm:inline">O'chirish</span>
-              </button>
+              {userRole === 'Texnik hujjatlar muhandisi' && (
+                <button 
+                  onClick={handleDelete}
+                  className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2 text-xs font-black"
+                  title="Varaqni o'chirish"
+                >
+                  <Trash2 size={18} />
+                  <span className="hidden sm:inline">O'chirish</span>
+                </button>
+              )}
               <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 transition-colors">
                 <X size={20} />
               </button>
@@ -1922,27 +2062,95 @@ function PageDetailModal({ page, userName, userRole, onClose, onDelete, toast }:
             <div className="space-y-2">
               {versions.map(v => (
                 <div key={v.id} className="flex items-center justify-between px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 group hover:bg-slate-100 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-slate-200 text-slate-600">{v.version}</span>
-                    <div>
+                  <button
+                    onClick={() => setViewingVersion(v)}
+                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                  >
+                    <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-slate-200 text-slate-600 shrink-0">{v.version}</span>
+                    <div className="min-w-0">
                       <p className="text-xs font-bold text-slate-600">Yuklagan: {v.uploaded_by}</p>
                       <p className="text-[10px] text-slate-400 font-bold">Almashtirilgan: {new Date(v.replaced_at).toLocaleDateString('uz')}</p>
                     </div>
+                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => setViewingVersion(v)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
+                      title="Ko'rish"
+                    >
+                      <Eye size={16} />
+                    </button>
+                    {userRole === 'texnik_hujjatlar' && (
+                      <button
+                        onClick={() => setDeleteVersionConfirm(v.id)}
+                        className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                        title="O'chirish"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
-                  <a
-                    href={v.drive_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 rounded-xl text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
-                    title="Eski versiyani ko'rish"
-                  >
-                    <ExternalLink size={16} />
-                  </a>
                 </div>
               ))}
             </div>
           </div>
         )}
+
+        {/* Eski versiyani ko'rish modali */}
+        {viewingVersion && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setViewingVersion(null)}>
+            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-y-auto animate-fade-up" onClick={e => e.stopPropagation()}>
+              <div className="px-6 pt-6 pb-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">{currentPage.name || `Varaq ${currentPage.page_number}`}</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Eski versiya: {viewingVersion.version} • Yuklagan: {viewingVersion.uploaded_by} • {new Date(viewingVersion.replaced_at).toLocaleDateString('uz')}
+                  </p>
+                </div>
+                <button onClick={() => setViewingVersion(null)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="px-6 py-4">
+                <div className="relative w-full h-[60vh] rounded-2xl overflow-hidden border-2 border-slate-200 bg-slate-50 group">
+                  {viewingVersion.drive_url.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                    <img src={viewingVersion.drive_url} alt="Eski sxema" className="w-full h-full object-contain" />
+                  ) : (
+                    <iframe src={`${viewingVersion.drive_url}#toolbar=0`} className="w-full h-full" title="Eski sxema" />
+                  )}
+                  <a
+                    href={viewingVersion.drive_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute top-4 right-4 p-3 rounded-xl bg-black/50 text-white backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70 flex items-center gap-2 text-xs font-black shadow-lg"
+                  >
+                    <ExternalLink size={16} />
+                    Kattalashtirish
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Versiyani o'chirish tasdiqlash modali */}
+        <ConfirmModal
+          isOpen={!!deleteVersionConfirm}
+          title="Eski versiyani o'chirish"
+          message="Rostdan ham ushbu eski versiyani o'chirmoqchimisiz? Bu amalni qaytarib bo'lmaydi."
+          onConfirm={async () => {
+            if (!deleteVersionConfirm) return
+            try {
+              await deleteTdmsPageVersion(deleteVersionConfirm)
+              mutateVersions()
+              setDeleteVersionConfirm(null)
+              toast.success("Eski versiya o'chirildi")
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Xatolik yuz berdi")
+            }
+          }}
+          onCancel={() => setDeleteVersionConfirm(null)}
+        />
       </div>
     </div>
   )
