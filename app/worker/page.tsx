@@ -826,7 +826,7 @@ export default function WorkerPage() {
 
 
           <div className={view === 'sxemalar' ? 'block' : 'hidden'}>
-            <WorkerSchemasView stationId={activeStationId} stationName={stationName} />
+            <WorkerSchemasView stationId={activeStationId} stationName={stationName} userRole={session?.role || ''} userName={session?.fullName || ''} />
           </div>
           <div className={view === 'grafiklar' ? 'block' : 'hidden'}>
             <WorkerGraphicsView />

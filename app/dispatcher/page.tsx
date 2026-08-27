@@ -757,7 +757,7 @@ export default function DispatcherPage() {
                         )}
 
                         {selectedReportType === 'sxemalar' && (
-                          <SchemasView key={selectedStation} stationId={selectedStation} userName={session?.fullName || ''} />
+                          <SchemasView key={selectedStation} stationId={selectedStation} stationName={stations.find(s => s.id === selectedStation)?.name || ''} userName={session?.fullName || ''} />
                         )}
                         {selectedReportType === 'jurnallar' && !activeJournalType && (
                           <JournalSelectModal

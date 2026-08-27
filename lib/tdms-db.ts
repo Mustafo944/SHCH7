@@ -185,6 +185,19 @@ export async function getTdmsDocumentsByStation(stationId: string): Promise<Tdms
   return (data || []).map(mapDocument)
 }
 
+/** Bekat nomi bo'yicha hujjatlarni olish (ishchi/dispetcher sahifalari uchun) */
+export async function getTdmsDocumentsByStationName(stationName: string): Promise<TdmsDocument[]> {
+  const { data, error } = await supabase
+    .from('tdms_documents')
+    .select('*')
+    .eq('station_name', stationName)
+    .order('category', { ascending: true })
+    .order('name', { ascending: true })
+
+  if (error) throw new Error(`Bekat hujjatlarini yuklashda xato: ${error.message}`)
+  return (data || []).map(mapDocument)
+}
+
 /** Yangi hujjat qo'shish */
 export async function addTdmsDocument(doc: Omit<TdmsDocument, 'id' | 'created_at'>): Promise<TdmsDocument> {
   const { data, error } = await supabase

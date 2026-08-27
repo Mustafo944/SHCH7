@@ -1699,11 +1699,13 @@ function DocumentPagesView({ document, userName, userRole, onBack, onPageClick, 
                       {page.page_number}
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-white border border-white/20 w-max mb-0.5">
-                        {page.version}
-                      </span>
+                      {page.version.toLowerCase() !== 'v1' && (
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-white border border-white/20 w-max mb-0.5">
+                          {page.version}
+                        </span>
+                      )}
                       <span className="text-[10px] font-bold text-white/90 truncate max-w-[100px]">
-                        {page.name || "Nomsiz"}
+                        {page.name || `Varaq ${page.page_number}`}
                       </span>
                     </div>
                   </div>
@@ -1860,7 +1862,7 @@ function PageDetailModal({ page, userName, userRole, onClose, onDelete, toast }:
               <div>
                 <h3 className="text-lg font-black text-slate-900">{currentPage.name || `Varaq ${currentPage.page_number}`}</h3>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  {currentPage.version} • Yuklagan: {currentPage.uploaded_by}
+                  {currentPage.version.toLowerCase() !== 'v1' ? `${currentPage.version} • ` : ''}Yuklagan: {currentPage.uploaded_by}
                 </p>
               </div>
             </div>
