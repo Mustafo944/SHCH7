@@ -689,6 +689,82 @@ export async function uncheckTdmsPage(pageId: string, checkedBy: string): Promis
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// MISMATCH REPORTS (Dashboard uchun — mos kelmaydigan varaqlar ro'yxati)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Boshqaruv panelida ko'rsatiladigan "mos kelmaydi" hisoboti */
+export interface TdmsMismatchReport {
+  checkId: string
+  pageId: string
+  pageName: string
+  pageNumber: number
+  documentId: string
+  documentName: string
+  stationName: string
+  checkedBy: string
+  checkedRole: string
+  checkedAt: string
+  comment: string
+}
+
+/** Barcha "mos kelmaydi" deb belgilangan varaqlarni olib beradi (bekat/hujjat/varaq ma'lumotlari bilan) */
+export async function getTdmsMismatchReports(): Promise<TdmsMismatchReport[]> {
+  // page_checks → pages → documents zanjiri orqali bitta so'rov
+  const { data: checks, error: checksErr } = await supabase
+    .from('tdms_page_checks')
+    .select('*')
+    .eq('status', 'mismatch')
+    .order('checked_at', { ascending: false })
+
+  if (checksErr) throw new Error(`Mismatch tekshiruvlarni yuklashda xato: ${checksErr.message}`)
+  if (!checks || checks.length === 0) return []
+
+  // Tegishli page va document ma'lumotlarini olish
+  const pageIds = Array.from(new Set(checks.map(c => c.page_id)))
+  const { data: pages, error: pagesErr } = await supabase
+    .from('tdms_pages')
+    .select('id, document_id, page_number, name')
+    .in('id', pageIds)
+
+  if (pagesErr) throw new Error(`Varaqlarni yuklashda xato: ${pagesErr.message}`)
+
+  const docIds = Array.from(new Set((pages || []).map(p => p.document_id)))
+  const { data: docs, error: docsErr } = await supabase
+    .from('tdms_documents')
+    .select('id, name, station_name')
+    .in('id', docIds)
+
+  if (docsErr) throw new Error(`Hujjatlarni yuklashda xato: ${docsErr.message}`)
+
+  // Tez qidiruv uchun Map
+  const pageMap = new Map((pages || []).map(p => [p.id, p]))
+  const docMap = new Map((docs || []).map(d => [d.id, d]))
+
+  return checks
+    .map(c => {
+      const page = pageMap.get(c.page_id)
+      if (!page) return null
+      const doc = docMap.get(page.document_id)
+      if (!doc) return null
+
+      return {
+        checkId: c.id,
+        pageId: c.page_id,
+        pageName: page.name || `Varaq ${page.page_number}`,
+        pageNumber: page.page_number,
+        documentId: page.document_id,
+        documentName: doc.name,
+        stationName: doc.station_name,
+        checkedBy: c.checked_by,
+        checkedRole: c.checked_role || '',
+        checkedAt: c.checked_at,
+        comment: c.comment || '',
+      } satisfies TdmsMismatchReport
+    })
+    .filter((r): r is TdmsMismatchReport => r !== null)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // TDMS BEKATLAR (Faqat Texnik Hujjatlar uchun — boshqa sahifalarga ta'sir qilmaydi)
 // ═══════════════════════════════════════════════════════════════════════════════
 

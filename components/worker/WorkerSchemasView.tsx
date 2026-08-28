@@ -4,7 +4,7 @@ import { getSchemasByStation } from '@/lib/supabase-db'
 import { getTdmsDocumentsByStationName, getTdmsPages, getTdmsPageChecks, getTdmsPageChecksByPage, checkTdmsPage, type TdmsDocument, type TdmsPage, type TdmsPageCheck } from '@/lib/tdms-db'
 import type { StationSchema } from '@/types'
 import { HeaderCard } from './BigActionCard'
-import useSWR from 'swr'
+import useSWR, { preload } from 'swr'
 
 /* ═══════════════════════════════════════════════════════════════════════
    WorkerSchemasView — bekat sxemalari + texnik hujjatlar sxemalari
@@ -170,6 +170,10 @@ function TdmsDocumentCard({ document, onClick }: { document: TdmsDocument, onCli
   return (
     <button
       onClick={onClick}
+      onMouseEnter={() => {
+        preload(`tdms_pages_${document.id}`, () => getTdmsPages(document.id))
+        preload(`tdms_page_checks_${document.id}`, () => getTdmsPageChecks(document.id))
+      }}
       className="group relative overflow-hidden rounded-[28px] bg-white/30 p-6 backdrop-blur-[40px] border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.05)] transition-all hover:bg-white/40 hover:shadow-[0_8px_32px_rgba(31,38,135,0.15)] hover:border-teal-300/60 text-left w-full active:scale-[0.98]"
     >
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80 z-20" />

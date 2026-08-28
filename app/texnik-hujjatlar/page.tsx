@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
-import useSWR, { mutate } from 'swr'
+import useSWR, { mutate, preload } from 'swr'
 import { useSessionGuard, useToast, useHardwareBack } from '@/lib/hooks'
 import { ToastContainer } from '@/components/ToastContainer'
 import { AuroraMeshBackground } from '@/components/AuroraMeshBackground'
@@ -33,6 +33,7 @@ import {
   addTdmsStation,
   deleteTdmsStation,
   updateTdmsStation,
+  getTdmsMismatchReports,
   type TdmsDocument,
   type TdmsAudit,
   type TdmsSchedule,
@@ -171,6 +172,12 @@ export default function TexnikHujjatlarPage() {
   const { data: schedules = [], mutate: mutateSchedules } = useSWR(
     session ? `tdms_schedules_${scheduleYear}` : null,
     () => getTdmsSchedulesAdmin(scheduleYear)
+  )
+
+  // Mos kelmaydigan varaqlar (elektromexanik izohlari bilan)
+  const { data: mismatchReports = [] } = useSWR(
+    session ? 'tdms_mismatch_reports' : null,
+    getTdmsMismatchReports
   )
 
   // Kategoriyani tanlash uchun state (Option A bo'yicha 4 ta toifa)
@@ -567,6 +574,92 @@ export default function TexnikHujjatlarPage() {
                 </div>
               </div>
 
+              {/* Mos kelmaydigan sxemalar (Elektromexanik izohlari) */}
+              {mismatchReports.length > 0 && (
+                <div className="premium-card relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                    <AlertTriangle size={120} />
+                  </div>
+                  <div className="relative p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 border-b border-red-100 pb-4">
+                      <div>
+                        <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                          <span className="bg-red-50 text-red-500 p-1.5 rounded-lg">
+                            <AlertTriangle size={20} />
+                          </span>
+                          Mos kelmaydigan sxemalar
+                        </h2>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">
+                          Katta elektromexanik tomonidan belgilangan muammolar
+                        </p>
+                      </div>
+                      <span className="shrink-0 bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+                        {mismatchReports.length} ta topilma
+                      </span>
+                    </div>
+
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+                      {mismatchReports.map(report => (
+                        <div
+                          key={report.checkId}
+                          className="group flex flex-col gap-2 bg-red-50/60 border border-red-200/60 rounded-2xl p-4 hover:shadow-md hover:border-red-300 transition-all cursor-pointer"
+                          onClick={() => {
+                            // Bekat sxemasi bo'limiga o'tish va tegishli hujjatni tanlash
+                            const doc = documents.find(d => d.id === report.documentId)
+                            if (doc) {
+                              setSelectedStationFilter(doc.station_id)
+                              setSelectedDocument(doc)
+                              setTab('hujjatlar')
+                            }
+                          }}
+                        >
+                          {/* Sarlavha: bekat + hujjat nomi */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <div className="shrink-0 w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center text-red-500 shadow-sm">
+                                <AlertTriangle size={16} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="text-sm font-black text-slate-800">{report.stationName}</span>
+                                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-white text-red-500 border border-red-200 shrink-0">
+                                    {report.pageName}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-slate-500 font-bold mt-0.5 truncate">
+                                  {report.documentName}
+                                </p>
+                              </div>
+                            </div>
+                            <ChevronRight size={18} className="shrink-0 text-slate-300 group-hover:text-red-400 transition-colors mt-2" />
+                          </div>
+
+                          {/* Izoh (comment) */}
+                          {report.comment && (
+                            <div className="ml-[46px] bg-white/80 rounded-xl px-3 py-2 border border-red-100">
+                              <p className="text-xs text-red-700 font-medium leading-relaxed">💬 {report.comment}</p>
+                            </div>
+                          )}
+
+                          {/* Meta: kim va qachon */}
+                          <div className="ml-[46px] flex flex-wrap items-center gap-2 text-[10px] font-bold text-slate-400">
+                            <span>{report.checkedBy}</span>
+                            {report.checkedRole && (
+                              <>
+                                <span className="w-1 h-1 rounded-full bg-slate-300" />
+                                <span>{report.checkedRole}</span>
+                              </>
+                            )}
+                            <span className="w-1 h-1 rounded-full bg-slate-300" />
+                            <span>{new Date(report.checkedAt).toLocaleDateString('uz')}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Bekatlar holati (List) */}
               <div className="premium-card p-6">
                 <h2 className="text-lg font-black text-slate-900 mb-1">Bekatlar tafsiloti</h2>
@@ -667,6 +760,10 @@ export default function TexnikHujjatlarPage() {
                               key={doc.id}
                               className="flex items-center gap-4 px-5 py-3 hover:bg-teal-50/30 transition-colors group cursor-pointer"
                               onClick={() => setSelectedDocument(doc)}
+                              onMouseEnter={() => {
+                                preload(`tdms_pages_${doc.id}`, () => getTdmsPages(doc.id))
+                                preload(`tdms_page_checks_${doc.id}`, () => getTdmsPageChecks(doc.id))
+                              }}
                             >
                               <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center shrink-0">
                                 <Layers size={18} className="text-teal-600" />
