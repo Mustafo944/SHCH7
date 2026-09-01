@@ -42,6 +42,7 @@ import {
   type TdmsPageVersion,
   type TdmsPageCheck,
   type TdmsStation,
+  type TdmsActivityItem,
 } from '@/lib/tdms-db'
 import {
   Home,
@@ -1069,77 +1070,10 @@ export default function TexnikHujjatlarPage() {
 
       {/* ═══ ACTIVITY MODAL ═══ */}
       {showActivityModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={() => setShowActivityModal(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col animate-fade-up overflow-hidden" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 shrink-0">
-              <div>
-                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                  <span className="bg-amber-50 text-amber-500 p-1.5 rounded-lg">
-                    <History size={18} />
-                  </span>
-                  Oxirgi yangiliklar
-                </h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                  Tizimda sodir bo&apos;lgan so&apos;nggi o&apos;zgarishlar
-                </p>
-              </div>
-              <button
-                onClick={() => setShowActivityModal(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-              {recentActivity.length === 0 ? (
-                <div className="py-12 text-center">
-                  <History size={40} className="mx-auto text-slate-200 mb-3" />
-                  <p className="text-sm font-bold text-slate-400">Hali yangiliklar yo&apos;q</p>
-                </div>
-              ) : (
-                recentActivity.map(item => {
-                  const config = {
-                    doc_added: { icon: <Plus size={14} />, bg: 'bg-teal-100', text: 'text-teal-600', badge: 'bg-teal-50 text-teal-600 border-teal-200', label: 'Sxema qo\'shildi' },
-                    page_checked: { icon: <CheckCircle2 size={14} />, bg: 'bg-emerald-100', text: 'text-emerald-600', badge: 'bg-emerald-50 text-emerald-600 border-emerald-200', label: 'Tekshirildi' },
-                    page_updated: { icon: <RefreshCw size={14} />, bg: 'bg-blue-100', text: 'text-blue-600', badge: 'bg-blue-50 text-blue-600 border-blue-200', label: 'Sxema yangilandi' },
-                    mismatch_found: { icon: <AlertTriangle size={14} />, bg: 'bg-red-100', text: 'text-red-500', badge: 'bg-red-50 text-red-600 border-red-200', label: 'Mos kelmaydi' },
-                  }
-                  const c = config[item.type]
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="flex items-start gap-3 px-4 py-3 rounded-2xl bg-slate-50/60 border border-slate-100 hover:bg-white hover:shadow-sm transition-all"
-                    >
-                      <div className={`shrink-0 w-8 h-8 rounded-xl ${c.bg} ${c.text} flex items-center justify-center mt-0.5`}>
-                        {c.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <p className="text-sm font-bold text-slate-800 leading-snug">{item.title}</p>
-                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border shrink-0 ${c.badge}`}>
-                            {c.label}
-                          </span>
-                        </div>
-                        {item.subtitle && (
-                          <p className="text-[10px] text-slate-400 font-bold mt-0.5 truncate">{item.subtitle}</p>
-                        )}
-                        <p className="text-[10px] text-slate-400 font-bold mt-0.5">{item.actor}</p>
-                      </div>
-                      <div className="shrink-0 text-right mt-0.5">
-                        <p className="text-xs font-black text-slate-700">{new Date(item.timestamp).toLocaleDateString('uz')}</p>
-                        <p className="text-[10px] font-bold text-slate-400">{new Date(item.timestamp).toLocaleTimeString('uz', { hour: '2-digit', minute: '2-digit' })}</p>
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          </div>
-        </div>
+        <ActivityModal
+          items={recentActivity}
+          onClose={() => setShowActivityModal(false)}
+        />
       )}
 
       {/* ═══ SIGN OUT MODAL ═══ */}
@@ -1279,6 +1213,197 @@ function StatCard({ icon, label, value, color, onClick }: { icon: React.ReactNod
       </div>
       <div className="text-xl sm:text-2xl font-black text-slate-900">{value}</div>
       <div className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 leading-tight">{label}</div>
+    </div>
+  )
+}
+
+/** Oxirgi yangiliklar modali — 3 bosqichli: Oylar → Kunlar → O'zgarishlar */
+function ActivityModal({ items, onClose }: { items: TdmsActivityItem[]; onClose: () => void }) {
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null) // 'YYYY-MM'
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)     // 'YYYY-MM-DD'
+
+  // Oylar bo'yicha guruhlash (faqat o'zgarish bo'lgan oylar)
+  const monthGroups = useMemo(() => {
+    const map = new Map<string, { label: string; count: number }>()
+    items.forEach(item => {
+      const d = new Date(item.timestamp)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      if (!map.has(key)) {
+        map.set(key, { label: `${MONTHS_UZ[d.getMonth()]} ${d.getFullYear()}`, count: 0 })
+      }
+      map.get(key)!.count++
+    })
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]))
+  }, [items])
+
+  // Tanlangan oy ichida kunlar bo'yicha guruhlash
+  const dayGroups = useMemo(() => {
+    if (!selectedMonth) return []
+    const map = new Map<string, { day: number; count: number }>()
+    items.forEach(item => {
+      const d = new Date(item.timestamp)
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      if (monthKey !== selectedMonth) return
+      const dayKey = `${monthKey}-${String(d.getDate()).padStart(2, '0')}`
+      if (!map.has(dayKey)) {
+        map.set(dayKey, { day: d.getDate(), count: 0 })
+      }
+      map.get(dayKey)!.count++
+    })
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]))
+  }, [items, selectedMonth])
+
+  // Tanlangan kun uchun o'zgarishlar
+  const dayItems = useMemo(() => {
+    if (!selectedDay) return []
+    return items.filter(item => {
+      const d = new Date(item.timestamp)
+      const dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      return dayKey === selectedDay
+    })
+  }, [items, selectedDay])
+
+  // Sarlavha va orqaga qaytish mantiqiy
+  const headerTitle = selectedDay
+    ? `${Number(selectedDay.split('-')[2])}-${MONTHS_UZ[Number(selectedDay.split('-')[1]) - 1]}`
+    : selectedMonth
+      ? monthGroups.find(([k]) => k === selectedMonth)?.[1].label || ''
+      : 'Oxirgi yangiliklar'
+
+  const handleBack = () => {
+    if (selectedDay) setSelectedDay(null)
+    else if (selectedMonth) setSelectedMonth(null)
+    else onClose()
+  }
+
+  const ACTIVITY_CONFIG = {
+    doc_added: { icon: <Plus size={14} />, bg: 'bg-teal-100', text: 'text-teal-600', badge: 'bg-teal-50 text-teal-600 border-teal-200', label: 'Sxema qo\'shildi' },
+    page_checked: { icon: <CheckCircle2 size={14} />, bg: 'bg-emerald-100', text: 'text-emerald-600', badge: 'bg-emerald-50 text-emerald-600 border-emerald-200', label: 'Tekshirildi' },
+    page_updated: { icon: <RefreshCw size={14} />, bg: 'bg-blue-100', text: 'text-blue-600', badge: 'bg-blue-50 text-blue-600 border-blue-200', label: 'Sxema yangilandi' },
+    mismatch_found: { icon: <AlertTriangle size={14} />, bg: 'bg-red-100', text: 'text-red-500', badge: 'bg-red-50 text-red-600 border-red-200', label: 'Mos kelmaydi' },
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col animate-fade-up overflow-hidden" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-3">
+            {(selectedMonth || selectedDay) && (
+              <button
+                onClick={handleBack}
+                className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-all active:scale-95"
+              >
+                <ArrowLeft size={16} />
+              </button>
+            )}
+            <div>
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                {!selectedMonth && !selectedDay && (
+                  <span className="bg-amber-50 text-amber-500 p-1.5 rounded-lg">
+                    <History size={18} />
+                  </span>
+                )}
+                {headerTitle}
+              </h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                {selectedDay ? 'Shu kundagi o\'zgarishlar' : selectedMonth ? 'O\'zgarish bo\'lgan kunlar' : 'Oylar bo\'yicha o\'zgarishlar'}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+          {items.length === 0 ? (
+            <div className="py-12 text-center">
+              <History size={40} className="mx-auto text-slate-200 mb-3" />
+              <p className="text-sm font-bold text-slate-400">Hali yangiliklar yo&apos;q</p>
+            </div>
+          ) : !selectedMonth ? (
+            /* ═══ 1-BOSQICH: OYLAR ═══ */
+            monthGroups.map(([key, { label, count }]) => (
+              <button
+                key={key}
+                onClick={() => setSelectedMonth(key)}
+                className="w-full flex items-center justify-between px-5 py-4 rounded-2xl bg-slate-50/60 border border-slate-100 hover:bg-amber-50/60 hover:border-amber-200 hover:shadow-sm transition-all group text-left active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-black text-sm">
+                    <CalendarCheck size={18} />
+                  </div>
+                  <span className="text-sm font-black text-slate-800">{label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+                    {count} ta
+                  </span>
+                  <ChevronRight size={16} className="text-slate-300 group-hover:text-amber-500 transition-colors" />
+                </div>
+              </button>
+            ))
+          ) : !selectedDay ? (
+            /* ═══ 2-BOSQICH: KUNLAR ═══ */
+            dayGroups.map(([key, { day, count }]) => (
+              <button
+                key={key}
+                onClick={() => setSelectedDay(key)}
+                className="w-full flex items-center justify-between px-5 py-4 rounded-2xl bg-slate-50/60 border border-slate-100 hover:bg-blue-50/60 hover:border-blue-200 hover:shadow-sm transition-all group text-left active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-black text-lg">
+                    {day}
+                  </div>
+                  <span className="text-sm font-black text-slate-800">
+                    {day}-{MONTHS_UZ[Number(selectedMonth!.split('-')[1]) - 1]}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+                    {count} ta o&apos;zgarish
+                  </span>
+                  <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
+                </div>
+              </button>
+            ))
+          ) : (
+            /* ═══ 3-BOSQICH: O'ZGARISHLAR ═══ */
+            dayItems.map(item => {
+              const c = ACTIVITY_CONFIG[item.type as keyof typeof ACTIVITY_CONFIG]
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-start gap-3 px-4 py-3 rounded-2xl bg-slate-50/60 border border-slate-100 hover:bg-white hover:shadow-sm transition-all"
+                >
+                  <div className={`shrink-0 w-8 h-8 rounded-xl ${c.bg} ${c.text} flex items-center justify-center mt-0.5`}>
+                    {c.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="text-sm font-bold text-slate-800 leading-snug">{item.title}</p>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border shrink-0 ${c.badge}`}>
+                        {c.label}
+                      </span>
+                    </div>
+                    {item.subtitle && (
+                      <p className="text-[10px] text-slate-400 font-bold mt-0.5 truncate">{item.subtitle}</p>
+                    )}
+                    <p className="text-[10px] text-slate-400 font-bold mt-0.5">{item.actor}</p>
+                  </div>
+                  <div className="shrink-0 text-right mt-0.5">
+                    <p className="text-xs font-black text-slate-700">
+                      {new Date(item.timestamp).toLocaleTimeString('uz', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      </div>
     </div>
   )
 }
