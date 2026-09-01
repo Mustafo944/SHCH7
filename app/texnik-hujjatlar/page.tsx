@@ -458,7 +458,7 @@ export default function TexnikHujjatlarPage() {
         <header className="sticky top-0 z-30 bg-transparent pt-3 px-4 sm:px-6 mx-auto w-full max-w-[1600px]">
           <div className="flex w-full items-center justify-between bg-white/[0.25] backdrop-blur-3xl px-3 sm:px-5 py-2 sm:py-3 rounded-[32px] sm:rounded-[40px] shadow-sm border border-white/50">
             <div className="flex items-center gap-3 sm:gap-4">
-              <button onClick={() => setIsMobileSidebarOpen(true)} className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-white/20 backdrop-blur-md p-2 shadow-sm border border-white/30 text-slate-600 hover:bg-slate-50 transition-all active:scale-95">
+              <button onClick={() => setIsMobileSidebarOpen(true)} className="lg:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-white/20 backdrop-blur-md p-2 shadow-sm border border-white/30 text-slate-600 hover:bg-slate-50 transition-all active:scale-95">
                 <Menu size={20} />
               </button>
               <div className="hidden sm:flex relative h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center bg-white rounded-full shadow-sm">
