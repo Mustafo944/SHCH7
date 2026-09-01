@@ -1127,11 +1127,11 @@ export default function TexnikHujjatlarPage() {
                         {item.subtitle && (
                           <p className="text-[10px] text-slate-400 font-bold mt-0.5 truncate">{item.subtitle}</p>
                         )}
-                        <div className="flex items-center gap-2 mt-1 text-[10px] font-bold text-slate-400">
-                          <span>{item.actor}</span>
-                          <span className="w-1 h-1 rounded-full bg-slate-300" />
-                          <span>{new Date(item.timestamp).toLocaleDateString('uz')} {new Date(item.timestamp).toLocaleTimeString('uz', { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
+                        <p className="text-[10px] text-slate-400 font-bold mt-0.5">{item.actor}</p>
+                      </div>
+                      <div className="shrink-0 text-right mt-0.5">
+                        <p className="text-xs font-black text-slate-700">{new Date(item.timestamp).toLocaleDateString('uz')}</p>
+                        <p className="text-[10px] font-bold text-slate-400">{new Date(item.timestamp).toLocaleTimeString('uz', { hour: '2-digit', minute: '2-digit' })}</p>
                       </div>
                     </div>
                   )
