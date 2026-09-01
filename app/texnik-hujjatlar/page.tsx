@@ -144,6 +144,7 @@ export default function TexnikHujjatlarPage() {
   const [selectedDocument, setSelectedDocument] = useState<TdmsDocument | null>(null)
   const [selectedPage, setSelectedPage] = useState<TdmsPage | null>(null)
   const [showAddPageModal, setShowAddPageModal] = useState(false)
+  const [showActivityModal, setShowActivityModal] = useState(false)
   const activeRole = 'texnik_hujjatlar'
 
   // Bekatlar boshqaruvi (faqat texnik hujjatlar uchun — boshqa sahifalarga ta'sir qilmaydi)
@@ -484,8 +485,8 @@ export default function TexnikHujjatlarPage() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard icon={<FileText size={20} />} label="Jami hujjatlar" value={dashboardStats.totalDocs} color="teal" />
                 <StatCard icon={<Shield size={20} />} label="Jami tekshiruvlar" value={dashboardStats.totalAudits} color="blue" />
-                <StatCard icon={<AlertTriangle size={20} />} label="Mos kelmaydigan" value={mismatchReports.length} color={mismatchReports.length > 0 ? 'red' : 'emerald'} />
-                <StatCard icon={<History size={20} />} label="Oxirgi yangiliklar" value={recentActivity.length} color="amber" />
+                <StatCard icon={<AlertTriangle size={20} />} label="Mos kelmaydigan" value={mismatchReports.length} color={mismatchReports.length > 0 ? 'red' : 'emerald'} onClick={() => document.getElementById('section-mismatch')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
+                <StatCard icon={<History size={20} />} label="Oxirgi yangiliklar" value={recentActivity.length} color="amber" onClick={() => setShowActivityModal(true)} />
               </div>
 
               {/* Joriy oydagi ishlar */}
@@ -574,7 +575,7 @@ export default function TexnikHujjatlarPage() {
 
               {/* Mos kelmaydigan sxemalar (Elektromexanik izohlari) */}
               {mismatchReports.length > 0 && (
-                <div className="premium-card relative overflow-hidden">
+                <div id="section-mismatch" className="premium-card relative overflow-hidden scroll-mt-6">
                   <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
                     <AlertTriangle size={120} />
                   </div>
@@ -653,64 +654,6 @@ export default function TexnikHujjatlarPage() {
                           </div>
                         </div>
                       ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Oxirgi yangiliklar (Activity Feed) */}
-              {recentActivity.length > 0 && (
-                <div className="premium-card relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                    <History size={120} />
-                  </div>
-                  <div className="relative p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 border-b border-slate-100 pb-4">
-                      <div>
-                        <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                          <span className="bg-amber-50 text-amber-500 p-1.5 rounded-lg">
-                            <History size={20} />
-                          </span>
-                          Oxirgi yangiliklar
-                        </h2>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">
-                          Tizimda sodir bo'lgan so'nggi o'zgarishlar
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
-                      {recentActivity.map(item => {
-                        const iconMap = {
-                          doc_added: { icon: <Plus size={14} />, bg: 'bg-teal-100', text: 'text-teal-600' },
-                          page_checked: { icon: <CheckCircle2 size={14} />, bg: 'bg-emerald-100', text: 'text-emerald-600' },
-                          page_updated: { icon: <RefreshCw size={14} />, bg: 'bg-blue-100', text: 'text-blue-600' },
-                          mismatch_found: { icon: <AlertTriangle size={14} />, bg: 'bg-red-100', text: 'text-red-500' },
-                        }
-                        const style = iconMap[item.type]
-
-                        return (
-                          <div
-                            key={item.id}
-                            className="flex items-start gap-3 px-4 py-3 rounded-2xl bg-slate-50/60 border border-slate-100 hover:bg-white hover:shadow-sm transition-all"
-                          >
-                            <div className={`shrink-0 w-8 h-8 rounded-xl ${style.bg} ${style.text} flex items-center justify-center mt-0.5`}>
-                              {style.icon}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-slate-800 leading-snug">{item.title}</p>
-                              {item.subtitle && (
-                                <p className="text-[10px] text-slate-400 font-bold mt-0.5 truncate">{item.subtitle}</p>
-                              )}
-                              <div className="flex items-center gap-2 mt-1 text-[10px] font-bold text-slate-400">
-                                <span>{item.actor}</span>
-                                <span className="w-1 h-1 rounded-full bg-slate-300" />
-                                <span>{new Date(item.timestamp).toLocaleDateString('uz')} {new Date(item.timestamp).toLocaleTimeString('uz', { hour: '2-digit', minute: '2-digit' })}</span>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
                     </div>
                   </div>
                 </div>
@@ -1124,6 +1067,81 @@ export default function TexnikHujjatlarPage() {
         />
       )}
 
+      {/* ═══ ACTIVITY MODAL ═══ */}
+      {showActivityModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={() => setShowActivityModal(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col animate-fade-up overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 shrink-0">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <span className="bg-amber-50 text-amber-500 p-1.5 rounded-lg">
+                    <History size={18} />
+                  </span>
+                  Oxirgi yangiliklar
+                </h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                  Tizimda sodir bo&apos;lgan so&apos;nggi o&apos;zgarishlar
+                </p>
+              </div>
+              <button
+                onClick={() => setShowActivityModal(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+              {recentActivity.length === 0 ? (
+                <div className="py-12 text-center">
+                  <History size={40} className="mx-auto text-slate-200 mb-3" />
+                  <p className="text-sm font-bold text-slate-400">Hali yangiliklar yo&apos;q</p>
+                </div>
+              ) : (
+                recentActivity.map(item => {
+                  const config = {
+                    doc_added: { icon: <Plus size={14} />, bg: 'bg-teal-100', text: 'text-teal-600', badge: 'bg-teal-50 text-teal-600 border-teal-200', label: 'Sxema qo\'shildi' },
+                    page_checked: { icon: <CheckCircle2 size={14} />, bg: 'bg-emerald-100', text: 'text-emerald-600', badge: 'bg-emerald-50 text-emerald-600 border-emerald-200', label: 'Tekshirildi' },
+                    page_updated: { icon: <RefreshCw size={14} />, bg: 'bg-blue-100', text: 'text-blue-600', badge: 'bg-blue-50 text-blue-600 border-blue-200', label: 'Sxema yangilandi' },
+                    mismatch_found: { icon: <AlertTriangle size={14} />, bg: 'bg-red-100', text: 'text-red-500', badge: 'bg-red-50 text-red-600 border-red-200', label: 'Mos kelmaydi' },
+                  }
+                  const c = config[item.type]
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-start gap-3 px-4 py-3 rounded-2xl bg-slate-50/60 border border-slate-100 hover:bg-white hover:shadow-sm transition-all"
+                    >
+                      <div className={`shrink-0 w-8 h-8 rounded-xl ${c.bg} ${c.text} flex items-center justify-center mt-0.5`}>
+                        {c.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <p className="text-sm font-bold text-slate-800 leading-snug">{item.title}</p>
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border shrink-0 ${c.badge}`}>
+                            {c.label}
+                          </span>
+                        </div>
+                        {item.subtitle && (
+                          <p className="text-[10px] text-slate-400 font-bold mt-0.5 truncate">{item.subtitle}</p>
+                        )}
+                        <div className="flex items-center gap-2 mt-1 text-[10px] font-bold text-slate-400">
+                          <span>{item.actor}</span>
+                          <span className="w-1 h-1 rounded-full bg-slate-300" />
+                          <span>{new Date(item.timestamp).toLocaleDateString('uz')} {new Date(item.timestamp).toLocaleTimeString('uz', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ═══ SIGN OUT MODAL ═══ */}
       {isSignOutModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
@@ -1242,7 +1260,7 @@ export default function TexnikHujjatlarPage() {
 // SUBCOMPONENTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number | string; color: string }) {
+function StatCard({ icon, label, value, color, onClick }: { icon: React.ReactNode; label: string; value: number | string; color: string; onClick?: () => void }) {
   const colorClasses: Record<string, string> = {
     teal: 'bg-teal-50 border-teal-100 text-teal-600',
     blue: 'bg-blue-50 border-blue-100 text-blue-600',
@@ -1252,7 +1270,10 @@ function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label:
     rose: 'bg-rose-50 border-rose-100 text-rose-600',
   }
   return (
-    <div className="premium-card p-3 sm:p-5">
+    <div
+      className={`premium-card p-3 sm:p-5 ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all' : ''}`}
+      onClick={onClick}
+    >
       <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-xl flex items-center justify-center border mb-2 sm:mb-3 [&>svg]:w-4 [&>svg]:h-4 sm:[&>svg]:w-5 sm:[&>svg]:h-5 ${colorClasses[color]}`}>
         {icon}
       </div>
