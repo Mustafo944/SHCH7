@@ -34,6 +34,7 @@ import {
   deleteTdmsStation,
   updateTdmsStation,
   getTdmsMismatchReports,
+  getTdmsRecentActivity,
   type TdmsDocument,
   type TdmsAudit,
   type TdmsSchedule,
@@ -178,6 +179,12 @@ export default function TexnikHujjatlarPage() {
   const { data: mismatchReports = [] } = useSWR(
     session ? 'tdms_mismatch_reports' : null,
     getTdmsMismatchReports
+  )
+
+  // Oxirgi yangiliklar (faoliyat tarixi)
+  const { data: recentActivity = [] } = useSWR(
+    session ? 'tdms_recent_activity' : null,
+    getTdmsRecentActivity
   )
 
   // Kategoriyani tanlash uchun state (Option A bo'yicha 4 ta toifa)
@@ -477,8 +484,8 @@ export default function TexnikHujjatlarPage() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard icon={<FileText size={20} />} label="Jami hujjatlar" value={dashboardStats.totalDocs} color="teal" />
                 <StatCard icon={<Shield size={20} />} label="Jami tekshiruvlar" value={dashboardStats.totalAudits} color="blue" />
-                <StatCard icon={<CheckCircle2 size={20} />} label="Bajarilgan (bu yil)" value={dashboardStats.completedSchedules} color="emerald" />
-                <StatCard icon={<Clock size={20} />} label="Kutilayotgan" value={dashboardStats.pendingSchedules} color="amber" />
+                <StatCard icon={<AlertTriangle size={20} />} label="Mos kelmaydigan" value={mismatchReports.length} color={mismatchReports.length > 0 ? 'red' : 'emerald'} />
+                <StatCard icon={<History size={20} />} label="Oxirgi yangiliklar" value={recentActivity.length} color="amber" />
               </div>
 
               {/* Joriy oydagi ishlar */}
@@ -646,6 +653,64 @@ export default function TexnikHujjatlarPage() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Oxirgi yangiliklar (Activity Feed) */}
+              {recentActivity.length > 0 && (
+                <div className="premium-card relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                    <History size={120} />
+                  </div>
+                  <div className="relative p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 border-b border-slate-100 pb-4">
+                      <div>
+                        <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                          <span className="bg-amber-50 text-amber-500 p-1.5 rounded-lg">
+                            <History size={20} />
+                          </span>
+                          Oxirgi yangiliklar
+                        </h2>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">
+                          Tizimda sodir bo'lgan so'nggi o'zgarishlar
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+                      {recentActivity.map(item => {
+                        const iconMap = {
+                          doc_added: { icon: <Plus size={14} />, bg: 'bg-teal-100', text: 'text-teal-600' },
+                          page_checked: { icon: <CheckCircle2 size={14} />, bg: 'bg-emerald-100', text: 'text-emerald-600' },
+                          page_updated: { icon: <RefreshCw size={14} />, bg: 'bg-blue-100', text: 'text-blue-600' },
+                          mismatch_found: { icon: <AlertTriangle size={14} />, bg: 'bg-red-100', text: 'text-red-500' },
+                        }
+                        const style = iconMap[item.type]
+
+                        return (
+                          <div
+                            key={item.id}
+                            className="flex items-start gap-3 px-4 py-3 rounded-2xl bg-slate-50/60 border border-slate-100 hover:bg-white hover:shadow-sm transition-all"
+                          >
+                            <div className={`shrink-0 w-8 h-8 rounded-xl ${style.bg} ${style.text} flex items-center justify-center mt-0.5`}>
+                              {style.icon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-slate-800 leading-snug">{item.title}</p>
+                              {item.subtitle && (
+                                <p className="text-[10px] text-slate-400 font-bold mt-0.5 truncate">{item.subtitle}</p>
+                              )}
+                              <div className="flex items-center gap-2 mt-1 text-[10px] font-bold text-slate-400">
+                                <span>{item.actor}</span>
+                                <span className="w-1 h-1 rounded-full bg-slate-300" />
+                                <span>{new Date(item.timestamp).toLocaleDateString('uz')} {new Date(item.timestamp).toLocaleTimeString('uz', { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 </div>

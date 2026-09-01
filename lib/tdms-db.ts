@@ -765,6 +765,127 @@ export async function getTdmsMismatchReports(): Promise<TdmsMismatchReport[]> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// RECENT ACTIVITY (Dashboard uchun — oxirgi o'zgarishlar)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Boshqaruv panelida ko'rsatiladigan faoliyat yozuvi */
+export interface TdmsActivityItem {
+  id: string
+  type: 'doc_added' | 'page_checked' | 'page_updated' | 'mismatch_found'
+  title: string
+  subtitle: string
+  actor: string
+  timestamp: string
+}
+
+/** Oxirgi 20 ta o'zgarishni olish (hujjat qo'shilishi, varaq tekshirilishi, versiya almashinishi) */
+export async function getTdmsRecentActivity(): Promise<TdmsActivityItem[]> {
+  const items: TdmsActivityItem[] = []
+
+  // 1. Oxirgi qo'shilgan hujjatlar
+  const { data: recentDocs } = await supabase
+    .from('tdms_documents')
+    .select('id, name, station_name, uploaded_by, created_at')
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  ;(recentDocs || []).forEach(d => {
+    items.push({
+      id: `doc_${d.id}`,
+      type: 'doc_added',
+      title: d.name,
+      subtitle: d.station_name,
+      actor: d.uploaded_by,
+      timestamp: d.created_at,
+    })
+  })
+
+  // 2. Oxirgi tekshiruvlar (matches va mismatch)
+  const { data: recentChecks } = await supabase
+    .from('tdms_page_checks')
+    .select('id, page_id, checked_by, checked_at, status, comment')
+    .order('checked_at', { ascending: false })
+    .limit(10)
+
+  if (recentChecks && recentChecks.length > 0) {
+    const checkPageIds = Array.from(new Set(recentChecks.map(c => c.page_id)))
+    const { data: checkPages } = await supabase
+      .from('tdms_pages')
+      .select('id, document_id, page_number, name')
+      .in('id', checkPageIds)
+
+    const cpMap = new Map((checkPages || []).map(p => [p.id, p]))
+
+    const checkDocIds = Array.from(new Set((checkPages || []).map(p => p.document_id)))
+    const { data: checkDocs } = await supabase
+      .from('tdms_documents')
+      .select('id, name, station_name')
+      .in('id', checkDocIds)
+
+    const cdMap = new Map((checkDocs || []).map(d => [d.id, d]))
+
+    recentChecks.forEach(c => {
+      const page = cpMap.get(c.page_id)
+      const doc = page ? cdMap.get(page.document_id) : null
+      const isMismatch = c.status === 'mismatch'
+      items.push({
+        id: `check_${c.id}`,
+        type: isMismatch ? 'mismatch_found' : 'page_checked',
+        title: isMismatch
+          ? `Mos kelmaydi: ${page?.name || `Varaq ${page?.page_number}`}`
+          : `Tekshirildi: ${page?.name || `Varaq ${page?.page_number}`}`,
+        subtitle: doc ? `${doc.station_name} • ${doc.name}` : '',
+        actor: c.checked_by,
+        timestamp: c.checked_at,
+      })
+    })
+  }
+
+  // 3. Oxirgi versiya almashtirilganlar
+  const { data: recentVersions } = await supabase
+    .from('tdms_page_versions')
+    .select('id, page_id, version, uploaded_by, replaced_at')
+    .order('replaced_at', { ascending: false })
+    .limit(10)
+
+  if (recentVersions && recentVersions.length > 0) {
+    const vPageIds = Array.from(new Set(recentVersions.map(v => v.page_id)))
+    const { data: vPages } = await supabase
+      .from('tdms_pages')
+      .select('id, document_id, page_number, name')
+      .in('id', vPageIds)
+
+    const vpMap = new Map((vPages || []).map(p => [p.id, p]))
+
+    const vDocIds = Array.from(new Set((vPages || []).map(p => p.document_id)))
+    const { data: vDocs } = await supabase
+      .from('tdms_documents')
+      .select('id, name, station_name')
+      .in('id', vDocIds)
+
+    const vdMap = new Map((vDocs || []).map(d => [d.id, d]))
+
+    recentVersions.forEach(v => {
+      const page = vpMap.get(v.page_id)
+      const doc = page ? vdMap.get(page.document_id) : null
+      items.push({
+        id: `ver_${v.id}`,
+        type: 'page_updated',
+        title: `Yangilandi: ${page?.name || `Varaq ${page?.page_number}`} → ${v.version}`,
+        subtitle: doc ? `${doc.station_name} • ${doc.name}` : '',
+        actor: v.uploaded_by,
+        timestamp: v.replaced_at,
+      })
+    })
+  }
+
+  // Vaqt bo'yicha saralash va eng oxirgi 20 tasini qaytarish
+  return items
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 20)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // TDMS BEKATLAR (Faqat Texnik Hujjatlar uchun — boshqa sahifalarga ta'sir qilmaydi)
 // ═══════════════════════════════════════════════════════════════════════════════
 
