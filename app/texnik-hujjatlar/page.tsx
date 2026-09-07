@@ -1957,7 +1957,7 @@ function DocumentPagesView({ document, userName, userRole, onBack, onPageClick, 
           <p className="text-sm text-slate-400">Varaq qo&apos;shish uchun yuqoridagi tugmani bosing</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
           {pages.map(page => {
             const pageChecks = pageChecksMap.get(page.id) || []
             const hasAnyCheck = pageChecks.length > 0
@@ -2022,8 +2022,8 @@ function DocumentPagesView({ document, userName, userRole, onBack, onPageClick, 
                   <span className="text-[10px] font-bold text-slate-400">Holati:</span>
                   
                   <div className="flex flex-col gap-1.5 text-[10px]">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-600">Katta elektromexanik:</span>
+                    <div className="flex flex-col min-[400px]:flex-row min-[400px]:items-center justify-between gap-1">
+                      <span className="font-bold text-slate-600">Katta<br className="hidden min-[400px]:hidden max-[350px]:block" /> elektromexanik:</span>
                       {(() => {
                         const keCheck = pageChecks.find(c => c.checked_role === 'Katta elektromexanik')
                         if (!keCheck) return (
@@ -2044,8 +2044,8 @@ function DocumentPagesView({ document, userName, userRole, onBack, onPageClick, 
                       })()}
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-600">Tex. hujjat muhandisi:</span>
+                    <div className="flex flex-col min-[400px]:flex-row min-[400px]:items-center justify-between gap-1">
+                      <span className="font-bold text-slate-600">Tex. hujjat<br className="hidden min-[400px]:hidden max-[350px]:block" /> muhandisi:</span>
                       {(() => {
                         const thCheck = pageChecks.find(c => c.checked_role === 'Texnik hujjatlar muhandisi')
                         if (!thCheck) return (
