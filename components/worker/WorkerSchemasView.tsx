@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Download, X, Map as MapIcon, Loader2, FileText, ChevronRight, ArrowLeft, CheckCircle2, AlertTriangle, ExternalLink, Layers, Eye } from 'lucide-react'
 import { getSchemasByStation } from '@/lib/supabase-db'
-import { getTdmsDocumentsByStationName, getTdmsPages, getTdmsPageChecks, getTdmsPageChecksByPage, checkTdmsPage, type TdmsDocument, type TdmsPage, type TdmsPageCheck } from '@/lib/tdms-db'
+import { getTdmsDocumentsByStationName, getTdmsPages, getTdmsPageChecks, getTdmsPageChecksByPage, checkTdmsPage, uncheckTdmsPage, type TdmsDocument, type TdmsPage, type TdmsPageCheck } from '@/lib/tdms-db'
 import type { StationSchema } from '@/types'
 import { HeaderCard } from './BigActionCard'
 import useSWR, { preload } from 'swr'
@@ -421,7 +421,7 @@ function TdmsPageDetailView({ page, userName, userRole, onBack, canCheck }: {
         setCheckError("Iltimos, izoh yozing!")
         return
       }
-      const roleName = userRole === 'katta_elektromexanik' ? 'Katta elektromexanik' : userRole
+      const roleName = (userRole === 'katta_elektromexanik' || userRole === 'worker') ? 'Katta elektromexanik' : userRole
       await checkTdmsPage(page.id, userName, roleName, 'general', status, status === 'mismatch' ? mismatchComment : undefined)
       mutateChecks()
       setShowMismatchForm(false)
@@ -429,6 +429,17 @@ function TdmsPageDetailView({ page, userName, userRole, onBack, canCheck }: {
       setMismatchComment('')
       setCheckError(null)
       setCheckSuccess(status === 'mismatch' ? "Izoh yuborildi!" : "Tasdiqlandi! ✅")
+      setTimeout(() => setCheckSuccess(null), 3000)
+    } catch (err) {
+      setCheckError(err instanceof Error ? err.message : "Xatolik yuz berdi")
+    }
+  }
+
+  const handleUncheck = async () => {
+    try {
+      await uncheckTdmsPage(page.id, userName)
+      mutateChecks()
+      setCheckSuccess("Tekshiruv bekor qilindi")
       setTimeout(() => setCheckSuccess(null), 3000)
     } catch (err) {
       setCheckError(err instanceof Error ? err.message : "Xatolik yuz berdi")
@@ -581,12 +592,22 @@ function TdmsPageDetailView({ page, userName, userRole, onBack, canCheck }: {
                     </div>
                     <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">{new Date(c.checked_at).toLocaleDateString('uz')}</span>
                   </div>
-                  <div className="mt-1.5 flex flex-wrap items-start gap-2">
-                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 ${isMismatch ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                      {isMismatch ? '❌ Mos kelmaydi' : '✅ Mos keladi'}
-                    </span>
-                    {c.comment && (
-                      <p className="text-xs text-red-700 font-medium">💬 {c.comment}</p>
+                  <div className="mt-1.5 flex flex-wrap items-start justify-between gap-2 w-full">
+                    <div className="flex flex-wrap items-start gap-2">
+                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 ${isMismatch ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                        {isMismatch ? '❌ Mos kelmaydi' : '✅ Mos keladi'}
+                      </span>
+                      {c.comment && (
+                        <p className="text-xs text-red-700 font-medium mt-0.5">💬 {c.comment}</p>
+                      )}
+                    </div>
+                    {c.checked_by === userName && (
+                      <button
+                        onClick={handleUncheck}
+                        className="text-[9px] font-bold px-2 py-1 rounded bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 transition-colors"
+                      >
+                        Bekor qilish
+                      </button>
                     )}
                   </div>
                 </div>
