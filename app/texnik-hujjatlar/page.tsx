@@ -2018,25 +2018,54 @@ function DocumentPagesView({ document, userName, userRole, onBack, onPageClick, 
                 </div>
 
                 {/* Bottom Footer Area */}
-                <div className="p-3 bg-white border-t border-slate-100 flex items-center justify-between">
+                <div className="p-3 bg-white border-t border-slate-100 flex flex-col gap-2">
                   <span className="text-[10px] font-bold text-slate-400">Holati:</span>
-                  {(() => {
-                    if (hasMismatch) return (
-                      <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-red-100 text-red-700 border border-red-200">
-                        ❌ Mos kelmaydi
-                      </span>
-                    )
-                    if (allMatch) return (
-                      <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-                        ✅ Tekshirilgan
-                      </span>
-                    )
-                    return (
-                      <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
-                        Kutilmoqda
-                      </span>
-                    )
-                  })()}
+                  
+                  <div className="flex flex-col gap-1.5 text-[10px]">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-600">Katta elektromexanik:</span>
+                      {(() => {
+                        const keCheck = pageChecks.find(c => c.checked_role === 'Katta elektromexanik')
+                        if (!keCheck) return (
+                          <span className="font-black px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100">
+                            Kutilmoqda
+                          </span>
+                        )
+                        if (keCheck.status === 'mismatch') return (
+                          <span className="font-black px-1.5 py-0.5 rounded bg-red-50 text-red-600 border border-red-100">
+                            ❌ Mos kelmaydi
+                          </span>
+                        )
+                        return (
+                          <span className="font-black px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">
+                            ✅ Tekshirilgan
+                          </span>
+                        )
+                      })()}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-600">Tex. hujjat muhandisi:</span>
+                      {(() => {
+                        const thCheck = pageChecks.find(c => c.checked_role === 'Texnik hujjatlar muhandisi')
+                        if (!thCheck) return (
+                          <span className="font-black px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100">
+                            Kutilmoqda
+                          </span>
+                        )
+                        if (thCheck.status === 'mismatch') return (
+                          <span className="font-black px-1.5 py-0.5 rounded bg-red-50 text-red-600 border border-red-100">
+                            ❌ Mos kelmaydi
+                          </span>
+                        )
+                        return (
+                          <span className="font-black px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">
+                            ✅ Tekshirilgan
+                          </span>
+                        )
+                      })()}
+                    </div>
+                  </div>
                 </div>
               </div>
             )
