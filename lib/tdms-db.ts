@@ -585,6 +585,59 @@ export async function deleteTdmsPage(id: string): Promise<void> {
   if (error) throw new Error(`Varaqni o'chirishda xato: ${error.message}`)
 }
 
+/** 
+ * Hozirgi versiyani bekor qilib (o'chirib), eng oxirgi eski versiyani tiklash.
+ * Agar eski versiyalar bo'lmasa, butunlay o'chiriladi.
+ */
+export async function revertTdmsPageToPreviousVersion(pageId: string): Promise<TdmsPage | null> {
+  // 1. Eng oxirgi eski versiyani olish
+  const { data: versions, error: versionsErr } = await supabase
+    .from('tdms_page_versions')
+    .select('*')
+    .eq('page_id', pageId)
+    .order('replaced_at', { ascending: false })
+    .limit(1)
+
+  if (versionsErr) throw new Error(`Versiyalarni tekshirishda xato: ${versionsErr.message}`)
+
+  if (!versions || versions.length === 0) {
+    // Eski versiya yo'q — butunlay o'chiramiz
+    await deleteTdmsPage(pageId)
+    return null
+  }
+
+  const latestOld = versions[0]
+
+  // 2. Hozirgi varaqni eski versiya ma'lumotlari bilan almashtirish
+  const { data: updated, error: updateErr } = await supabase
+    .from('tdms_pages')
+    .update({
+      drive_url: latestOld.drive_url,
+      version: latestOld.version,
+      uploaded_by: latestOld.uploaded_by,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', pageId)
+    .select()
+    .single()
+
+  if (updateErr) throw new Error(`Varaqni tiklashda xato: ${updateErr.message}`)
+
+  // 3. Tekshiruvlarni tozalash (eski versiyaga qaytgani uchun qaytadan tekshirilishi kerak bo'lishi mumkin)
+  await supabase
+    .from('tdms_page_checks')
+    .delete()
+    .eq('page_id', pageId)
+
+  // 4. Tiklangan versiya yozuvini tarix (versions) jadvalidan o'chirish
+  await supabase
+    .from('tdms_page_versions')
+    .delete()
+    .eq('id', latestOld.id)
+
+  return mapPage(updated)
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // PAGE VERSIONS CRUD
 // ═══════════════════════════════════════════════════════════════════════════════

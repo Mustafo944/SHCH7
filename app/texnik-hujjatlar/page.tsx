@@ -22,6 +22,7 @@ import {
   addTdmsPage,
   uploadTdmsPageFile,
   replaceTdmsPage,
+  revertTdmsPageToPreviousVersion,
   deleteTdmsPage,
   getTdmsPageVersions,
   deleteTdmsPageVersion,
@@ -2143,6 +2144,28 @@ function PageDetailModal({ page, userName, userRole, onClose, onDelete, toast }:
   }
 
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
+  const [showConfirmRevert, setShowConfirmRevert] = useState(false)
+
+  const handleRevert = async () => {
+    setIsSubmitting(true)
+    try {
+      const reverted = await revertTdmsPageToPreviousVersion(currentPage.id)
+      if (reverted) {
+        setCurrentPage(reverted)
+        mutateVersions()
+        mutateChecks()
+        setShowConfirmRevert(false)
+        toast.success(`Hozirgi versiya o'chirildi, ${reverted.version} ga qaytildi!`)
+      } else {
+        toast.success("Varaq butunlay o'chirildi (boshqa versiyalar qolmagan).")
+        onDelete(currentPage.id)
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Xatolik yuz berdi")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   const handleDelete = () => {
     setShowConfirmDelete(true)
@@ -2318,13 +2341,30 @@ function PageDetailModal({ page, userName, userRole, onClose, onDelete, toast }:
         {/* ═══ VARAQNI ALMASHTIRISH ═══ */}
         <div className="px-6 pb-4">
           {!showReplaceForm ? (
-            <button
-              onClick={() => setShowReplaceForm(true)}
-              className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm font-bold hover:bg-amber-100 transition-all"
-            >
-              <RefreshCw size={16} />
-              Varaqni almashtirish (yangi versiya)
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowReplaceForm(true)}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm font-bold hover:bg-amber-100 transition-all active:scale-95"
+              >
+                <RefreshCw size={16} />
+                Varaqni almashtirish (yangi)
+              </button>
+              {versions.length > 0 && !showConfirmRevert ? (
+                <button
+                  onClick={() => setShowConfirmRevert(true)}
+                  className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm font-bold hover:bg-red-100 transition-all active:scale-95"
+                  title="Hozirgi versiyani o'chirish va eskiga qaytish"
+                >
+                  <Trash2 size={16} />
+                </button>
+              ) : showConfirmRevert ? (
+                <div className="flex-1 flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-1">
+                  <span className="text-xs font-bold text-red-600 px-2">Aniqmi?</span>
+                  <button onClick={handleRevert} disabled={isSubmitting} className="flex-1 py-2 bg-red-500 text-white text-xs font-black rounded-lg hover:bg-red-600">Ha, o'chirish</button>
+                  <button onClick={() => setShowConfirmRevert(false)} disabled={isSubmitting} className="flex-1 py-2 bg-white text-slate-500 text-xs font-bold rounded-lg hover:bg-slate-50">Yo'q</button>
+                </div>
+              ) : null}
+            </div>
           ) : (
             <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3">
               <div className="flex items-center justify-between">
