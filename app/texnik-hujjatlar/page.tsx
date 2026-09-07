@@ -2349,21 +2349,21 @@ function PageDetailModal({ page, userName, userRole, onClose, onDelete, toast }:
                 <RefreshCw size={16} />
                 Varaqni almashtirish (yangi)
               </button>
-              {versions.length > 0 && !showConfirmRevert ? (
+              {!showConfirmRevert ? (
                 <button
                   onClick={() => setShowConfirmRevert(true)}
                   className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm font-bold hover:bg-red-100 transition-all active:scale-95"
-                  title="Hozirgi versiyani o'chirish va eskiga qaytish"
+                  title="Hozirgi versiyani o'chirish"
                 >
                   <Trash2 size={16} />
                 </button>
-              ) : showConfirmRevert ? (
-                <div className="flex-1 flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-1">
-                  <span className="text-xs font-bold text-red-600 px-2">Aniqmi?</span>
-                  <button onClick={handleRevert} disabled={isSubmitting} className="flex-1 py-2 bg-red-500 text-white text-xs font-black rounded-lg hover:bg-red-600">Ha, o'chirish</button>
-                  <button onClick={() => setShowConfirmRevert(false)} disabled={isSubmitting} className="flex-1 py-2 bg-white text-slate-500 text-xs font-bold rounded-lg hover:bg-slate-50">Yo'q</button>
+              ) : (
+                <div className="flex-1 flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-1 animate-fade-in">
+                  <span className="text-xs font-bold text-red-600 px-2 text-center leading-tight">Aniqmi?</span>
+                  <button onClick={handleRevert} disabled={isSubmitting} className="flex-1 py-2 px-1 bg-red-500 text-white text-[10px] font-black rounded-lg hover:bg-red-600">Ha, o'chirish</button>
+                  <button onClick={() => setShowConfirmRevert(false)} disabled={isSubmitting} className="flex-1 py-2 px-1 bg-white text-slate-500 text-[10px] font-bold rounded-lg hover:bg-slate-50">Yo'q</button>
                 </div>
-              ) : null}
+              )}
             </div>
           ) : (
             <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3">
