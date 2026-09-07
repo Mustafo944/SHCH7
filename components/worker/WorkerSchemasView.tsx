@@ -273,44 +273,117 @@ function TdmsDocumentPagesView({ document, onBack, onPageClick, canCheck }: {
           <p className="text-sm text-slate-400">Bu hujjatga varaqlar hali yuklanmagan</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
           {pages.map(page => {
             const pageChecks = pageChecksMap.get(page.id) || []
             const hasAnyCheck = pageChecks.length > 0
             const hasMismatch = pageChecks.some(c => c.status === 'mismatch')
             const allMatch = hasAnyCheck && !hasMismatch
 
+            let ringClass = 'hover:ring-2 hover:ring-teal-400'
+            if (hasMismatch) ringClass = 'ring-2 ring-red-400'
+            else if (allMatch) ringClass = 'ring-2 ring-emerald-400'
+
             return (
-              <button
+              <div
                 key={page.id}
                 onClick={() => onPageClick(page)}
-                className={`group relative rounded-2xl p-4 text-left transition-all active:scale-[0.97] border-2 backdrop-blur-md ${
-                  hasMismatch
-                    ? 'bg-red-50/60 border-red-200 hover:border-red-300 hover:shadow-md'
-                    : allMatch
-                      ? 'bg-emerald-50/60 border-emerald-200 hover:border-emerald-300 hover:shadow-md'
-                      : 'bg-white/40 border-white/40 hover:border-slate-200 hover:shadow-md hover:bg-white/60'
-                }`}
+                className={`relative premium-card cursor-pointer overflow-hidden transition-all hover:-translate-y-1 active:scale-[0.98] group flex flex-col ${ringClass}`}
               >
-                <div className={`text-2xl font-black mb-2 ${
-                  hasMismatch ? 'text-red-500' : allMatch ? 'text-emerald-500' : 'text-slate-300'
-                }`}>
-                  {page.page_number}
+                {/* Status icon */}
+                {hasAnyCheck && (
+                  <div className="absolute top-2 left-2 z-30 bg-white/90 backdrop-blur-sm rounded-full shadow-md p-0.5">
+                    {hasMismatch ? <AlertTriangle size={20} className="text-red-500" /> : <CheckCircle2 size={20} className="text-emerald-500" />}
+                  </div>
+                )}
+
+                {/* Thumbnail Preview Area */}
+                <div className="w-full aspect-video bg-slate-50 relative pointer-events-none overflow-hidden flex items-center justify-center">
+                  {page.drive_url.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                    <img 
+                      src={page.drive_url} 
+                      alt={`Varaq ${page.page_number}`} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <iframe 
+                      src={`${page.drive_url}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
+                      className="w-full h-full border-0 absolute inset-0"
+                      tabIndex={-1}
+                    />
+                  )}
+                  {/* Dark gradient overlay at bottom for text visibility */}
+                  <div className="absolute bottom-0 left-0 right-0 h-2/3 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10" />
+                  
+                  {/* Bottom overlay info */}
+                  <div className="absolute bottom-3 left-3 right-3 z-20 flex items-center gap-2">
+                    <div className="flex items-center justify-center h-8 w-8 rounded-xl bg-teal-500 text-white text-sm font-black shadow-lg">
+                      {page.page_number}
+                    </div>
+                    <div className="flex flex-col">
+                      {page.version.toLowerCase() !== 'v1' && (
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-white border border-white/20 w-max mb-0.5">
+                          {page.version}
+                        </span>
+                      )}
+                      <span className="text-[10px] font-bold text-white/90 truncate max-w-[100px]">
+                        {page.name || `Varaq ${page.page_number}`}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-[10px] font-bold text-slate-600 line-clamp-2 mb-2">
-                  {page.name || `Varaq ${page.page_number}`}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-bold text-slate-400">{page.version.toLowerCase() !== 'v1' ? page.version : ''}</span>
-                  {hasMismatch ? (
-                    <AlertTriangle size={14} className="text-red-500" />
-                  ) : allMatch ? (
-                    <CheckCircle2 size={14} className="text-emerald-500" />
-                  ) : canCheck ? (
-                    <span className="text-[9px] font-bold text-amber-500">Tekshirilmagan</span>
-                  ) : null}
+
+                {/* Bottom Footer Area */}
+                <div className="p-3 bg-white border-t border-slate-100 flex flex-col gap-2">
+                  <span className="text-[10px] font-bold text-slate-400">Holati:</span>
+                  
+                  <div className="flex flex-col gap-1.5 text-[10px]">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-600">Katta elektromexanik:</span>
+                      {(() => {
+                        const keCheck = pageChecks.find(c => c.checked_role === 'Katta elektromexanik')
+                        if (!keCheck) return (
+                          <span className="font-black px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100">
+                            Kutilmoqda
+                          </span>
+                        )
+                        if (keCheck.status === 'mismatch') return (
+                          <span className="font-black px-1.5 py-0.5 rounded bg-red-50 text-red-600 border border-red-100">
+                            ❌ Mos kelmaydi
+                          </span>
+                        )
+                        return (
+                          <span className="font-black px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">
+                            ✅ Tekshirilgan
+                          </span>
+                        )
+                      })()}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-600">Tex. hujjat muhandisi:</span>
+                      {(() => {
+                        const thCheck = pageChecks.find(c => c.checked_role === 'Texnik hujjatlar muhandisi')
+                        if (!thCheck) return (
+                          <span className="font-black px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100">
+                            Kutilmoqda
+                          </span>
+                        )
+                        if (thCheck.status === 'mismatch') return (
+                          <span className="font-black px-1.5 py-0.5 rounded bg-red-50 text-red-600 border border-red-100">
+                            ❌ Mos kelmaydi
+                          </span>
+                        )
+                        return (
+                          <span className="font-black px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">
+                            ✅ Tekshirilgan
+                          </span>
+                        )
+                      })()}
+                    </div>
+                  </div>
                 </div>
-              </button>
+              </div>
             )
           })}
         </div>
