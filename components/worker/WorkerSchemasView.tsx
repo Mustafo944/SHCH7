@@ -378,7 +378,72 @@ function TdmsPageDetailView({ page, userName, userRole, onBack, canCheck }: {
             {page.version.toLowerCase() !== 'v1' ? `${page.version} • ` : ''}Yuklagan: {page.uploaded_by}
           </p>
         </div>
+        {canCheck && !showCheckOptions && !showMismatchForm && (
+          <button
+            onClick={() => setShowCheckOptions(true)}
+            className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-black text-xs hover:from-teal-600 hover:to-emerald-600 transition-all active:scale-[0.98] shadow-lg shadow-teal-200"
+          >
+            <CheckCircle2 size={16} />
+            <span className="hidden sm:inline">Tekshirish</span>
+          </button>
+        )}
       </div>
+
+      {/* Tekshirish variantlari (header ostida) */}
+      {canCheck && showCheckOptions && !showMismatchForm && (
+        <div className="space-y-3 animate-fade-in">
+          <div className="flex gap-3">
+            <button
+              onClick={() => { handleCheck('matches'); setShowCheckOptions(false) }}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-emerald-50 border-2 border-emerald-200 text-emerald-700 font-black hover:bg-emerald-100 transition-all active:scale-[0.98]"
+            >
+              <CheckCircle2 size={20} />
+              Mos keladi ✅
+            </button>
+            <button
+              onClick={() => setShowMismatchForm(true)}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-red-50 border-2 border-red-200 text-red-600 font-black hover:bg-red-100 transition-all active:scale-[0.98]"
+            >
+              <AlertTriangle size={20} />
+              Mos kelmaydi ❌
+            </button>
+          </div>
+          <button
+            onClick={() => setShowCheckOptions(false)}
+            className="w-full text-center text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors py-1"
+          >
+            Bekor qilish
+          </button>
+        </div>
+      )}
+
+      {/* Mos kelmaydi formasi */}
+      {canCheck && showMismatchForm && (
+        <div className="p-4 rounded-2xl bg-red-50 border border-red-100 space-y-3 animate-fade-in">
+          <label className="block text-xs font-black text-red-700">Izoh yozing — nima mos kelmaydi?</label>
+          <textarea
+            value={mismatchComment}
+            onChange={(e) => setMismatchComment(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-red-200 bg-white text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none resize-none"
+            rows={3}
+            placeholder="Masalan: 5-rele sxemada bor, lekin bekatda yo'q..."
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => { setShowMismatchForm(false); setShowCheckOptions(false); setMismatchComment('') }}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition-colors"
+            >
+              Bekor qilish
+            </button>
+            <button
+              onClick={() => { handleCheck('mismatch'); setShowCheckOptions(false) }}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-red-500 text-white shadow-md hover:bg-red-600 transition-colors"
+            >
+              Yuborish
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* PDF / Rasm ko'rish */}
       <div className="relative w-full rounded-2xl overflow-hidden border-2 border-white/40 bg-white/40 backdrop-blur-md group" style={{ height: '55vh' }}>
@@ -388,7 +453,7 @@ function TdmsPageDetailView({ page, userName, userRole, onBack, canCheck }: {
         ) : (
           <iframe src={`${page.drive_url}#toolbar=0`} className="w-full h-full" title="Sxema" />
         )}
-        <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-3 right-3 flex flex-col gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           <a
             href={page.drive_url}
             target="_blank"
@@ -423,70 +488,6 @@ function TdmsPageDetailView({ page, userName, userRole, onBack, canCheck }: {
         </div>
       )}
 
-      {/* ═══ TEKSHIRISH (faqat katta_elektromexanik uchun) ═══ */}
-      {canCheck && (
-        <div>
-          {!showCheckOptions && !showMismatchForm ? (
-            <button
-              onClick={() => setShowCheckOptions(true)}
-              className="flex items-center justify-center gap-3 w-full px-6 py-4 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-black text-sm hover:from-teal-600 hover:to-emerald-600 transition-all active:scale-[0.98] shadow-lg shadow-teal-200"
-            >
-              <CheckCircle2 size={22} />
-              Tekshirish
-            </button>
-          ) : !showMismatchForm ? (
-            <div className="space-y-3 animate-fade-in">
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { handleCheck('matches'); setShowCheckOptions(false) }}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-emerald-50 border-2 border-emerald-200 text-emerald-700 font-black hover:bg-emerald-100 transition-all active:scale-[0.98]"
-                >
-                  <CheckCircle2 size={20} />
-                  Mos keladi ✅
-                </button>
-                <button
-                  onClick={() => setShowMismatchForm(true)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-red-50 border-2 border-red-200 text-red-600 font-black hover:bg-red-100 transition-all active:scale-[0.98]"
-                >
-                  <AlertTriangle size={20} />
-                  Mos kelmaydi ❌
-                </button>
-              </div>
-              <button
-                onClick={() => setShowCheckOptions(false)}
-                className="w-full text-center text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors py-1"
-              >
-                Bekor qilish
-              </button>
-            </div>
-          ) : (
-            <div className="p-4 rounded-2xl bg-red-50 border border-red-100 space-y-3 animate-fade-in">
-              <label className="block text-xs font-black text-red-700">Izoh yozing — nima mos kelmaydi?</label>
-              <textarea
-                value={mismatchComment}
-                onChange={(e) => setMismatchComment(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-red-200 bg-white text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none resize-none"
-                rows={3}
-                placeholder="Masalan: 5-rele sxemada bor, lekin bekatda yo'q..."
-              />
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() => { setShowMismatchForm(false); setShowCheckOptions(false); setMismatchComment('') }}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition-colors"
-                >
-                  Bekor qilish
-                </button>
-                <button
-                  onClick={() => { handleCheck('mismatch'); setShowCheckOptions(false) }}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-red-500 text-white shadow-md hover:bg-red-600 transition-colors"
-                >
-                  Yuborish
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Tekshiruvlar tarixi */}
       {checks.length > 0 && (
