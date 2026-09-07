@@ -122,14 +122,14 @@ export function WorkerSchemasView({ stationId, stationName, userRole = '', userN
                 userName={userName}
                 userRole={userRole}
                 onBack={handleBack}
-                canCheck={userRole === 'katta_elektromexanik'}
+                canCheck={['katta_elektromexanik', 'worker'].includes(userRole)}
               />
             ) : (
               <TdmsDocumentPagesView
                 document={selectedTdmsDoc}
                 onBack={handleBack}
                 onPageClick={setSelectedTdmsPage}
-                canCheck={userRole === 'katta_elektromexanik'}
+                canCheck={['katta_elektromexanik', 'worker'].includes(userRole)}
               />
             )
           ) : (
@@ -361,6 +361,8 @@ function TdmsPageDetailView({ page, userName, userRole, onBack, canCheck }: {
       setCheckError(err instanceof Error ? err.message : "Xatolik yuz berdi")
     }
   }
+
+  console.log('[TdmsPageDetailView] canCheck:', canCheck, 'userRole:', userRole, 'userName:', userName)
 
   return (
     <div className="space-y-4 animate-fade-up">
